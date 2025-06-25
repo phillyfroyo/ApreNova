@@ -1,5 +1,5 @@
 // src/app/es/quiz/advanced/q1/page.js
-'use client';
+"use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
