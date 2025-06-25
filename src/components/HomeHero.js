@@ -1,3 +1,5 @@
+"use client";
+
 export default function HomeHero({ language }) {
   return (
     <div>
