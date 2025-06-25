@@ -1,9 +1,9 @@
-// src/app/es/quiz/beginner/q1/page.js
-'use client';
+"use client";
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function BeginnerQ1() {
+function BeginnerQ1Inner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const count = parseInt(searchParams.get('count') || '1');
@@ -26,7 +26,15 @@ export default function BeginnerQ1() {
       <h1>¿Cómo se dice &quot;cat&quot; en español?</h1>
       <button onClick={() => handleAnswer(true)}>Gato</button>
       <button onClick={() => handleAnswer(false)}>Perro</button>
-      <button onClick={() => handleAnswer(false)}>Caballo</button>
+      <button onClick={() => handleAnswer(false)}>Casa</button>
     </div>
+  );
+}
+
+export default function BeginnerQ1() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BeginnerQ1Inner />
+    </Suspense>
   );
 }
