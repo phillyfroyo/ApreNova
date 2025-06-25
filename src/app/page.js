@@ -1,12 +1,9 @@
-'use client';
+import HomeHero from '@/components/HomeHero';
 
-import { useEffect } from 'react';
-import { redirect } from 'next/navigation';
-
-export default function Home() {
-  useEffect(() => {
-    redirect('/es');
-  }, []);
-
-  return null; // Or add a loading spinner if you want
+export default function HomePage() {
+  return (
+    <>
+      <HomeHero />
+    </>
+  );
 }
