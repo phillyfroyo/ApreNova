@@ -23,7 +23,7 @@ export default function IntermediateQ1() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Qué significa "ventana"?</h1>
+      <h1>¿Qué significa &quot;ventana&quot;?</h1>
       <button onClick={() => handleAnswer(true)}>Window</button>
       <button onClick={() => handleAnswer(false)}>Chair</button>
       <button onClick={() => handleAnswer(false)}>Floor</button>

@@ -22,7 +22,7 @@ export default function BrandNewQ2() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Qué número es "dos"?</h1>
+      <h1>¿Qué número es &quot;dos&quot;?</h1>
       <button onClick={() => handleAnswer(true)}>2</button>
       <button onClick={() => handleAnswer(false)}>3</button>
       <button onClick={() => handleAnswer(false)}>4</button>

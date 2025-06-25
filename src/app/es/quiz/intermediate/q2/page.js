@@ -23,7 +23,7 @@ export default function IntermediateQ2() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Cuál es el opuesto de "caliente"?</h1>
+      <h1>¿Cuál es el opuesto de &quot;caliente&quot;?</h1>
       <button onClick={() => handleAnswer(true)}>Frío</button>
       <button onClick={() => handleAnswer(false)}>Rojo</button>
       <button onClick={() => handleAnswer(false)}>Fácil</button>

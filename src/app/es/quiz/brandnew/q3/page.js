@@ -22,7 +22,7 @@ export default function BrandNewQ3() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Cómo se dice "goodbye" en español?</h1>
+      <h1>¿Cómo se dice &quot;goodbye&quot; en español?</h1>
       <button onClick={() => handleAnswer(true)}>Adiós</button>
       <button onClick={() => handleAnswer(false)}>Hola</button>
       <button onClick={() => handleAnswer(false)}>Gracias</button>
