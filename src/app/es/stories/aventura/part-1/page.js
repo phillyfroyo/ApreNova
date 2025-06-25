@@ -11,8 +11,8 @@ function Part1Content() {
     <div style={{ padding: "2rem" }}>
       <h1>Parte 1: La carta misteriosa</h1>
       <p>
-        Pedro vivía en un pequeño pueblo en las montañas de Guatemala. Un día, recibió una carta sin remitente. La carta decía: "Sigue el mapa. El secreto te espera."
-      </p>
+  Pedro vivía en un pequeño pueblo en las montañas de Guatemala. Un día, recibió una carta sin remitente. La carta decía: &quot;Sigue el mapa. El secreto te espera.&quot;
+</p>
       <p>
         {storyMode === "read"
           ? "Pedro miró el mapa con curiosidad y decidió seguirlo."
