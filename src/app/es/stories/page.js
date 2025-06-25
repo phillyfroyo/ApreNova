@@ -14,11 +14,11 @@ export default function StoriesPage() {
   const [selectedLevel, setSelectedLevel] = useState(initialLevel);
 
   useEffect(() => {
-    // If user updates the URL manually
-    if (searchParams.get('level') && searchParams.get('level') !== selectedLevel) {
-      setSelectedLevel(searchParams.get('level'));
-    }
-  }, [searchParams]);
+  // If user updates the URL manually
+  if (searchParams.get('level') && searchParams.get('level') !== selectedLevel) {
+    setSelectedLevel(searchParams.get('level'));
+  }
+}, [searchParams, selectedLevel]);
 
   const stories = [
     {

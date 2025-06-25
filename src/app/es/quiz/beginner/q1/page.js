@@ -23,7 +23,7 @@ export default function BeginnerQ1() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Cómo se dice "cat" en español?</h1>
+      <h1>¿Cómo se dice &quot;cat&quot; en español?</h1>
       <button onClick={() => handleAnswer(true)}>Gato</button>
       <button onClick={() => handleAnswer(false)}>Perro</button>
       <button onClick={() => handleAnswer(false)}>Caballo</button>

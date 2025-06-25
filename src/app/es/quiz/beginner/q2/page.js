@@ -23,7 +23,7 @@ export default function BeginnerQ2() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Qué significa "perro"?</h1>
+      <h1>¿Qué significa &quot;perro&quot;?</h1>
       <button onClick={() => handleAnswer(true)}>Dog</button>
       <button onClick={() => handleAnswer(false)}>Cat</button>
       <button onClick={() => handleAnswer(false)}>Bird</button>

@@ -23,7 +23,7 @@ export default function BeginnerQ3() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>¿Cómo se dice "house" en español?</h1>
+      <h1>¿Cómo se dice &quot;house&quot; en español?</h1>
       <button onClick={() => handleAnswer(true)}>Casa</button>
       <button onClick={() => handleAnswer(false)}>Mesa</button>
       <button onClick={() => handleAnswer(false)}>Cielo</button>
