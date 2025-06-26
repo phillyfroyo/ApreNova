@@ -1,5 +1,5 @@
 import HomeHero from '@/components/HomeHero';
 
-export default function Home() {
+export default function EnglishHomePage() {
   return <HomeHero language="en" />;
 }

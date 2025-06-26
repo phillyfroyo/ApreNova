@@ -1,33 +1,56 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function LanguageSwitcher() {
-  const router = useRouter();
   const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
 
-  const handleLanguageChange = (lang) => {
-    const pathParts = pathname.split('/');
-    pathParts[1] = lang;
-    const newPath = pathParts.join('/') || '/';
-    startTransition(() => {
-      router.push(newPath);
-    });
+  const switchLanguage = (lang) => {
+    let newPath;
+
+    if (lang === "en") {
+      newPath = "/en";
+    } else {
+      newPath = "/";
+    }
+
+    router.push(newPath);
+    setOpen(false);
   };
 
   return (
-    <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
-      <label style={{ marginRight: '0.5rem' }}>Site Language</label>
-      <select
-        onChange={(e) => handleLanguageChange(e.target.value)}
-        defaultValue={pathname.split('/')[1]}
-        disabled={isPending}
+    <div className="absolute top-4 right-4 text-[15px] font-[Alice] text-black z-50">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 focus:outline-none"
+        type="button"
       >
-        <option value="es">Español 🇲🇽</option>
-        <option value="en">English 🇺🇸</option>
-      </select>
+        <span>Site Language</span>
+        <span>🌐</span>
+        <span className="text-xs">▼</span>
+      </button>
+      {open && (
+        <div
+          className="mt-2 bg-white shadow-md rounded-md p-2 absolute right-0"
+          onMouseLeave={() => setOpen(false)}
+        >
+          <button
+            className="block px-4 py-2 text-left hover:bg-gray-100 w-full"
+            onClick={() => switchLanguage("es")}
+          >
+            🇪🇸 Español
+          </button>
+          <button
+            className="block px-4 py-2 text-left hover:bg-gray-100 w-full"
+            onClick={() => switchLanguage("en")}
+          >
+            🇺🇸 English
+          </button>
+        </div>
+      )}
     </div>
   );
 }
