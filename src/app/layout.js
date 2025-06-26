@@ -9,8 +9,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang="es" translate="no">
       <head>
+        <meta name="google" content="notranslate" />
         <link
           href="https://fonts.googleapis.com/css2?family=Alice&family=Open+Sans:wght@400;600&display=swap"
           rel="stylesheet"

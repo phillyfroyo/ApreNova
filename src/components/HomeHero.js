@@ -6,9 +6,10 @@ export default function HomeHero({ language = 'es' }) {
   const t = heroText[language];
 
   return (
-    <section className="min-h-screen flex items-start justify-start px-8 pt-24 bg-[url('/images/background.png')] bg-cover bg-center">
-      <div className="max-w-xl">
-        {/* ApreNova Logo */}
+  <section className="min-h-screen flex items-start justify-start px-8 pt-24 bg-[url('/images/background.png')] bg-cover bg-center">
+    <div className="max-w-xl">
+      {/* ApreNova Logo */}
+      <div translate="no">
         <h1 className="text-[74px] font-bold leading-none relative font-[Alice]">
           <span className="text-[#5ce1e6] absolute left-0 top-1 z-0">Apre</span>
           <span className="text-[#1000c8] relative z-10">Apre</span>
@@ -17,6 +18,7 @@ export default function HomeHero({ language = 'es' }) {
             <span className="text-[#5100a2] relative z-10">Nova</span>
           </span>
         </h1>
+      </div>
 
         {/* Subtitle */}
         <p className="mt-4 text-[20px] font-[Alice] text-black">{t.subtitle}</p>
