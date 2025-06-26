@@ -1,5 +1,4 @@
 import './globals.css';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import SessionWrapper from '../components/SessionWrapper';
 
 export const metadata = {
@@ -19,7 +18,6 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-background text-foreground font-sans">
         <SessionWrapper>
-          <LanguageSwitcher />
           {children}
         </SessionWrapper>
       </body>
