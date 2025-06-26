@@ -11,7 +11,7 @@ export default function LandingPage() {
           <span className="text-[#5100a2]">Nova</span>
         </h1>
         <p className="mt-4 text-[18px] font-[Alice]">
-          Learn smarter, not harder. Learn with stories.
+          Aprende más rápido. Aprende con historias.
         </p>
       </div>
 
@@ -22,7 +22,7 @@ export default function LandingPage() {
           <p className="text-[24px] font-bold mb-4">
             Mi lengua materna es el español
           </p>
-          <Link href="/es">
+          <Link href="/es/home">
             <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
               Continuar
             </button>

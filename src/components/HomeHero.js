@@ -34,18 +34,14 @@ export default function HomeHero({ language = 'es' }) {
         </div>
 
         {/* Sign-in Link */}
-        <p className="mt-4 text-[14px] font-['Open_Sans']">
-          <span className="text-black">{t.signInPrompt} </span>
-          <a href="/login" className="text-[#1000c8] hover:underline">
-            {t.signIn}
-          </a>
-        </p>
+<p className="mt-4 text-[14px] font-['Open_Sans']">
+  <span className="text-black">{t.signInPrompt} </span>
+  <a href="/login" className="text-[#1000c8] hover:underline">
+    {t.signIn}
+  </a>
+</p>
 
-        {/* Site Language */}
-        <div className="mt-8 flex items-center gap-2 text-[15px] font-[Alice] text-black">
-          🌐 {t.languageLabel}
-        </div>
-      </div>
-    </section>
+</div> {/* <- This closes the 'max-w-xl' div */}
+</section>
   );
 }
