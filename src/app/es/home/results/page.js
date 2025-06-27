@@ -6,7 +6,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     // Read stored level (defaults to l1 if empty or invalid)
-    const storedLevel = sessionStorage.getItem('quizLevel') || 'l1';
+    const storedLevel = localStorage.getItem('quizLevel') || 'l1';
 
     // Map to user-friendly label
     const levelMap = {
@@ -31,10 +31,10 @@ export default function ResultsPage() {
           onClick={() => {
             sessionStorage.removeItem('quizProgress');
             sessionStorage.removeItem('quizLevel');
-            window.location.href = '/es'; // or /es/home or restart path
+            window.location.href = '/es/stories'; // or /es/home or restart path
           }}
         >
-          Go to Homepage
+          Start Learning
         </button>
       </div>
     </section>

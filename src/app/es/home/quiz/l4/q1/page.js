@@ -39,21 +39,49 @@ export default function QuizQuestion() {
     return selectedAnswer === 0 ? routeObj.correct : routeObj.incorrect;
   };
 
-  const handleNext = () => {
+  const isFinalStep = flow[internalLevel]?.[question]?.correct?.includes('/results') ||
+      flow[internalLevel]?.[question]?.incorrect?.includes('/results');
+
+
+function maybeStoreUserLevel(currentLevel) {
+  const sessionLevel = sessionStorage.getItem('quizLevel');
+  const localLevel = localStorage.getItem('quizLevel');
+  const numericCurrent = Number(currentLevel.replace('l', ''));
+  const numericSession = Number((sessionLevel || '').replace('l', ''));
+  const numericLocal = Number((localLevel || '').replace('l', ''));
+
+  if (!sessionLevel || numericCurrent > numericSession) {
+    sessionStorage.setItem('quizLevel', currentLevel);
+  }
+  if (!localLevel || numericCurrent > numericLocal) {
+    localStorage.setItem('quizLevel', currentLevel);
+  }
+}
+
+const handleNext = () => {
     if (selectedAnswer === null) return;
 
     const answeredCount = Number(sessionStorage.getItem('quizProgress') || 0);
     const currentLevel = 'l4';
 
-    if (selectedAnswer === 0) {
-      const highest = sessionStorage.getItem('quizLevel');
-      const numericLevel = Number(currentLevel.replace('l', ''));
-      const savedLevel = Number((highest || '').replace('l', ''));
+    if (selectedAnswer === 0 && isFinalStep) {
+    maybeStoreUserLevel(currentLevel);
+  const sessionLevel = sessionStorage.getItem('quizLevel');
+  const localLevel = localStorage.getItem('quizLevel');
 
-      if (!highest || numericLevel > savedLevel) {
-        sessionStorage.setItem('quizLevel', currentLevel);
-      }
-    }
+  const numericCurrent = Number(currentLevel.replace('l', ''));
+  const numericSession = Number((sessionLevel || '').replace('l', ''));
+  const numericLocal = Number((localLevel || '').replace('l', ''));
+
+  // Update if current level is higher than stored values
+  if (!sessionLevel || numericCurrent > numericSession) {
+    sessionStorage.setItem('quizLevel', currentLevel);
+  }
+
+  if (!localLevel || numericCurrent > numericLocal) {
+    localStorage.setItem('quizLevel', currentLevel);
+  }
+}
 
     const newCount = answeredCount + 1;
     sessionStorage.setItem('quizProgress', newCount);
