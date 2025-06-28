@@ -43,7 +43,7 @@ export default function QuizWelcomeES() {
       {/* Sign-in link */}
       <p className="mt-6 text-[14px] font-['Open_Sans']">
         <span className="text-black">¿Ya tienes una cuenta? </span>
-        <a href="/login" className="text-[#1000c8] hover:underline">
+        <a href="/es/auth/login" className="text-[#1000c8] hover:underline">
           Inicia sesión
         </a>
       </p>
