@@ -43,10 +43,17 @@ export default function LandingPage() {
       </div>
 
       {/* Sign-in link */}
-      <p className="mt-4 text-[14px] font-['Open_Sans']">
+<p className="mt-4 text-[14px] font-['Open_Sans']">
   <span className="text-black">¿Ya tienes una cuenta? </span>
   <a href="/login" className="text-[#1000c8] hover:underline">
     Inicia sesión
+  </a>
+</p>
+
+<p className="mt-2 text-[14px] font-['Open_Sans']">
+  <span className="text-black">New to ApreNova? </span>
+  <a href="/auth/signup" className="text-[#1000c8] hover:underline">
+    Create a free account
   </a>
 </p>
     </section>
