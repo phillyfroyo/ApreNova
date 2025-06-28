@@ -78,7 +78,7 @@ export default function SignupPage() {
 
         <div className="flex flex-col gap-1">
   <p className="text-sm italic text-gray-600">
-    Mi idioma nativo es / My native language is:
+    My native language is / Mi idioma nativo es:
   </p>
 
   <div className="relative w-full" ref={dropdownRef}>
