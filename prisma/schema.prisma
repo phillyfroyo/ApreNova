@@ -9,9 +9,9 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())       // ✅ changed from Int to String
   email     String   @unique
-  password  String
+  password  String?                            // ✅ still optional
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

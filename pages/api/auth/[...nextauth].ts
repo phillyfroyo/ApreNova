@@ -1,14 +1,23 @@
 import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
-import { PrismaClient } from '@prisma/client';
-import bcrypt from "bcrypt";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcrypt";
+import { prisma } from "../../../lib/prisma";
 
-const prisma = new PrismaClient();
+// 👇 If you're using JWT strategy instead of Prisma adapter, no Prisma needed
+// If you're keeping database strategy, reintroduce PrismaAdapter + prisma
 
-const handler = NextAuth({
+export default NextAuth({
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -22,48 +31,35 @@ const handler = NextAuth({
           where: { email: credentials.email },
         });
 
-        if (!user) return null;
+        if (!user || !user.password) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await compare(credentials.password, user.password);
         if (!isValid) return null;
 
         return {
-          id: user.id.toString(),
-          email: user.email,
-        };
+  id: user.id.toString(),          // ✅ ensures it's a string
+  email: user.email,
+  password: user.password,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+};
       },
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-    }),
   ],
+
   session: {
-    strategy: "jwt",
+    strategy: "jwt", // ✅ safer for now
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  pages: {
-    signIn: "/auth/login", // or wherever your login page lives
-  },
+
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-      }
-      return token;
-    },
     async session({ session, token }) {
-      if (token && session.user) {
-        (session.user as any).id = token.id;
-        session.user.email = token.email;
+      if (session.user && token?.sub) {
+        session.user.id = token.sub;
       }
       return session;
     },
   },
-});
 
-export default handler;
+  secret: process.env.NEXTAUTH_SECRET,
+});
