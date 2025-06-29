@@ -1,7 +1,15 @@
-// src/app/page.js
-import Link from 'next/link';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
-export default function LandingPage() {
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+
+  if (session) {
+    redirect("/es/stories");
+  }
+
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background.png')] bg-cover bg-center text-black px-6">
       {/* Logo and subtitle */}
@@ -17,7 +25,6 @@ export default function LandingPage() {
 
       {/* Language choice buttons */}
       <div className="flex flex-col md:flex-row items-center gap-10">
-        {/* Spanish option */}
         <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
           <p className="text-[24px] font-bold mb-4">
             Mi lengua materna es el español
@@ -28,8 +35,6 @@ export default function LandingPage() {
             </button>
           </Link>
         </div>
-
-        {/* English option */}
         <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
           <p className="text-[24px] font-bold mb-4">
             My native language is English
@@ -42,20 +47,19 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Sign-in link */}
-<p className="mt-4 text-[14px] font-['Open_Sans']">
-  <span className="text-black">¿Ya tienes una cuenta? </span>
-  <a href="/es/auth/login" className="text-[#1000c8] hover:underline">
-    Inicia sesión
-  </a>
-</p>
+      <p className="mt-4 text-[14px] font-['Open_Sans']">
+        <span className="text-black">¿Ya tienes una cuenta? </span>
+        <a href="/es/auth/login" className="text-[#1000c8] hover:underline">
+          Inicia sesión
+        </a>
+      </p>
 
-<p className="mt-2 text-[14px] font-['Open_Sans']">
-  <span className="text-black">New to ApreNova? </span>
-  <a href="/es/auth/signup" className="text-[#1000c8] hover:underline">
-    Create a free account
-  </a>
-</p>
+      <p className="mt-2 text-[14px] font-['Open_Sans']">
+        <span className="text-black">New to ApreNova? </span>
+        <a href="/es/auth/signup" className="text-[#1000c8] hover:underline">
+          Create a free account
+        </a>
+      </p>
     </section>
   );
 }

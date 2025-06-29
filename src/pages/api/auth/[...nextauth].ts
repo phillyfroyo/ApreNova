@@ -1,14 +1,11 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcrypt";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../../../lib/prisma";
 
-// 👇 If you're using JWT strategy instead of Prisma adapter, no Prisma needed
-// If you're keeping database strategy, reintroduce PrismaAdapter + prisma
-
-export default NextAuth({
+export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -36,19 +33,17 @@ export default NextAuth({
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) return null;
 
+        // ✅ Only return what NextAuth expects (no Prisma metadata)
         return {
-  id: user.id.toString(),          // ✅ ensures it's a string
-  email: user.email,
-  password: user.password,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
-};
+          id: user.id.toString(),
+          email: user.email,
+        };
       },
     }),
   ],
 
   session: {
-    strategy: "jwt", // ✅ safer for now
+    strategy: "jwt", // ✅ stateless and compatible with Vercel
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
@@ -62,4 +57,6 @@ export default NextAuth({
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+export default NextAuth(authOptions);
