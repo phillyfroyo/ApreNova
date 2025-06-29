@@ -1,14 +1,17 @@
-import { getServerSession } from "next-auth";
+'use client';
+
+import { getServerSession } from 'next-auth';
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { Card, Button } from '@/components/ui';
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect("/es/stories");
+    redirect('/es/stories');
   }
 
   return (
@@ -21,42 +24,43 @@ export default async function Home() {
         </p>
       </div>
 
-      {/* Language choice buttons */}
+      {/* Language choice cards */}
       <div className="flex flex-col md:flex-row items-center gap-10">
-        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
-          <p className="text-[24px] font-bold mb-4">
+        <Card className="glass-card max-w-xs text-center space-y-4">
+          <p className="text-[24px] font-bold">
             Mi lengua materna es el español
           </p>
           <Link href="/es/home">
-            <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
+            <Button className="w-full" variant="button1">
               Continuar
-            </button>
+            </Button>
           </Link>
-        </div>
-        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
-          <p className="text-[24px] font-bold mb-4">
+        </Card>
+
+        <Card className="glass-card max-w-xs text-center space-y-4">
+          <p className="text-[24px] font-bold">
             My native language is English
           </p>
           <Link href="/en">
-            <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
+            <Button className="w-full" variant="button1">
               Continue
-            </button>
+            </Button>
           </Link>
-        </div>
+        </Card>
       </div>
 
       <p className="mt-4 text-[14px] font-['Open_Sans']">
         <span className="text-black">¿Ya tienes una cuenta? </span>
-        <a href="/es/auth/login" className="text-[#1000c8] hover:underline">
+        <Link href="/es/auth/login" className="text-[#1000c8] hover:underline">
           Inicia sesión
-        </a>
+        </Link>
       </p>
 
       <p className="mt-2 text-[14px] font-['Open_Sans']">
         <span className="text-black">New to ApreNova? </span>
-        <a href="/es/auth/signup" className="text-[#1000c8] hover:underline">
+        <Link href="/es/auth/signup" className="text-[#1000c8] hover:underline">
           Create a free account
-        </a>
+        </Link>
       </p>
     </section>
   );
