@@ -1,8 +1,8 @@
 // src/components/Logo.tsx
 
 interface LogoProps {
-  variant?: 'default' | 'fun' | 'soft' | 'bold';
-  size?: string; // optional text size like "text-4xl"
+  variant?: string;
+  size?: string;
   className?: string;
 }
 
@@ -10,7 +10,7 @@ export default function Logo({ variant = 'default', size = 'text-[64px]', classN
   const variants: Record<string, [string, string]> = {
     default: ['text-[#5ce1e6]', 'text-[#5100a2]'],
     quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600'],
-    soft: ['text-[#70e0dc]', 'text-[#6a1b9a]'],
+    auth: ['text-[#70e0dc]', 'text-[#6a1b9a]'],
     bold: ['text-[#1000c8]', 'text-purple-800'],
   };
 

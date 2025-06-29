@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import Logo from '@/components/Logo';
 
 export default function SignupPage() {
   const router = useRouter()
@@ -69,7 +70,10 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+  <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[url('/images/background3.png')] bg-cover bg-center text-black">
+    <div className="mb-6 text-center">
+      <Logo variant="auth" />
+    </div>
       <form
   onSubmit={handleSubmit}
   className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg space-y-6"
