@@ -1,8 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    './src/**/*.{js,jsx,ts,tsx}',
-  ],
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
@@ -10,11 +8,42 @@ module.exports = {
         sans: ['"Open Sans"', 'sans-serif'],
       },
       colors: {
-        primary: '#1A73E8',      // example blue
-        accent: '#FFB703',       // example yellow-orange
+        primary: '#1A73E8',
+        accent: '#FFB703',
         background: '#FFFFFF',
         foreground: '#171717',
         muted: '#E5E5E5',
+
+        success: '#34D399', // Tailwind green-400
+        warning: '#FBBF24', // Tailwind yellow-400
+        danger: '#EF4444',  // Tailwind red-500
+
+        badge: {
+          level1: '#E0F2FE',
+          level2: '#C7D2FE',
+          level3: '#FDE68A',
+        },
+      },
+      spacing: {
+        'header': '4.5rem',
+        'section': '6rem',
+        'card': '2.5rem',
+      },
+      fontSize: {
+        'h1': ['2.25rem', { lineHeight: '2.75rem', fontWeight: '700' }],
+        'h2': ['1.875rem', { lineHeight: '2.25rem', fontWeight: '600' }],
+        'body': ['1rem', { lineHeight: '1.5rem' }],
+        'small': ['0.875rem', { lineHeight: '1.25rem' }],
+      },
+      boxShadow: {
+        soft: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        strong: '0 4px 20px rgba(0, 0, 0, 0.1)',
+      },
+      borderRadius: {
+        xl: '1.25rem',
+      },
+      transitionProperty: {
+        'layout': 'margin, padding, width, height',
       },
     },
   },

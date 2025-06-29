@@ -1,12 +1,13 @@
+// src/app/layout.tsx
 import './globals.css';
-import SessionWrapper from '../components/SessionWrapper';
+import type { ReactNode } from 'react';
 
 export const metadata = {
   title: 'ApreNova',
   description: 'Learn smarter, not harder. Learn with stories.',
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" translate="no">
       <head>
@@ -16,10 +17,8 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background text-foreground font-sans">
-        <SessionWrapper>
-          {children}
-        </SessionWrapper>
+      <body className="bg-background text-foreground font-sans transition-none">
+        {children}
       </body>
     </html>
   );
