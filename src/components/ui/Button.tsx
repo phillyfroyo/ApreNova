@@ -3,23 +3,22 @@ import React from 'react';
 import clsx from 'clsx';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'accent' | 'muted';
+  variant?: 'primary' | 'accent' | 'muted' | 'button1';
+  className?: string;
 }
 
-const Button: React.FC<ButtonProps> = ({ variant = 'primary', className, children, ...props }) => {
-  const base = 'px-6 py-2 rounded-xl shadow-soft transition';
+const baseStyles = 'px-6 py-2 rounded-full font-semibold transition-all duration-200';
+const variants: Record<string, string> = {
+  primary: 'bg-blue-500 text-white',
+  accent: 'bg-purple-600 text-white',
+  muted: 'bg-gray-300 text-black',
+  button1: 'bg-[#1000c8] text-white drop-shadow-md hover:opacity-90 hover:scale-105',
+};
 
-  const variants = {
-    primary: 'bg-primary text-white hover:bg-primary/90',
-    accent: 'bg-accent text-black hover:bg-accent/90',
-    muted: 'bg-muted text-foreground hover:bg-muted/80',
-  };
-
+export default function Button({ children, variant = 'primary', className = '', ...props }: ButtonProps) {
   return (
-    <button className={clsx(base, variants[variant], className)} {...props}>
+    <button className={clsx(baseStyles, variants[variant], className)} {...props}>
       {children}
     </button>
   );
-};
-
-export default Button;
+}
