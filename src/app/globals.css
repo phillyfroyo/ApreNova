@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Orbitron&family=Raleway&family=Fredoka&family=Baloo+2&family=Press+Start+2P&family=Playfair+Display&family=Quicksand&family=Exo+2&family=Lora&family=Merriweather&family=Changa+One&family=Audiowide&family=Oswald&display=swap');
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -11,4 +13,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Open Sans', sans-serif;
+}
+@layer components {
+  .glass-card {
+    @apply bg-white/30 backdrop-blur-md border border-white/10 text-black shadow-md hover:shadow-lg rounded-xl p-6 max-w-md mx-auto transition-shadow duration-300;
+  }
 }

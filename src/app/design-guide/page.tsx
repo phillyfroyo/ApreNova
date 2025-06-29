@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { H1, H2, Body, Small, Button, Badge, Card, Input } from '@/components/ui';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 export default function DesignGuide() {
   const [language, setLanguage] = useState('es');
@@ -23,6 +24,46 @@ export default function DesignGuide() {
     };
   }, []);
 
+  const logoVariants = {
+  default: 'Default',
+  quiz: 'Quiz',
+  auth: 'Auth',
+  storiesmain: 'Stories Main',
+  corporate: 'Corporate',
+  classic: 'Classic',
+  coolgray: 'Cool Gray',
+  steel: 'Steel',
+  vibrant: 'Vibrant',
+  electric: 'Electric',
+  wave: 'Wave',
+  berryblast: 'Berry Blast',
+  glowcool: 'Glow Cool',
+  glowmint: 'Glow Mint',
+  glowroyal: 'Glow Royal',
+  glassmode: 'Glass Mode',
+  storiesfun: 'Stories Fun',
+  dashboard: 'Dashboard',
+
+  // 🧁 New creative variants
+  playtime: 'Playtime',
+  storybook: 'Storybook',
+  neonpop: 'Neon Pop',
+  bubblegum: 'Bubblegum',
+  starlight: 'Starlight',
+  novaflare: 'Nova Flare',
+  plasma: 'Plasma',
+  eventhorizon: 'Event Horizon',
+  goldleaf: 'Goldleaf',
+  midnight: 'Midnight',
+  pearl: 'Pearl',
+  onyx: 'Onyx',
+  hotline: 'Hotline',
+  splash: 'Splash',
+  retrobit: 'Retro Bit',
+  electricice: 'Electric Ice'
+};
+
+
   return (
     <motion.div
       className="p-10 space-y-12 bg-[url('/images/background3.png')] bg-cover bg-center text-foreground min-h-screen"
@@ -30,6 +71,18 @@ export default function DesignGuide() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      <section>
+        <H1 className="mb-8">Design Guide</H1>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Object.entries(logoVariants).map(([variant, label]) => (
+            <Card key={variant} className="flex flex-col items-center justify-center py-6 px-12 scale-200">
+              <Logo variant={variant} size="text-6xl" className="drop-shadow-aprenova" />
+              <p className="mt-4 text-black text-lg font-semibold">{label}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       <section>
         <H1 className="mb-8">Design Guide</H1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">

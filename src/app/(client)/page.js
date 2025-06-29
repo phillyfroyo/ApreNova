@@ -15,7 +15,7 @@ export default async function Home() {
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
       {/* Logo and subtitle */}
       <div className="text-center mb-12">
-        <Logo variant="default" />
+        <Logo variant="classic" />
         <p className="mt-4 text-[18px] font-[Alice]">
           Aprende más rápido. Aprende con historias.
         </p>
