@@ -12,7 +12,7 @@ export default async function Home() {
   }
 
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background.png')] bg-cover bg-center text-black px-6">
+    <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
       {/* Logo and subtitle */}
       <div className="text-center mb-12">
         <Logo variant="default" />

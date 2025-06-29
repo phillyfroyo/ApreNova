@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { signOut, useSession } from "next-auth/react";
+import Logo from '@/components/Logo';
 
 // Account dropdown shown in top-right
 function AccountDropdown() {
@@ -93,7 +94,12 @@ function StoriesPageContent() {
     <div style={{ padding: "2rem", position: "relative" }}>
       <AccountDropdown />
 
-      <h1>Historias ({selectedLevel})</h1>
+      <div className="text-center mb-6">
+  <Logo variant="storiesmain" />
+  <h2 style={{ marginTop: '0.5rem', fontSize: '1.25rem' }}>
+    Historias ({selectedLevel})
+  </h2>
+</div>
       <div
         style={{
           display: "flex",

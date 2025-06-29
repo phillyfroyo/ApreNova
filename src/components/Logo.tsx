@@ -11,7 +11,7 @@ export default function Logo({ variant = 'default', size = 'text-[64px]', classN
     default: ['text-[#5ce1e6]', 'text-[#5100a2]'],
     quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600'],
     auth: ['text-[#70e0dc]', 'text-[#6a1b9a]'],
-    bold: ['text-[#1000c8]', 'text-purple-800'],
+    storiesmain: ['text-[#1000c8]', 'text-purple-800'],
   };
 
   const [apre, nova] = variants[variant] || variants.default;
