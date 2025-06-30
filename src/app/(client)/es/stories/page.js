@@ -51,6 +51,15 @@ function AccountDropdown() {
             {email}
           </div>
           <div
+            style={{ marginBottom: "0.75rem", cursor: "pointer", color: "green" }}
+            onClick={() => {
+              const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es';
+              window.location.href = `/${lang}/home/quiz/l1/q1`;
+            }}
+          >
+            Take the Quiz
+          </div>
+          <div
             style={{ marginBottom: "0.75rem", cursor: "pointer", color: "#1000c8" }}
             onClick={() => (window.location.href = "/es/myaccount")}
           >
@@ -70,6 +79,7 @@ function AccountDropdown() {
 
 function StoriesPageContent() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [selectedLevel, setSelectedLevel] = useState("all");
   const [activeStory, setActiveStory] = useState(null);
   const [cardPosition, setCardPosition] = useState(null);
@@ -81,17 +91,43 @@ function StoriesPageContent() {
 };
 
   useEffect(() => {
-    sessionStorage.removeItem("activeLevel");
-
+  async function fetchUserLevel() {
     const levelFromURL = searchParams.get("level");
     const levelFromStorage = localStorage.getItem("quizLevel");
 
     if (levelFromURL && levelFromURL !== selectedLevel) {
       setSelectedLevel(levelFromURL);
-    } else if (!levelFromURL && levelFromStorage && levelFromStorage !== selectedLevel) {
-      setSelectedLevel(levelFromStorage);
+      return;
     }
-  }, [searchParams, selectedLevel]);
+
+    if (!session?.user?.email) return; // ✅ Early return if no session
+
+    try {
+      const res = await fetch(`/api/user-level?email=${session.user.email}`);
+      if (!res.ok) {
+  console.warn("Level not found or fetch failed, falling back to localStorage or default.");
+  return; // allow fallback logic to proceed
+}
+
+      const data = await res.json();
+      if (data?.level) {
+        setSelectedLevel(data.level);
+        localStorage.setItem("quizLevel", data.level); // ✅ Cache it in localStorage
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to fetch level from DB", err);
+    }
+
+    if (levelFromStorage && levelFromStorage !== selectedLevel) {
+      setSelectedLevel(levelFromStorage);
+    } else if (!levelFromStorage && selectedLevel !== "l2") {
+      setSelectedLevel("l2");
+    }
+  }
+
+  fetchUserLevel();
+}, [searchParams, selectedLevel, session]);
 
   useEffect(() => {
     if (activeStory !== null) {
