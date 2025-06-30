@@ -72,13 +72,6 @@ function StoriesPageContent() {
   const searchParams = useSearchParams();
   const [selectedLevel, setSelectedLevel] = useState("all");
   const [activeStory, setActiveStory] = useState(null);
-  const [cardPosition, setCardPosition] = useState(null);
-
-  const handleCardClick = (index, e) => {
-  const rect = e.currentTarget.getBoundingClientRect();
-  setCardPosition(rect);
-  setActiveStory(index);
-};
 
   useEffect(() => {
     sessionStorage.removeItem("activeLevel");
@@ -162,8 +155,8 @@ function StoriesPageContent() {
           <motion.div
             key={i}
             layoutId={`story-${i}`}
-            whileHover={{ scale: 1.04 }}
-            onClick={(e) => handleCardClick(i, e)}
+            whileHover={{ scale: 1.05 }}
+            onClick={() => setActiveStory(i)}
             style={{
               cursor: "pointer",
               minWidth: "200px",
@@ -198,105 +191,93 @@ function StoriesPageContent() {
       </div>
 
       <AnimatePresence>
-  {activeStory !== null && (
-    <>
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          zIndex: 99,
-        }}
-        onClick={() => {
-          setActiveStory(null);
-          setCardPosition(null);
-        }}
-      />
-      <motion.div
-        key="modal"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        style={{
-          position: "absolute",
-          top: cardPosition?.top ?? "50%",
-          left: cardPosition?.left ?? "50%",
-          width: cardPosition?.width ?? "400px",
-          height: "auto",
-          transform: "translate(0, 0)",
-          zIndex: 100,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <motion.div
-          layoutId={`story-${activeStory}`}
-          style={{
-            borderRadius: "12px",
-            maxWidth: "100%",
-            width: "400px",
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          <Card variant="glass" className="hide-scrollbar">
-            <div
+        {activeStory !== null && (
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 100,
+            }}
+            onClick={() => setActiveStory(null)}
+          >
+            <motion.div
+              layoutId={`story-${activeStory}`}
               style={{
-                minHeight: "600px",
-                maxHeight: "600px",
-                overflowY: "auto",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
+                borderRadius: "12px",
+                maxWidth: "90%",
+                width: "400px",
+                overflow: "hidden",
+                position: "relative",
               }}
-              className="hide-scrollbar"
+              onClick={(e) => e.stopPropagation()}
             >
-              <motion.img
-                src={stories[activeStory].image}
-                alt={stories[activeStory].title}
-                initial={{ borderRadius: "12px" }}
-                animate={{ borderRadius: "12px" }}
-                style={{
-                  width: "100%",
-                  display: "block",
-                  objectFit: "cover",
-                  aspectRatio: "2 / 3",
-                }}
-              />
-              <div style={{ padding: "1.5rem", textAlign: "center" }}>
-                <h3 style={{ fontWeight: "bold" }}>
-                  {stories[activeStory].title}
-                </h3>
-                <p style={{ margin: "0.5rem 0 1rem" }}>
-                  {stories[activeStory].description}
-                </p>
-                {stories[activeStory].levels.map((lvl, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() =>
-                      (window.location.href = `/es/stories/aventura/${lvl}/part-1`)
-                    }
+              <Card variant="glass" className="hide-scrollbar">
+                <div
+                  style={{
+                    minHeight: "700px",
+                    maxHeight: "700px",
+                    overflowY: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  <motion.img
+                    src={stories[activeStory].image}
+                    alt={stories[activeStory].title}
+                    initial={{ borderRadius: "12px" }}
+                    animate={{ borderRadius: "12px" }}
                     style={{
-                      margin: "0.25rem",
-                      padding: "0.5rem 1rem",
-                      backgroundColor: "#1000c8",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
+                      width: "100%",
+                      display: "block",
+                      objectFit: "cover",
+                      aspectRatio: "2 / 3",
                     }}
-                  >
-                    Nivel {lvl.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-    </>
-  )}
-</AnimatePresence>
+                  />
+                  <div style={{ padding: "1.5rem", textAlign: "center" }}>
+                    <h3 style={{ fontWeight: "bold" }}>
+                      {stories[activeStory].title}
+                    </h3>
+                    <p style={{ margin: "0.5rem 0 1rem" }}>
+                      {stories[activeStory].description}
+                    </p>
+                    {stories[activeStory].levels.map((lvl, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() =>
+                          (window.location.href = `/es/stories/aventura/${lvl}/part-1`)
+                        }
+                        style={{
+                          margin: "0.25rem",
+                          padding: "0.5rem 1rem",
+                          backgroundColor: "#1000c8",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Nivel {lvl.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
