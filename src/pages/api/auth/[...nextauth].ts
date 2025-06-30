@@ -1,11 +1,13 @@
 import NextAuth from "next-auth";
-import { prisma } from "@/lib/prisma";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "@/lib/prisma"; // ✅ import your PrismaClient
 import { compare } from "bcryptjs";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { SessionStrategy } from "next-auth";
 
 export const authOptions = {
+  adapter: PrismaAdapter(prisma), // 👈 this saves users to your DB
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -49,7 +51,6 @@ export const authOptions = {
   },
   pages: {
     signIn: "/es/auth/login",
-    newUser: "/es/auth/signup",
   },
   session: {
   strategy: "jwt" as SessionStrategy,
