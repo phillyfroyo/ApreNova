@@ -13,9 +13,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "baseUrl": ".",                      // 🔄 changed from "src"
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["./*"]                     // 🔄 adjusted for root-based aliasing
+    "@/*": ["*"]                 
     },
     "plugins": [
       {
