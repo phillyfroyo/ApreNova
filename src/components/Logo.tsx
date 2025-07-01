@@ -42,12 +42,12 @@ export default function Logo({ variant = 'default', size = 'text-[64px]', classN
     electricice: ['text-sky-300', 'text-teal-300', 'font-[Raleway]'],
   };
 
-  const [apre, nova, font = 'font-[Alice]'] = variants[variant] || variants.default;
+  const [aprend, o, font = 'font-[Alice]'] = variants[variant] || variants.default;
 
   return (
     <h1 className={`font-bold leading-none ${font} ${size} ${className}`}>
-      <span className={`${apre} drop-shadow-aprenova`}>Apre</span>
-      <span className={`${nova} drop-shadow-aprenova`}>Nova</span>
+      <span className={`${aprend} drop-shadow-aprenova`}>Aprend</span>
+      <span className={`${o} drop-shadow-aprenova`}>O</span>
     </h1>
   );
 }
