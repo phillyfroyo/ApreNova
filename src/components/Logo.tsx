@@ -1,5 +1,5 @@
-// src/components/Logo.tsx
 'use client'
+// src/components/Logo.tsx
 
 import { useSession } from 'next-auth/react'
 

@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import './globals.css';
 import type { ReactNode } from 'react';
+import { SessionProvider } from 'next-auth/react';
 
 export const metadata = {
   title: 'ApreNova',
@@ -18,8 +19,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
-        {children}
-      </body>
+  <SessionProvider>
+    {children}
+  </SessionProvider>
+</body>
     </html>
   );
 }
