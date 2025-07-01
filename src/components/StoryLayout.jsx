@@ -18,15 +18,35 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
     speechSynthesis.speak(utterance);
   };
 
-  const partNumber = parseInt(currentPart.split("-")[1]);
-  const previousPart = partNumber > 1 ? `part-${partNumber - 1}` : null;
-  const nextPart = partNumber < 10 ? `part-${partNumber + 1}` : null;
-
   return (
     <div className="font-sans bg-cover bg-fixed bg-center text-gray-900 min-h-screen px-4 pt-6"
          style={{ backgroundImage: "url('/images/background2.jpg')" }}>
 
-      {/* Top Nav */}
+      {/* Top Nav with Part Buttons */}
+      <div className="fixed top-5 left-5 z-50 flex flex-wrap gap-2">
+        {[...Array(10)].map((_, i) => {
+          const part = `part-${i + 1}`;
+          const isActive = currentPart === part;
+          const greenClass = [
+            "bg-green-300", "bg-green-400", "bg-green-500", "bg-green-500", "bg-green-600",
+            "bg-green-600", "bg-green-700", "bg-green-800", "bg-green-900", "bg-emerald-900"
+          ][i];
+
+          return (
+            <a
+              key={part}
+              href={`/es/stories/aventura/${currentLevel}/${part}`}
+              aria-current={isActive ? "page" : undefined}
+              className={`px-3 py-1 rounded text-sm font-semibold text-white transition transform
+                ${greenClass} hover:bg-green-300 hover:scale-105
+                ${isActive ? "ring-2 ring-black scale-105" : ""}`}
+            >
+              PART {i + 1}
+            </a>
+          );
+        })}
+      </div>
+
       <div className="fixed top-5 right-10 z-50 flex gap-6">
         <div className="relative group cursor-pointer">
           <div>Navigate ▾</div>
@@ -63,31 +83,6 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
           <h1 className="text-3xl font-bold text-center">{title}</h1>
           <h2 className="text-xl text-center mb-6">{partTitle}</h2>
 
-          {/* Part Navigation Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mt-6 mb-10">
-            {[...Array(10)].map((_, i) => {
-              const part = `part-${i + 1}`;
-              const isActive = currentPart === part;
-              const greenClass = [
-                "bg-green-300", "bg-green-400", "bg-green-500", "bg-green-500", "bg-green-600",
-                "bg-green-600", "bg-green-700", "bg-green-800", "bg-green-900", "bg-emerald-900"
-              ][i];
-
-              return (
-                <a
-                  key={part}
-                  href={`/es/stories/aventura/${currentLevel}/${part}`}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`px-3 py-1 rounded text-sm font-semibold text-white transition transform
-                    ${greenClass} hover:bg-green-300 hover:scale-105
-                    ${isActive ? "ring-2 ring-black scale-105" : ""}`}
-                >
-                  PART {i + 1}
-                </a>
-              );
-            })}
-          </div>
-
           {sentences.map((s, i) => (
             <div key={i} className="my-16 text-center max-w-md relative mx-auto">
               {/* Audio/Translate icons */}
@@ -106,26 +101,6 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
               <div className="translation hidden italic text-gray-600 mt-2">{s.es}</div>
             </div>
           ))}
-
-          {/* Navigation Controls */}
-          <div className="text-center mt-16 text-base">
-            {previousPart && (
-              <a
-                href={`/es/stories/aventura/${currentLevel}/${previousPart}`}
-                className="mr-6 underline hover:text-blue-600"
-              >
-                ← Previous
-              </a>
-            )}
-            {nextPart && (
-              <a
-                href={`/es/stories/aventura/${currentLevel}/${nextPart}`}
-                className="underline hover:text-blue-600"
-              >
-                Next →
-              </a>
-            )}
-          </div>
 
         </div>
       </div>
