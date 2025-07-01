@@ -18,7 +18,7 @@ const sentences = [
 export default function Part1Page() {
   return (
     <div style={{ 
-      backgroundImage: "url('/images/background3.png')",
+      backgroundImage: "url('/images/background4.png')",
       backgroundRepeat: "no-repeat",
       backgroundSize: "cover",
       backgroundAttachment: "fixed",
@@ -28,7 +28,6 @@ export default function Part1Page() {
       <StoryLayout
         title="Adventure in Guatemala"
         partTitle="Part 1"
-        imageSrc="/images/aventura-thumbnail.png"
         sentences={sentences}
         imageMask={false}
       />

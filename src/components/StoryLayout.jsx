@@ -18,10 +18,14 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
     speechSynthesis.speak(utterance);
   };
 
+  const partNumber = parseInt(currentPart.split("-")[1]);
+  const previousPart = partNumber > 1 ? `part-${partNumber - 1}` : null;
+  const nextPart = partNumber < 10 ? `part-${partNumber + 1}` : null;
+
   return (
     <div className="font-sans bg-cover bg-fixed bg-center text-gray-900 min-h-screen px-4 pt-6"
          style={{ backgroundImage: "url('/images/background2.jpg')" }}>
-      
+
       {/* Top Nav */}
       <div className="fixed top-5 right-10 z-50 flex gap-6">
         <div className="relative group cursor-pointer">
@@ -54,14 +58,6 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
       {/* Story Layout */}
       <div className="flex justify-center mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap">
 
-        {/* Left Image */}
-        <div className="w-[250px]">
-          <img
-            src={imageSrc}
-            alt="Story visual"
-          />
-        </div>
-
         {/* Center Content */}
         <div className="flex flex-col items-center max-w-[700px] w-full">
           <h1 className="text-3xl font-bold text-center">{title}</h1>
@@ -85,6 +81,27 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
               <div className="translation hidden italic text-gray-600 mt-2">{s.es}</div>
             </div>
           ))}
+
+          {/* Navigation Controls */}
+          <div className="text-center mt-16 text-base">
+            {previousPart && (
+              <a
+                href={`/es/stories/aventura/${currentLevel}/${previousPart}`}
+                className="mr-6 underline hover:text-blue-600"
+              >
+                ← Previous
+              </a>
+            )}
+            {nextPart && (
+              <a
+                href={`/es/stories/aventura/${currentLevel}/${nextPart}`}
+                className="underline hover:text-blue-600"
+              >
+                Next →
+              </a>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
