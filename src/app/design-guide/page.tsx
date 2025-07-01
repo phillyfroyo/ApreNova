@@ -1,5 +1,5 @@
-// src/styles/DesignGuide.tsx
 'use client';
+// src/styles/DesignGuide.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
