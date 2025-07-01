@@ -26,3 +26,11 @@ body {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
+.mask-radial {
+  -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%);
+  mask-image: radial-gradient(circle, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 70%);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
