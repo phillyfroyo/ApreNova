@@ -2,11 +2,12 @@
 
 import { ReactNode } from 'react';
 import SessionWrapper from '@/components/SessionWrapper';
+import { SessionProvider } from 'next-auth/react';
 
-export default function ClientLayout({ children }: { children: ReactNode }) {
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionWrapper>
+    <SessionProvider>
       {children}
-    </SessionWrapper>
+    </SessionProvider>
   );
 }

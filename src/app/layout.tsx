@@ -19,10 +19,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
-  <SessionProvider>
-    {children}
-  </SessionProvider>
-</body>
+        {children}
+      </body>
     </html>
   );
 }
