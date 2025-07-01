@@ -63,6 +63,31 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
           <h1 className="text-3xl font-bold text-center">{title}</h1>
           <h2 className="text-xl text-center mb-6">{partTitle}</h2>
 
+          {/* Part Navigation Tabs */}
+          <div className="flex flex-wrap justify-center gap-2 mt-6 mb-10">
+            {[...Array(10)].map((_, i) => {
+              const part = `part-${i + 1}`;
+              const isActive = currentPart === part;
+              const greenClass = [
+                "bg-green-300", "bg-green-400", "bg-green-500", "bg-green-500", "bg-green-600",
+                "bg-green-600", "bg-green-700", "bg-green-800", "bg-green-900", "bg-emerald-900"
+              ][i];
+
+              return (
+                <a
+                  key={part}
+                  href={`/es/stories/aventura/${currentLevel}/${part}`}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`px-3 py-1 rounded text-sm font-semibold text-white transition transform
+                    ${greenClass} hover:bg-green-300 hover:scale-105
+                    ${isActive ? "ring-2 ring-black scale-105" : ""}`}
+                >
+                  PART {i + 1}
+                </a>
+              );
+            })}
+          </div>
+
           {sentences.map((s, i) => (
             <div key={i} className="my-16 text-center max-w-md relative mx-auto">
               {/* Audio/Translate icons */}
