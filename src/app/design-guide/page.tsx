@@ -1,5 +1,5 @@
 'use client';
-// src/styles/DesignGuide.tsx
+export const dynamic = 'force-dynamic';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
