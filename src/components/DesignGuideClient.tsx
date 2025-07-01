@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { H1, H2, Body, Small, Button, Badge, Card, Input } from '@/components/ui';
+import Dropdown from '@/components/ui/Dropdown';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { H1, H2, Body, Small, Button, Badge, Card, Input } from '@/components/ui';
 
 export default function DesignGuideClient() {
   const [language, setLanguage] = useState('es');
@@ -12,8 +13,8 @@ export default function DesignGuideClient() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
     };
@@ -48,60 +49,63 @@ export default function DesignGuideClient() {
       transition={{ duration: 0.5 }}
     >
       <div className="absolute top-10 right-10 flex flex-col md:flex-row gap-4">
-  {/* Classic Dropdown */}
-  <div className="inline-block relative group cursor-pointer w-fit">
-    <div className="inline-block px-4 py-2 border bg-white rounded shadow hover:bg-gray-100 whitespace-nowrap">
-      Level Select ▾
-    </div>
-    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
-      {levels.map((level) => (
-        <div
-          key={level}
-          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-          className="hover:underline cursor-pointer py-1"
-        >
-          {level.toUpperCase()}
+        <Dropdown
+          label="Shared Dropdown ▾"
+          options={levels}
+          onSelect={(level) => window.location.href = `/es/stories/aventura/${level}/part-1`}
+        />
+        <div className="inline-block relative group cursor-pointer w-fit">
+          <div className="inline-block px-4 py-2 border bg-white rounded shadow hover:bg-gray-100 whitespace-nowrap">
+            Level Select ▾
+          </div>
+          <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
+            {levels.map((level) => (
+              <div
+                key={level}
+                onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                className="hover:underline cursor-pointer py-1"
+              >
+                {level.toUpperCase()}
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-
-  {/* Styled Dropdown #1 */}
-  <div className="inline-block relative group cursor-pointer w-fit">
-    <div className="inline-block px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 whitespace-nowrap">
-      Choose Level ▾
-    </div>
-    <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
-      {levels.map((level) => (
-        <div
-          key={level}
-          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-          className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
-        >
-          {level.toUpperCase()}
+        <div className="inline-block relative group cursor-pointer w-fit">
+          <div className="inline-block px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 whitespace-nowrap">
+            Choose Level ▾
+          </div>
+          <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
+            {levels.map((level) => (
+              <div
+                key={level}
+                onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
+              >
+                {level.toUpperCase()}
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-
-  {/* Styled Dropdown #2 */}
-  <div className="inline-block relative group cursor-pointer w-fit">
-    <div className="inline-block px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold whitespace-nowrap">
-      Select Level ▾
-    </div>
-    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
-      {levels.map((level) => (
-        <div
-          key={level}
-          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-          className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
-        >
-          {level.toUpperCase()}
+        <div className="inline-block relative group cursor-pointer w-fit">
+          <div className="inline-block px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold whitespace-nowrap">
+            Select Level ▾
+          </div>
+          <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
+            {levels.map((level) => (
+              <div
+                key={level}
+                onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
+              >
+                {level.toUpperCase()}
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-</div>
+        <Link href="/about">
+          <Button variant="button1">Go to About Page</Button>
+        </Link>
+      </div>
 
       <section>
         <H1 className="mb-8">Design Guide</H1>
@@ -240,70 +244,65 @@ export default function DesignGuideClient() {
   </Card>
 </section>
 
-      <section>
-        <H2 className="mb-4">Navigate</H2>
-        <Link href="/about">
-          <Button variant="button1">Go to About Page</Button>
-        </Link>
-      </section>
-      <section>
-        <H2 className="mb-4">Dropdown Styles</H2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Classic Dropdown */}
-          <div className="relative group cursor-pointer">
-            <div className="px-3 py-2 border bg-white rounded shadow hover:bg-gray-100">
-              Level Select ▾
-            </div>
-            <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
-              {levels.map((level) => (
-                <div
-                  key={level}
-                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-                  className="hover:underline cursor-pointer py-1"
-                >
-                  {level.toUpperCase()}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Styled Dropdown #1 */}
-          <div className="relative group cursor-pointer">
-            <div className="px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50">
-              Choose Level ▾
-            </div>
-            <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
-              {levels.map((level) => (
-                <div
-                  key={level}
-                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-                  className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
-                >
-                  {level.toUpperCase()}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Styled Dropdown #2 */}
-          <div className="relative group cursor-pointer">
-            <div className="px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold">
-              Select Level ▾
-            </div>
-            <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
-              {levels.map((level) => (
-                <div
-                  key={level}
-                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
-                  className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
-                >
-                  {level.toUpperCase()}
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="absolute top-10 right-10 flex flex-col md:flex-row gap-4">
+  <Dropdown
+    label="Shared Dropdown ▾"
+    options={levels}
+    onSelect={(level) => window.location.href = `/es/stories/aventura/${level}/part-1`}
+  />
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border bg-white rounded shadow hover:bg-gray-100 whitespace-nowrap">
+      Level Select ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="hover:underline cursor-pointer py-1"
+        >
+          {level.toUpperCase()}
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 whitespace-nowrap">
+      Choose Level ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
+        >
+          {level.toUpperCase()}
+        </div>
+      ))}
+    </div>
+  </div>
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold whitespace-nowrap">
+      Select Level ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
+        >
+          {level.toUpperCase()}
+        </div>
+      ))}
+    </div>
+  </div>
+  <Link href="/about">
+    <Button variant="button1">Go to About Page</Button>
+  </Link>
+</div>
+      
     </motion.div>
   );
 }
