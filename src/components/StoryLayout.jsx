@@ -6,6 +6,8 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
   const [currentLevel, setCurrentLevel] = useState("");
   const [currentPart, setCurrentPart] = useState("");
 
+  console.log("👀 StoryLayout RENDERED");
+
   useEffect(() => {
     const pathParts = window.location.pathname.split("/");
     setCurrentLevel(pathParts[4] || "l1");
