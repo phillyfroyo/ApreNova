@@ -11,9 +11,9 @@ export default function DesignGuideClient() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
@@ -24,52 +24,85 @@ export default function DesignGuideClient() {
   }, []);
 
   const logoVariants = {
-  default: 'Default',
-  quiz: 'Quiz',
-  auth: 'Auth',
-  storiesmain: 'Stories Main',
-  corporate: 'Corporate',
-  classic: 'Classic',
-  coolgray: 'Cool Gray',
-  steel: 'Steel',
-  vibrant: 'Vibrant',
-  electric: 'Electric',
-  wave: 'Wave',
-  berryblast: 'Berry Blast',
-  glowcool: 'Glow Cool',
-  glowmint: 'Glow Mint',
-  glowroyal: 'Glow Royal',
-  glassmode: 'Glass Mode',
-  storiesfun: 'Stories Fun',
-  dashboard: 'Dashboard',
+    default: 'Default',
+    quiz: 'Quiz',
+    auth: 'Auth',
+    corporate: 'Corporate',
+    classic: 'Classic',
+    vibrant: 'Vibrant',
+    electric: 'Electric',
+    wave: 'Wave',
+    berryblast: 'Berry Blast',
+    glowcool: 'Glow Cool',
+    glowmint: 'Glow Mint',
+    glassmode: 'Glass Mode',
+  };
 
-  // 🧁 New creative variants
-  playtime: 'Playtime',
-  storybook: 'Storybook',
-  neonpop: 'Neon Pop',
-  bubblegum: 'Bubblegum',
-  starlight: 'Starlight',
-  novaflare: 'Nova Flare',
-  plasma: 'Plasma',
-  eventhorizon: 'Event Horizon',
-  goldleaf: 'Goldleaf',
-  midnight: 'Midnight',
-  pearl: 'Pearl',
-  onyx: 'Onyx',
-  hotline: 'Hotline',
-  splash: 'Splash',
-  retrobit: 'Retro Bit',
-  electricice: 'Electric Ice'
-};
-
+  const levels = ['l1', 'l2', 'l3', 'l4', 'l5'];
 
   return (
     <motion.div
-      className="p-10 space-y-12 bg-[url('/images/background3.png')] bg-cover bg-center text-foreground min-h-screen"
+      className="p-10 space-y-12 bg-[url('/images/background3.png')] bg-cover bg-center text-foreground min-h-screen overflow-y-auto"
       initial={{ y: 10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      <div className="absolute top-10 right-10 flex flex-col md:flex-row gap-4">
+  {/* Classic Dropdown */}
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border bg-white rounded shadow hover:bg-gray-100 whitespace-nowrap">
+      Level Select ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="hover:underline cursor-pointer py-1"
+        >
+          {level.toUpperCase()}
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* Styled Dropdown #1 */}
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 whitespace-nowrap">
+      Choose Level ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
+        >
+          {level.toUpperCase()}
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* Styled Dropdown #2 */}
+  <div className="inline-block relative group cursor-pointer w-fit">
+    <div className="inline-block px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold whitespace-nowrap">
+      Select Level ▾
+    </div>
+    <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
+      {levels.map((level) => (
+        <div
+          key={level}
+          onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+          className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
+        >
+          {level.toUpperCase()}
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
       <section>
         <H1 className="mb-8">Design Guide</H1>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -84,49 +117,49 @@ export default function DesignGuideClient() {
 
       <section>
         <H1 className="mb-8">Design Guide</H1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-          {/* 🧁 Soft Glow */}
-          <Card className="shadow-md hover:shadow-lg ring-1 ring-inset ring-neutral-200">
-            <H2 className="mb-2">🧁 Soft Glow</H2>
-            <Body className="mb-4">Subtle shadows and ring effects.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+  {/* 🧁 Soft Glow */}
+  <Card className="shadow-md hover:shadow-lg ring-1 ring-inset ring-neutral-200 rounded-2xl p-6">
+    <H2 className="mb-2">🧁 Soft Glow</H2>
+    <Body className="mb-4">Subtle shadows and ring effects.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
 
-          {/* 🍬 Glassmorphism */}
-          <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black">
-            <H2 className="mb-2">🍬 Glassmorphism</H2>
-            <Body className="mb-4">Semi-transparent, soft blur.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
+  {/* 🍬 Glassmorphism */}
+  <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black rounded-2xl p-6">
+    <H2 className="mb-2">🍬 Glassmorphism</H2>
+    <Body className="mb-4">Semi-transparent, soft blur.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
 
-          {/* 🔮 Interactive Animation */}
-          <Card className="transition-all duration-300 hover:scale-105 hover:rotate-1">
-            <H2 className="mb-2">🔮 Interactive Animations</H2>
-            <Body className="mb-4">Movement and fun on hover.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
+  {/* 🔮 Interactive Animation */}
+  <Card className="transition-all duration-300 hover:scale-105 hover:rotate-1 rounded-2xl p-6">
+    <H2 className="mb-2">🔮 Interactive Animations</H2>
+    <Body className="mb-4">Movement and fun on hover.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
 
-          {/* 🧨 Bold Theme */}
-          <Card className="bg-gradient-to-br from-purple-700 to-indigo-700 text-white shadow-xl">
-            <H2 className="mb-2">🧨 Bold Theme</H2>
-            <Body className="mb-4">Big contrast and punchy color.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
+  {/* 🧨 Bold Theme */}
+  <Card className="bg-gradient-to-br from-purple-700 to-indigo-700 text-white shadow-xl rounded-2xl p-6">
+    <H2 className="mb-2">🧨 Bold Theme</H2>
+    <Body className="mb-4">Big contrast and punchy color.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
 
-          {/* 🌈 Combo: Glow + Glass + Hover Scale */}
-          <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black ring-1 ring-inset shadow-md hover:shadow-lg transform transition-transform duration-300 hover:scale-[1.005] will-change-transform">
-            <H2 className="mb-2">🌈 Combo Style</H2>
-            <Body className="mb-4">Glow, glassmorphism, and soft hover animation.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
+  {/* 🌈 Combo: Glow + Glass + Hover Scale */}
+  <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black ring-1 ring-inset shadow-md hover:shadow-lg transform transition-transform duration-300 hover:scale-[1.005] will-change-transform rounded-2xl p-6">
+    <H2 className="mb-2">🌈 Combo Style</H2>
+    <Body className="mb-4">Glow, glassmorphism, and soft hover animation.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
 
-          {/* 🌥️ Glassmorphism + Glow Hover */}
-          <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black transition-shadow duration-300 hover:shadow-lg ring-1 ring-inset">
-            <H2 className="mb-2">🌥️ Glass + Glow Hover</H2>
-            <Body className="mb-4">Glass base with soft glow on hover.</Body>
-            <Button variant="button1">Try Me</Button>
-          </Card>
-        </div>
+  {/* 🍬 Glassmorphism + Glow Hover */}
+  <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black transition-shadow duration-300 hover:shadow-lg ring-1 ring-inset rounded-2xl p-6">
+    <H2 className="mb-2">🌥️ Glass + Glow Hover</H2>
+    <Body className="mb-4">Glass base with soft glow on hover.</Body>
+    <Button variant="button1">Try Me</Button>
+  </Card>
+</div>
       </section>
 
       <section>
@@ -159,7 +192,7 @@ export default function DesignGuideClient() {
 
       <section>
   <H2 className="mb-4">Card + Input Demo</H2>
-  <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black shadow-md hover:shadow-lg">
+  <Card className="bg-white/30 backdrop-blur-md border border-white/10 text-black transition-shadow duration-300 hover:shadow-lg ring-1 ring-inset rounded-2xl p-6">
     <H2 className="mb-6">Sign In</H2>
 
     <p className="text-sm italic text-black mb-1">
@@ -212,6 +245,64 @@ export default function DesignGuideClient() {
         <Link href="/about">
           <Button variant="button1">Go to About Page</Button>
         </Link>
+      </section>
+      <section>
+        <H2 className="mb-4">Dropdown Styles</H2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Classic Dropdown */}
+          <div className="relative group cursor-pointer">
+            <div className="px-3 py-2 border bg-white rounded shadow hover:bg-gray-100">
+              Level Select ▾
+            </div>
+            <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36 z-50">
+              {levels.map((level) => (
+                <div
+                  key={level}
+                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                  className="hover:underline cursor-pointer py-1"
+                >
+                  {level.toUpperCase()}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Styled Dropdown #1 */}
+          <div className="relative group cursor-pointer">
+            <div className="px-4 py-2 border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50">
+              Choose Level ▾
+            </div>
+            <div className="absolute top-full right-0 hidden group-hover:block bg-white/90 text-black border border-emerald-300 rounded-xl shadow-md p-2 w-40 z-50">
+              {levels.map((level) => (
+                <div
+                  key={level}
+                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                  className="py-2 px-4 hover:bg-emerald-100 rounded cursor-pointer"
+                >
+                  {level.toUpperCase()}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Styled Dropdown #2 */}
+          <div className="relative group cursor-pointer">
+            <div className="px-4 py-2 border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold">
+              Select Level ▾
+            </div>
+            <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-purple-300 rounded-lg shadow-lg p-2 w-40 z-50">
+              {levels.map((level) => (
+                <div
+                  key={level}
+                  onClick={() => window.location.href = `/es/stories/aventura/${level}/part-1`}
+                  className="py-2 px-4 hover:bg-purple-100 rounded cursor-pointer"
+                >
+                  {level.toUpperCase()}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
     </motion.div>
   );

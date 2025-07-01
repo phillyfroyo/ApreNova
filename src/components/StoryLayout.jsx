@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState } from "react";
+import Dropdown from "@/components/ui/Dropdown";
 
 export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
   const [currentLevel, setCurrentLevel] = useState("");
@@ -37,14 +38,14 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
     <div className="font-sans bg-cover bg-fixed bg-center text-gray-900 min-h-screen px-4 pt-6"
          style={{ backgroundImage: "url('/images/background2.jpg')" }}>
 
-          {/* Top Nav with Part Buttons */}
+      {/* Top Nav with Part Buttons */}
       <div className="fixed top-5 left-5 z-50 flex flex-wrap gap-2">
         {[...Array(10)].map((_, i) => {
           const part = `part-${i + 1}`;
           const isActive = currentPart === part;
           const greenClass = [
-            "bg-green-300", "bg-green-400", "bg-green-500", "bg-green-500", "bg-green-600",
-            "bg-green-600", "bg-green-700", "bg-green-800", "bg-green-900", "bg-emerald-900"
+            "bg-green-500", "bg-green-500", "bg-green-600", "bg-green-600", "bg-green-700",
+            "bg-green-700", "bg-green-800", "bg-green-800", "bg-emerald-800", "bg-emerald-900"
           ][i];
 
           return (
@@ -70,24 +71,15 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
           </div>
         </div>
 
-        {/* Level Select Dropdown */}
-        <div className="relative group cursor-pointer">
-          <div>Level Select ▾ <span className="font-bold uppercase">{currentLevel}</span></div>
-          <div className="absolute top-full right-0 hidden group-hover:block bg-white text-black border border-gray-300 p-2 w-36">
-            {["l1", "l2", "l3", "l4", "l5"].map((level) => (
-              <div
-                key={level}
-                onClick={() => {
-                  const part = currentPart || "part-1";
-                  window.location.href = `/es/stories/aventura/${level}/${part}`;
-                }}
-                className="hover:underline cursor-pointer py-1"
-              >
-                {level.toUpperCase()}
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Level Select Dropdown (replaced) */}
+        <Dropdown
+          label={`Level Select ▾ ${currentLevel.toUpperCase()}`}
+          options={["l1", "l2", "l3", "l4", "l5"]}
+          onSelect={(level) => {
+            const part = currentPart || "part-1";
+            window.location.href = `/es/stories/aventura/${level}/${part}`;
+          }}
+        />
       </div>
 
       {/* Story Layout */}
