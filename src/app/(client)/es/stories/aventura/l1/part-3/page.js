@@ -15,13 +15,22 @@ const sentences = [
   { en: "Still, I felt something in the air.", es: "Aun así, sentía algo en el aire." }
 ];
 
-export default function Part3Page() {
+export default function Part1Page() {
   return (
-    <StoryLayout
-      title="Adventure in Guatemala"
-      partTitle="Part 3"
-      imageSrc=""
-      sentences={sentences}
-    />
+    <div style={{ 
+      backgroundImage: "url('/images/background4.png')",
+      backgroundRepeat: "no-repeat",
+      backgroundSize: "cover",
+      backgroundAttachment: "fixed",
+      backgroundPosition: "center center",
+      minHeight: "100vh"
+    }}>
+      <StoryLayout
+        title="Adventure in Guatemala"
+        partTitle="Part 1"
+        sentences={sentences}
+        imageMask={false}
+      />
+    </div>
   );
 }

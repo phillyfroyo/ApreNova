@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
   const [currentLevel, setCurrentLevel] = useState("");
@@ -14,6 +14,19 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
     setCurrentPart(pathParts[5] || "part-1");
   }, []);
 
+  useLayoutEffect(() => {
+    const possibleGhost = [...document.querySelectorAll("button")]
+      .find(b => b.innerText === "PART 1");
+
+    if (possibleGhost) {
+      const ghostContainer = possibleGhost.closest("div");
+      if (ghostContainer && ghostContainer.style.position === "fixed") {
+        console.warn("💀 DELETING GHOST (layout effect):", ghostContainer);
+        ghostContainer.remove();
+      }
+    }
+  }, []);
+
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.cancel();
@@ -24,7 +37,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
     <div className="font-sans bg-cover bg-fixed bg-center text-gray-900 min-h-screen px-4 pt-6"
          style={{ backgroundImage: "url('/images/background2.jpg')" }}>
 
-      {/* Top Nav with Part Buttons */}
+          {/* Top Nav with Part Buttons */}
       <div className="fixed top-5 left-5 z-50 flex flex-wrap gap-2">
         {[...Array(10)].map((_, i) => {
           const part = `part-${i + 1}`;

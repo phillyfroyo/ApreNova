@@ -15,7 +15,7 @@ const sentences = [
   { en: "Still, I felt something in the air.", es: "Aun así, sentía algo en el aire." }
 ];
 
-export default function Part2Page() {
+export default function Part1Page() {
   return (
     <div style={{ 
       backgroundImage: "url('/images/background4.png')",
@@ -27,8 +27,9 @@ export default function Part2Page() {
     }}>
       <StoryLayout
         title="Adventure in Guatemala"
-        partTitle="Part 2"
+        partTitle="Part 1"
         sentences={sentences}
+        imageMask={false}
       />
     </div>
   );
