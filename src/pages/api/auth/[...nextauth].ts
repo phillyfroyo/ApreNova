@@ -40,15 +40,27 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, token }: any) {
-      session.user.id = token.sub;
-      return session;
-    },
-    async jwt({ token, user }: any) {
-      if (user) token.sub = user.id;
-      return token;
-    },
+  async jwt({ token, user }) {
+    // If user is just logging in, enrich the token
+    if (user?.email) {
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+      if (dbUser) {
+        token.nativeLanguage = dbUser.nativeLanguage;
+      }
+    }
+
+    return token;
   },
+
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.nativeLanguage = token.nativeLanguage as string;
+    }
+    return session;
+  },
+},
   pages: {
     signIn: "/es/auth/login",
   },

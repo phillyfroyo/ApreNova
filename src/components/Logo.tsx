@@ -1,4 +1,7 @@
 // src/components/Logo.tsx
+'use client'
+
+import { useSession } from 'next-auth/react'
 
 interface LogoProps {
   variant?: string;
@@ -7,6 +10,8 @@ interface LogoProps {
 }
 
 export default function Logo({ variant = 'default', size = 'text-[64px]', className = '' }: LogoProps) {
+  const { data: session } = useSession();
+
   const variants: Record<string, [string, string, string?]> = {
     default: ['text-[#1000c8]', 'text-[#5100a2]', 'font-[Alice]'],
     quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600'],
@@ -42,12 +47,21 @@ export default function Logo({ variant = 'default', size = 'text-[64px]', classN
     electricice: ['text-sky-300', 'text-teal-300', 'font-[Raleway]'],
   };
 
-  const [aprend, o, font = 'font-[Alice]'] = variants[variant] || variants.default;
+  const [aprendColor, oColor, font = 'font-[Alice]'] = variants[variant] || variants.default;
+
+  // Language logic
+  const isLoggedIn = !!session?.user;
+  const lang = session?.user?.nativeLanguage || 'es'; // default to Spanish
+  const brand = !isLoggedIn
+    ? ['Aprend', 'O']
+    : lang === 'es'
+      ? ['miAprend', 'O']
+      : ['myAprend', 'O'];
 
   return (
     <h1 className={`font-bold leading-none ${font} ${size} ${className}`}>
-      <span className={`${aprend} drop-shadow-aprenova`}>Aprend</span>
-      <span className={`${o} drop-shadow-aprenova`}>O</span>
+      <span className={`${aprendColor} drop-shadow-aprenova`}>{brand[0]}</span>
+      <span className={`${oColor} drop-shadow-aprenova`}>{brand[1]}</span>
     </h1>
   );
 }

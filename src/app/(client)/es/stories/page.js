@@ -48,8 +48,13 @@ function AccountDropdown() {
           }}
         >
           <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
-            {email}
-          </div>
+  {email}
+</div>
+{session?.user?.nativeLanguage && (
+  <div style={{ fontSize: "12px", color: "#666", marginBottom: "1rem" }}>
+    🌐 {session.user.nativeLanguage}
+  </div>
+)}
           <div
             style={{ marginBottom: "0.75rem", cursor: "pointer", color: "green" }}
             onClick={() => {
