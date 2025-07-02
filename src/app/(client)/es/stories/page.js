@@ -225,8 +225,8 @@ function StoriesPageContent() {
               className="hide-scrollbar"
             >
               <motion.img
-                src={stories[activeStory].image}
-                alt={stories[activeStory].title}
+                src={STORY_METADATA[activeStory].image}
+                alt={STORY_METADATA[activeStory].title}
                 initial={{ borderRadius: "12px" }}
                 animate={{ borderRadius: "12px" }}
                 style={{
@@ -238,12 +238,13 @@ function StoriesPageContent() {
               />
               <div style={{ padding: "1.5rem", textAlign: "center" }}>
                 <h3 style={{ fontWeight: "bold" }}>
-                  {stories[activeStory].title}
+                  {STORY_METADATA[activeStory].title}
                 </h3>
                 <p style={{ margin: "0.5rem 0 1rem" }}>
-                  {stories[activeStory].description}
+                  {STORY_METADATA[activeStory].description}
                 </p>
-                {stories[activeStory].levels.map((lvl, idx) => (
+                {STORY_METADATA[activeStory].levels.map((lvl, idx) => (
+
                   <button
                     key={idx}
                     onClick={() => {
