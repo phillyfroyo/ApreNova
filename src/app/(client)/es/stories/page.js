@@ -10,6 +10,7 @@ import { STORY_METADATA } from "@/lib/stories";
 import { getStoryUrl } from "@/lib/stories";
 import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
+import StoryModal from "@/components/StoryModal";
 
 function AccountDropdown() {
   const { data: session } = useSession();
@@ -170,110 +171,15 @@ function StoriesPageContent() {
         ))}
       </div>
 
-      <AnimatePresence>
-  {activeStory !== null && (
-    <>
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          zIndex: 99,
-        }}
-        onClick={() => {
-          setActiveStory(null);
-          setCardPosition(null);
-        }}
-      />
-      <motion.div
-        key="modal"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        style={{
-          position: "absolute",
-          top: cardPosition?.top ?? "50%",
-          left: cardPosition?.left ?? "50%",
-          width: cardPosition?.width ?? "400px",
-          height: "auto",
-          transform: "translate(0, 0)",
-          zIndex: 100,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <motion.div
-          layoutId={`story-${activeStory}`}
-          style={{
-            borderRadius: "12px",
-            maxWidth: "100%",
-            width: "400px",
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          <Card variant="glass" className="hide-scrollbar">
-            <div
-              style={{
-                minHeight: "600px",
-                maxHeight: "600px",
-                overflowY: "auto",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-              className="hide-scrollbar"
-            >
-              <motion.img
-                src={STORY_METADATA[activeStory].image}
-                alt={STORY_METADATA[activeStory].title}
-                initial={{ borderRadius: "12px" }}
-                animate={{ borderRadius: "12px" }}
-                style={{
-                  width: "100%",
-                  display: "block",
-                  objectFit: "cover",
-                  aspectRatio: "2 / 3",
-                }}
-              />
-              <div style={{ padding: "1.5rem", textAlign: "center" }}>
-                <h3 style={{ fontWeight: "bold" }}>
-                  {STORY_METADATA[activeStory].title}
-                </h3>
-                <p style={{ margin: "0.5rem 0 1rem" }}>
-                  {STORY_METADATA[activeStory].description}
-                </p>
-                {STORY_METADATA[activeStory].levels.map((lvl, idx) => (
+      <StoryModal
+  activeStory={activeStory}
+  cardPosition={cardPosition}
+  onClose={() => {
+    setActiveStory(null);
+    setCardPosition(null);
+  }}
+/>
 
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      const locale = 'es'; // or pull from router in the future
-                      const storySlug = 'aventura'; // later: derive this from the story
-                      const url = getStoryUrl({ locale, storySlug, level: lvl });
-                      window.location.href = url;
-                   }}
-                    style={{
-                      margin: "0.25rem",
-                      padding: "0.5rem 1rem",
-                      backgroundColor: "#1000c8",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Nivel {lvl.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
-    </>
-  )}
-</AnimatePresence>
     </div>
   );
 }
