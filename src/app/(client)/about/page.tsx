@@ -9,7 +9,7 @@ import Link from 'next/link';
 export default function HomePage() {
   return (
     <motion.div
-      className="p-10 bg-background text-foreground min-h-screen"
+      className="p-10 space-y-12 bg-[url('/images/background3.png')] bg-cover bg-center text-foreground min-h-screen overflow-y-auto"
       initial={{ y: 10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}

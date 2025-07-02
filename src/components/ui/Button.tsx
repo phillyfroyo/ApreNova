@@ -3,7 +3,7 @@ import React from 'react';
 import clsx from 'clsx';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'accent' | 'muted' | 'button1';
+  variant?: 'primary' | 'accent' | 'muted' | 'button1'| 'parts';
   className?: string;
 }
 
@@ -16,6 +16,8 @@ const variants: Record<string, string> = {
   muted: 'bg-gray-300 text-black hover:bg-gray-400',
   button1:
     'bg-[#1000c8] text-white drop-shadow-md hover:opacity-90 hover:scale-105',
+  parts:
+    'bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-green-300 hover:scale-105',
 };
 
 export default function Button({
