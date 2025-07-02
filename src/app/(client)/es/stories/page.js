@@ -6,6 +6,10 @@ import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from '@/components/Logo';
 import { Card } from '@/components/ui';
+import { STORY_METADATA } from "@/lib/stories";
+import { getStoryUrl } from "@/lib/stories";
+import { useUserLevel } from "@/hooks/useUserLevel";
+import { useUserSession } from "@/lib/auth";
 
 function AccountDropdown() {
   const { data: session } = useSession();
@@ -84,8 +88,8 @@ function AccountDropdown() {
 
 function StoriesPageContent() {
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-  const [selectedLevel, setSelectedLevel] = useState("all");
+  const { user, email, image, name, nativeLanguage } = useUserSession();
+  const selectedLevel = useUserLevel();
   const [activeStory, setActiveStory] = useState(null);
   const [cardPosition, setCardPosition] = useState(null);
 
@@ -94,45 +98,6 @@ function StoriesPageContent() {
   setCardPosition(rect);
   setActiveStory(index);
 };
-
-  useEffect(() => {
-  async function fetchUserLevel() {
-    const levelFromURL = searchParams.get("level");
-    const levelFromStorage = localStorage.getItem("quizLevel");
-
-    if (levelFromURL && levelFromURL !== selectedLevel) {
-      setSelectedLevel(levelFromURL);
-      return;
-    }
-
-    if (!session?.user?.email) return; // ✅ Early return if no session
-
-    try {
-      const res = await fetch(`/api/user-level?email=${session.user.email}`);
-      if (!res.ok) {
-  console.warn("Level not found or fetch failed, falling back to localStorage or default.");
-  return; // allow fallback logic to proceed
-}
-
-      const data = await res.json();
-      if (data?.level) {
-        setSelectedLevel(data.level);
-        localStorage.setItem("quizLevel", data.level); // ✅ Cache it in localStorage
-        return;
-      }
-    } catch (err) {
-      console.error("Failed to fetch level from DB", err);
-    }
-
-    if (levelFromStorage && levelFromStorage !== selectedLevel) {
-      setSelectedLevel(levelFromStorage);
-    } else if (!levelFromStorage && selectedLevel !== "l2") {
-      setSelectedLevel("l2");
-    }
-  }
-
-  fetchUserLevel();
-}, [searchParams, selectedLevel, session]);
 
   useEffect(() => {
     if (activeStory !== null) {
@@ -144,39 +109,6 @@ function StoriesPageContent() {
       document.body.style.overflow = 'auto';
     };
   }, [activeStory]);
-
-  const stories = [
-    {
-      title: "La Aventura",
-      image: "/images/aventura-thumbnail.png",
-      levels: ["l1", "l2", "l3", "l4", "l5"],
-      description: "Una serie de aventuras en Latinoamérica, perfecta para todos los niveles. Una serie de aventuras en Latinoamérica, perfecta para todos los niveles. Una serie de aventuras en Latinoamérica, perfecta para todos los niveles. Una serie de aventuras en Latinoamérica, perfecta para todos los niveles. Una serie de aventuras en Latinoamérica, perfecta para todos los niveles. Una serie de aventuras en Latinoamérica, perfecta para todos los niveles."
-    },
-    {
-      title: "El Bosque Perdido",
-      image: "/images/placeholder1.png",
-      levels: ["l2"],
-      description: "Misterios y criaturas ocultas en un bosque encantado."
-    },
-    {
-      title: "Misterio en la Selva",
-      image: "/images/placeholder2.png",
-      levels: ["l3"],
-      description: "Un arqueólogo desaparece en la selva profunda..."
-    },
-    {
-      title: "El Viaje Mágico",
-      image: "/images/placeholder3.png",
-      levels: ["l4"],
-      description: "Un tren, un mapa antiguo, y una puerta a otro mundo."
-    },
-    {
-      title: "Secretos del Desierto",
-      image: "/images/placeholder4.png",
-      levels: ["l5"],
-      description: "El pasado cobra vida entre las dunas del desierto."
-    },
-  ];
 
   return (
     <div
@@ -199,7 +131,7 @@ function StoriesPageContent() {
       </div>
 
       <div style={{ display: "flex", gap: "1.5rem", overflow: "hidden", padding: "1rem 0" }}>
-        {stories.map((story, i) => (
+        {STORY_METADATA.map((story, i) => (
           <motion.div
             key={i}
             layoutId={`story-${i}`}
@@ -314,9 +246,12 @@ function StoriesPageContent() {
                 {stories[activeStory].levels.map((lvl, idx) => (
                   <button
                     key={idx}
-                    onClick={() =>
-                      (window.location.href = `/es/stories/aventura/${lvl}/part-1`)
-                    }
+                    onClick={() => {
+                      const locale = 'es'; // or pull from router in the future
+                      const storySlug = 'aventura'; // later: derive this from the story
+                      const url = getStoryUrl({ locale, storySlug, level: lvl });
+                      window.location.href = url;
+                   }}
                     style={{
                       margin: "0.25rem",
                       padding: "0.5rem 1rem",
