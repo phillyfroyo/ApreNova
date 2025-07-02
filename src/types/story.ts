@@ -2,6 +2,7 @@
 
 export type StoryMetadata = {
   title: string;
+  slug: string;
   image: string;
   levels: string[]; // e.g., ["l1", "l2"]
   description: string;

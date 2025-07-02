@@ -7,6 +7,7 @@ import { STORY_METADATA } from "@/lib/stories";
 type StoryModalProps = {
   activeStory: number | null;
   cardPosition: DOMRect | null;
+  storySlug: string;
   onClose: () => void;
   handleLevelClick: (lvl: string) => void;
 };
@@ -14,6 +15,7 @@ type StoryModalProps = {
 export default function StoryModal({
   activeStory,
   cardPosition,
+  storySlug,
   onClose,
   handleLevelClick
 }: StoryModalProps) {

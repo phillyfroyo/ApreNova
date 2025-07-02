@@ -151,6 +151,7 @@ function StoriesPageContent() {
       <StoryModal
   activeStory={activeStory}
   cardPosition={cardPosition}
+  storySlug={activeStory !== null ? STORY_METADATA[activeStory].slug : ""}
   onClose={() => {
     setActiveStory(null);
     setCardPosition(null);
