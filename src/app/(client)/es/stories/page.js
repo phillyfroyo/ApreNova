@@ -11,6 +11,7 @@ import { getStoryUrl } from "@/lib/stories";
 import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
 import StoryModal from "@/components/StoryModal";
+import StoryCard from "@/components/StoryCard";
 
 function AccountDropdown() {
   const { data: session } = useSession();
@@ -94,12 +95,6 @@ function StoriesPageContent() {
   const [activeStory, setActiveStory] = useState(null);
   const [cardPosition, setCardPosition] = useState(null);
 
-  const handleCardClick = (index, e) => {
-  const rect = e.currentTarget.getBoundingClientRect();
-  setCardPosition(rect);
-  setActiveStory(index);
-};
-
   useEffect(() => {
     if (activeStory !== null) {
       document.body.style.overflow = 'hidden';
@@ -133,42 +128,17 @@ function StoriesPageContent() {
 
       <div style={{ display: "flex", gap: "1.5rem", overflow: "hidden", padding: "1rem 0" }}>
         {STORY_METADATA.map((story, i) => (
-          <motion.div
-            key={i}
-            layoutId={`story-${i}`}
-            whileHover={{ scale: 1.04 }}
-            onClick={(e) => handleCardClick(i, e)}
-            style={{
-              cursor: "pointer",
-              minWidth: "200px",
-              borderRadius: "12px",
-              overflow: "hidden",
-              transition: "box-shadow 0.3s ease",
-              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <img
-              src={story.image}
-              alt={story.title}
-              style={{
-                width: "100%",
-                aspectRatio: "2 / 3",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-            <p
-              style={{
-                marginTop: "0.5rem",
-                textAlign: "center",
-                fontWeight: "bold",
-                color: "#000",
-              }}
-            >
-              {story.title}
-            </p>
-          </motion.div>
-        ))}
+  <StoryCard
+    key={i}
+    index={i}
+    title={story.title}
+    image={story.image}
+    onClick={(rect) => {
+      setCardPosition(rect);
+      setActiveStory(i);
+    }}
+  />
+))}
       </div>
 
       <StoryModal
