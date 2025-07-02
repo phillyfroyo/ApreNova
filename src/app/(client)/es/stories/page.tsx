@@ -92,8 +92,8 @@ function StoriesPageContent() {
   const searchParams = useSearchParams();
   const { user, email, image, name, nativeLanguage } = useUserSession();
   const selectedLevel = useUserLevel();
-  const [activeStory, setActiveStory] = useState(null);
-  const [cardPosition, setCardPosition] = useState(null);
+  const [cardPosition, setCardPosition] = useState<DOMRect | null>(null);
+  const [activeStory, setActiveStory] = useState<number | null>(null);
 
   function handleLevelClick(lvl) {
   const locale = "es"; // We'll pull from router later
