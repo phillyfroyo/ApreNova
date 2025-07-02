@@ -56,12 +56,11 @@ export const authOptions = {
 
   session: async ({ session, token }) => {
   if (session?.user) {
+    session.user.id = token.sub;
+
+    // Only assign nativeLanguage if it exists
     if (token?.nativeLanguage) {
       session.user.nativeLanguage = token.nativeLanguage;
-    }
-
-    if (token?.sub) {
-      session.user.id = token.sub;
     }
   }
 
