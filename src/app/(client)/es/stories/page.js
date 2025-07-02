@@ -95,6 +95,13 @@ function StoriesPageContent() {
   const [activeStory, setActiveStory] = useState(null);
   const [cardPosition, setCardPosition] = useState(null);
 
+  function handleLevelClick(lvl) {
+  const locale = "es"; // We'll pull from router later
+  const storySlug = "aventura"; // We'll make this dynamic in the future
+  const url = getStoryUrl({ locale, storySlug, level: lvl });
+  window.location.href = url;
+}
+
   useEffect(() => {
     if (activeStory !== null) {
       document.body.style.overflow = 'hidden';
@@ -148,6 +155,7 @@ function StoriesPageContent() {
     setActiveStory(null);
     setCardPosition(null);
   }}
+  handleLevelClick={handleLevelClick}
 />
 
     </div>

@@ -8,12 +8,14 @@ type StoryModalProps = {
   activeStory: number | null;
   cardPosition: DOMRect | null;
   onClose: () => void;
+  handleLevelClick: (lvl: string) => void;
 };
 
 export default function StoryModal({
   activeStory,
   cardPosition,
   onClose,
+  handleLevelClick
 }: StoryModalProps) {
   if (activeStory === null) return null;
 
@@ -86,22 +88,20 @@ export default function StoryModal({
                 <p style={{ margin: "0.5rem 0 1rem" }}>{story.description}</p>
                 {story.levels.map((lvl, idx) => (
                   <button
-                    key={idx}
-                    onClick={() =>
-                      (window.location.href = `/es/stories/aventura/${lvl}/part-1`)
-                    }
-                    style={{
-                      margin: "0.25rem",
-                      padding: "0.5rem 1rem",
-                      backgroundColor: "#1000c8",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Nivel {lvl.toUpperCase()}
-                  </button>
+                   key={idx}
+                   onClick={() => handleLevelClick(lvl)}
+                   style={{
+                    margin: "0.25rem",
+                    padding: "0.5rem 1rem",
+                    backgroundColor: "#1000c8",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Nivel {lvl.toUpperCase()}
+                </button>
                 ))}
               </div>
             </div>
