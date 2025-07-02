@@ -15,8 +15,8 @@ export const authOptions = {
     }),
 
     CredentialsProvider({
-      name: "Credentials",
-      credentials: {
+        name: "Credentials",
+        credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
@@ -54,12 +54,17 @@ export const authOptions = {
     return token;
   },
 
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.nativeLanguage = token.nativeLanguage as string;
+  session: async ({ session, token }) => {
+  if (session?.user) {
+    if (token?.nativeLanguage) {
+      session.user.nativeLanguage = token.nativeLanguage;
     }
-    return session;
-  },
+    if (token?.sub) {
+      session.user.id = token.sub;
+    }
+  }
+  return session;
+}
 },
   pages: {
     signIn: "/es/auth/login",
