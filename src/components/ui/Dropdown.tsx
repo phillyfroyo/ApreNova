@@ -47,12 +47,12 @@ export default function Dropdown({
       ref={dropdownRef}
       className="inline-block relative w-fit"
     >
-      <div
-        onClick={() => setOpen((prev) => !prev)}
-        className={`${baseStyles[variant]} cursor-pointer`}
-      >
-        {label}
-      </div>
+      <button
+  onClick={() => setOpen((prev) => !prev)}
+  className={`${baseStyles[variant]} cursor-pointer w-full text-left`}
+>
+  {label}
+</button>
       {open && (
         <div
           className="absolute top-full left-0 mt-1 w-full bg-white/30 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50"
