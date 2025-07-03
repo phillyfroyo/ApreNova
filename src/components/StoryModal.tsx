@@ -81,7 +81,7 @@ export default function StoryModal({
       borderRadius: "18px",
     }}
   />
-          <Card className="glass-card hide-scrollbar">
+          <Card className="glass-card hide-scrollbar px-[0.25rem]">
             <div
               style={{
                 minHeight: "300px",
@@ -132,25 +132,18 @@ export default function StoryModal({
 >
   Leerme
 </button>
-              <div style={{ padding: "1.5rem", textAlign: "center" }}>
+
+              <div className="px-[0.25rem] text-center">
                 <h3 style={{ fontWeight: "bold" }}>{story.title}</h3>
-                <p style={{ margin: "0.5rem 0 1rem" }}>{story.description}</p>
+                <p className="my-4 text-sm text-black">{story.description}</p>
                 {story.levels.map((lvl, idx) => (
-                  <button
+                  <span
                    key={idx}
                    onClick={() => handleLevelClick(lvl)}
-                   style={{
-                    margin: "0.25rem",
-                    padding: "0.5rem 1rem",
-                    backgroundColor: "#1000c8",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Nivel {lvl.toUpperCase()}
-                </button>
+                   className="inline-block m-1 cursor-pointer rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
+                  >
+                   Nivel {lvl.toUpperCase()}
+                  </span>
                 ))}
               </div>
             </div>
