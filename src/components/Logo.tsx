@@ -12,6 +12,13 @@ interface LogoProps {
 export default function Logo({ variant = 'default', size = 'text-[64px]', className = '' }: LogoProps) {
   const { data: session } = useSession();
 
+  const label =
+    session?.user?.nativeLanguage === 'es'
+      ? 'miAprendO'
+      : session?.user?.nativeLanguage === 'en'
+      ? 'myAprendO'
+      : 'AprendO';
+
   const variants: Record<string, [string, string, string?]> = {
     default: ['text-[#1000c8]', 'text-[#5100a2]', 'font-[Alice]'],
     quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600'],

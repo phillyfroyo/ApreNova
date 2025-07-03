@@ -2,7 +2,10 @@
 
 import StoryLayout from "@/components/StoryLayout";
 
-const sentences = [
+export default function StoryPage({ params }: { params: { storySlug: string; level: string; part: string } }) {
+  const { storySlug, level, part } = params;
+
+  const sentences = [
   { en: "My name is Pedro, and I live in a quiet town in Guatemala.", es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala." },
   { en: "One afternoon, my friend Juan came over with something in his hand. It was a map.", es: "Una tarde, mi amigo Juan vino con algo en la mano. Era un mapa." },
   { en: "The paper looked old, like it had been hidden for a long time.", es: "El papel parecía viejo, como si hubiera estado escondido por mucho tiempo." },
@@ -15,8 +18,7 @@ const sentences = [
   { en: "Still, I felt something in the air.", es: "Aun así, sentía algo en el aire." }
 ];
 
-export default function Part1Page() {
-  return (
+ return (
     <div style={{ 
       backgroundImage: "url('/images/background4.png')",
       backgroundRepeat: "no-repeat",
@@ -26,11 +28,11 @@ export default function Part1Page() {
       minHeight: "100vh"
     }}>
       <StoryLayout
-        title="Adventure in Guatemala"
-        partTitle="Part 1"
-        sentences={sentences}
-        imageMask={false}
-      />
+  title="Adventure in Guatemala"
+  partTitle="Part 1"
+  sentences={sentences}
+  imageSrc="/images/aventura-thumbnail.png"
+/>
     </div>
   );
 }

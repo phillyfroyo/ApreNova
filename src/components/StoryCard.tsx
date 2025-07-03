@@ -24,9 +24,21 @@ export default function StoryCard({
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     onClick(rect);
   }}
-  whileHover={{ scale: 1.05 }}
+  whileHover={
+  typeof window !== "undefined" &&
+  window.matchMedia("(hover: hover)").matches
+    ? { scale: 1.05 }
+    : undefined // ✅ not false
+}
   transition={{ duration: 0.2, ease: "easeOut" }}
-  style={{ cursor: "pointer", borderRadius: "12px", overflow: "hidden" }}
+  style={{
+    cursor: "pointer",
+    borderRadius: "12px",
+    overflow: "hidden",
+    width: "160px",              // ← Adjust to desired size
+    flexShrink: 0,               // ← Prevent squishing in flex scroll
+    scrollSnapAlign: "start",    // ← Carousel snapping
+  }}
 >
   <img
     src={image}
@@ -39,6 +51,18 @@ export default function StoryCard({
       borderRadius: "12px"
     }}
   />
+  <p
+        style={{
+          textAlign: "center",
+          fontSize: "0.875rem", // ~text-sm
+          marginTop: "0.5rem",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {title}
+      </p>
 </motion.div>
   );
 }

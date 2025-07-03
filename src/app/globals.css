@@ -34,3 +34,14 @@ body {
   mask-size: contain;
 }
 
+.story-scroll-container::before,
+.story-scroll-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2rem;
+  pointer-events: none;
+  z-index: 10;
+}
+

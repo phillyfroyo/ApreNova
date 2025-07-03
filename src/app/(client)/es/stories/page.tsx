@@ -114,39 +114,52 @@ function StoriesPageContent() {
   }, [activeStory]);
 
   return (
-    <div
-      style={{
-        padding: "2rem",
-        position: "relative",
-        backgroundImage: "url('/images/background3.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        minHeight: "100vh",
-      }}
-    >
-      <AccountDropdown />
+    <div style={{
+    padding: "2rem",
+    position: "relative",
+    backgroundImage: "url('/images/background3.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    minHeight: "100vh",
+  }}>
+    <AccountDropdown />
 
-      <div className="text-center mb-6">
-        <Logo variant="storiesmain" />
-        <h2 style={{ marginTop: "0.5rem", fontSize: "1.25rem" }}>
-          Historias ({selectedLevel})
-        </h2>
-      </div>
+    <div className="text-center" style={{ marginBottom: "2rem" }}>
+      <Logo variant="storiesmain" size="text-[40px]" className="mx-auto" />
+      <h2 style={{ marginTop: "0.5rem", fontSize: "1.25rem", marginBottom: "1rem" }}>
+        Historias ({selectedLevel})
+      </h2>
+    </div>
 
-      <div style={{ display: "flex", gap: "1.5rem", overflow: "hidden", padding: "1rem 0" }}>
-        {STORY_METADATA.map((story, i) => (
-  <StoryCard
-    key={i}
-    index={i}
-    title={story.title}
-    image={story.image}
-    onClick={(rect) => {
-      setCardPosition(rect);
-      setActiveStory(i);
-    }}
-  />
-))}
+    <div style={{ position: "relative" }}>
+      <div
+        style={{
+          position: "relative",               // 👈 add this
+          display: "flex",
+          gap: "1.5rem",
+          overflowX: "auto",
+          paddingLeft: "1rem",
+          paddingRight: "1rem",
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        >
+         {STORY_METADATA.map((story, i) => (
+           <StoryCard
+             key={i}
+             index={i}
+             title={story.title}
+             image={story.image}
+             onClick={(rect) => {
+              setCardPosition(rect);
+              setActiveStory(i);
+            }}
+          />
+        ))}
       </div>
+    </div> {/* Close scroll wrapper */}
 
       <StoryModal
   activeStory={activeStory}
@@ -157,9 +170,9 @@ function StoriesPageContent() {
     setCardPosition(null);
   }}
   handleLevelClick={handleLevelClick}
+  user={user} // ✅ Add this line
 />
-
-    </div>
+    </div> 
   );
 }
 

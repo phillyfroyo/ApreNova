@@ -10,6 +10,7 @@ type StoryModalProps = {
   storySlug: string;
   onClose: () => void;
   handleLevelClick: (lvl: string) => void;
+  user: any;
 };
 
 export default function StoryModal({
@@ -17,7 +18,8 @@ export default function StoryModal({
   cardPosition,
   storySlug,
   onClose,
-  handleLevelClick
+  handleLevelClick,
+  user,
 }: StoryModalProps) {
   if (activeStory === null) return null;
 
@@ -62,14 +64,33 @@ export default function StoryModal({
             position: "relative",
           }}
         >
+          {/* 🔽 Background image layer */}
+  <motion.img
+    src={story.image}
+    alt={story.title}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      zIndex: 0,
+      borderRadius: "18px",
+    }}
+  />
           <Card className="glass-card hide-scrollbar">
             <div
               style={{
-                minHeight: "600px",
-                maxHeight: "600px",
+                minHeight: "300px",
+                maxHeight: "300px",
                 overflowY: "auto",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
+                position: "relative",
+                zIndex: 1,
               }}
               className="hide-scrollbar"
             >
@@ -85,6 +106,27 @@ export default function StoryModal({
                   aspectRatio: "2 / 3",
                 }}
               />
+
+              <button
+  onClick={() => {
+    const level = user?.quizLevel?.toLowerCase?.() || 'l2';
+    const url = `/es/stories/${storySlug}/${level}/part-1`;
+    window.location.href = url;
+  }}
+  style={{
+    margin: "1rem auto 1rem",
+    display: "block",
+    padding: "0.5rem 1rem",
+    fontWeight: "bold",
+    backgroundColor: "#1000c8",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+  }}
+>
+  Leerme
+</button>
               <div style={{ padding: "1.5rem", textAlign: "center" }}>
                 <h3 style={{ fontWeight: "bold" }}>{story.title}</h3>
                 <p style={{ margin: "0.5rem 0 1rem" }}>{story.description}</p>
