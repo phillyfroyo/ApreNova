@@ -5,6 +5,7 @@ import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import { useParams } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import { STORY_THEMES } from "@/components/storyThemes";
 
 export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel }) {
   const [currentLevel, setCurrentLevel] = useState(initialLevel || "");
@@ -12,6 +13,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
   const [menuOpen, setMenuOpen] = useState(false);
   const params = useParams();
   const storySlug = params?.storySlug;
+  const theme = STORY_THEMES[storySlug] || STORY_THEMES["aventura"];
 
   useEffect(() => {
     const pathParts = window.location.pathname.split("/");
@@ -39,9 +41,10 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
   };
 
   return (
-    <div className="font-sans bg-cover bg-fixed bg-center text-gray-900 min-h-screen px-4 sm:px-10 pt-6 pb-16"
-         style={{ backgroundImage: "url('/images/background4.png')" }}>
-
+    <div
+  className={`min-h-screen px-4 sm:px-10 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
+  style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
+>
       {/* Fixed Hamburger Button */}
       <header className="fixed top-4 left-4 z-50">
   <button
@@ -107,9 +110,9 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
           const nextDisabled = partNumber === 10;
 
           const buttonClass = (disabled, color) =>
-            `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
-              disabled ? 'opacity-40 cursor-default' : 'hover:bg-green-300 hover:scale-105'
-            }`;
+  `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
+    disabled ? 'opacity-40 cursor-default' : `${theme.hoverAccentColor} hover:scale-105`
+  }`;
 
           return (
             <>
