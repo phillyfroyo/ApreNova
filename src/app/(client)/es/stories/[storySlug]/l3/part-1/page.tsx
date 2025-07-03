@@ -1,6 +1,8 @@
 import StoryLayout from "@/components/StoryLayout";
 
 export default function Page({ params }: any) {
+  const storySlug = "aventura";
+
   const sentences = [
     { en: "My name is Pedro, and I live in a quiet town in Guatemala.", es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala." },
     { en: "One afternoon, my friend Juan came over with something in his hand. It was a map.", es: "Una tarde, mi amigo Juan vino con algo en la mano. Era un mapa." },
@@ -18,6 +20,7 @@ export default function Page({ params }: any) {
     <StoryLayout
       title="Adventure in Guatemala"
       partTitle="Part 1"
+      storySlug={storySlug}
       sentences={sentences}
       imageSrc="/images/aventura-thumbnail.png"
       initialLevel="l2"
