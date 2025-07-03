@@ -22,10 +22,6 @@ export default function StoryModal({
   handleLevelClick,
   user,
 }: StoryModalProps) {
-  if (activeStory === null) return null;
-
-  const story = STORY_METADATA[activeStory];
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtTop, setIsAtTop] = useState(true);
 
@@ -37,6 +33,11 @@ export default function StoryModal({
   useEffect(() => {
     handleScroll();
   }, []);
+
+  if (activeStory === null) return null;
+
+  const story = STORY_METADATA[activeStory];
+
 
   return (
     <AnimatePresence>
