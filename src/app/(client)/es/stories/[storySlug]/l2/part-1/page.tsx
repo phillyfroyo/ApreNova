@@ -1,14 +1,10 @@
 import StoryLayout from "@/components/StoryLayout";
 
-interface PageProps {
-  params: {
-    storySlug: string;
-    level: string;
-    part: string;
-  };
-}
-
-export default async function Page({ params }: PageProps) {
+export default async function Page({
+  params,
+}: {
+  params: { storySlug: string; level: string; part: string };
+}) {
   const sentences = [
     { en: "My name is Pedro, and I live in a quiet town in Guatemala.", es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala." },
     { en: "One afternoon, my friend Juan came over with something in his hand. It was a map.", es: "Una tarde, mi amigo Juan vino con algo en la mano. Era un mapa." },
