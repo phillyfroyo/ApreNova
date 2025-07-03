@@ -139,7 +139,8 @@ export default function StoryModal({
                   const url = `/es/stories/${storySlug}/${level}/part-1`;
                   window.location.href = url;
                 }}
-                className="mx-auto my-4 block bg-amber-800 hover:bg-amber-700 text-white"
+                className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"
+
               >
                 Read me
               </Button>
