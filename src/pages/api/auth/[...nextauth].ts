@@ -49,14 +49,16 @@ export const authOptions = {
     if (dbUser?.nativeLanguage) {
       token.nativeLanguage = dbUser.nativeLanguage;
     }
+    if (dbUser?.quizLevel) {
+        token.quizLevel = dbUser.quizLevel;
   }
-
+  }
   return token;
 },
 
   session: async ({ session, token }) => {
-  if (session?.user) {
-    session.user.id = token.sub;
+  if (session.user && token.quizLevel) {
+      session.user.quizLevel = token.quizLevel as string;
 
     // Only assign nativeLanguage if it exists
     if (token?.nativeLanguage) {

@@ -28,6 +28,8 @@ export default function ResultsPage() {
     saveLevelToDB();
 
     const storedLevel = localStorage.getItem('quizLevel') || 'l1';
+    localStorage.setItem('level', storedLevel); // ✅ this is the key "Leerme" reads from
+    
     const levelMap = {
       l1: 'Brand New',
       l2: 'Beginner',

@@ -109,7 +109,12 @@ export default function StoryModal({
 
               <button
   onClick={() => {
-    const level = user?.quizLevel?.toLowerCase?.() || 'l2';
+    const storedLevel = typeof window !== "undefined" ? localStorage.getItem("level") : null;
+    const level =
+      user?.quizLevel?.toLowerCase?.() ||
+      storedLevel?.toLowerCase?.() ||
+      "l2";
+
     const url = `/es/stories/${storySlug}/${level}/part-1`;
     window.location.href = url;
   }}
