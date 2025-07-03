@@ -104,6 +104,8 @@ export default function DesignGuideClient() {
           <Badge level="level1">Level 1</Badge>
           <Badge level="level2">Level 2</Badge>
           <Badge level="level3">Level 3</Badge>
+          <Badge level="level4">Level 4</Badge>
+          <Badge level="level5">Level 5</Badge>
         </div>
       </section>
 

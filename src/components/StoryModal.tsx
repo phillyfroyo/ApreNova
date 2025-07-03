@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "@/components/ui";
+import { Card, Badge, Button } from "@/components/ui";
 import { STORY_METADATA } from "@/lib/stories";
+import { useRef, useState, useEffect } from "react";
 
 type StoryModalProps = {
   activeStory: number | null;
@@ -24,6 +25,18 @@ export default function StoryModal({
   if (activeStory === null) return null;
 
   const story = STORY_METADATA[activeStory];
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    setIsAtTop(scrollRef.current.scrollTop === 0);
+  };
+
+  useEffect(() => {
+    handleScroll();
+  }, []);
 
   return (
     <AnimatePresence>
@@ -65,27 +78,29 @@ export default function StoryModal({
           }}
         >
           {/* 🔽 Background image layer */}
-  <motion.img
-    src={story.image}
-    alt={story.title}
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-      zIndex: 0,
-      borderRadius: "18px",
-    }}
-  />
+          <motion.img
+            src={story.image}
+            alt={story.title}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 0,
+              borderRadius: "18px",
+            }}
+          />
           <Card className="glass-card hide-scrollbar px-[0.25rem]">
             <div
+              ref={scrollRef}
+              onScroll={handleScroll}
               style={{
-                minHeight: "300px",
-                maxHeight: "300px",
+                minHeight: "325px",
+                maxHeight: "325px",
                 overflowY: "auto",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
@@ -94,6 +109,7 @@ export default function StoryModal({
               }}
               className="hide-scrollbar"
             >
+
               <motion.img
                 src={story.image}
                 alt={story.title}
@@ -107,44 +123,50 @@ export default function StoryModal({
                 }}
               />
 
-              <button
-  onClick={() => {
-    const storedLevel = typeof window !== "undefined" ? localStorage.getItem("level") : null;
-    const level =
-      user?.quizLevel?.toLowerCase?.() ||
-      storedLevel?.toLowerCase?.() ||
-      "l2";
+              <Button
+                variant="parts"
+                onClick={() => {
+                  const storedLevel =
+                    typeof window !== "undefined"
+                      ? localStorage.getItem("level")
+                      : null;
+                  const level =
+                    user?.quizLevel?.toLowerCase?.() ||
+                    storedLevel?.toLowerCase?.() ||
+                    "l2";
 
-    const url = `/es/stories/${storySlug}/${level}/part-1`;
-    window.location.href = url;
-  }}
-  style={{
-    margin: "1rem auto 1rem",
-    display: "block",
-    padding: "0.5rem 1rem",
-    fontWeight: "bold",
-    backgroundColor: "#1000c8",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-  }}
->
-  Leerme
-</button>
+                  const url = `/es/stories/${storySlug}/${level}/part-1`;
+                  window.location.href = url;
+                }}
+                className="mx-auto my-4 block bg-amber-800 hover:bg-amber-700 text-white"
+              >
+                Read me
+              </Button>
 
-              <div className="px-[0.25rem] text-center">
+              <div className="text-center">
                 <h3 style={{ fontWeight: "bold" }}>{story.title}</h3>
                 <p className="my-4 text-sm text-black">{story.description}</p>
-                {story.levels.map((lvl, idx) => (
-                  <span
-                   key={idx}
-                   onClick={() => handleLevelClick(lvl)}
-                   className="inline-block m-1 cursor-pointer rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
-                  >
-                   Nivel {lvl.toUpperCase()}
-                  </span>
-                ))}
+
+                <p className="text-xs font-semibold text-gray-600 mb-2">
+                  Available in levels:
+                </p>
+
+                <div className="flex flex-wrap justify-center gap-2">
+                  {story.levels.map((lvl, idx) => {
+                    const badgeLevel = `level${lvl.replace("l", "")}` as
+                      | "level1"
+                      | "level2"
+                      | "level3"
+                      | "level4"
+                      | "level5";
+
+                    return (
+                      <Badge key={idx} level={badgeLevel}>
+                        Level {lvl.toUpperCase()}
+                      </Badge>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </Card>
