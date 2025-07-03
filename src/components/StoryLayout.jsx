@@ -6,12 +6,14 @@ import Button from "@/components/ui/Button";
 import { useParams } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { STORY_THEMES } from "@/components/storyThemes";
+import { useRef } from "react";
 
 export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel, storySlug, }) {
   const [currentLevel, setCurrentLevel] = useState(initialLevel || "");
   const [currentPart, setCurrentPart] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = STORY_THEMES[storySlug] || STORY_THEMES["aventura"];
+  const audioRefs = useRef(new Map());
 
   useEffect(() => {
     const pathParts = window.location.pathname.split("/");
@@ -156,19 +158,35 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
   onClick={() => {
     const partNum = currentPart.replace("part-", "");
     const audioPath = `/audio/${storySlug}/${currentLevel}/p${partNum}/line${i + 1}.mp3`;
-  
-    // 🔍 Debug Log
+
     console.log("🔊 audioPath:", audioPath);
-    console.log("storySlug:", storySlug);
-    console.log("currentLevel:", currentLevel);
-    console.log("currentPart:", currentPart);
-    console.log("line index:", i);
-  
+
+    const existingAudio = audioRefs.current.get(i);
+
+    // ✅ If MP3 is playing, pause and reset
+    if (existingAudio && !existingAudio.paused) {
+      existingAudio.pause();
+      existingAudio.currentTime = 0;
+      return;
+    }
+
+    // ✅ If TTS is active, cancel it
+    if (!existingAudio && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      return;
+    }
+
+    // Create and attempt to play audio file
     const audio = new Audio(audioPath);
 
-    // Fallback: if audio fails to load/play, use speechSynthesis
     audio.onerror = () => {
-      if ('speechSynthesis' in window) {
+      audioRefs.current.delete(i);
+
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+
+      if ("speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(s.en);
         utterance.lang = "en-US";
         window.speechSynthesis.speak(utterance);
@@ -177,7 +195,8 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
       }
     };
 
-    audio.play();
+    audioRefs.current.set(i, audio);
+    audio.play().catch(() => {});
   }}
   className="hover:scale-110 transition"
 >
