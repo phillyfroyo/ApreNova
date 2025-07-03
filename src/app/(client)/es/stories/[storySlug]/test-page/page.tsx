@@ -3,7 +3,7 @@ import StoryLayout from "@/components/StoryLayout";
 export default async function Page({
   params,
 }: {
-  params: { storySlug: string; level: string; part: string };
+  params: { storySlug: string; part: string };
 }) {
   const sentences = [
     { en: "My name is Pedro, and I live in a quiet town in Guatemala.", es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala." },
@@ -32,7 +32,7 @@ export default async function Page({
         partTitle="Part 1"
         sentences={sentences}
         imageSrc="/images/aventura-thumbnail.png"
-        initialLevel={params.level}
+        initialLevel="l2"
       />
     </div>
   );
