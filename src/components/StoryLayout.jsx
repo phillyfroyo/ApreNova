@@ -7,12 +7,10 @@ import { useParams } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { STORY_THEMES } from "@/components/storyThemes";
 
-export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel }) {
+export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel, storySlug, }) {
   const [currentLevel, setCurrentLevel] = useState(initialLevel || "");
   const [currentPart, setCurrentPart] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const params = useParams();
-  const storySlug = params?.storySlug;
   const theme = STORY_THEMES[storySlug] || STORY_THEMES["aventura"];
 
   useEffect(() => {
@@ -154,7 +152,38 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
             <div key={i} className="my-12 sm:my-16 text-center max-w-md relative mx-auto">
               {/* Audio/Translate icons */}
               <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-5 justify-center mb-2 sm:mb-0">
-                <button onClick={() => speak(s.en)} className="hover:scale-110 transition">🔊</button>
+                <button
+  onClick={() => {
+    const partNum = currentPart.replace("part-", "");
+    const audioPath = `/audio/${storySlug}/${currentLevel}/p${partNum}/line${i + 1}.mp3`;
+  
+    // 🔍 Debug Log
+    console.log("🔊 audioPath:", audioPath);
+    console.log("storySlug:", storySlug);
+    console.log("currentLevel:", currentLevel);
+    console.log("currentPart:", currentPart);
+    console.log("line index:", i);
+  
+    const audio = new Audio(audioPath);
+
+    // Fallback: if audio fails to load/play, use speechSynthesis
+    audio.onerror = () => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(s.en);
+        utterance.lang = "en-US";
+        window.speechSynthesis.speak(utterance);
+      } else {
+        console.warn("TTS not supported and audio failed:", audioPath);
+      }
+    };
+
+    audio.play();
+  }}
+  className="hover:scale-110 transition"
+>
+  🔊
+</button>
+
                 <button
                   onClick={(e) => {
                     const t = e.target.closest('div').parentElement.querySelector('.translation');
