@@ -153,7 +153,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
           {sentences.map((s, i) => (
             <div key={i} className="my-12 sm:my-16 text-center max-w-md relative mx-auto">
               {/* Audio/Translate icons */}
-              <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-1 justify-center mb-2 sm:mb-0">
+              <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-5 justify-center mb-2 sm:mb-0">
                 <button onClick={() => speak(s.en)} className="hover:scale-110 transition">🔊</button>
                 <button
                   onClick={(e) => {
