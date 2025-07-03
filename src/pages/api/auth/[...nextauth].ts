@@ -57,7 +57,7 @@ export const authOptions = {
 },
 
   session: async ({ session, token }) => {
-  if (session.user && token.quizLevel) {
+  if (session.user && token.quizLevel) { // force git to see change
       session.user.quizLevel = token.quizLevel as string;
 
     // Only assign nativeLanguage if it exists
