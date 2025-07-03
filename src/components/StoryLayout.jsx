@@ -3,10 +3,14 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
+import { useParams } from "next/navigation";
 
-export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
-  const [currentLevel, setCurrentLevel] = useState("");
+export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel }) {
+
+  const [currentLevel, setCurrentLevel] = useState(initialLevel || "");
   const [currentPart, setCurrentPart] = useState("");
+  const params = useParams();
+  const storySlug = params?.storySlug;
 
   console.log("👀 StoryLayout RENDERED");
 
@@ -54,7 +58,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
               key={part}
               variant="parts"
               onClick={() => {
-              window.location.href = `/es/stories/aventura/${currentLevel}/${part}`;
+              window.location.href = `/es/stories/${storySlug}/${currentLevel}/${part}`;
              }}
               className={isActive ? "ring-2 ring-black scale-105" : ""}
             >
@@ -66,33 +70,44 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
 
       {/* Prev/Next Buttons */}
       <div className="fixed top-[72px] left-5 z-50 flex gap-2">
-        {(() => {
-          const partNumber = parseInt(currentPart.replace('part-', ''));
-          const prevDisabled = partNumber === 1;
-          const nextDisabled = partNumber === 10;
+  {(() => {
+    const partNumber = parseInt(currentPart.replace('part-', ''));
+    const prevDisabled = partNumber === 1;
+    const nextDisabled = partNumber === 10;
 
-          const buttonClass = (disabled, color) => `px-3 py-1 rounded text-sm font-semibold text-white transition transform ${color} ${disabled ? 'opacity-40 cursor-default' : 'hover:bg-green-300 hover:scale-105'}`;
+    const buttonClass = (disabled, color) =>
+      `px-3 py-1 rounded text-sm font-semibold text-white transition transform ${color} ${
+        disabled ? 'opacity-40 cursor-default' : 'hover:bg-green-300 hover:scale-105'
+      }`;
 
-          return (
-            <>
-              <a
-                className={buttonClass(prevDisabled, 'bg-green-600')}
-                href={prevDisabled ? undefined : `/es/stories/aventura/${currentLevel}/part-${partNumber - 1}`}
-                onClick={e => prevDisabled && e.preventDefault()}
-              >
-                ⬅ Prev
-              </a>
-              <a
-                className={buttonClass(nextDisabled, 'bg-green-700')}
-                href={nextDisabled ? undefined : `/es/stories/aventura/${currentLevel}/part-${partNumber + 1}`}
-                onClick={e => nextDisabled && e.preventDefault()}
-              >
-                Next ➡
-              </a>
-            </>
-          );
-        })()}
-      </div>
+    return (
+      <>
+        <a
+          className={buttonClass(prevDisabled, 'bg-green-600')}
+          href={
+            prevDisabled
+              ? undefined
+              : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
+          }
+          onClick={(e) => prevDisabled && e.preventDefault()}
+        >
+          ⬅ Prev
+        </a>
+        <a
+          className={buttonClass(nextDisabled, 'bg-green-700')}
+          href={
+            nextDisabled
+              ? undefined
+              : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
+          }
+          onClick={(e) => nextDisabled && e.preventDefault()}
+        >
+          Next ➡
+        </a>
+      </>
+    );
+  })()}
+</div>
 
       {/* Top Right Dropdowns */}
       <div className="fixed top-5 right-10 z-50 flex gap-6">
@@ -113,7 +128,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences }) {
           options={["l1", "l2", "l3", "l4", "l5"]}
           onSelect={(level) => {
             const part = currentPart || "part-1";
-            window.location.href = `/es/stories/aventura/${level}/${part}`;
+            window.location.href = `/es/stories/${storySlug}/${level}/${part}`;
           }}
         />
       </div>
