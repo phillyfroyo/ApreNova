@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
 
-export default function StoryLayout({ sentences, initialLevel, storySlug, title, imageSrc }) {
+export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
   const [activeAudio, setActiveAudio] = useState(null);
   const [lineWidths, setLineWidths] = useState({});
   const progressBarRef = useRef(null);
