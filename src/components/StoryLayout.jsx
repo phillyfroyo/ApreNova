@@ -157,7 +157,7 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
                 <button
   onClick={() => {
     const partNum = currentPart.replace("part-", "");
-    const audioPath = `/audio/${storySlug}/${currentLevel}/p${partNum}/line${i + 1}.mp3`;
+    const audioPath = `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`;
 
     console.log("🔊 audioPath:", audioPath);
 
