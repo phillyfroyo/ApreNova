@@ -1,42 +1,49 @@
 "use client";
-
-import { useEffect, useLayoutEffect, useState } from "react";
-import Dropdown from "@/components/ui/Dropdown";
-import Button from "@/components/ui/Button";
-import { useParams } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { STORY_THEMES } from "@/components/storyThemes";
-import { useRef } from "react";
+import Link from "next/link";
+import { Menu, X } from "lucide-react";
+import Dropdown from "@/components/ui/Dropdown";
+import Button from "@/components/ui/Button"; // ✅ correct for default exports
 
-export default function StoryLayout({ title, partTitle, imageSrc, sentences, initialLevel, storySlug, }) {
-  const [currentLevel, setCurrentLevel] = useState(initialLevel || "");
-  const [currentPart, setCurrentPart] = useState("");
+export default function StoryLayout({ sentences, initialLevel, storySlug, title, partTitle }) {
+  const [activeAudio, setActiveAudio] = useState(null);
+  const [lineWidths, setLineWidths] = useState({});
+  const progressBarRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const textRefs = useRef([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES["aventura"];
-  const audioRefs = useRef(new Map());
-  const [activeAudio, setActiveAudio] = useState<null | {
-  index: number;
-  path: string;
-}>(null);
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const pathParts = pathname.split("/");
+  const currentLevel = pathParts[4] || initialLevel || "l1";
+  const currentPart = pathParts[5] || "part-1";
+
+  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
   useEffect(() => {
-    const pathParts = window.location.pathname.split("/");
-    setCurrentLevel(pathParts[4] || "l1");
-    setCurrentPart(pathParts[5] || "part-1");
-  }, []);
+    const handleGlobalMove = (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      handleDrag(e);
+    };
+    const handleGlobalUp = () => setIsDragging(false);
 
-  useLayoutEffect(() => {
-    const possibleGhost = [...document.querySelectorAll("button")]
-      .find(b => b.innerText === "PART 1");
+    window.addEventListener("mousemove", handleGlobalMove);
+    window.addEventListener("touchmove", handleGlobalMove, { passive: false });
+    window.addEventListener("mouseup", handleGlobalUp);
+    window.addEventListener("touchend", handleGlobalUp);
 
-    if (possibleGhost) {
-      const ghostContainer = possibleGhost.closest("div");
-      if (ghostContainer && ghostContainer.style.position === "fixed") {
-        console.warn("💀 DELETING GHOST (layout effect):", ghostContainer);
-        ghostContainer.remove();
-      }
-    }
-  }, []);
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMove);
+      window.removeEventListener("touchmove", handleGlobalMove);
+      window.removeEventListener("mouseup", handleGlobalUp);
+      window.removeEventListener("touchend", handleGlobalUp);
+    };
+  }, [isDragging]);
 
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -44,22 +51,106 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
     speechSynthesis.speak(utterance);
   };
 
+  const handlePlay = (index, path, isSlow, text) => {
+    if (activeAudio && activeAudio.index === index && activeAudio.isSlow === isSlow) {
+      if (activeAudio.audio.paused) {
+        activeAudio.audio.play();
+        setActiveAudio({ ...activeAudio, isPlaying: true });
+      } else {
+        activeAudio.audio.pause();
+        setActiveAudio({ ...activeAudio, isPlaying: false });
+      }
+    } else {
+      if (activeAudio?.audio) activeAudio.audio.pause();
+      const audio = new Audio(path);
+      audio.addEventListener("loadedmetadata", () => {
+        setActiveAudio({
+          index,
+          path,
+          audio,
+          duration: audio.duration,
+          isPlaying: true,
+          isSlow,
+          progress: 0,
+        });
+        audio.play();
+      });
+      audio.addEventListener("timeupdate", () => {
+        if (!isDragging) {
+          setActiveAudio((prev) => {
+            if (!prev || prev.index !== index || prev.path !== path) return prev;
+            return { ...prev, progress: audio.currentTime };
+          });
+        }
+      });
+      audio.addEventListener("ended", () => {
+        setActiveAudio((prev) => ({ ...prev, isPlaying: false }));
+      });
+      audio.addEventListener("error", () => speak(text));
+
+      const width = textRefs.current[index]?.offsetWidth || 0;
+      setLineWidths((prev) => ({ ...prev, [index]: width }));
+    }
+  };
+
+  const handleSeek = (newTime) => {
+    if (activeAudio?.audio) {
+      activeAudio.audio.pause();
+      activeAudio.audio.currentTime = newTime;
+      setActiveAudio({ ...activeAudio, progress: newTime, isPlaying: false });
+    }
+  };
+
+  const handleDrag = (e) => {
+    if (!progressBarRef.current || !activeAudio?.duration) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clientX = e.type.includes("mouse") ? e.clientX : e.touches[0].clientX;
+    const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const newTime = (offsetX / rect.width) * activeAudio.duration;
+    handleSeek(newTime);
+  };
+
+  const renderProgressBar = (audio) => {
+    const percent = (audio.progress / audio.duration) * 100;
+    const width = lineWidths[audio.index] ? `${lineWidths[audio.index] * 0.8}px` : "80%";
+    return (
+      <div
+        ref={progressBarRef}
+        className="relative h-[30px] mt-1 select-none mx-auto cursor-pointer flex items-center"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          handleDrag(e);
+        }}
+        onTouchStart={(e) => {
+          setIsDragging(true);
+          handleDrag(e);
+        }}
+      >
+        <div className="w-full h-[6px] rounded bg-gradient-to-r from-black/10 via-black/30 to-black/10 backdrop-blur-md border border-black/20 shadow-inner" />
+        <div
+          className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center"
+          style={{ left: `${percent}%` }}
+        >
+          <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/50 rounded-full shadow-md pointer-events-auto" />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
-  className={`min-h-screen px-4 sm:px-10 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
-  style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
->
-      {/* Fixed Hamburger Button */}
+      className={`min-h-screen px-4 sm:px-10 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
+      style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
+    >
       <header className="fixed top-4 left-4 z-50">
-  <button
-    className="p-2 rounded-md bg-white/80 border border-emerald-300 hover:bg-emerald-50 shadow-md"
-    onClick={() => setMenuOpen(!menuOpen)}
-  >
-    {menuOpen ? <X size={20} /> : <Menu size={20} />}
-  </button>
+        <button
+          className="p-2 rounded-md bg-white/80 border border-emerald-300 hover:bg-emerald-50 shadow-md"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </header>
 
-      {/* Hamburger Menu Content */}
       {menuOpen && (
         <div className="fixed top-16 left-4 right-4 z-40 bg-white/90 backdrop-blur-md shadow-md rounded-xl p-4 space-y-4 border border-emerald-200">
           <div className="flex flex-wrap gap-4">
@@ -106,37 +197,32 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
         </div>
       )}
 
-      {/* Always visible Prev/Next navigation */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2">
         {(() => {
-          const partNumber = parseInt(currentPart.replace('part-', ''));
+          const partNumber = parseInt(currentPart.replace("part-", ""));
           const prevDisabled = partNumber === 1;
           const nextDisabled = partNumber === 10;
 
           const buttonClass = (disabled, color) =>
-  `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
-    disabled ? 'opacity-40 cursor-default' : `${theme.hoverAccentColor} hover:scale-105`
-  }`;
+            `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
+              disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
+            }`;
 
           return (
             <>
               <a
-                className={buttonClass(prevDisabled, 'bg-green-600')}
+                className={buttonClass(prevDisabled, "bg-green-600")}
                 href={
-                  prevDisabled
-                    ? undefined
-                    : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
+                  prevDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
                 }
                 onClick={(e) => prevDisabled && e.preventDefault()}
               >
                 ⬅ Prev
               </a>
               <a
-                className={buttonClass(nextDisabled, 'bg-green-700')}
+                className={buttonClass(nextDisabled, "bg-green-700")}
                 href={
-                  nextDisabled
-                    ? undefined
-                    : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
+                  nextDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
                 }
                 onClick={(e) => nextDisabled && e.preventDefault()}
               >
@@ -147,70 +233,30 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
         })()}
       </div>
 
-      {/* Story Layout */}
       <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap">
-        {/* Center Content */}
-        <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto">
+        <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-center">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6">{partTitle}</h2>
 
           {sentences.map((s, i) => (
-  <div key={i} className="my-12 sm:my-16 text-center max-w-md relative mx-auto">
-    {/* Audio/Translate icons */}
-    <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-5 justify-center mb-2 sm:mb-0">
-      <button
-        onClick={() => {
-          const normalPath = `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`;
-          setActiveAudio({ index: i, path: normalPath });
-        }}
-        className="hover:scale-110 transition"
-      >
-        🔊
-      </button>
+            <div key={i} className="my-12">
+              <div className="flex space-x-4 items-center justify-center">
+                <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
+                <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
+              </div>
 
-      <button
-        onClick={() => {
-          const slowPath = `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`;
-          setActiveAudio({ index: i, path: slowPath });
-        }}
-        className="hover:scale-110 transition"
-      >
-        🐢
-      </button>
+              {activeAudio?.index === i && <div className="my-3">{renderProgressBar(activeAudio)}</div>}
 
-      <button
-        onClick={(e) => {
-          const t = e.target.closest("div").parentElement.querySelector(".translation");
-          t.style.display = t.style.display === "block" ? "none" : "block";
-        }}
-        className="hover:scale-110 transition"
-      >
-        ✍️
-      </button>
+              <p>
+                <span ref={(el) => (textRefs.current[i] = el)} className="inline-block">
+                  {s.en}
+                </span>
+              </p>
+              <p className="text-muted-foreground text-sm mt-2">{s.es}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-
-    {/* Sentence */}
-    <div className="ml-4 text-base sm:text-lg">{s.en}</div>
-    <div className="translation hidden italic text-gray-600 mt-2 text-sm sm:text-base">{s.es}</div>
-
-    {/* Audio bar - inside the sentence block now ✅ */}
-{activeAudio?.index === i && (
-  <audio
-    key={activeAudio.path}
-    controls
-    autoPlay
-    src={activeAudio.path}
-    onEnded={() => setActiveAudio(null)}
-    className="w-full mt-1"
-  />
-)}
-
-</div> {/* end of .my-12 block inside map */}
-))}
-
-</div> {/* End of Center Content */}
-</div> {/* End of Story Layout */}
-</div> {/* End of main background wrapper */}
-);
+  );
 }
-
