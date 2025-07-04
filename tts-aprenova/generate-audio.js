@@ -10,16 +10,16 @@ const baseInputDir = path.join(__dirname, "../stories-json/aventura");
 const baseOutputDir = path.join(__dirname, "../public/audio/aventura");
 const voice = "en-US-BrianMultilingualNeural";
 
-const synthesize = async (text, outputPath) => {
-const ssml = `
-<speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang='en-US'>
-  <voice name='${voice}'>
-    <mstts:express-as style="default">
-      <prosody rate="medium" pitch="default">${text}</prosody>
-    </mstts:express-as>
-  </voice>
-</speak>
-`;
+const synthesizeWithRate = async (text, outputPath, rate) => {
+  const ssml = `
+  <speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang='en-US'>
+    <voice name='${voice}'>
+      <mstts:express-as style="default">
+        <prosody rate="${rate}" pitch="default">${text}</prosody>
+      </mstts:express-as>
+    </voice>
+  </speak>
+  `;
 
   try {
     const response = await axios.post(endpoint, ssml, {
@@ -34,7 +34,7 @@ const ssml = `
 
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, response.data);
-    console.log(`✅ ${path.relative(baseOutputDir, outputPath)}`);
+    console.log(`✅ ${path.relative(baseOutputDir, outputPath)} (${rate})`);
   } catch (err) {
     console.error(`❌ Failed to generate ${outputPath}`, err.response?.data || err.message);
   }
@@ -54,8 +54,14 @@ const generateAll = () => {
 
       sentences.forEach((sentence, i) => {
         const lineNum = i + 1;
-        const outputPath = path.join(baseOutputDir, level, partName, `line${lineNum}.mp3`);
-        synthesize(sentence.en, outputPath);
+        // Normal speed
+        const normalPath = path.join(baseOutputDir, level, partName, `line${lineNum}.mp3`);
+synthesizeWithRate(sentence.en, normalPath, "medium");
+
+// Slow speed
+        const slowPartName = `${partName}-slow`;
+        const slowPath = path.join(baseOutputDir, level, slowPartName, `line${lineNum}.mp3`);
+synthesizeWithRate(sentence.en, slowPath, "x-slow");
       });
     });
   });

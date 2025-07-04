@@ -203,6 +203,55 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
   🔊
 </button>
 
+<button
+  onClick={() => {
+    const partNum = currentPart.replace("part-", "");
+    const slowPath = `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`;
+
+    console.log("🐢 slowPath:", slowPath);
+
+    const existingAudio = audioRefs.current.get(`slow-${i}`);
+
+    // ✅ If slow audio is already playing, stop it
+    if (existingAudio && !existingAudio.paused) {
+      existingAudio.pause();
+      existingAudio.currentTime = 0;
+      return;
+    }
+
+    // ✅ Cancel any current browser TTS
+    if (!existingAudio && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      return;
+    }
+
+    const audio = new Audio(slowPath);
+
+    audio.onerror = () => {
+      audioRefs.current.delete(`slow-${i}`);
+
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(s.en);
+        utterance.lang = "en-US";
+        utterance.rate = 0.5; // Slow speech fallback
+        window.speechSynthesis.speak(utterance);
+      } else {
+        console.warn("Slow TTS not supported and audio failed:", slowPath);
+      }
+    };
+
+    audioRefs.current.set(`slow-${i}`, audio);
+    audio.play().catch(() => {});
+  }}
+  className="hover:scale-110 transition"
+>
+  🐢
+</button>
+
                 <button
                   onClick={(e) => {
                     const t = e.target.closest('div').parentElement.querySelector('.translation');
