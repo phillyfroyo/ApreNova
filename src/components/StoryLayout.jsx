@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
 
-export default function StoryLayout({ sentences, initialLevel, storySlug, title, partTitle }) {
+export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
   const [activeAudio, setActiveAudio] = useState(null);
   const [lineWidths, setLineWidths] = useState({});
   const progressBarRef = useRef(null);
@@ -21,6 +21,8 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title,
   const pathParts = pathname.split("/");
   const currentLevel = pathParts[4] || initialLevel || "l1";
   const currentPart = pathParts[5] || "part-1";
+  const partNumber = parseInt(currentPart.replace("part-", ""));
+  const dynamicPartTitle = `Part ${partNumber}`;
 
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
@@ -126,12 +128,12 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title,
           handleDrag(e);
         }}
       >
-        <div className="w-full h-[6px] rounded bg-gradient-to-r from-black/10 via-black/30 to-black/10 backdrop-blur-md border border-black/20 shadow-inner" />
+        <div className="w-full h-[6px] rounded bg-transparent backdrop-blur-2xl border border-black/10 shadow-inner" />
         <div
           className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center"
           style={{ left: `${percent}%` }}
         >
-          <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/50 rounded-full shadow-md pointer-events-auto" />
+          <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/10 rounded-full shadow-lg shadow-black/50 pointer-events-auto" />
         </div>
       </div>
     );
@@ -236,13 +238,22 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title,
       <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap">
         <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-center">{title}</h1>
-          <h2 className="text-lg sm:text-xl text-center mb-6">{partTitle}</h2>
+          <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPartTitle}</h2>
 
           {sentences.map((s, i) => (
             <div key={i} className="my-12">
               <div className="flex space-x-4 items-center justify-center">
                 <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
                 <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
+                <button
+        onClick={(e) => {
+          const t = e.target.closest("div").parentElement.querySelector(".translation");
+          t.classList.toggle("hidden");
+        }}
+        className="hover:scale-110 transition"
+      >
+        ✍️
+      </button>
               </div>
 
               {activeAudio?.index === i && <div className="my-3">{renderProgressBar(activeAudio)}</div>}
@@ -252,7 +263,7 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title,
                   {s.en}
                 </span>
               </p>
-              <p className="text-muted-foreground text-sm mt-2">{s.es}</p>
+              <p className="translation hidden text-muted-foreground text-sm mt-2">{s.es}</p>
             </div>
           ))}
         </div>
