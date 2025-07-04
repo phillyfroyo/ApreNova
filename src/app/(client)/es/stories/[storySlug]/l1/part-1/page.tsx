@@ -19,7 +19,6 @@ export default function Page({ params }: any) {
   return (
     <StoryLayout
       title="Adventure in Guatemala"
-      partTitle="Part 1"
       storySlug={storySlug}
       sentences={sentences}
       imageSrc="/images/aventura-thumbnail.png"
