@@ -14,6 +14,10 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = STORY_THEMES[storySlug] || STORY_THEMES["aventura"];
   const audioRefs = useRef(new Map());
+  const [activeAudio, setActiveAudio] = useState<null | {
+  index: number;
+  path: string;
+}>(null);
 
   useEffect(() => {
     const pathParts = window.location.pathname.split("/");
@@ -151,123 +155,62 @@ export default function StoryLayout({ title, partTitle, imageSrc, sentences, ini
           <h2 className="text-lg sm:text-xl text-center mb-6">{partTitle}</h2>
 
           {sentences.map((s, i) => (
-            <div key={i} className="my-12 sm:my-16 text-center max-w-md relative mx-auto">
-              {/* Audio/Translate icons */}
-              <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-5 justify-center mb-2 sm:mb-0">
-                <button
-  onClick={() => {
-    const partNum = currentPart.replace("part-", "");
-    const audioPath = `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`;
+  <div key={i} className="my-12 sm:my-16 text-center max-w-md relative mx-auto">
+    {/* Audio/Translate icons */}
+    <div className="sm:absolute sm:left-[-50px] top-0 flex sm:flex-col gap-5 justify-center mb-2 sm:mb-0">
+      <button
+        onClick={() => {
+          const normalPath = `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`;
+          setActiveAudio({ index: i, path: normalPath });
+        }}
+        className="hover:scale-110 transition"
+      >
+        🔊
+      </button>
 
-    console.log("🔊 audioPath:", audioPath);
+      <button
+        onClick={() => {
+          const slowPath = `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`;
+          setActiveAudio({ index: i, path: slowPath });
+        }}
+        className="hover:scale-110 transition"
+      >
+        🐢
+      </button>
 
-    const existingAudio = audioRefs.current.get(i);
-
-    // ✅ If MP3 is playing, pause and reset
-    if (existingAudio && !existingAudio.paused) {
-      existingAudio.pause();
-      existingAudio.currentTime = 0;
-      return;
-    }
-
-    // ✅ If TTS is active, cancel it
-    if (!existingAudio && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      return;
-    }
-
-    // Create and attempt to play audio file
-    const audio = new Audio(audioPath);
-
-    audio.onerror = () => {
-      audioRefs.current.delete(i);
-
-      if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-      }
-
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(s.en);
-        utterance.lang = "en-US";
-        window.speechSynthesis.speak(utterance);
-      } else {
-        console.warn("TTS not supported and audio failed:", audioPath);
-      }
-    };
-
-    audioRefs.current.set(i, audio);
-    audio.play().catch(() => {});
-  }}
-  className="hover:scale-110 transition"
->
-  🔊
-</button>
-
-<button
-  onClick={() => {
-    const partNum = currentPart.replace("part-", "");
-    const slowPath = `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`;
-
-    console.log("🐢 slowPath:", slowPath);
-
-    const existingAudio = audioRefs.current.get(`slow-${i}`);
-
-    // ✅ If slow audio is already playing, stop it
-    if (existingAudio && !existingAudio.paused) {
-      existingAudio.pause();
-      existingAudio.currentTime = 0;
-      return;
-    }
-
-    // ✅ Cancel any current browser TTS
-    if (!existingAudio && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      return;
-    }
-
-    const audio = new Audio(slowPath);
-
-    audio.onerror = () => {
-      audioRefs.current.delete(`slow-${i}`);
-
-      if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-      }
-
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(s.en);
-        utterance.lang = "en-US";
-        utterance.rate = 0.5; // Slow speech fallback
-        window.speechSynthesis.speak(utterance);
-      } else {
-        console.warn("Slow TTS not supported and audio failed:", slowPath);
-      }
-    };
-
-    audioRefs.current.set(`slow-${i}`, audio);
-    audio.play().catch(() => {});
-  }}
-  className="hover:scale-110 transition"
->
-  🐢
-</button>
-
-                <button
-                  onClick={(e) => {
-                    const t = e.target.closest('div').parentElement.querySelector('.translation');
-                    t.style.display = t.style.display === 'block' ? 'none' : 'block';
-                  }}
-                  className="hover:scale-110 transition"
-                >✍️</button>
-              </div>
-              {/* Sentence */}
-              <div className="ml-4 text-base sm:text-lg">{s.en}</div>
-              <div className="translation hidden italic text-gray-600 mt-2 text-sm sm:text-base">{s.es}</div>
-            </div>
-          ))}
-
-        </div>
-      </div>
+      <button
+        onClick={(e) => {
+          const t = e.target.closest("div").parentElement.querySelector(".translation");
+          t.style.display = t.style.display === "block" ? "none" : "block";
+        }}
+        className="hover:scale-110 transition"
+      >
+        ✍️
+      </button>
     </div>
-  );
+
+    {/* Sentence */}
+    <div className="ml-4 text-base sm:text-lg">{s.en}</div>
+    <div className="translation hidden italic text-gray-600 mt-2 text-sm sm:text-base">{s.es}</div>
+
+    {/* Audio bar - inside the sentence block now ✅ */}
+{activeAudio?.index === i && (
+  <audio
+    key={activeAudio.path}
+    controls
+    autoPlay
+    src={activeAudio.path}
+    onEnded={() => setActiveAudio(null)}
+    className="w-full mt-1"
+  />
+)}
+
+</div> {/* end of .my-12 block inside map */}
+))}
+
+</div> {/* End of Center Content */}
+</div> {/* End of Story Layout */}
+</div> {/* End of main background wrapper */}
+);
 }
+
