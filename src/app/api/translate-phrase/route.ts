@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const sentence = sentenceParam.trim();
   const level = parseInt(levelParam.trim());
 
-  const prompt = getPhrasePrompt(level, phrase, sentence);
+  const prompt = getPhrasePrompt(level, phrase, );
   console.log("🧠 Prompt to GPT:", prompt);
 
   try {

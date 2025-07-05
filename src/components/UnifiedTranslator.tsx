@@ -199,19 +199,28 @@ const fetchExample = async (spanishWord: string) => {
         <div className="text-sm">
           <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
           <ul className="list-disc list-inside mt-1">
-  {translations.map((t: any, i: number) => (
+  {translations.map((t: any, i: number) => {
+  const translation = typeof t === "string" ? t : t.translation;
+  const hasExample = !!exampleMap[translation];
+
+  return (
     <li key={i}>
-      <span className="text-blue-600">
-        {typeof t === "string" ? t : t.translation}
-      </span>
-      {t.example && t.example_es && (
+      <button
+        onClick={() => fetchExample(translation)}
+        className="text-blue-600 hover:underline"
+      >
+        {translation}
+      </button>
+
+      {hasExample && (
         <div className="mt-1 text-sm">
-          <p className="text-gray-900">&quot;{t.example}&quot;</p>
-          <p className="text-gray-600 italic">&quot;{t.example_es}&quot;</p>
+          <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
+          <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
         </div>
       )}
     </li>
-  ))}
+  );
+})}
 </ul>
         </div>
       )}
