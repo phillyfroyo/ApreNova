@@ -197,8 +197,8 @@ const fetchExample = async (spanishWord: string) => {
       </button>
       {exampleMap[t] && (
         <div className="mt-1 text-sm">
-          <p className="text-gray-900">"{exampleMap[t].english}"</p>
-          <p className="text-gray-600 italic">"{exampleMap[t].spanish}"</p>
+          <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
+          <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
         </div>
       )}
     </li>
