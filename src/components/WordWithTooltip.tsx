@@ -1,7 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-export default function WordGroupSelector({ sentence }: { sentence: string }) {
+type Props = {
+  word: string;
+  sentence: string;
+};
+
+export default function WordWithTooltip({ word, sentence }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
