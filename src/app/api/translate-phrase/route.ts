@@ -1,59 +1,74 @@
-import { NextResponse } from "next/server";
-import { OpenAI } from "openai";
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { OpenAI } from 'openai';
+import { NextRequest, NextResponse } from 'next/server';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-const cache = new Map<string, { translation: string }>();
+export async function GET(req: NextRequest) {
+  const inputParam = req.nextUrl.searchParams.get('input');
+  const sentenceParam = req.nextUrl.searchParams.get('sentence');
+  const levelParam = req.nextUrl.searchParams.get('level');
+  const mode = req.nextUrl.searchParams.get('mode') || 'auto';
 
-const systemPrompt = `
-You are a bilingual Spanish-English language tutor.
-
-Given an English phrase and the sentence it's in, return ONLY the natural Spanish translation of the phrase.
-
-Do NOT include markdown, explanation, or commentary — just the translation itself.
-`;
-
-export async function POST(req: Request) {
-  const { phrase, sentence } = await req.json();
-
-  if (!phrase || !sentence) {
-    return NextResponse.json({ error: "Missing phrase or sentence." }, { status: 400 });
+  if (!inputParam || !sentenceParam || !levelParam) {
+    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
   }
 
-  const cacheKey = `${phrase.toLowerCase()}|${sentence}`;
-  if (cache.has(cacheKey)) {
-    return NextResponse.json(cache.get(cacheKey));
+  const input = inputParam.trim();
+  const sentence = sentenceParam.trim();
+  const level = levelParam.trim();
+
+  const wordCount = input.split(/\s+/).length;
+  let translationMode = 'simple';
+
+  // If explicit mode is given
+  if (mode === 'multi') {
+    translationMode = 'multi';
+  } else if (mode === 'simple') {
+    translationMode = 'simple';
+  } else if (wordCount === 1) {
+    translationMode = 'multi';
+  } else {
+    // Ask GPT if this is a phrase with multiple interpretations
+    const checkPrompt = `Is the English phrase "${input}" a multi-meaning phrase, idiom, or phrasal verb that would benefit from seeing more than one possible Spanish translation? Respond only with YES or NO.`;
+
+    try {
+      const checkResponse = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant for ESL learners.' },
+          { role: 'user', content: checkPrompt }
+        ],
+        max_tokens: 10,
+      });
+
+      const isPhrase = checkResponse.choices[0]?.message?.content?.trim().toUpperCase().startsWith('Y');
+      translationMode = isPhrase ? 'multi' : 'simple';
+    } catch (e) {
+      console.error('GPT idiom check failed:', e);
+      translationMode = 'simple';
+    }
   }
 
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: `Phrase: "${phrase}"\nSentence: "${sentence}"` },
-  ];
+  const prompt = translationMode === 'multi'
+    ? `Provide 1 to 3 possible Spanish translations for the English phrase \"${input}\" using the context of the full sentence: \"${sentence}\". Return a JSON array of objects, each with fields: \"translation\" and optionally \"example\" and \"example_es\". Respond with only the JSON.`
+    : `Translate the English phrase \"${input}\" into Spanish using the full context of the sentence: \"${sentence}\". Return a JSON object with the field \"translation\". Respond with only the JSON.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      temperature: 0.3,
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: 'You are a helpful Spanish translator for ESL learners. Respond in JSON only.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
     });
 
-    const reply = completion.choices[0]?.message?.content || "";
-
-    // 🧹 Clean messy outputs
-    const cleaned = reply
-      .replace(/```json|```/g, "")
-      .replace(/^["']|["']$/g, "")                     // remove outer quotes
-      .replace(/^Translation[:：]?\s*/i, "")           // remove "Translation: ..."
-      .trim();
-
-    // ✅ Save to cache
-    const result = { translation: cleaned };
-    cache.set(cacheKey, result);
-
-    return NextResponse.json(result);
-  } catch (err) {
-    console.error("❌ OpenAI error (phrase):", err);
-    return NextResponse.json({ error: "Failed to fetch phrase translation." }, { status: 500 });
+    const result = completion.choices[0]?.message?.content;
+    const cleaned = result?.replace(/^```json\n?|```$/g, '').trim();
+    return NextResponse.json(JSON.parse(cleaned!));
+  } catch (e) {
+    console.error('Translation error:', e);
+    return NextResponse.json({ error: 'Translation failed' }, { status: 500 });
   }
 }
+

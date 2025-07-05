@@ -1,8 +1,9 @@
-// src/app/api/translate-word/route.ts
+// src\app\api\example-sentence\route.ts
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getExamplePrompt } from "@/lib/getExamplePrompt";
+
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -10,19 +11,16 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new Map<string, { english: string; spanish: string }>();
 
 export async function POST(req: Request) {
-  const { spanishWord, level } = await req.json();
+  const { spanishWord, englishWord, level } = await req.json();
 
-  console.log("🧪 example-sentence input:", { spanishWord, level });
+  console.log("🧪 example-sentence input:", { spanishWord, englishWord, level });
 
-const systemPrompt = getExamplePrompt(level ?? 2);
+const prompt = getExamplePrompt(level, englishWord, spanishWord);
 
 const messages: ChatCompletionMessageParam[] = [
-  { role: "system", content: systemPrompt },
-  {
-    role: "user",
-    content: `Please provide a short example sentence using the Spanish word "${spanishWord}" in its most natural, everyday usage.`,
-  },
+  { role: "user", content: prompt }
 ];
+
 
 try {
     const completion = await openai.chat.completions.create({

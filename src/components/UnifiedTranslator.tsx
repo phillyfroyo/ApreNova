@@ -27,25 +27,32 @@ export default function UnifiedTranslator({ sentence }: Props) {
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
 
-    const endpoint = isSingleWord ? "/api/translate-word" : "/api/translate-phrase";
-    const body = isSingleWord
-      ? { word: cleanWord, sentence }
-      : { phrase, sentence };
+    const endpoint = isSingleWord
+  ? "/api/translate-word"
+  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=l1&mode=auto`; // Replace 'l1' with dynamic level if you have it
+
+const body = isSingleWord
+  ? { word: cleanWord, sentence: "" }
+  : null;
 
     try {
       setLoading(true);
       setError("");
       const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+  method: isSingleWord ? "POST" : "GET",
+  headers: isSingleWord ? { "Content-Type": "application/json" } : undefined,
+  body: isSingleWord ? JSON.stringify(body) : undefined,
+});
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
 // If it's a multi-word phrase, the response is a single string
 if (!isSingleWord) {
-  setTranslations([data.translation]);
+  if (Array.isArray(data)) {
+    setTranslations(data.map((d: any) => d.translation));
+  } else {
+    setTranslations([data.translation]);
+  }
 } else {
   setTranslations(data.translations || []);
 }

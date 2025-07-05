@@ -14,9 +14,9 @@ export async function POST(req: Request) {
 
   console.log("🧪 translate-word input:", { word, sentence, level });
 
-  if (!word || !sentence) {
-    return NextResponse.json({ error: "Missing word or sentence." }, { status: 400 });
-  }
+  if (!word) {
+  return NextResponse.json({ error: "Missing word." }, { status: 400 });
+}
 
   const systemPrompt = getWordPrompt(level ?? 2);
 

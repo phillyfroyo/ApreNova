@@ -1,30 +1,30 @@
-export function getExamplePrompt(level: number): string {
+export function getExamplePrompt(level: number, englishWord: string, spanishWord: string): string {
   const base = `
-You are a bilingual language tutor helping Spanish learners from Mexico.
+You are a bilingual Spanish-English tutor.
 
-Given a Spanish word and the context of an English sentence, write a short, natural-sounding Spanish sentence that uses that word in its most common, everyday meaning — appropriate for the learner’s level.
+Given an English word and its Spanish translation, return:
 
-⚠️ IMPORTANT:
-- Do NOT copy, translate, or adapt the original sentence
-- Create a completely new sentence, similar in theme or tone
-- Use natural, conversational phrasing (avoid robotic or literal structures)
-- Prefer examples that match **real-world Mexican Spanish usage**
+1. A short, natural English sentence that includes the **exact English word**: "${englishWord}"  
+2. A matching Spanish sentence that uses the **exact Spanish word**: "${spanishWord}"
 
-For example, if the English sentence is “My name is Pedro and I live in a quiet town in Guatemala,” you might generate:
-"La casa está tranquila por la noche."
-—not:
-"La noche es muy quieta aquí."
+Both sentences must describe the same context or scenario. Do not paraphrase or substitute synonyms. Do not change the English word.
 
-Also avoid uncommon word applications (e.g. “callado” for places).
+⚠️ You must use the exact English word and Spanish word in your examples.
 
-Return an English translation of the new sentence as well.
-`;
+Respond only with a raw JSON object like this:
+{
+  "english": "She runs that business really well.",
+  "spanish": "Ella administra ese negocio muy bien."
+}
+
+No formatting, no code blocks, no explanations.
+`.trim();
 
   const constraints = {
     1: `Use only the 100 most common Spanish words. Only present tense. Keep it extremely simple.`,
     2: `Use only the 200 most common Spanish words. Present tense only.`,
     3: `Use up to the 500 most common Spanish words. You may include present and preterite.`,
-    4: `Use up to the 1000 most common words. Present, preterite, and imperfect allowed.`,
+    4: `Use up to the 1000 most common Spanish words. Present, preterite, and imperfect allowed.`,
     5: `No vocabulary restrictions. Use natural, fluent Mexican Spanish.`,
   };
 
@@ -32,13 +32,6 @@ Return an English translation of the new sentence as well.
 ${base}
 
 ${constraints[level]}
-
-Respond only with a raw JSON object like this:
-{
-  "english": "The house is quiet at night.",
-  "spanish": "La casa está tranquila por la noche."
-}
-
-No formatting, no code blocks, no explanations.
 `.trim();
 }
+
