@@ -200,18 +200,18 @@ const fetchExample = async (spanishWord: string) => {
           <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
           <ul className="list-disc list-inside mt-1">
   {translations.map((t: any, i: number) => (
-  <li key={i}>
-    <span className="text-blue-600">
-      {typeof t === "string" ? t : t.translation}
-    </span>
-    {t.example && t.example_es && (
-      <div className="mt-1 text-sm">
-        <p className="text-gray-900">"{t.example}"</p>
-        <p className="text-gray-600 italic">"{t.example_es}"</p>
-      </div>
-    )}
-  </li>
-))}
+    <li key={i}>
+      <span className="text-blue-600">
+        {typeof t === "string" ? t : t.translation}
+      </span>
+      {t.example && t.example_es && (
+        <div className="mt-1 text-sm">
+          <p className="text-gray-900">&quot;{t.example}&quot;</p>
+          <p className="text-gray-600 italic">&quot;{t.example_es}&quot;</p>
+        </div>
+      )}
+    </li>
+  ))}
 </ul>
         </div>
       )}
