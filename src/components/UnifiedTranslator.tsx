@@ -103,8 +103,8 @@ export default function UnifiedTranslator({ sentence }: Props) {
         setError("");
       }
     };
-    document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   return (
@@ -126,7 +126,7 @@ export default function UnifiedTranslator({ sentence }: Props) {
       {(translation || loading || error) && (
         <div
           ref={tooltipRef}
-          className="absolute top-full mt-2 transform -translate-x-1/2 z-50 bg-white text-black p-3 border shadow rounded w-max max-w-sm"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white text-black p-3 border shadow rounded w-max max-w-sm"
         >
           {loading && <div className="text-sm">Loading...</div>}
           {error && <div className="text-sm text-red-500">{error}</div>}
