@@ -48,25 +48,25 @@ export default function UnifiedTranslator({ sentence }: Props) {
   };
 
   const handleClick = (index: number) => {
-    if (startIdx === null || endIdx !== null) {
-      // New selection
+    if (startIdx === null && endIdx === null) {
       setStartIdx(index);
-      setEndIdx(null);
-      setTranslation("");
-      setError("");
-    } else if (index === startIdx) {
-      // Toggle off
+      setEndIdx(index);
+      fetchTranslation(index, index);
+      return;
+    }
+
+    if (startIdx === index && endIdx === index) {
       setStartIdx(null);
       setEndIdx(null);
       setTranslation("");
       setError("");
-    } else {
-      // Finalize selection
-      const [s, e] = index > startIdx ? [startIdx, index] : [index, startIdx];
-      setStartIdx(s);
-      setEndIdx(e);
-      fetchTranslation(s, e);
+      return;
     }
+
+    const [s, e] = index > startIdx! ? [startIdx!, index] : [index, startIdx!];
+    setStartIdx(s);
+    setEndIdx(e);
+    fetchTranslation(s, e);
   };
 
   const isSelected = (i: number) => {
@@ -88,6 +88,24 @@ export default function UnifiedTranslator({ sentence }: Props) {
       tooltipRef.current.style.left = `${left}px`;
     }
   }, [startIdx, endIdx, translation]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node) &&
+        tooltipRef.current &&
+        !tooltipRef.current.contains(e.target as Node)
+      ) {
+        setStartIdx(null);
+        setEndIdx(null);
+        setTranslation("");
+        setError("");
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
 
   return (
     <div className="p-4 relative">
