@@ -27,6 +27,7 @@ export default function UnifiedTranslator({ sentence }: Props) {
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
 
+
     const endpoint = isSingleWord
   ? "/api/translate-word"
   : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=l1&mode=auto`; // Replace 'l1' with dynamic level if you have it
@@ -45,16 +46,19 @@ const body = isSingleWord
 });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+      console.log("🎯 Data from API:", data);
 
 // If it's a multi-word phrase, the response is a single string
 if (!isSingleWord) {
   if (Array.isArray(data)) {
-    setTranslations(data.map((d: any) => d.translation));
+    setTranslations(data);
+    console.log("✅ Set phrase translations:", data);
   } else {
     setTranslations([data.translation]);
   }
 } else {
   setTranslations(data.translations || []);
+  console.log("✅ Set word translations:", data.translations || []);
 }
     } catch (err) {
       console.error(err);
@@ -123,6 +127,7 @@ const fetchExample = async (spanishWord: string) => {
         spanish: data.spanish,
       },
     }));
+    console.log("🎯 Data from API:", data);
   } catch (err) {
     console.error("❌ Failed to fetch example:", err);
   }
@@ -194,22 +199,19 @@ const fetchExample = async (spanishWord: string) => {
         <div className="text-sm">
           <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
           <ul className="list-disc list-inside mt-1">
-  {translations.map((t, i) => (
-    <li key={i}>
-      <button
-        onClick={() => fetchExample(t)}
-        className="text-blue-600 hover:underline"
-      >
-        {t}
-      </button>
-      {exampleMap[t] && (
-        <div className="mt-1 text-sm">
-          <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
-          <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
-        </div>
-      )}
-    </li>
-  ))}
+  {translations.map((t: any, i: number) => (
+  <li key={i}>
+    <span className="text-blue-600">
+      {typeof t === "string" ? t : t.translation}
+    </span>
+    {t.example && t.example_es && (
+      <div className="mt-1 text-sm">
+        <p className="text-gray-900">"{t.example}"</p>
+        <p className="text-gray-600 italic">"{t.example_es}"</p>
+      </div>
+    )}
+  </li>
+))}
 </ul>
         </div>
       )}

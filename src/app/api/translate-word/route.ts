@@ -10,24 +10,22 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new Map<string, { translations: string[] }>();
 
 export async function POST(req: Request) {
-  const { word, sentence, level } = await req.json();
+  const { word, level } = await req.json();
 
-  console.log("🧪 translate-word input:", { word, sentence, level });
+  console.log("🧪 translate-word input:", { word, level });
 
   if (!word) {
-  return NextResponse.json({ error: "Missing word." }, { status: 400 });
-}
+    return NextResponse.json({ error: "Missing word." }, { status: 400 });
+  }
 
-  const systemPrompt = getWordPrompt(level ?? 2);
-
-  const cacheKey = `${word.toLowerCase()}|${sentence}|${level ?? 2}`;
+  const prompt = getWordPrompt(level ?? 2);
+  const cacheKey = `${word.toLowerCase()}|${level ?? 2}`;
   if (cache.has(cacheKey)) {
     return NextResponse.json(cache.get(cacheKey));
   }
 
   const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: `Word: "${word}"\nSentence: "${sentence}"` },
+    { role: "user", content: `${prompt}\n\nWord: \"${word}\"` },
   ];
 
   try {
@@ -57,7 +55,6 @@ export async function POST(req: Request) {
     }
 
     const parsed = { translations };
-
     cache.set(cacheKey, parsed);
 
     return NextResponse.json(parsed);
@@ -66,4 +63,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to fetch translation." }, { status: 500 });
   }
 }
+
 
