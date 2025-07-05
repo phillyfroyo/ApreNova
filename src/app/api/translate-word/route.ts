@@ -2,34 +2,25 @@
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { getWordPrompt } from "@/lib/getWordPrompt";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
-const cache = new Map<string, { translation: string }>();
-
-const systemPrompt = `
-You are a bilingual Spanish-English language tutor.
-
-Given an English word and the sentence it's in, return ONLY the 1:1 Spanish translation as JSON like this:
-
-{
-  "translation": "caminar"
-}
-
-Do not include extra text or explanation.
-`;
+const cache = new Map<string, { translations: string[] }>();
 
 export async function POST(req: Request) {
-  const { word, sentence } = await req.json();
+  const { word, sentence, level } = await req.json();
 
-  console.log("🧪 translate-word input:", { word, sentence });
+  console.log("🧪 translate-word input:", { word, sentence, level });
 
   if (!word || !sentence) {
     return NextResponse.json({ error: "Missing word or sentence." }, { status: 400 });
   }
 
-  const cacheKey = `${word.toLowerCase()}|${sentence}`;
+  const systemPrompt = getWordPrompt(level ?? 2);
+
+  const cacheKey = `${word.toLowerCase()}|${sentence}|${level ?? 2}`;
   if (cache.has(cacheKey)) {
     return NextResponse.json(cache.get(cacheKey));
   }
@@ -47,10 +38,27 @@ export async function POST(req: Request) {
     });
 
     const reply = completion.choices[0]?.message?.content || "";
-    const cleanReply = reply.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleanReply);
+    console.log("🧠 GPT raw reply:", reply);
 
-    cache.set(cacheKey, parsed); // ✅ Store in cache
+    const cleanReply = reply.replace(/```json|```/g, "").trim();
+
+    let translations: string[] = [];
+
+    try {
+      const raw = JSON.parse(cleanReply);
+      if (Array.isArray(raw) && raw.every(item => typeof item === "string")) {
+        translations = raw;
+      } else {
+        throw new Error("Invalid translation format");
+      }
+    } catch (parseError) {
+      console.error("❌ Failed to parse GPT response:", parseError);
+      return NextResponse.json({ error: "Invalid GPT translation format." }, { status: 500 });
+    }
+
+    const parsed = { translations };
+
+    cache.set(cacheKey, parsed);
 
     return NextResponse.json(parsed);
   } catch (err) {

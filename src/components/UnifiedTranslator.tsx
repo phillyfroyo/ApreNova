@@ -1,4 +1,5 @@
 "use client";
+// src\components\UnifiedTranslator.tsx
 
 import { useState, useRef, useEffect } from "react";
 
@@ -10,11 +11,14 @@ export default function UnifiedTranslator({ sentence }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
-  const [translation, setTranslation] = useState("");
+  const [translations, setTranslations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
+
 
   const getSelectedText = () => words.slice(startIdx!, endIdx! + 1).join(" ");
 
@@ -38,7 +42,13 @@ export default function UnifiedTranslator({ sentence }: Props) {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setTranslation(data.translation);
+
+// If it's a multi-word phrase, the response is a single string
+if (!isSingleWord) {
+  setTranslations([data.translation]);
+} else {
+  setTranslations(data.translations || []);
+}
     } catch (err) {
       console.error(err);
       setError("⚠️ Failed to fetch translation.");
@@ -49,25 +59,67 @@ export default function UnifiedTranslator({ sentence }: Props) {
 
   const handleClick = (index: number) => {
     if (startIdx === null && endIdx === null) {
-      setStartIdx(index);
-      setEndIdx(index);
-      fetchTranslation(index, index);
-      return;
-    }
+  // First word clicked
+  setStartIdx(index);
+  setEndIdx(index);
+  fetchTranslation(index, index);
+  return;
+}
 
-    if (startIdx === index && endIdx === index) {
-      setStartIdx(null);
-      setEndIdx(null);
-      setTranslation("");
-      setError("");
-      return;
-    }
+// If clicking the same exact word again — clear the selection
+if (startIdx === index && endIdx === index) {
+  setStartIdx(null);
+  setEndIdx(null);
+  setTranslations([]);
+  setError("");
+  return;
+}
 
-    const [s, e] = index > startIdx! ? [startIdx!, index] : [index, startIdx!];
-    setStartIdx(s);
-    setEndIdx(e);
-    fetchTranslation(s, e);
+// Expand selection to include both the current selection and clicked index
+const s = Math.min(startIdx!, endIdx!, index);
+const e = Math.max(startIdx!, endIdx!, index);
+setStartIdx(s);
+setEndIdx(e);
+fetchTranslation(s, e);
   };
+const fetchExample = async (spanishWord: string) => {
+  const englishWord = words.slice(startIdx!, endIdx! + 1).join(" ");
+  const sentenceText = sentence;
+  // 🔁 Toggle: hide if already open
+  if (exampleMap[spanishWord]) {
+    setExampleMap((prev) => {
+      const updated = { ...prev };
+      delete updated[spanishWord];
+      return updated;
+    });
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/example-sentence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        spanishWord,
+        englishWord,
+        originalSentence: sentenceText,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    setExampleMap((prev) => ({
+      ...prev,
+      [spanishWord]: {
+        english: data.english,
+        spanish: data.spanish,
+      },
+    }));
+  } catch (err) {
+    console.error("❌ Failed to fetch example:", err);
+  }
+};
 
   const isSelected = (i: number) => {
     if (startIdx === null || endIdx === null) return false;
@@ -87,7 +139,7 @@ export default function UnifiedTranslator({ sentence }: Props) {
       const { left } = getTooltipPosition();
       tooltipRef.current.style.left = `${left}px`;
     }
-  }, [startIdx, endIdx, translation]);
+  }, [startIdx, endIdx, translations]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -99,7 +151,7 @@ export default function UnifiedTranslator({ sentence }: Props) {
       ) {
         setStartIdx(null);
         setEndIdx(null);
-        setTranslation("");
+        setTranslations([]);
         setError("");
       }
     };
@@ -123,20 +175,40 @@ export default function UnifiedTranslator({ sentence }: Props) {
         ))}
       </div>
 
-      {(translation || loading || error) && (
-        <div
-          ref={tooltipRef}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white text-black p-3 border shadow rounded w-max max-w-sm"
-        >
-          {loading && <div className="text-sm">Loading...</div>}
-          {error && <div className="text-sm text-red-500">{error}</div>}
-          {translation && (
-            <div className="text-sm">
-              <strong>Translation:</strong> {translation}
-            </div>
-          )}
+  <span className="relative inline-block">
+  {(translations.length > 0 || loading || error) && (
+    <div
+      ref={tooltipRef}
+      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white text-black p-2 rounded shadow z-50"
+    >
+      {loading && <div className="text-sm">Loading...</div>}
+      {error && <div className="text-sm text-red-500">{error}</div>}
+      {translations.length > 0 && (
+        <div className="text-sm">
+          <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
+          <ul className="list-disc list-inside mt-1">
+  {translations.map((t, i) => (
+    <li key={i}>
+      <button
+        onClick={() => fetchExample(t)}
+        className="text-blue-600 hover:underline"
+      >
+        {t}
+      </button>
+      {exampleMap[t] && (
+        <div className="mt-1 text-sm">
+          <p className="text-gray-900">"{exampleMap[t].english}"</p>
+          <p className="text-gray-600 italic">"{exampleMap[t].spanish}"</p>
         </div>
       )}
+    </li>
+  ))}
+</ul>
+        </div>
+      )}
+    </div>
+  )}
+</span>
     </div>
   );
 }
