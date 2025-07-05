@@ -2,6 +2,7 @@
 // src\components\UnifiedTranslator.tsx
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from 'next/navigation';
 
 interface Props {
   sentence: string;
@@ -17,6 +18,11 @@ export default function UnifiedTranslator({ sentence }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  const pathname = usePathname() ?? "";
+  const pathParts = pathname.split("/");
+  const currentLevel = pathParts[4] || "l2"; // Fallback to l1 if undefined
+
+
   const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
 
 
@@ -30,10 +36,10 @@ export default function UnifiedTranslator({ sentence }: Props) {
 
     const endpoint = isSingleWord
   ? "/api/translate-word"
-  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=l1&mode=auto`; // Replace 'l1' with dynamic level if you have it
+  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto`;
 
 const body = isSingleWord
-  ? { word: cleanWord, sentence: "" }
+  ? { word: cleanWord, sentence: "", level: currentLevel }
   : null;
 
     try {
