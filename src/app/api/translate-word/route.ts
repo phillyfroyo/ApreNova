@@ -23,6 +23,8 @@ Do not include extra text or explanation.
 export async function POST(req: Request) {
   const { word, sentence } = await req.json();
 
+  console.log("🧪 translate-word input:", { word, sentence });
+
   if (!word || !sentence) {
     return NextResponse.json({ error: "Missing word or sentence." }, { status: 400 });
   }

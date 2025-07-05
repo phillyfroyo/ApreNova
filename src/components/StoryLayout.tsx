@@ -1,6 +1,6 @@
 "use client";
 
-import WordWithTooltip from "@/components/WordWithTooltip";
+import UnifiedTranslator from "@/components/UnifiedTranslator";
 
 type Props = {
   title: string;
@@ -14,20 +14,9 @@ export default function StoryLayout({ title, storySlug, sentences, initialLevel 
 
   return (
     <div className="p-6 text-lg leading-relaxed">
-      {/* Example title use */}
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
 
-      {sentence.split(" ").map((word, idx) => {
-        const cleanWord = word.replace(/[.,!?;:()]/g, "");
-        const trailingPunct = word.match(/[.,!?;:()]+$/)?.[0] || "";
-
-        return (
-          <span key={idx} className="mr-1">
-            <WordWithTooltip word={cleanWord} sentence={sentence} />
-            {trailingPunct}
-          </span>
-        );
-      })}
+      <UnifiedTranslator sentence={sentence} />
     </div>
   );
 }
