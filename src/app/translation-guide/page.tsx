@@ -2,6 +2,9 @@
 // src\app\translation-guide\page.tsx
 
 import UnifiedTranslator from "@/components/UnifiedTranslator";
+import { STORY_THEMES } from "@/components/storyThemes";
+
+const theme = STORY_THEMES.default;
 
 export default function TranslationGuide() {
   const testSentences = [
@@ -16,11 +19,14 @@ export default function TranslationGuide() {
   ];
 
   return (
-    <div className="p-6 text-lg leading-relaxed space-y-6">
+    <div
+  className={`min-h-screen p-6 text-lg leading-normal space-y-6 ${theme.fontFamily} ${theme.textColor} bg-cover bg-center`}
+  style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
+>
       <h2 className="text-xl font-semibold mb-4">Translation Tester</h2>
 
       {testSentences.map((s, idx) => (
-        <div key={idx} className="border-t pt-4">
+        <div key={idx} className="pt-4">
           <p className="mb-2 font-medium text-gray-700">Sentence {idx + 1}:</p>
           <UnifiedTranslator sentence={s} />
         </div>

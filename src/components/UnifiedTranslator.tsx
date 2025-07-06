@@ -179,17 +179,19 @@ const fetchExample = async (spanishWord: string) => {
 
   return (
     <div className="p-4 relative">
-      <div ref={containerRef} className="flex flex-wrap gap-1 text-lg">
+      <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
         {words.map((word, i) => (
           <button
-            key={i}
-            onClick={() => handleClick(i)}
-            className={`px-1 underline transition rounded whitespace-nowrap ${
-              isSelected(i) ? "bg-yellow-200" : "text-blue-600 hover:text-blue-800"
-            }`}
-          >
-            {word}
-          </button>
+  key={i}
+  onClick={() => handleClick(i)}
+  className={`px-1 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 ${
+  isSelected(i)
+    ? "bg-white/10 backdrop-blur-sm border-[1.5px] border-black/10 rounded-md shadow-md shadow-black/20"
+    : "text-black"
+}`}
+>
+  {word}
+</button>
         ))}
       </div>
 
