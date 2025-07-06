@@ -246,40 +246,49 @@ const fetchExample = async (spanishWord: string) => {
     ref={tooltipRef}
     className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50 w-fit max-w-[80vw] min-w-[8rem]"
   >
-    {loading && <div className="text-sm">Loading...</div>}
     {error && <div className="text-sm text-red-500">{error}</div>}
+    {(translations.length > 0 || loading) && (
+  <div className="text-sm">
+    <strong className="flex items-center gap-2">
+      {"Translation:"}
+      {loading && <span className="animate-pulse text-lg">🧠</span>}
+    </strong>
+
     {translations.length > 0 && (
-      <div className="text-sm">
-        <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
-        <ul className="list-disc list-inside mt-1">
-          {translations.map((t: any, i: number) => {
-            const translation = typeof t === "string" ? t : t.translation;
-            const hasExample = !!exampleMap[translation];
+      <ul className="list-disc list-inside mt-1">
+        {translations.map((t: any, i: number) => {
+          const translation = typeof t === "string" ? t : t.translation;
+          const hasExample = !!exampleMap[translation];
 
-            return (
-              <div key={i} className="flex items-start gap-2">
-  <span className="text-lg leading-snug">•</span>
-  <div>
-    <button
-      onClick={() => fetchExample(translation)}
-      className="text-blue-600 hover:underline break-words text-left"
-    >
-      {translation}
-    </button>
-
-    {hasExample && (
-      <div className="mt-1 text-sm">
-        <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
-        <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
-      </div>
+          return (
+            <div key={i} className="flex items-start gap-2">
+              <span className="text-lg leading-snug">•</span>
+              <div>
+                <button
+                  onClick={() => fetchExample(translation)}
+                  className="text-blue-600 hover:underline break-words text-left"
+                >
+                  {translation}
+                </button>
+                {hasExample && (
+                  <div className="mt-1 text-sm">
+                    <p className="text-gray-900">
+                      &quot;{exampleMap[translation].english}&quot;
+                    </p>
+                    <p className="text-gray-600 italic">
+                      &quot;{exampleMap[translation].spanish}&quot;
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </ul>
     )}
   </div>
-</div>
-            );
-          })}
-        </ul>
-      </div>
-    )}
+)}
+
   </div>
 )}
     </div>
