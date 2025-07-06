@@ -7,8 +7,7 @@ import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
 
-export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
-  type ActiveAudio = {
+type ActiveAudio = {
   index: number;
   path: string;
   audio: HTMLAudioElement;
@@ -18,6 +17,8 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   progress: number;
 };
 
+export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
+
 const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
 
   const [lineWidths, setLineWidths] = useState<Record<number, number>>({});
@@ -26,11 +27,10 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const pathname = usePathname();
-  if (!pathname) return null;
+  const pathname = usePathname() ?? "";
   const router = useRouter();
 
-  const pathParts = pathname.split("/");
+  const pathParts = pathname ? pathname.split("/") : [];
   const currentLevel = pathParts[4] || initialLevel || "l1";
   const currentPart = pathParts[5] || "part-1";
   const partNumber = parseInt(currentPart.replace("part-", ""));
