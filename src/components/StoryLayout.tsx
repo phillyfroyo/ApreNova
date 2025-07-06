@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
+import UnifiedTranslator from "@/components/UnifiedTranslator";
+
 
 type ActiveAudio = {
   index: number;
@@ -38,6 +40,9 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const dynamicPartTitle = `Part ${partNumber}`;
 
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+
+  const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+
 
   useEffect(() => {
     const handleGlobalMove = (e) => {
@@ -291,20 +296,56 @@ if (
 
           {sentences.map((s, i) => (
             <div key={i} className="my-12">
-              <div className="flex space-x-4 items-center justify-center">
-                <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
-                <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
-                <button
-        onClick={(e) => {
-          const target = e.target as HTMLElement;
-          const t = target.closest("div")?.parentElement?.querySelector(".translation") as HTMLElement;
-          t.classList.toggle("hidden");
-        }}
-        className="hover:scale-110 transition"
-      >
-        ✍️
-      </button>
-              </div>
+              <div className="flex flex-col items-center justify-center space-y-2">
+  <div className="flex space-x-4 items-center">
+    <button
+      onClick={() =>
+        handlePlay(
+          i,
+          `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`,
+          false,
+          s.en
+        )
+      }
+    >
+      🔊
+    </button>
+    <button
+      onClick={() =>
+        handlePlay(
+          i,
+          `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`,
+          true,
+          s.en
+        )
+      }
+    >
+      🐢
+    </button>
+    {translationMode === "free" && (
+  <button
+    onClick={() => {
+      const el = translationRefs.current[i];
+      if (el) {
+        requestAnimationFrame(() => {
+          el.classList.toggle("hidden");
+        });
+      }
+    }}
+    className="hover:scale-110 transition"
+  >
+    ✍️
+  </button>
+)}
+
+  </div>
+
+  {translationMode === "premium" && (
+    <UnifiedTranslator sentence={s.en} enabled />
+  )}
+
+  {/* Only show translation paragraph in Free mode */}
+</div>
 
               {activeAudio?.index === i && (
   <div className="my-3 relative">
@@ -318,17 +359,28 @@ if (
   </div>
 )}
 
-              <p>
-                <span
-                 ref={(el) => {
-                 textRefs.current[i] = el;
-                }}
-                 className="inline-block"
-                >
-                  {s.en}
-                </span>
-              </p>
-              <p className="translation hidden text-muted-foreground text-sm mt-2">{s.es}</p>
+              {translationMode === "free" && (
+  <p>
+    <span
+      ref={(el) => {
+        textRefs.current[i] = el;
+      }}
+      className="inline-block"
+    >
+      {s.en}
+    </span>
+  </p>
+)}
+{translationMode === "free" && (
+    <p
+  ref={(el) => {
+    translationRefs.current[i] = el;
+  }}
+  className="translation hidden text-muted-foreground text-sm mt-2"
+>
+  {s.es}
+</p>
+  )}
             </div>
           ))}
         </div>

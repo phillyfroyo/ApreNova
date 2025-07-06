@@ -6,9 +6,10 @@ import { usePathname } from 'next/navigation';
 
 interface Props {
   sentence: string;
+  enabled?: boolean; // default false if not passed
 }
 
-export default function UnifiedTranslator({ sentence }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -76,6 +77,8 @@ if (!isSingleWord) {
   };
 
   const handleClick = (index: number) => {
+  if (!enabled) return;
+  
   if (startIdx === null && endIdx === null) {
     // First word clicked
     setStartIdx(index);
@@ -219,78 +222,75 @@ const fetchExample = async (spanishWord: string) => {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
-
-  return (
-    <div className="p-4 relative">
-      <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
-        {words.map((word, i) => (
-          <button
+          return (
+  <div className="p-4 relative">
+    <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
+      {words.map((word, i) => (
+        <button
           ref={(el) => {
-  buttonRefs.current[i] = el;
-}}
+            buttonRefs.current[i] = el;
+          }}
           key={i}
           onClick={() => handleClick(i)}
           className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 ${
-          isSelected(i)
-    ? "bg-white/10 backdrop-blur-sm border-[1.5px] border-black/10 rounded-md shadow-md shadow-black/20"
-    : "text-black"
-     }`}
+            enabled && isSelected(i)
+              ? "bg-white/10 backdrop-blur-sm border-[1.5px] border-black/10 rounded-md shadow-md shadow-black/20"
+              : "text-black"
+          }`}
+        >
+          {word}
+        </button>
+      ))}
+    </div>
+
+    {enabled && (translations.length > 0 || loading || error) && (
+      <div
+        ref={tooltipRef}
+        className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50 w-fit max-w-[80vw] min-w-[8rem]"
       >
-       {word}
-      </button>
-        ))}
+        {error && <div className="text-sm text-red-500">{error}</div>}
+        {(translations.length > 0 || loading) && (
+          <div className="text-sm">
+            <strong className="flex items-center gap-2">
+              {"Translation:"}
+              {loading && <span className="animate-pulse text-lg">🧠</span>}
+            </strong>
+
+            {translations.length > 0 && (
+              <ul className="list-disc list-inside mt-1">
+                {translations.map((t: any, i: number) => {
+                  const translation = typeof t === "string" ? t : t.translation;
+                  const hasExample = !!exampleMap[translation];
+
+                  return (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-lg leading-snug">•</span>
+                      <div>
+                        <button
+                          onClick={() => fetchExample(translation)}
+                          className="text-blue-600 hover:underline break-words text-left"
+                        >
+                          {translation}
+                        </button>
+                        {hasExample && (
+                          <div className="mt-1 text-sm">
+                            <p className="text-gray-900">
+                              &quot;{exampleMap[translation].english}&quot;
+                            </p>
+                            <p className="text-gray-600 italic">
+                              &quot;{exampleMap[translation].spanish}&quot;
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
-
-  {(translations.length > 0 || loading || error) && (
-  <div
-    ref={tooltipRef}
-    className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50 w-fit max-w-[80vw] min-w-[8rem]"
-  >
-    {error && <div className="text-sm text-red-500">{error}</div>}
-    {(translations.length > 0 || loading) && (
-  <div className="text-sm">
-    <strong className="flex items-center gap-2">
-      {"Translation:"}
-      {loading && <span className="animate-pulse text-lg">🧠</span>}
-    </strong>
-
-    {translations.length > 0 && (
-      <ul className="list-disc list-inside mt-1">
-        {translations.map((t: any, i: number) => {
-          const translation = typeof t === "string" ? t : t.translation;
-          const hasExample = !!exampleMap[translation];
-
-          return (
-            <div key={i} className="flex items-start gap-2">
-              <span className="text-lg leading-snug">•</span>
-              <div>
-                <button
-                  onClick={() => fetchExample(translation)}
-                  className="text-blue-600 hover:underline break-words text-left"
-                >
-                  {translation}
-                </button>
-                {hasExample && (
-                  <div className="mt-1 text-sm">
-                    <p className="text-gray-900">
-                      &quot;{exampleMap[translation].english}&quot;
-                    </p>
-                    <p className="text-gray-600 italic">
-                      &quot;{exampleMap[translation].spanish}&quot;
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </ul>
     )}
   </div>
-)}
-
-  </div>
-)}
-    </div>
-  );
-}
+); }
