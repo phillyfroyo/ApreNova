@@ -26,6 +26,7 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
 
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -66,48 +67,64 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   };
 
   const handlePlay = (index, path, isSlow, text) => {
-    if (activeAudio && activeAudio.index === index && activeAudio.isSlow === isSlow) {
-      if (activeAudio.audio.paused) {
-        activeAudio.audio.play();
-        setActiveAudio({ ...activeAudio, isPlaying: true });
-      } else {
-        activeAudio.audio.pause();
-        setActiveAudio({ ...activeAudio, isPlaying: false });
-      }
-    } else {
-      if (activeAudio?.audio) activeAudio.audio.pause();
-      const audio = new Audio(path);
-      audio.addEventListener("loadedmetadata", () => {
-        setActiveAudio({
-          index,
-          path,
-          audio,
-          duration: audio.duration,
-          isPlaying: true,
-          isSlow,
-          progress: 0,
-        });
-        audio.play();
-      });
-      audio.addEventListener("timeupdate", () => {
-        if (!isDragging) {
-          setActiveAudio((prev) => {
-            if (!prev || prev.index !== index || prev.path !== path) return prev;
-            return { ...prev, progress: audio.currentTime };
-          });
-        }
-      });
-      audio.addEventListener("ended", () => {
-          setActiveAudio((prev) => {
-            if (!prev) return null;
-            return { ...prev, isPlaying: false };
-        });
-      });
-      audio.addEventListener("error", () => speak(text));
 
-      const width = textRefs.current[index]?.offsetWidth || 0;
-      setLineWidths((prev) => ({ ...prev, [index]: width }));
+// Reuse same audio if same index + slow mode
+if (
+  activeAudio &&
+  activeAudio.index === index &&
+  activeAudio.isSlow === isSlow
+) {
+  // Toggle play/pause on same line + mode
+  const audio = activeAudio.audio;
+  if (audio.paused) {
+    audio.play();
+    setActiveAudio({ ...activeAudio, isPlaying: true });
+  } else {
+    audio.pause();
+    setActiveAudio({ ...activeAudio, isPlaying: false });
+  }
+} else {
+  // Pause any currently playing audio
+  if (activeAudio?.audio) {
+    activeAudio.audio.pause();
+  }
+
+  const audio = new Audio(path);
+
+  audio.addEventListener("loadedmetadata", () => {
+    setActiveAudio({
+      index,
+      path,
+      audio,
+      duration: audio.duration,
+      isPlaying: true,
+      isSlow,
+      progress: 0,
+    });
+    audio.play();
+  });
+
+  audio.addEventListener("timeupdate", () => {
+    if (!isDragging) {
+      setActiveAudio((prev) => {
+        if (!prev || prev.index !== index || prev.path !== path) return prev;
+        return { ...prev, progress: audio.currentTime };
+      });
     }
+  });
+
+  audio.addEventListener("ended", () => {
+    setActiveAudio((prev) => {
+      if (!prev) return null;
+      return { ...prev, isPlaying: false };
+    });
+  });
+
+  audio.addEventListener("error", () => speak(text));
+
+  const width = textRefs.current[index]?.offsetWidth || 0;
+  setLineWidths((prev) => ({ ...prev, [index]: width }));
+}
   };
 
   const handleSeek = (newTime) => {
@@ -211,6 +228,23 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
               );
             })}
           </div>
+          <div className="flex gap-2 flex-wrap">
+  <Button
+    variant="parts"
+    onClick={() => setTranslationMode("free")}
+    className={translationMode === "free" ? "ring-2 ring-black" : ""}
+  >
+    Free Mode
+  </Button>
+  <Button
+    variant="parts"
+    onClick={() => setTranslationMode("premium")}
+    className={translationMode === "premium" ? "ring-2 ring-black" : ""}
+  >
+    Premium Mode
+  </Button>
+</div>
+
         </div>
       )}
 
@@ -272,7 +306,17 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
       </button>
               </div>
 
-              {activeAudio?.index === i && <div className="my-3">{renderProgressBar(activeAudio)}</div>}
+              {activeAudio?.index === i && (
+  <div className="my-3 relative">
+    <button
+      onClick={() => setActiveAudio(null)}
+      className="absolute -top-5 right-0 text-xl hover:scale-110 transition"
+    >
+      ✖️
+    </button>
+    {renderProgressBar(activeAudio)}
+  </div>
+)}
 
               <p>
                 <span
