@@ -6,10 +6,12 @@ import { usePathname } from 'next/navigation';
 
 interface Props {
   sentence: string;
-  enabled?: boolean; // default false if not passed
+  enabled?: boolean;
+  autoTriggerAll?: boolean; // 🍌 new prop
 }
 
-export default function UnifiedTranslator({ sentence, enabled = false }: Props) {
+
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -199,29 +201,39 @@ const fetchExample = async (spanishWord: string) => {
 };
 
   useEffect(() => {
-    if (tooltipRef.current) {
-      const { left } = getTooltipPosition();
-      tooltipRef.current.style.left = `${left}px`;
-    }
-  }, [startIdx, endIdx, translations]);
+  if (tooltipRef.current) {
+    const { left } = getTooltipPosition();
+    tooltipRef.current.style.left = `${left}px`;
+  }
+}, [startIdx, endIdx, translations]);
 
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node) &&
-        tooltipRef.current &&
-        !tooltipRef.current.contains(e.target as Node)
-      ) {
-        setStartIdx(null);
-        setEndIdx(null);
-        setTranslations([]);
-        setError("");
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
+useEffect(() => {
+  if (enabled && autoTriggerAll) {
+    setStartIdx(0);
+    setEndIdx(words.length - 1);
+    fetchTranslation(0, words.length - 1);
+  }
+}, [autoTriggerAll]);
+
+useEffect(() => {
+  const handleOutsideClick = (e: MouseEvent) => {
+    if (
+      containerRef.current &&
+      !containerRef.current.contains(e.target as Node) &&
+      tooltipRef.current &&
+      !tooltipRef.current.contains(e.target as Node)
+    ) {
+      setStartIdx(null);
+      setEndIdx(null);
+      setTranslations([]);
+      setError("");
+    }
+  };
+
+  document.addEventListener("mousedown", handleOutsideClick);
+  return () => document.removeEventListener("mousedown", handleOutsideClick);
+}, []);
+
           return (
   <div className="p-4 relative">
     <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
@@ -242,6 +254,7 @@ const fetchExample = async (spanishWord: string) => {
         </button>
       ))}
     </div>
+
 
     {enabled && (translations.length > 0 || loading || error) && (
       <div

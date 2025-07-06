@@ -29,6 +29,8 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
+  const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
+
 
   const pathname = usePathname() ?? "";
   const router = useRouter();
@@ -338,10 +340,26 @@ if (
   </button>
 )}
 
+{translationMode === "premium" && (
+  <button
+    onClick={() =>
+      setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))
+    }
+    className="hover:scale-110 transition"
+  >
+    💎
+  </button>
+)}
+
   </div>
 
   {translationMode === "premium" && (
-    <UnifiedTranslator sentence={s.en} enabled />
+    <UnifiedTranslator
+  sentence={s.en}
+  enabled
+  autoTriggerAll={!!premiumTriggers[i]}
+/>
+
   )}
 
   {/* Only show translation paragraph in Free mode */}
