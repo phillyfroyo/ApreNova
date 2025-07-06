@@ -76,29 +76,56 @@ if (!isSingleWord) {
   };
 
   const handleClick = (index: number) => {
-    if (startIdx === null && endIdx === null) {
-  // First word clicked
-  setStartIdx(index);
-  setEndIdx(index);
-  fetchTranslation(index, index);
-  return;
-}
+  if (startIdx === null && endIdx === null) {
+    // First word clicked
+    setStartIdx(index);
+    setEndIdx(index);
+    fetchTranslation(index, index);
+    return;
+  }
 
-// If clicking the same exact word again — clear the selection
-if (startIdx === index && endIdx === index) {
-  setStartIdx(null);
-  setEndIdx(null);
-  setTranslations([]);
-  setError("");
-  return;
-}
+  if (startIdx === index && endIdx === index) {
+    // Deselect single-word selection
+    setStartIdx(null);
+    setEndIdx(null);
+    setTranslations([]);
+    setError("");
+    return;
+  }
 
-// Expand selection to include both the current selection and clicked index
-const s = Math.min(startIdx!, endIdx!, index);
-const e = Math.max(startIdx!, endIdx!, index);
-setStartIdx(s);
-setEndIdx(e);
-fetchTranslation(s, e);
+  if (startIdx !== null && endIdx !== null) {
+    if (index < startIdx || index > endIdx) {
+      // Expand selection
+      const newStart = Math.min(startIdx, index);
+      const newEnd = Math.max(endIdx, index);
+      setStartIdx(newStart);
+      setEndIdx(newEnd);
+      fetchTranslation(newStart, newEnd);
+    } else if (index > startIdx && index < endIdx) {
+      // Shrink from right
+      setEndIdx(index);
+      fetchTranslation(startIdx, index);
+    } else if (index === startIdx && startIdx !== endIdx) {
+      // Shrink from left
+      const newStart = startIdx + 1;
+      setStartIdx(newStart);
+      fetchTranslation(newStart, endIdx);
+    } else {
+      // Fallback: Reset everything
+      setStartIdx(null);
+      setEndIdx(null);
+      setTranslations([]);
+      setError("");
+    }
+    return;
+  }
+
+  // Final fallback: select range that includes clicked word
+  const s = Math.min(startIdx!, endIdx!, index);
+  const e = Math.max(startIdx!, endIdx!, index);
+  setStartIdx(s);
+  setEndIdx(e);
+  fetchTranslation(s, e);
   };
 const fetchExample = async (spanishWord: string) => {
   const englishWord = words.slice(startIdx!, endIdx! + 1).join(" ");
@@ -230,21 +257,24 @@ const fetchExample = async (spanishWord: string) => {
             const hasExample = !!exampleMap[translation];
 
             return (
-              <li key={i}>
-                <button
-                  onClick={() => fetchExample(translation)}
-                  className="text-blue-600 hover:underline break-words"
-                >
-                  {translation}
-                </button>
+              <div key={i} className="flex items-start gap-2">
+  <span className="text-lg leading-snug">•</span>
+  <div>
+    <button
+      onClick={() => fetchExample(translation)}
+      className="text-blue-600 hover:underline break-words text-left"
+    >
+      {translation}
+    </button>
 
-                {hasExample && (
-                  <div className="mt-1 text-sm">
-                    <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
-                    <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
-                  </div>
-                )}
-              </li>
+    {hasExample && (
+      <div className="mt-1 text-sm">
+        <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
+        <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
+      </div>
+    )}
+  </div>
+</div>
             );
           })}
         </ul>
