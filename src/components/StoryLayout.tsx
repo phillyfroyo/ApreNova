@@ -178,7 +178,7 @@ if (
 
   return (
     <div
-      className={`min-h-screen px-4 sm:px-10 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
+      className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
       style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
     >
       <header className="fixed top-4 left-4 z-50">
@@ -297,7 +297,7 @@ if (
           {sentences.map((s, i) => (
             <div key={i} className="my-12">
               <div className="flex flex-col items-center justify-center space-y-2">
-  <div className="flex space-x-4 items-center">
+                <div className="flex space-x-4 items-center">
     <button
       onClick={() =>
         handlePlay(
