@@ -16,6 +16,7 @@ export default function UnifiedTranslator({ sentence }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname() ?? "";
@@ -145,12 +146,27 @@ const fetchExample = async (spanishWord: string) => {
   };
 
   const getTooltipPosition = () => {
-    if (startIdx === null || !containerRef.current || !tooltipRef.current) return { left: 0 };
-    const span = containerRef.current.querySelectorAll("button")[startIdx];
-    if (!span) return { left: 0 };
-    const rect = span.getBoundingClientRect();
-    return { left: rect.left + rect.width / 2 };
-  };
+  if (
+    startIdx === null ||
+    endIdx === null ||
+    !tooltipRef.current ||
+    !buttonRefs.current[startIdx] ||
+    !buttonRefs.current[endIdx]
+  ) {
+    return { left: 0 };
+  }
+
+  const firstEl = buttonRefs.current[startIdx];
+  const lastEl = buttonRefs.current[endIdx];
+  const parentRect = firstEl?.offsetParent?.getBoundingClientRect();
+  const firstRect = firstEl?.getBoundingClientRect();
+  const lastRect = lastEl?.getBoundingClientRect();
+
+  if (!firstRect || !lastRect || !parentRect) return { left: 0 };
+
+  const center = (firstRect.left + lastRect.right) / 2 - parentRect.left;
+  return { left: center };
+};
 
   useEffect(() => {
     if (tooltipRef.current) {
@@ -182,59 +198,60 @@ const fetchExample = async (spanishWord: string) => {
       <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
         {words.map((word, i) => (
           <button
-  key={i}
-  onClick={() => handleClick(i)}
-  className={`px-1 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 ${
-  isSelected(i)
+          ref={(el) => {
+  buttonRefs.current[i] = el;
+}}
+          key={i}
+          onClick={() => handleClick(i)}
+          className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 ${
+          isSelected(i)
     ? "bg-white/10 backdrop-blur-sm border-[1.5px] border-black/10 rounded-md shadow-md shadow-black/20"
     : "text-black"
-}`}
->
-  {word}
-</button>
+     }`}
+      >
+       {word}
+      </button>
         ))}
       </div>
 
-  <span className="relative inline-block">
   {(translations.length > 0 || loading || error) && (
-    <div
-      ref={tooltipRef}
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white text-black p-2 rounded shadow z-50"
-    >
-      {loading && <div className="text-sm">Loading...</div>}
-      {error && <div className="text-sm text-red-500">{error}</div>}
-      {translations.length > 0 && (
-        <div className="text-sm">
-          <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
-          <ul className="list-disc list-inside mt-1">
-  {translations.map((t: any, i: number) => {
-  const translation = typeof t === "string" ? t : t.translation;
-  const hasExample = !!exampleMap[translation];
+  <div
+    ref={tooltipRef}
+    className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50 w-fit max-w-[80vw] min-w-[8rem]"
+  >
+    {loading && <div className="text-sm">Loading...</div>}
+    {error && <div className="text-sm text-red-500">{error}</div>}
+    {translations.length > 0 && (
+      <div className="text-sm">
+        <strong>{translations.length === 1 ? "Translation" : "Translations"}:</strong>
+        <ul className="list-disc list-inside mt-1">
+          {translations.map((t: any, i: number) => {
+            const translation = typeof t === "string" ? t : t.translation;
+            const hasExample = !!exampleMap[translation];
 
-  return (
-    <li key={i}>
-      <button
-        onClick={() => fetchExample(translation)}
-        className="text-blue-600 hover:underline"
-      >
-        {translation}
-      </button>
+            return (
+              <li key={i}>
+                <button
+                  onClick={() => fetchExample(translation)}
+                  className="text-blue-600 hover:underline break-words"
+                >
+                  {translation}
+                </button>
 
-      {hasExample && (
-        <div className="mt-1 text-sm">
-          <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
-          <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
-        </div>
-      )}
-    </li>
-  );
-})}
-</ul>
-        </div>
-      )}
-    </div>
-  )}
-</span>
+                {hasExample && (
+                  <div className="mt-1 text-sm">
+                    <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
+                    <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
 }
