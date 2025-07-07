@@ -17,7 +17,11 @@ function AccountDropdown() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const profilePic = session?.user?.image;
-  const email = session?.user?.email || "User";
+  const email = session?.user?.email || (
+  <a href="/es/auth/signup" className="text-blue-800 hover:underline">
+  Create an Account
+</a>
+);
 
   return (
     <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
@@ -74,13 +78,7 @@ function AccountDropdown() {
             style={{ marginBottom: "0.75rem", cursor: "pointer", color: "#1000c8" }}
             onClick={() => (window.location.href = "/es/settings")}
           >
-            Settings
-          </div>
-          <div
-            style={{ cursor: "pointer", color: "red" }}
-            onClick={() => signOut({ callbackUrl: "/" })}
-          >
-            Log out
+            My Account
           </div>
         </div>
       )}
