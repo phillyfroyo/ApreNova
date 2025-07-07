@@ -57,7 +57,7 @@ export default function SettingsPage() {
   </div>
 ) : (
   <div
-    className="text-xs text-blue-200 underline mb-4 cursor-pointer"
+    className="text-xs text-blue-800 mb-4 cursor-pointer"
     onClick={() => {
       const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es'
       window.location.href = `/${lang}/home/quiz/l1/q1`
