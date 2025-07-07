@@ -177,36 +177,6 @@ const fetchExample = async (spanishWord: string) => {
     return i >= startIdx && i <= endIdx;
   };
 
-  const getTooltipPosition = () => {
-  if (
-    startIdx === null ||
-    endIdx === null ||
-    !tooltipRef.current ||
-    !buttonRefs.current[startIdx] ||
-    !buttonRefs.current[endIdx]
-  ) {
-    return { left: 0 };
-  }
-
-  const firstEl = buttonRefs.current[startIdx];
-  const lastEl = buttonRefs.current[endIdx];
-  const parentRect = firstEl?.offsetParent?.getBoundingClientRect();
-  const firstRect = firstEl?.getBoundingClientRect();
-  const lastRect = lastEl?.getBoundingClientRect();
-
-  if (!firstRect || !lastRect || !parentRect) return { left: 0 };
-
-  const center = (firstRect.left + lastRect.right) / 2 - parentRect.left;
-  return { left: center };
-};
-
-  useEffect(() => {
-  if (tooltipRef.current) {
-    const { left } = getTooltipPosition();
-    tooltipRef.current.style.left = `${left}px`;
-  }
-}, [startIdx, endIdx, translations]);
-
 useEffect(() => {
   if (enabled && autoTriggerAll) {
     setStartIdx(0);
