@@ -40,26 +40,29 @@ export const authOptions: AuthOptions = {
 
   callbacks: {
     jwt: async ({ token, user }) => {
-      if (user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
-        if (dbUser?.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
-        if (dbUser?.quizLevel) token.quizLevel = dbUser.quizLevel;
-        if (dbUser?.name) token.name = dbUser.name;
-      }
-      return token;
-    },
+  if (user?.email) {
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
+    if (dbUser) {
+      token.id = dbUser.id // ✅ This line is critical
+      if (dbUser.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
+      if (dbUser.quizLevel) token.quizLevel = dbUser.quizLevel;
+      if (dbUser.name) token.name = dbUser.name;
+    }
+  }
+  return token;
+},
 
     session: async ({ session, token }) => {
-      if (session.user) {
-        if (token.quizLevel) session.user.quizLevel = token.quizLevel as string;
-        if (token.nativeLanguage) session.user.nativeLanguage = token.nativeLanguage;
-        if (token.sub) session.user.id = token.sub;
-        if (token.name) session.user.name = token.name;
-      }
-      return session;
-    },
+  if (session.user) {
+    if (token.id) session.user.id = token.id; // ✅ use this
+    if (token.quizLevel) session.user.quizLevel = token.quizLevel as string;
+    if (token.nativeLanguage) session.user.nativeLanguage = token.nativeLanguage;
+    if (token.name) session.user.name = token.name;
+  }
+  return session;
+},
   },
 
   session: {

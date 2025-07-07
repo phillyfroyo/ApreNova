@@ -1,51 +1,29 @@
-"use client";
-// src\hooks\useUserLevel.ts
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+'use client'
 
-export function useUserLevel(defaultLevel: string = "l2") {
-  const { data: session } = useSession();
-  const searchParams = useSearchParams();
-  const [selectedLevel, setSelectedLevel] = useState("all");
+import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+
+export function useUserLevel(defaultLevel: string = 'l2') {
+  const { data: session } = useSession()
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchUserLevel() {
-      const levelFromURL = searchParams?.get("level");
-      const levelFromStorage = localStorage.getItem("quizLevel");
-
-      if (levelFromURL && levelFromURL !== selectedLevel) {
-        setSelectedLevel(levelFromURL);
-        return;
-      }
-
-      if (!session?.user?.email) return;
+    const fetchLevel = async () => {
+      if (!session?.user?.id) return
 
       try {
-        const res = await fetch(`/api/user-level?email=${session.user.email}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.level) {
-            setSelectedLevel(data.level);
-            localStorage.setItem("quizLevel", data.level);
-            return;
-          }
-        } else {
-          console.warn("Level not found or fetch failed, falling back.");
+        const res = await fetch(`/api/user-level?userId=${session.user.id}`)
+        const data = await res.json()
+        if (data.level) {
+          setSelectedLevel(data.level)
         }
       } catch (err) {
-        console.error("Failed to fetch level from DB", err);
-      }
-
-      if (levelFromStorage && levelFromStorage !== selectedLevel) {
-        setSelectedLevel(levelFromStorage);
-      } else if (!levelFromStorage && selectedLevel !== defaultLevel) {
-        setSelectedLevel(defaultLevel);
+        console.error('Failed to load user level', err)
       }
     }
 
-    fetchUserLevel();
-  }, [searchParams, selectedLevel, session, defaultLevel]);
+    fetchLevel()
+  }, [session?.user?.id])
 
-  return selectedLevel;
+  return selectedLevel ?? defaultLevel
 }

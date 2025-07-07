@@ -4,7 +4,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      email: string;
+      email?: string;
       name?: string;
       image?: string;
       nativeLanguage?: string;
@@ -13,6 +13,7 @@ declare module "next-auth" {
   }
 
   interface User {
+    id: string
     name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS
@@ -21,6 +22,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id?: string
     name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS

@@ -1,45 +1,47 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { Card } from '@/components/ui';
-import Logo from '@/components/Logo';
+import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { Card } from '@/components/ui'
+import Logo from '@/components/Logo'
 
 export default function ResultsPage() {
-  const [levelLabel, setLevelLabel] = useState('');
-  const { data: session } = useSession();
+  const [levelLabel, setLevelLabel] = useState('')
+  const { data: session } = useSession()
 
   useEffect(() => {
     async function saveLevelToDB() {
-      if (!session?.user?.email) return;
+      const level = localStorage.getItem('quizLevel') || 'l1'
 
-      const level = localStorage.getItem('quizLevel') || 'l1';
+      if (session?.user?.id) {
+        try {
+          await fetch('/api/user-level', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: session.user.id, level }),
+          })
+        } catch (err) {
+          console.error('Failed to update level:', err)
+        }
+      }
 
-      await fetch('/api/user-level', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: session.user.email,
-          level,
-        }),
-      });
+      // Store level for Leerme reference
+      localStorage.setItem('level', level)
+
+      // Set label for display
+      const levelMap = {
+        l1: 'Brand New',
+        l2: 'Beginner',
+        l3: 'Intermediate',
+        l4: 'Advanced',
+      }
+
+      setLevelLabel(levelMap[level] || 'Brand New')
     }
 
-    saveLevelToDB();
+    saveLevelToDB()
+  }, [session])
 
-    const storedLevel = localStorage.getItem('quizLevel') || 'l1';
-    localStorage.setItem('level', storedLevel); // ✅ this is the key "Leerme" reads from
-    
-    const levelMap = {
-      l1: 'Brand New',
-      l2: 'Beginner',
-      l3: 'Intermediate',
-      l4: 'Advanced',
-    };
-
-    const label = levelMap[storedLevel] || 'Brand New';
-    setLevelLabel(label);
-  }, [session]);
 
   return (
     <div
