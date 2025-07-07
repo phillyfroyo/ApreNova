@@ -11,7 +11,6 @@ import SettingsLevelDisplay from './SettingsLevelDisplay'
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const selectedLevel = useUserLevel();
 
   if (status === 'loading') {
     return <p>Loading...</p>
