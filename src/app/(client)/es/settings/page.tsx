@@ -3,11 +3,13 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Logo from '@/components/Logo'
+import { useUserLevel } from "@/hooks/useUserLevel";
 
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const selectedLevel = useUserLevel();
 
   if (status === 'loading') {
     return <p>Loading...</p>
@@ -51,9 +53,9 @@ export default function SettingsPage() {
   </div>
 )}
 
-{session.user.quizLevel ? (
+{selectedLevel ? (
   <div className="text-xs text-black/80 mb-4">
-    🎯 Current Level: {session.user.quizLevel.toUpperCase()}
+    🎯 Current Level: {selectedLevel.toUpperCase()}
   </div>
 ) : (
   <div
@@ -66,6 +68,7 @@ export default function SettingsPage() {
     🎯 Current Level: Undefined. Take the Quiz
   </div>
 )}
+
 
 
     <div
