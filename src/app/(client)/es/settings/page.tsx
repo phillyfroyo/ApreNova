@@ -32,22 +32,31 @@ export default function SettingsPage() {
       console.error("Failed to update user field:", err)
     }
   }
-  
-  return (
+
+ return (
   <div key={sessionKey}>
     <div
-      className="min-h-screen h-screen bg-cover bg-center px-4 py-10 text-black"
-      style={{ backgroundImage: 'url(/images/background3.png)' }}
-    >
-      <div className="flex justify-center mb-6">
-        <Logo />
-      </div>
+  className="relative min-h-screen h-screen bg-cover bg-center px-4 py-10 text-black"
+  style={{ backgroundImage: 'url(/images/background3.png)' }}
+>
 
+      <div className="absolute top-4 left-4">
+  <button
+    onClick={() => window.location.href = '/es/stories'}
+    className="text-sm text-blue-700 hover:underline"
+  >
+    ← Back to stories
+  </button>
+</div>
+
+      <div className="flex justify-center mb-12">
+  <Logo />
+</div>
       <h1 className="text-2xl font-bold text-center mb-6">
         ¡Hola {session.user.name || session.user.email}! 🎉
       </h1>
 
-      <div className="text-left max-w-sm mx-auto">
+      <div className="text-left max-w-sm mx-auto space-y-4">
         <EditableField
           label="👤"
           value={session.user.name ?? ''}
@@ -71,24 +80,25 @@ export default function SettingsPage() {
         <Suspense fallback={<div className="text-xs mb-4">🎯 Loading level...</div>}>
           <SettingsLevelDisplay />
         </Suspense>
-      </div>
 
-      <div
-        className="mb-3 text-green-700 cursor-pointer hover:underline"
-        onClick={() => {
-          const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es'
-          window.location.href = `/${lang}/home/quiz/l1/q1`
-        }}
-      >
-        Take the Quiz
-      </div>
+        <div
+          className="text-green-700 cursor-pointer hover:underline text-sm"
+          onClick={() => {
+            const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es'
+            window.location.href = `/${lang}/home/quiz/l1/q1`
+          }}
+        >
+          ▶️ Take the Quiz
+        </div>
 
-      <div
-        className="text-red-600 cursor-pointer hover:underline"
-        onClick={() => signOut({ callbackUrl: '/' })}
-      >
-        Log out
+        <div
+          className="text-red-600 cursor-pointer hover:underline text-sm"
+          onClick={() => signOut({ callbackUrl: '/' })}
+        >
+          🚪 Log Out
+        </div>
       </div>
     </div>
   </div>
-)}
+)
+}

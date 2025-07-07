@@ -12,7 +12,7 @@ export default function SettingsLevelDisplay() {
       typeof window !== 'undefined' && window.location.pathname.startsWith('/en') ? 'en' : 'es'
     return (
       <div
-        className="text-xs text-blue-800 mb-4 cursor-pointer"
+        className="text-sm text-blue-800 mb-4 cursor-pointer"
         onClick={() => {
           window.location.href = `/${lang}/home/quiz/l1/q1`
         }}
@@ -22,14 +22,29 @@ export default function SettingsLevelDisplay() {
     )
   }
 
+  const lang =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/en') ? 'en' : 'es'
+
   return (
-    <div className="flex items-center gap-2 text-xs mb-4">
-      {editing ? (
-        <span className="text-blue-800">🎯 Take the Quiz</span>
-      ) : (
-        <span>🎯 Current Level: {selectedLevel.toUpperCase()}</span>
-      )}
-      <button onClick={() => setEditing(!editing)} className="text-gray-500 hover:text-black">
+    <div className="flex items-center justify-between text-sm mb-2">
+      <span className="font-medium">
+        🎯 <span className="text-black">Current Level:</span> {selectedLevel.toUpperCase()}
+        {editing && (
+          <span
+            className="ml-2 text-blue-800 underline cursor-pointer"
+            onClick={() => {
+              window.location.href = `/${lang}/home/quiz/l1/q1`
+            }}
+          >
+            take the quiz to change your level
+          </span>
+        )}
+      </span>
+
+      <button
+        onClick={() => setEditing(!editing)}
+        className="text-gray-500 hover:text-black text-base"
+      >
         ✏️
       </button>
     </div>
