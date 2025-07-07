@@ -1,6 +1,6 @@
 // src/app/(client)/page.js
 import { getServerSession } from 'next-auth';
-import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { authOptions } from "@/lib/authOptions";
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/Logo';

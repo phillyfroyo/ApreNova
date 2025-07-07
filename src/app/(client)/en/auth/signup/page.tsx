@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Logo from '@/components/Logo'
 import { Card, Input, Button, H1, Small } from '@/components/ui'
+import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function SignupPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.message || 'Something went wrong')
+      setError(data.error || data.message || 'Something went wrong')
     } else {
       setSuccess(true)
 
@@ -154,6 +155,12 @@ export default function SignupPage() {
               Sign up with Google
             </span>
           </button>
+          <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
+  <span className="text-black">¿Ya tienes una cuenta? </span>
+  <Link href="/es/auth/login" className="text-[#1000c8] hover:underline">
+    Inicia sesión
+  </Link>
+</p>
         </Card>
       </form>
     </div>

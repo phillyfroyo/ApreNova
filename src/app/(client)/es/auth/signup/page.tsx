@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Logo from '@/components/Logo'
 import { Card, Input, Button, H1, Small } from '@/components/ui'
+import Link from "next/link";
+
+
 
 export default function SignupPage() {
   const router = useRouter()
@@ -42,7 +45,7 @@ export default function SignupPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.message || 'Something went wrong')
+      setError(data.error || data.message || 'Something went wrong')
     } else {
       setSuccess(true)
 
@@ -70,7 +73,7 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
         <Card className="glass-card space-y-6">
-          <H1 className="text-center text-2xl">Crear una cuenta</H1>
+          <H1 className="text-center text-2xl">Create an account</H1>
 
           <div className="flex flex-col gap-1">
             <p className="text-sm text-black/70">
@@ -128,7 +131,7 @@ export default function SignupPage() {
           {error && <p className="text-red-600 text-sm text-center">{error}</p>}
           {success && (
             <p className="text-green-600 text-sm text-center">
-              ¡Cuenta creada! Redirigiendo...
+              Account created! Redirecting...
             </p>
           )}
 
@@ -154,6 +157,12 @@ export default function SignupPage() {
               Registrarse con Google
             </span>
           </button>
+          <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
+  <span className="text-black">¿Ya tienes una cuenta? </span>
+  <Link href="/es/auth/login" className="text-[#1000c8] hover:underline">
+    Inicia sesión
+  </Link>
+</p>
         </Card>
       </form>
     </div>
