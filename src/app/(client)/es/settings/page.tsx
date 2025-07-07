@@ -1,53 +1,38 @@
 'use client'
 
-import { useSession, signOut } from 'next-auth/react'
+import { useSession, signOut, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Logo from '@/components/Logo'
-import { useUserLevel } from "@/hooks/useUserLevel";
-import { Suspense } from 'react'
+import { useUserLevel } from "@/hooks/useUserLevel"
+import { Suspense, useState } from 'react'
 import SettingsLevelDisplay from './SettingsLevelDisplay'
 import EditableField from '@/components/ui/EditableField'
-import { useState } from 'react'
-import { getSession } from 'next-auth/react'
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession() // ✅ Everything here
   const router = useRouter()
   const [sessionKey, setSessionKey] = useState(0)
 
-
-  if (status === 'loading') {
-    return <p>Loading...</p>
-  }
-
-  if (!session?.user?.email) {
-    return <p>Not logged in</p>
-  }
+  if (status === 'loading') return <p>Loading...</p>
+  if (!session?.user?.email) return <p>Not logged in</p>
 
   const email = session.user.email
 
-const updateUserField = async (field: string, value: string) => {
-  try {
-    await fetch('/api/user/update-field', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field, value }),
-    })
+  const updateUserField = async (field: string, value: string) => {
+    try {
+      await fetch("/api/user/update-field", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field, value }),
+      })
 
-    await fetch('/api/auth/session?update') // refresh server-side session cookie
-
-    const refreshedSession = await getSession() // 🔄 force client-side update
-    console.log('🔁 Refreshed session:', refreshedSession)
-
-    setSessionKey((prev) => prev + 1)
-    router.refresh()
-  } catch (err) {
-    console.error('Failed to update user field:', err)
+      await update()          // 🔁 Refresh session context
+      router.refresh()        // 🔃 Optional SSR refresh
+    } catch (err) {
+      console.error("Failed to update user field:", err)
+    }
   }
-}
-
-
-
+  
   return (
   <div key={sessionKey}>
     <div

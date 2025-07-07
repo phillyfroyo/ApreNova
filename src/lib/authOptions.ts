@@ -40,12 +40,16 @@ export const authOptions: AuthOptions = {
 
   callbacks: {
     jwt: async ({ token, user }) => {
-  if (user?.email) {
+  if (user) {
     const dbUser = await prisma.user.findUnique({
-      where: { email: user.email },
+      where: {
+        id: user.id || undefined, // Try by ID
+        email: user.email || undefined, // Fallback to email
+      },
     });
+
     if (dbUser) {
-      token.id = dbUser.id // ✅ This line is critical
+      token.id = dbUser.id;
       if (dbUser.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
       if (dbUser.quizLevel) token.quizLevel = dbUser.quizLevel;
       if (dbUser.name) token.name = dbUser.name;
@@ -55,14 +59,22 @@ export const authOptions: AuthOptions = {
 },
 
     session: async ({ session, token }) => {
-  if (session.user) {
-    if (token.id) session.user.id = token.id; // ✅ use this
-    if (token.quizLevel) session.user.quizLevel = token.quizLevel as string;
-    if (token.nativeLanguage) session.user.nativeLanguage = token.nativeLanguage;
-    if (token.name) session.user.name = token.name;
+  if (!token?.id) return session;
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: token.id },
+  });
+
+  if (session.user && dbUser) {
+    session.user.id = dbUser.id;
+    session.user.name = dbUser.name ?? undefined;
+    session.user.email = dbUser.email ?? undefined;
+    session.user.nativeLanguage = dbUser.nativeLanguage ?? undefined;
+    session.user.quizLevel = dbUser.quizLevel ?? undefined;
   }
+
   return session;
-},
+}
   },
 
   session: {
