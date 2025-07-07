@@ -152,31 +152,32 @@ if (
   };
 
   const renderProgressBar = (audio) => {
-    const percent = (audio.progress / audio.duration) * 100;
-    const width = lineWidths[audio.index] ? `${lineWidths[audio.index] * 0.8}px` : "80%";
-    return (
+  const percent = (audio.progress / audio.duration) * 100;
+
+  return (
+    <div
+      ref={progressBarRef}
+      className="relative w-full h-[30px] select-none cursor-pointer flex items-center"
+      onMouseDown={(e) => {
+        setIsDragging(true);
+        handleDrag(e);
+      }}
+      onTouchStart={(e) => {
+        setIsDragging(true);
+        handleDrag(e);
+      }}
+    >
+      <div className="w-full h-[6px] rounded bg-white/30 backdrop-blur-2xl border border-black/10 shadow-inner" />
       <div
-        ref={progressBarRef}
-        className="relative h-[30px] mt-1 select-none mx-auto cursor-pointer flex items-center"
-        onMouseDown={(e) => {
-          setIsDragging(true);
-          handleDrag(e);
-        }}
-        onTouchStart={(e) => {
-          setIsDragging(true);
-          handleDrag(e);
-        }}
+        className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center"
+        style={{ left: `${percent}%` }}
       >
-        <div className="w-full h-[6px] rounded bg-transparent backdrop-blur-2xl border border-black/10 shadow-inner" />
-        <div
-          className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center"
-          style={{ left: `${percent}%` }}
-        >
-          <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/10 rounded-full shadow-lg shadow-black/50 pointer-events-auto" />
-        </div>
+        <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/10 rounded-full shadow-lg shadow-black/50 pointer-events-auto" />
       </div>
-    );
-  };
+    </div>
+  );
+};
+
 
   return (
     <div
@@ -297,110 +298,65 @@ if (
           <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPartTitle}</h2>
 
           {sentences.map((s, i) => (
-            <div key={i} className="my-12">
-              <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="flex space-x-4 items-center">
-    <button
-      onClick={() =>
-        handlePlay(
-          i,
-          `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`,
-          false,
-          s.en
-        )
-      }
-    >
-      🔊
-    </button>
-    <button
-      onClick={() =>
-        handlePlay(
-          i,
-          `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`,
-          true,
-          s.en
-        )
-      }
-    >
-      🐢
-    </button>
-    {translationMode === "free" && (
-  <button
-    onClick={() => {
-      const el = translationRefs.current[i];
-      if (el) {
-        requestAnimationFrame(() => {
-          el.classList.toggle("hidden");
-        });
-      }
-    }}
-    className="hover:scale-110 transition"
-  >
-    ✍️
-  </button>
-)}
+  <div key={i} className="my-12">
+    <div className="flex flex-col items-center justify-center space-y-2">
 
-{translationMode === "premium" && (
-  <button
-    onClick={() =>
-      setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))
-    }
-    className="hover:scale-110 transition"
-  >
-    💎
-  </button>
-)}
+      {/* Horizontal emoji + audio bar row */}
+      <div className="w-full flex items-center gap-3 px-4 sm:px-6">
+        {/* Emoji buttons */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
+          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
+          {translationMode === "free" && (
+            <button onClick={() => {
+              const el = translationRefs.current[i];
+              if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
+            }} className="hover:scale-110 transition">✍️</button>
+          )}
+          {translationMode === "premium" && (
+            <button onClick={() => setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))} className="hover:scale-110 transition">💎</button>
+          )}
+        </div>
 
+        {/* Audio bar */}
+        <div className="relative flex-1 flex items-center h-[30px]">
+          {activeAudio?.index === i ? (
+            <>
+              {renderProgressBar(activeAudio)}
+              <button onClick={() => setActiveAudio(null)} className="ml-2 text-xl hover:scale-110 transition z-10">✖️</button>
+            </>
+          ) : (
+            <div className="w-full h-[6px] bg-transparent" />
+          )}
+        </div>
+      </div>
+
+      {/* Translator section */}
+      {translationMode === "premium" && (
+        <UnifiedTranslator
+          sentence={s.en}
+          enabled
+          autoTriggerAll={!!premiumTriggers[i]}
+        />
+      )}
+
+      {translationMode === "free" && (
+        <>
+          <p>
+            <span ref={el => { textRefs.current[i] = el; }} className="inline-block">{s.en}</span>
+          </p>
+          <p
+            ref={el => { translationRefs.current[i] = el; }}
+            className="translation hidden text-muted-foreground text-sm mt-2"
+          >
+            {s.es}
+          </p>
+        </>
+      )}
+    </div>
   </div>
+))}
 
-  {translationMode === "premium" && (
-    <UnifiedTranslator
-  sentence={s.en}
-  enabled
-  autoTriggerAll={!!premiumTriggers[i]}
-/>
-
-  )}
-
-  {/* Only show translation paragraph in Free mode */}
-</div>
-
-              {activeAudio?.index === i && (
-  <div className="my-3 relative">
-    <button
-      onClick={() => setActiveAudio(null)}
-      className="absolute -top-5 right-0 text-xl hover:scale-110 transition"
-    >
-      ✖️
-    </button>
-    {renderProgressBar(activeAudio)}
-  </div>
-)}
-
-              {translationMode === "free" && (
-  <p>
-    <span
-      ref={(el) => {
-        textRefs.current[i] = el;
-      }}
-      className="inline-block"
-    >
-      {s.en}
-    </span>
-  </p>
-)}
-{translationMode === "free" && (
-    <p
-  ref={(el) => {
-    translationRefs.current[i] = el;
-  }}
-  className="translation hidden text-muted-foreground text-sm mt-2"
->
-  {s.es}
-</p>
-  )}
-            </div>
-          ))}
         </div>
       </div>
     </div>
