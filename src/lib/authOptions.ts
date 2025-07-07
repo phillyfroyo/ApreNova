@@ -46,6 +46,7 @@ export const authOptions: AuthOptions = {
         });
         if (dbUser?.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
         if (dbUser?.quizLevel) token.quizLevel = dbUser.quizLevel;
+        if (dbUser?.name) token.name = dbUser.name;
       }
       return token;
     },
@@ -55,6 +56,7 @@ export const authOptions: AuthOptions = {
         if (token.quizLevel) session.user.quizLevel = token.quizLevel as string;
         if (token.nativeLanguage) session.user.nativeLanguage = token.nativeLanguage;
         if (token.sub) session.user.id = token.sub;
+        if (token.name) session.user.name = token.name;
       }
       return session;
     },

@@ -72,9 +72,9 @@ function AccountDropdown() {
           </div>
           <div
             style={{ marginBottom: "0.75rem", cursor: "pointer", color: "#1000c8" }}
-            onClick={() => (window.location.href = "/es/myaccount")}
+            onClick={() => (window.location.href = "/es/settings")}
           >
-            My Account
+            Settings
           </div>
           <div
             style={{ cursor: "pointer", color: "red" }}

@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [language, setLanguage] = useState('es')
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -39,7 +40,7 @@ export default function SignupPage() {
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nativeLanguage: language }),
+      body: JSON.stringify({ email, password, nativeLanguage: language, name }),
     })
 
     const data = await res.json()
@@ -111,6 +112,22 @@ export default function SignupPage() {
               )}
             </div>
           </div>
+
+          <div className="mb-4">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-1">
+          First Name
+          </label>
+          <input
+          type="text"
+          name="name"
+          id="name"
+          required
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded-md text-black"
+         />
+         </div>
 
           <Input
             type="email"

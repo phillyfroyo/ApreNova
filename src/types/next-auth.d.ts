@@ -13,6 +13,7 @@ declare module "next-auth" {
   }
 
   interface User {
+    name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS
   }
@@ -20,6 +21,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS
   }
