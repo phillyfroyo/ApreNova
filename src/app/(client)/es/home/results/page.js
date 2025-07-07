@@ -11,7 +11,18 @@ export default function ResultsPage() {
 
   useEffect(() => {
     async function saveLevelToDB() {
-      const level = localStorage.getItem('quizLevel') || 'l1'
+      const correctCount = Number(sessionStorage.getItem('correctAnswers') || 0)
+let level = 'l1'
+
+if (correctCount >= 3) {
+  level = 'l4'
+} else if (correctCount === 2) {
+  level = 'l3'
+} else if (correctCount === 1) {
+  level = 'l2'
+} else {
+  level = 'l1'
+}
 
       if (session?.user?.id) {
         try {

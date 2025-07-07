@@ -43,58 +43,31 @@ export default function QuizQuestion() {
   const isFinalStep = flow[internalLevel]?.[question]?.correct?.includes('/results') ||
       flow[internalLevel]?.[question]?.incorrect?.includes('/results');
 
-
-function maybeStoreUserLevel(currentLevel) {
-  const sessionLevel = sessionStorage.getItem('quizLevel');
-  const localLevel = localStorage.getItem('quizLevel');
-  const numericCurrent = Number(currentLevel.replace('l', ''));
-  const numericSession = Number((sessionLevel || '').replace('l', ''));
-  const numericLocal = Number((localLevel || '').replace('l', ''));
-
-  if (!sessionLevel || numericCurrent > numericSession) {
-    sessionStorage.setItem('quizLevel', currentLevel);
-  }
-  if (!localLevel || numericCurrent > numericLocal) {
-    localStorage.setItem('quizLevel', currentLevel);
-  }
-}
-
 const handleNext = () => {
-    if (selectedAnswer === null) return;
+  if (selectedAnswer === null) return;
 
-    const answeredCount = Number(sessionStorage.getItem('quizProgress') || 0);
-    const currentLevel = 'l4';
-
-    if (selectedAnswer === 0 && isFinalStep) {
-    maybeStoreUserLevel(currentLevel);
-  const sessionLevel = sessionStorage.getItem('quizLevel');
-  const localLevel = localStorage.getItem('quizLevel');
-
-  const numericCurrent = Number(currentLevel.replace('l', ''));
-  const numericSession = Number((sessionLevel || '').replace('l', ''));
-  const numericLocal = Number((localLevel || '').replace('l', ''));
-
-  // Update if current level is higher than stored values
-  if (!sessionLevel || numericCurrent > numericSession) {
-    sessionStorage.setItem('quizLevel', currentLevel);
+  // ✅ Track correct answers
+  if (selectedAnswer === 0) {
+    const correct = Number(sessionStorage.getItem('correctAnswers') || 0);
+    sessionStorage.setItem('correctAnswers', correct + 1);
   }
 
-  if (!localLevel || numericCurrent > numericLocal) {
-    localStorage.setItem('quizLevel', currentLevel);
+  // ✅ Track quiz progress
+  const answeredCount = Number(sessionStorage.getItem('quizProgress') || 0);
+  const newCount = answeredCount + 1;
+  sessionStorage.setItem('quizProgress', newCount);
+
+  // ✅ If max reached, go to results
+  if (newCount >= 4) {
+    router.push('/es/home/results');
+    return;
   }
-}
 
-    const newCount = answeredCount + 1;
-    sessionStorage.setItem('quizProgress', newCount);
+  // ✅ Go to next question
+  const next = getNextRoute();
+  router.push(next);
+};
 
-    if (newCount >= 4) {
-      router.push('/es/home/results');
-      return;
-    }
-
-    const next = getNextRoute();
-    router.push(next);
-  };
 
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
@@ -126,5 +99,4 @@ const handleNext = () => {
         </button>
       </div>
     </section>
-  );
-}
+  );}

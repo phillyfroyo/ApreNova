@@ -43,38 +43,16 @@ export default function QuizQuestion() {
   const isFinalStep = flow[internalLevel]?.[question]?.correct?.includes('/results') ||
       flow[internalLevel]?.[question]?.incorrect?.includes('/results');
 
-
-function maybeStoreUserLevel(currentLevel) {
-  const sessionLevel = sessionStorage.getItem('quizLevel');
-  const localLevel = localStorage.getItem('quizLevel');
-  const numericCurrent = Number(currentLevel.replace('l', ''));
-  const numericSession = Number((sessionLevel || '').replace('l', ''));
-  const numericLocal = Number((localLevel || '').replace('l', ''));
-
-  if (!sessionLevel || numericCurrent > numericSession) {
-    sessionStorage.setItem('quizLevel', currentLevel);
-  }
-  if (!localLevel || numericCurrent > numericLocal) {
-    localStorage.setItem('quizLevel', currentLevel);
-  }
-}
-
 const handleNext = () => {
     if (selectedAnswer === null) return;
 
+    if (selectedAnswer === 0) {
+  const correct = Number(sessionStorage.getItem('correctAnswers') || 0)
+  sessionStorage.setItem('correctAnswers', correct + 1)
+}
+
     const answeredCount = Number(sessionStorage.getItem('quizProgress') || 0);
     const currentLevel = 'l3';
-
-    if (selectedAnswer === 0 && isFinalStep) {
-    maybeStoreUserLevel(currentLevel);
-      const highest = sessionStorage.getItem('quizLevel');
-      const numericLevel = Number(currentLevel.replace('l', ''));
-      const savedLevel = Number((highest || '').replace('l', ''));
-
-      if (!highest || numericLevel > savedLevel) {
-        sessionStorage.setItem('quizLevel', currentLevel);
-      }
-    }
 
     const newCount = answeredCount + 1;
     sessionStorage.setItem('quizProgress', newCount);
