@@ -9,6 +9,7 @@ declare module "next-auth" {
       image?: string;
       nativeLanguage?: string;
       quizLevel?: string; // 👈 ADD THIS
+      isPremium?: boolean;
     };
   }
 
@@ -17,6 +18,7 @@ declare module "next-auth" {
     name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS
+    isPremium?: boolean;
   }
 }
 
@@ -26,6 +28,7 @@ declare module "next-auth/jwt" {
     name?: string;
     nativeLanguage?: string;
     quizLevel?: string; // 👈 ADD THIS
+    isPremium?: boolean;
   }
 }
 

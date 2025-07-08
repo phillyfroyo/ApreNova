@@ -257,23 +257,6 @@ if (
               );
             })}
           </div>
-          <div className="flex gap-2 flex-wrap">
-  <Button
-    variant="parts"
-    onClick={() => setTranslationMode("free")}
-    className={translationMode === "free" ? "ring-2 ring-black" : ""}
-  >
-    Free Mode
-  </Button>
-  <Button
-    variant="parts"
-    onClick={() => setTranslationMode("premium")}
-    className={translationMode === "premium" ? "ring-2 ring-black" : ""}
-  >
-    Premium Mode
-  </Button>
-</div>
-
         </div>
       )}
 

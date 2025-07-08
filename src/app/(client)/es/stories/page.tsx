@@ -12,6 +12,8 @@ import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
 import StoryModal from "@/components/StoryModal";
 import StoryCard from "@/components/StoryCard";
+import Link from "next/link";
+
 
 function AccountDropdown() {
   const { data: session } = useSession();
@@ -65,21 +67,29 @@ function AccountDropdown() {
     🌐 {session.user.nativeLanguage}
   </div>
 )}
-          <div
-            style={{ marginBottom: "0.75rem", cursor: "pointer", color: "green" }}
-            onClick={() => {
-              const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es';
-              window.location.href = `/${lang}/home/quiz/l1/q1`;
-            }}
-          >
-            Take the Quiz
-          </div>
-          <div
-            style={{ marginBottom: "0.75rem", cursor: "pointer", color: "#1000c8" }}
-            onClick={() => (window.location.href = "/es/settings")}
-          >
-            My Account
-          </div>
+          <div className="space-y-2">
+  <div
+    className="text-green-600 cursor-pointer"
+    onClick={() => {
+      const lang = window.location.pathname.startsWith("/en") ? "en" : "es";
+      window.location.href = `/${lang}/home/quiz/l1/q1`;
+    }}
+  >
+    Take the Quiz
+  </div>
+  <div
+    className="text-blue-800 cursor-pointer"
+    onClick={() => (window.location.href = "/es/settings")}
+  >
+    My Account
+  </div>
+  <Link
+    href="/es/premium"
+    className="text-yellow-700 cursor-pointer block"
+  >
+    Go Premium 💎
+  </Link>
+</div>
         </div>
       )}
     </div>
