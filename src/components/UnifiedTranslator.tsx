@@ -85,12 +85,23 @@ if (!isSingleWord) {
   };
 
   const handleClick = (index: number) => {
-  if (!enabled || readOnlyMode) {
+  if (!enabled) return;
+
+// If in readOnlyMode, still allow full range selection but skip GPT
+if (readOnlyMode) {
+  if (startIdx === null || endIdx === null) {
+    setStartIdx(index);
+    setEndIdx(index);
+  } else {
+    const newStart = Math.min(startIdx, index);
+    const newEnd = Math.max(endIdx, index);
+    setStartIdx(newStart);
+    setEndIdx(newEnd);
+  }
   setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
-  setStartIdx(index);
-  setEndIdx(index);
   return;
 }
+
   
   if (startIdx === null && endIdx === null) {
     // First word clicked
