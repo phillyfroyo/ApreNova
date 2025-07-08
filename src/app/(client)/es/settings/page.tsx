@@ -14,7 +14,58 @@ export default function SettingsPage() {
   const [sessionKey, setSessionKey] = useState(0)
 
   if (status === 'loading') return <p>Loading...</p>
-  if (!session?.user?.email) return <p>Not logged in</p>
+
+if (!session?.user?.email) {
+  return (
+    <div className="min-h-screen relative bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
+
+  {/* Back Button */}
+  <div className="absolute top-4 left-4">
+    <button
+      onClick={() => window.location.href = '/es/stories'}
+      className="text-sm text-blue-700 hover:underline"
+    >
+      ← Back to stories
+    </button>
+  </div>
+
+  {/* Layout container */}
+  <div className="flex flex-col items-center justify-center min-h-screen relative">
+
+    {/* Logo slightly higher */}
+    <div className="absolute top-[20%]">
+      <Logo />
+    </div>
+
+    {/* Centered message + auth links */}
+    <div className="text-center mt-10 space-y-4">
+      <p className="text-xl font-semibold">You’re not logged in.</p>
+
+      <div className="text-sm text-black text-center space-y-2">
+        <p>
+          Already have an account?{' '}
+          <a href="/es/auth/login" className="text-blue-700 underline">
+            Sign in
+          </a>
+        </p>
+
+        <div className="text-gray-500 text-xs">or</div>
+
+        <a
+          href="/es/auth/signup"
+          className="text-blue-700 font-semibold"
+        >
+          Create a new account
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+  )
+}
+
+
 
   const email = session.user.email
 
