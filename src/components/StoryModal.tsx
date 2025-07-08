@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, Badge, Button } from "@/components/ui";
 import { STORY_METADATA } from "@/lib/stories";
 import { useRef, useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 
 type StoryModalProps = {
   activeStory: number | null;
@@ -24,6 +25,7 @@ export default function StoryModal({
 }: StoryModalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtTop, setIsAtTop] = useState(true);
+  const router = useRouter();
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -137,7 +139,7 @@ export default function StoryModal({
                     "l2";
 
                   const url = `/es/stories/${storySlug}/${level}/part-1`;
-                  window.location.href = url;
+                  router.push(url);
                 }}
                 className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"
 

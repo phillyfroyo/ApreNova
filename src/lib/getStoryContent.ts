@@ -1,3 +1,5 @@
+// /src/lib/getStoryContent.ts
+
 export async function getStoryContent(
   storySlug: string,
   level: string,
@@ -6,11 +8,11 @@ export async function getStoryContent(
 ) {
   try {
     const file = await import(
-      `../content/${storySlug}/${level}/part-${part}.${lang}.ts`
+      `../content/${storySlug}/${level}/${part}.${lang}.ts`
     );
-    return file.lines;
+    return file.default; // 🛠️ use `default` instead of `lines`
   } catch (err) {
     console.error("Failed to load story content:", err);
-    return ["Contenido no disponible."];
+    return [{ en: "Content not available.", es: "Contenido no disponible." }];
   }
 }

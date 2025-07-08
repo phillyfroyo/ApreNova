@@ -1,5 +1,5 @@
 // /src/content/aventura/l1/part-5.es.ts
-export const lines = [
+const lines = [
     { en: "My name is Pedro, and I live in a quiet town in Guatemala.", es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala." },
     { en: "One afternoon, my friend Juan came over with something in his hand. It was a map.", es: "Una tarde, mi amigo Juan vino con algo en la mano. Era un mapa." },
     { en: "The paper looked old, like it had been hidden for a long time.", es: "El papel parecía viejo, como si hubiera estado escondido por mucho tiempo." },
@@ -11,3 +11,5 @@ export const lines = [
     { en: "Most of the time, the only sounds were our steps and the wind.", es: "La mayoría del tiempo, los únicos sonidos eran nuestros pasos y el viento." },
     { en: "Still, I felt something in the air.", es: "Aun así, sentía algo en el aire." }
   ];
+  
+  export default lines;
