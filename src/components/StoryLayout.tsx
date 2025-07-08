@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from "next-auth/react";
 import { STORY_THEMES } from "@/components/storyThemes";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
@@ -25,6 +26,9 @@ type ActiveAudio = {
 export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
   useSessionLogger('reading');
 
+  const { data: session, status } = useSession();
+  const isPremiumUser = session?.user?.isPremium;
+
 const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
 
   const [lineWidths, setLineWidths] = useState<Record<number, number>>({});
@@ -33,6 +37,15 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
+
+useEffect(() => {
+  if (storySlug === "aventura") {
+    setTranslationMode("premium");
+  } else if (storySlug === "el-bosque-perdido") {
+    setTranslationMode(isPremiumUser ? "premium" : "free");
+  }
+}, [storySlug, isPremiumUser]);
+
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
 
 
@@ -174,6 +187,8 @@ if (
 
   const renderProgressBar = (audio) => {
   const percent = (audio.progress / audio.duration) * 100;
+
+  if (status === "loading") return null;
 
   return (
     <div
