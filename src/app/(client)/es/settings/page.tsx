@@ -7,6 +7,7 @@ import { useUserLevel } from "@/hooks/useUserLevel"
 import { Suspense, useState } from 'react'
 import SettingsLevelDisplay from './SettingsLevelDisplay'
 import EditableField from '@/components/ui/EditableField'
+import UserStatsCard from '@/components/UserStatsCard';
 
 export default function SettingsPage() {
   const { data: session, status, update } = useSession() // ✅ Everything here
@@ -65,8 +66,6 @@ if (!session?.user?.email) {
   )
 }
 
-
-
   const email = session.user.email
 
   const updateUserField = async (field: string, value: string) => {
@@ -87,22 +86,22 @@ if (!session?.user?.email) {
  return (
   <div key={sessionKey}>
     <div
-  className="relative min-h-screen h-screen bg-cover bg-center px-4 py-10 text-black"
-  style={{ backgroundImage: 'url(/images/background3.png)' }}
->
-
+      className="relative min-h-screen h-screen bg-cover bg-center px-4 py-10 text-black"
+      style={{ backgroundImage: 'url(/images/background3.png)' }}
+    >
       <div className="absolute top-4 left-4">
-  <button
-    onClick={() => window.location.href = '/es/stories'}
-    className="text-sm text-blue-700 hover:underline"
-  >
-    ← Back to stories
-  </button>
-</div>
+        <button
+          onClick={() => window.location.href = '/es/stories'}
+          className="text-sm text-blue-700 hover:underline"
+        >
+          ← Back to stories
+        </button>
+      </div>
 
       <div className="flex justify-center mb-12">
-  <Logo />
-</div>
+        <Logo />
+      </div>
+
       <h1 className="text-2xl font-bold text-center mb-6">
         ¡Hola {session.user.name || session.user.email}! 🎉
       </h1>
@@ -135,8 +134,8 @@ if (!session?.user?.email) {
         <div
           className="text-green-700 cursor-pointer hover:underline text-sm"
           onClick={() => {
-            const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es'
-            window.location.href = `/${lang}/home/quiz/l1/q1`
+            const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es';
+            window.location.href = `/${lang}/home/quiz/l1/q1`;
           }}
         >
           ▶️ Take the Quiz
@@ -149,7 +148,12 @@ if (!session?.user?.email) {
           🚪 Log Out
         </div>
       </div>
+
+      {/* ✅ Stats card below all editable/profile elements */}
+      <div className="mt-12 flex justify-center">
+        <UserStatsCard />
+      </div>
     </div>
   </div>
-)
+);
 }

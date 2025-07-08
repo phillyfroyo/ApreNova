@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { STORY_THEMES } from "@/components/storyThemes";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
 import UnifiedTranslator from "@/components/UnifiedTranslator";
+import { useSessionLogger } from '@/hooks/useSessionLogger';
+import { getMaxPartForStory } from '@/lib/stories';
+import { slugify } from '@/lib/stories';
 
 
 type ActiveAudio = {
@@ -20,6 +23,7 @@ type ActiveAudio = {
 };
 
 export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
+  useSessionLogger('reading');
 
 const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
 
@@ -44,9 +48,25 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const [isFinalPart, setIsFinalPart] = useState(false);
 
 
-  useEffect(() => {
+ useEffect(() => {
+  const maxPart = getMaxPartForStory(storySlug, currentLevel);
+
+  console.log({
+    slugified: slugify("La Aventura"),
+    storySlug, // the one you're currently viewing
+    currentLevel,
+    partNumber,
+    maxPart,
+    isFinal: partNumber === maxPart,
+  });
+
+  setIsFinalPart(partNumber === maxPart);
+}, [storySlug, currentLevel, partNumber]);
+
+
     const handleGlobalMove = (e) => {
       if (!isDragging) return;
       e.preventDefault();
@@ -54,6 +74,7 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
     };
     const handleGlobalUp = () => setIsDragging(false);
 
+    useEffect(() => {
     window.addEventListener("mousemove", handleGlobalMove);
     window.addEventListener("touchmove", handleGlobalMove, { passive: false });
     window.addEventListener("mouseup", handleGlobalUp);
@@ -268,27 +289,48 @@ if (
             }`;
 
           return (
-            <>
-              <a
-                className={buttonClass(prevDisabled, "bg-green-600")}
-                href={
-                  prevDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
-                }
-                onClick={(e) => prevDisabled && e.preventDefault()}
-              >
-                ⬅ Prev
-              </a>
-              <a
-                className={buttonClass(nextDisabled, "bg-green-700")}
-                href={
-                  nextDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
-                }
-                onClick={(e) => nextDisabled && e.preventDefault()}
-              >
-                Next ➡
-              </a>
-            </>
-          );
+  <div className="flex flex-col items-center space-y-4 mt-8">
+    <div className="flex space-x-4">
+      <a
+        className={buttonClass(prevDisabled, "bg-green-600")}
+        href={
+          prevDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
+        }
+        onClick={(e) => prevDisabled && e.preventDefault()}
+      >
+        ⬅ Prev
+      </a>
+      <a
+        className={buttonClass(nextDisabled, "bg-green-700")}
+        href={
+          nextDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
+        }
+        onClick={(e) => nextDisabled && e.preventDefault()}
+      >
+        Next ➡
+      </a>
+    </div>
+
+    {isFinalPart && (
+      <button
+        className="text-sm text-green-700 hover:underline"
+        onClick={() => {
+          fetch('/api/mark-complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storySlug,
+              level: currentLevel,
+              part: `part-${partNumber}`,
+            }),
+          }).then(() => alert('✅ Story marked as complete!'));
+        }}
+      >
+        ✅ Mark this story as complete
+      </button>
+    )}
+  </div>
+);
         })()}
       </div>
 

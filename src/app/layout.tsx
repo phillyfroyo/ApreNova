@@ -1,6 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
 import SessionWrapper from '@/components/SessionWrapper';
+import SessionTracker from '@/components/SessionTracker';
 
 export const metadata = {
   title: 'ApreNova',
@@ -20,9 +21,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
         <SessionWrapper>
+          <SessionTracker /> {/* ✅ Logging handled client-side */}
           {children}
         </SessionWrapper>
       </body>
     </html>
   );
 }
+
+

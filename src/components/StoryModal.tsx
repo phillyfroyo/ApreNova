@@ -154,21 +154,21 @@ export default function StoryModal({
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-2">
-                  {story.levels.map((lvl, idx) => {
-                    const badgeLevel = `level${lvl.replace("l", "")}` as
-                      | "level1"
-                      | "level2"
-                      | "level3"
-                      | "level4"
-                      | "level5";
+  {Object.keys(story.levels).map((lvl, idx) => {
+    const badgeLevel = `level${lvl.replace("l", "")}` as
+      | "level1"
+      | "level2"
+      | "level3"
+      | "level4"
+      | "level5";
 
-                    return (
-                      <Badge key={idx} level={badgeLevel}>
-                        Level {lvl.toUpperCase()}
-                      </Badge>
-                    );
-                  })}
-                </div>
+    return (
+      <Badge key={idx} level={badgeLevel}>
+        Level {lvl.toUpperCase()}
+      </Badge>
+    );
+  })}
+</div>
               </div>
             </div>
           </Card>

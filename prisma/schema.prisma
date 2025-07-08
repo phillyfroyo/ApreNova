@@ -4,8 +4,8 @@ generator client {
 
 // prisma/schema.prisma
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   // uncomment next line if you use Prisma <5.10
   // directUrl = env("DATABASE_URL_UNPOOLED")
 }
@@ -14,7 +14,7 @@ model User {
   id             String    @id @default(cuid())
   name           String?
   email          String    @unique
-  emailVerified  DateTime?     // ✅ Required for OAuth
+  emailVerified  DateTime?
   image          String?
   password       String?
   nativeLanguage String?
@@ -22,23 +22,26 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
+  accounts Account[]
+  sessions Session[]
+
+  sessionLogs      SessionLog[] // ✅ now inside User model
+  completedStories CompletedStory[] // ✅ now inside User model
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -46,10 +49,10 @@ model Account {
 }
 
 model Session {
-  id            String   @id @default(cuid())
-  sessionToken  String   @unique
-  userId        String
-  expires       DateTime
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -60,4 +63,24 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model SessionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  ms        Int
+  type      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model CompletedStory {
+  id          String   @id @default(cuid())
+  userId      String
+  storySlug   String
+  level       String
+  part        String
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
