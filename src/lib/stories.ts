@@ -26,14 +26,21 @@ export const STORY_METADATA: StoryMetadata[] = [
       l4: { parts: 10 },
       l5: { parts: 10 },
     },
+    isPremiumOnly: false,
+    description: "Misterios y criaturas ocultas en un bosque encantado. Misterios y criaturas ocultas en un bosque encantado. Misterios y criaturas ocultas en un bosque encantado. Misterios y criaturas ocultas en un bosque encantado.",
   },
   {
     title: "El Bosque Perdido",
     slug: slugify("El Bosque Perdido"),
     image: "/images/placeholder1.png",
     levels: {
-      l2: { parts: 5 },
+      l1: { parts: 10 },
+      l2: { parts: 10 },
+      l3: { parts: 10 },
+      l4: { parts: 10 },
+      l5: { parts: 10 },
     },
+    isPremiumOnly: false,
     description: "Misterios y criaturas ocultas en un bosque encantado.",
   },
   {

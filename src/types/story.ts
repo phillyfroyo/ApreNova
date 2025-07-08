@@ -7,6 +7,7 @@ export type StoryMetadata = {
   slug: string;
   image: string;
   description?: string;
+  isPremiumOnly?: boolean;
   levels: {
     [key in LevelKey]?: {
       parts: number;
