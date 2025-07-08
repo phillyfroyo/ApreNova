@@ -7,11 +7,13 @@ import { usePathname } from 'next/navigation';
 interface Props {
   sentence: string;
   enabled?: boolean;
-  autoTriggerAll?: boolean; // 🍌 new prop
+  autoTriggerAll?: boolean;
+  readOnlyMode?: boolean; // 🍌 NEW: disables real GPT fetch
 }
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll }: Props) {
+
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -33,6 +35,10 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const getSelectedText = () => words.slice(startIdx!, endIdx! + 1).join(" ");
 
   const fetchTranslation = async (start: number, end: number) => {
+      if (readOnlyMode) {
+    setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+    return;
+  }
     const phrase = words.slice(start, end + 1).join(" ");
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
@@ -79,7 +85,12 @@ if (!isSingleWord) {
   };
 
   const handleClick = (index: number) => {
-  if (!enabled) return;
+  if (!enabled || readOnlyMode) {
+  setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+  setStartIdx(index);
+  setEndIdx(index);
+  return;
+}
   
   if (startIdx === null && endIdx === null) {
     // First word clicked
@@ -249,12 +260,19 @@ useEffect(() => {
                     <div key={i} className="flex items-start gap-2">
                       <span className="text-lg leading-snug">•</span>
                       <div>
-                        <button
-                          onClick={() => fetchExample(translation)}
-                          className="text-blue-600 hover:underline break-words text-left"
-                        >
-                          {translation}
-                        </button>
+                        {!readOnlyMode ? (
+  <button
+    onClick={() => fetchExample(translation)}
+    className="text-blue-600 hover:underline break-words text-left"
+  >
+    {translation}
+  </button>
+) : (
+  <span className="text-blue-600 break-words text-left opacity-60">
+    {translation}
+  </span>
+)}
+{readOnlyMode && <span>{translation}</span>}
                         {hasExample && (
                           <div className="mt-1 text-sm">
                             <p className="text-gray-900">

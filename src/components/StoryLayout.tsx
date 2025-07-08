@@ -58,6 +58,14 @@ useEffect(() => {
   const partNumber = parseInt(currentPart.replace("part-", ""));
   const dynamicPartTitle = `Part ${partNumber}`;
 
+  const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
+  aventura: "alwaysPremium",
+  "el-bosque-perdido": "conditional",
+  // add more stories here later
+};
+const accessType = storyAccessMap[storySlug] || "alwaysFree";
+const readOnlyMode = accessType === "conditional" && !isPremiumUser;
+
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
@@ -372,27 +380,18 @@ if (
       </div>
 
       {/* Translator section */}
-      {translationMode === "premium" && (
-        <UnifiedTranslator
-          sentence={s.en}
-          enabled
-          autoTriggerAll={!!premiumTriggers[i]}
-        />
-      )}
-
-      {translationMode === "free" && (
-        <>
-          <p>
-            <span ref={el => { textRefs.current[i] = el; }} className="inline-block">{s.en}</span>
-          </p>
-          <p
-            ref={el => { translationRefs.current[i] = el; }}
-            className="translation hidden text-muted-foreground text-sm mt-2"
-          >
-            {s.es}
-          </p>
-        </>
-      )}
+<UnifiedTranslator
+  sentence={s.en}
+  enabled
+  readOnlyMode={translationMode === "free"}
+  autoTriggerAll={!!premiumTriggers[i]}
+/>
+<p
+  ref={el => { translationRefs.current[i] = el; }}
+  className="translation hidden text-muted-foreground text-sm mt-2"
+>
+  {s.es}
+</p>
     </div>
   </div>
 ))}
