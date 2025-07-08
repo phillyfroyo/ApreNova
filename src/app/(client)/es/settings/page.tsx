@@ -112,6 +112,17 @@ if (!session?.user?.email) {
           value={session.user.name ?? ''}
           onSave={(newVal) => updateUserField('name', newVal)}
         />
+      <div className="flex items-center text-sm text-gray-800">
+  <span className="w-5 inline-block text-center">💼</span>
+  <span className="ml-2">
+    Member Status:{" "}
+    <span className="font-semibold text-black">
+      {session.user.isPremium ? "Premium 💎" : "Free"}
+    </span>
+  </span>
+  <span className="ml-auto text-gray-500 text-xs">✏️</span>
+</div>
+
 
         <EditableField
           label="📧"
