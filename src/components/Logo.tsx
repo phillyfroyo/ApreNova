@@ -9,7 +9,7 @@ interface LogoProps {
   className?: string;
 }
 
-export default function Logo({ variant = 'default', size = 'text-[64px]', className = '' }: LogoProps) {
+export default function Logo({ variant = 'default', size = 'text-[32px]', className = '' }: LogoProps) {
   const { data: session } = useSession();
 
   const label =

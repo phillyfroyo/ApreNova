@@ -26,30 +26,52 @@ function AccountDropdown() {
 );
 
   return (
-    <div style={{ position: "absolute", top: "1rem", right: "1rem" }}>
+  <div>
+    <div style={{ position: "absolute", top: "1rem", right: "1rem", textAlign: "center" }}>
+
+    <div
+      style={{
+        cursor: "pointer",
+        borderRadius: "50%",
+        overflow: "hidden",
+        width: "32px",
+        height: "32px",
+        margin: "0 auto",
+      }}
+      onClick={() => setOpen((prev) => !prev)}
+    >
+      <img
+        src={profilePic || "/images/default-avatar.png"}
+        alt="Account"
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
+    </div>
+
+    {session?.user?.isPremium && (
       <div
         style={{
-          cursor: "pointer",
-          borderRadius: "50%",
-          overflow: "hidden",
-          width: "32px",
-          height: "32px",
+          fontSize: "8px",
+          marginTop: "0",
+          backgroundColor: "rgba(255, 255, 255, 0.6)",
+          padding: "p-0",
+          borderRadius: "9999px",
+          backdropFilter: "blur(4px)",
+          fontWeight: "600",
+          color: "#333",
+          display: "inline-block",
         }}
-        onClick={() => setOpen((prev) => !prev)}
       >
-        <img
-          src={profilePic || "/images/default-avatar.png"}
-          alt="Account"
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        Premium 💎
       </div>
+    )}
+  </div>
 
       {open && (
         <div
           style={{
             position: "absolute",
-            top: "40px",
-            right: 0,
+            top: "70px",
+            right: "15px",
             backgroundColor: "white",
             border: "1px solid #ccc",
             borderRadius: "8px",
@@ -62,11 +84,6 @@ function AccountDropdown() {
           <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
   {email}
 </div>
-{session?.user?.nativeLanguage && (
-  <div style={{ fontSize: "12px", color: "#666", marginBottom: "1rem" }}>
-    🌐 {session.user.nativeLanguage}
-  </div>
-)}
           <div className="space-y-2">
   <div
     className="text-green-600 cursor-pointer"
@@ -89,7 +106,7 @@ function AccountDropdown() {
   >
     Go Premium 💎
   </Link>
-</div>
+           </div>
         </div>
       )}
     </div>
@@ -132,12 +149,16 @@ function StoriesPageContent() {
   }}>
     <AccountDropdown />
 
-    <div className="text-center" style={{ marginBottom: "2rem" }}>
-      <Logo variant="storiesmain" size="text-[40px]" className="mx-auto" />
-      <h2 style={{ marginTop: "0.5rem", fontSize: "1.25rem", marginBottom: "1rem" }}>
-        Historias ({selectedLevel})
-      </h2>
-    </div>
+    <div className="absolute top-4 left-4 z-50">
+  <Logo variant="storiesmain" size="text-[32px]" />
+</div>
+
+<div className="mt-16 mb-4 px-4">
+  <h2 className="text-xl font-semibold text-left">
+    Historias ({selectedLevel})
+  </h2>
+</div>
+
 
     <div style={{ position: "relative" }}>
       <div
