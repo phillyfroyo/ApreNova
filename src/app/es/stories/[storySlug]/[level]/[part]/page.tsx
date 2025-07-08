@@ -3,8 +3,7 @@ import { getStoryContent } from "@/lib/getStoryContent";
 import StoryLayout from "@/components/StoryLayout";
 import { STORY_METADATA } from "@/lib/stories";
 
-type RouteParams = { storySlug: string; level: string; part: string };
-export default async function Page({ params }: { params: RouteParams }) {
+export default async function Page({ params }: any) {
   const { storySlug, level, part } = await Promise.resolve(params);
 
   console.log("📦 Dynamic route loaded with:", { storySlug, level, part });
