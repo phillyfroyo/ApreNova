@@ -4,36 +4,59 @@ import { authOptions } from "@/lib/authOptions";
 import PremiumDevToggle from "@/components/PremiumDevToggle";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import SubscribeButton from "@/components/SubscribeButton";
 
 export default async function PremiumSalesPage() {
   const session = await getServerSession(authOptions);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">Go Premium 💎</h1>
-      <p className="text-lg">
-        Unlock smart translations, early content access, and more.
-      </p>
+    <div className="p-6 max-w-3xl mx-auto">
+  <h1 className="text-4xl font-extrabold mb-4 text-yellow-700">Go Premium 💎</h1>
 
-      <p className="mt-4 text-sm">
-        Current Plan:{" "}
-        <span className="font-bold">
-          {session?.user?.isPremium ? "Premium 💎" : "Free"}
-        </span>
-      </p>
+  <p className="text-lg mb-6 text-gray-700">
+    Cuentana Premium unlocks smarter tools for faster learning:
+  </p>
 
-      <div className="mt-6">
-        <PremiumDevToggle />
-      </div>
-      <div className="mt-8">
-  <Link href="/es/stories">
-    <Button variant="button1">
-      ← Return to Stories
-    </Button>
-  </Link>
-</div>
+  <ul className="grid gap-4">
+    <li className="bg-white rounded-xl shadow-md p-4 border border-yellow-200">
+      <span className="font-semibold text-yellow-700">💬 Instant GPT Translations:</span>{" "}
+      Translate any word or phrase with full context.
+    </li>
+    <li className="bg-white rounded-xl shadow-md p-4 border border-yellow-200">
+      <span className="font-semibold text-yellow-700">📖 Premium-Only Stories:</span>{" "}
+      Early access to new stories and advanced levels.
+    </li>
+    <li className="bg-white rounded-xl shadow-md p-4 border border-yellow-200">
+      <span className="font-semibold text-yellow-700">🔊 Full-Sentence Translation Mode:</span>{" "}
+      One-click whole sentence translation with example usage.
+    </li>
+  </ul>
 
+  <p className="mt-6 text-sm text-gray-600">
+    Current Plan:{" "}
+    <span className="font-bold">
+      {session?.user?.isPremium ? "Premium 💎" : "Free"}
+    </span>
+  </p>
+
+  {/* 💎 Subscribe Button */}
+{!session?.user?.isPremium && (
+  <div className="mt-8">
+    <SubscribeButton />
+  </div>
+)}
+
+
+  {/* 🔁 Dev toggle + return */}
+  <div className="mt-8">
+    <PremiumDevToggle />
+    <div className="mt-4">
+      <Link href="/es/stories">
+        <Button variant="button1">← Return to Stories</Button>
+      </Link>
     </div>
+  </div>
+</div>
   );
 }
 

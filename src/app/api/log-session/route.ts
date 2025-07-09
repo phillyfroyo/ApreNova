@@ -6,29 +6,27 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (req.headers.get("content-type") !== "application/json") {
+    console.warn("⚠️ Received non-JSON log POST");
+    return NextResponse.json({ error: 'Expected JSON' }, { status: 400 });
   }
 
-  const { ms, type } = await req.json();
+  let ms: number, type: string;
+
+  try {
+    const body = await req.json();
+    ms = body.ms;
+    type = body.type;
+  } catch (err) {
+    console.warn("⚠️ Malformed or missing JSON body in log POST");
+    return NextResponse.json({ error: 'Malformed JSON' }, { status: 400 });
+  }
 
   if (typeof ms !== 'number' || !type) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
 
-  try {
-    await prisma.sessionLog.create({
-  data: {
-    userId: session.user.id,
-    ms,
-    type,
-  },
-});
+  console.log(`📝 Logged session: ${type} - ${ms}ms`);
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('SessionLog error:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
-  }
+  return NextResponse.json({ status: 'ok' });
 }
