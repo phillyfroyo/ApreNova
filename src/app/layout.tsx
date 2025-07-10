@@ -17,12 +17,12 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({
   children,
-  params,
 }: {
   children: ReactNode;
-  params: { lang: string };
 }) {
-  const typedLang = params.lang === "en" || params.lang === "es" ? params.lang : "es";
+  // Use "es" or "en" default manually or via browser language if needed
+  const typedLang = "es"; // or detect from headers or ignore
+
 
   return (
     <html lang={typedLang} className={`${inter.className} ${alice.className} ${openSans.className}`} translate="no">
