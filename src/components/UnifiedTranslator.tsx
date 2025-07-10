@@ -41,43 +41,35 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
       setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
       return;
     }
+
     const phrase = words.slice(start, end + 1).join(" ");
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
 
-
     const endpoint = isSingleWord
-  ? "/api/translate-word"
-  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto`;
+      ? "/api/translate-word"
+      : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto`;
 
-const body = isSingleWord
-  ? { word: cleanWord, sentence: "", level: currentLevel }
-  : null;
+    const body = isSingleWord
+      ? { word: cleanWord, sentence: "", level: currentLevel }
+      : null;
 
     try {
       setLoading(true);
       setError("");
       const res = await fetch(endpoint, {
-  method: isSingleWord ? "POST" : "GET",
-  headers: isSingleWord ? { "Content-Type": "application/json" } : undefined,
-  body: isSingleWord ? JSON.stringify(body) : undefined,
-});
+        method: isSingleWord ? "POST" : "GET",
+        headers: isSingleWord ? { "Content-Type": "application/json" } : undefined,
+        body: isSingleWord ? JSON.stringify(body) : undefined,
+      });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      console.log("🎯 Data from API:", data);
 
-// If it's a multi-word phrase, the response is a single string
-if (!isSingleWord) {
-  if (Array.isArray(data)) {
-    setTranslations(data);
-    console.log("✅ Set phrase translations:", data);
-  } else {
-    setTranslations([data.translation]);
-  }
-} else {
-  setTranslations(data.translations || []);
-  console.log("✅ Set word translations:", data.translations || []);
-}
+      if (!isSingleWord) {
+        setTranslations(Array.isArray(data) ? data : [data.translation]);
+      } else {
+        setTranslations(data.translations || []);
+      }
     } catch (err) {
       console.error(err);
       setError("⚠️ Failed to fetch translation.");
@@ -85,7 +77,7 @@ if (!isSingleWord) {
       setLoading(false);
     }
   },
-  [readOnlyMode] // ✅ include any dependencies it relies on
+  [readOnlyMode, sentence, currentLevel, words] // ✅ FULL LIST
 );
 
   const handleClick = (index: number) => {
