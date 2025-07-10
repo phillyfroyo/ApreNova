@@ -1,4 +1,4 @@
-// /src/app/layout.tsx (root layout)
+// /src/app/layout.tsx
 
 import './globals.css';
 import type { ReactNode } from 'react';
@@ -20,23 +20,19 @@ export default function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  // Use "es" or "en" default manually or via browser language if needed
-  const typedLang = "es"; // or detect from headers or ignore
-
-
   return (
-    <html lang={typedLang} className={`${inter.className} ${alice.className} ${openSans.className}`} translate="no">
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google" content="notranslate" />
-  </head>
-  <body className="bg-background text-foreground font-sans transition-none">
-    <SessionWrapper>
-      <SessionTracker />
-      {children}
-    </SessionWrapper>
-  </body>
-</html>
+    <html lang="es" className={`${inter.className} ${alice.className} ${openSans.className}`} translate="no">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="google" content="notranslate" />
+      </head>
+      <body className="bg-background text-foreground font-sans transition-none">
+        <SessionWrapper>
+          <SessionTracker />
+          {children}
+        </SessionWrapper>
+      </body>
+    </html>
   );
 }
 
