@@ -8,13 +8,11 @@ import SubscribeButton from "@/components/SubscribeButton";
 import type { Language } from "@/types/i18n";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 
-type PageProps = {
-  params: {
-    lang: string;
-  };
-};
-
-export default async function PremiumSalesPage({ params }: PageProps) {
+export default async function PremiumSalesPage({
+  params,
+}: {
+  params: { lang: string };
+}) {
   const session = await getServerSession(authOptions);
   const lang = (["en", "es"].includes(params.lang) ? params.lang : "es") as Language;
 
