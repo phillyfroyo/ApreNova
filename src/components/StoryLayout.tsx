@@ -45,7 +45,15 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const { lang } = useParams() ?? {};
   const typedLang = (lang as Language) ?? "es";
 
-  const handleDrag = (e: MouseEvent | TouchEvent) => {
+  const handleSeek = (newTime) => {
+    if (activeAudio?.audio) {
+      activeAudio.audio.pause();
+      activeAudio.audio.currentTime = newTime;
+      setActiveAudio({ ...activeAudio, progress: newTime, isPlaying: false });
+    }
+  };
+
+  const handleDrag = useCallback((e: MouseEvent | TouchEvent) => {
   if (!progressBarRef.current || !activeAudio?.duration) return;
 
   const rect = progressBarRef.current.getBoundingClientRect();
@@ -60,7 +68,8 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
   const newTime = (offsetX / rect.width) * activeAudio.duration;
   handleSeek(newTime);
-};
+}, [activeAudio, progressBarRef, handleSeek]); // ✅ include any used values
+
 
   const handleGlobalMove = useCallback((e: MouseEvent | TouchEvent) => {
   if (!isDragging) return;
@@ -203,14 +212,6 @@ if (
   const width = textRefs.current[index]?.offsetWidth || 0;
   setLineWidths((prev) => ({ ...prev, [index]: width }));
 }
-  };
-
-  const handleSeek = (newTime) => {
-    if (activeAudio?.audio) {
-      activeAudio.audio.pause();
-      activeAudio.audio.currentTime = newTime;
-      setActiveAudio({ ...activeAudio, progress: newTime, isPlaying: false });
-    }
   };
 
   const renderProgressBar = (audio) => {

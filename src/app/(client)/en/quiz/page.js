@@ -1,5 +1,8 @@
 // src/app/en/quiz/page.js
-<a href="/en/quiz/start/">Start Quiz</a>
+import Link from "next/link";
+
+<Link href="/en/quiz/start/">Start</Link>
+
 
 export default function QuizWelcomeEN() {
   return (
