@@ -1,4 +1,6 @@
 // src/app/(client)/page.js
+"use client";
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from "@/lib/authOptions";
 import { redirect } from 'next/navigation';
@@ -7,9 +9,10 @@ import Logo from '@/components/Logo';
 import { Card, Button } from '@/components/ui';
 import { useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
+import { useSession } from "next-auth/react";
 
-export default async function Home() {
-  const session = await getServerSession(authOptions);
+export default function Home() {
+  const { data: session, status } = useSession();
   const { lang } = useParams();
   const typedLang = lang as Language;
 
