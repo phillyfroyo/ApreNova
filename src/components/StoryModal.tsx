@@ -5,6 +5,9 @@ import { Card, Badge, Button } from "@/components/ui";
 import { STORY_METADATA } from "@/lib/stories";
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
+import { useParams } from "next/navigation";
+import { getStoryUrl } from "@/utils/getStoryUrl";
+import type { Language } from "@/types/i18n";
 
 type StoryModalProps = {
   activeStory: number | null;
@@ -26,6 +29,9 @@ export default function StoryModal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtTop, setIsAtTop] = useState(true);
   const router = useRouter();
+  const { lang } = useParams();
+  const typedLang = lang as Language;
+
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -138,7 +144,7 @@ export default function StoryModal({
                     storedLevel?.toLowerCase?.() ||
                     "l2";
 
-                  const url = `/es/stories/${storySlug}/${level}/part-1`;
+                  const url = getStoryUrl(storySlug, level, "part-1", typedLang);
                   router.push(url);
                 }}
                 className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"

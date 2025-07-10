@@ -1,6 +1,7 @@
+// src/components/StoryLayout.tsx
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { STORY_THEMES } from "@/components/storyThemes";
 import Link from "next/link";
@@ -11,6 +12,8 @@ import UnifiedTranslator from "@/components/UnifiedTranslator";
 import { useSessionLogger } from '@/hooks/useSessionLogger';
 import { getMaxPartForStory } from '@/lib/stories';
 import { slugify } from '@/lib/stories';
+import { getStoryUrl } from "@/utils/getStoryUrl";
+import type { Language } from "@/types/i18n";
 
 
 type ActiveAudio = {
@@ -29,7 +32,7 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;
 
-const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
+  const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
 
   const [lineWidths, setLineWidths] = useState<Record<number, number>>({});
   const progressBarRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +40,9 @@ const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
+
+  const { lang } = useParams() ?? {};
+  const typedLang = (lang as Language) ?? "es";
 
 useEffect(() => {
   if (storySlug === "aventura") {
@@ -246,7 +252,7 @@ if (
               options={["Home"]}
               onSelect={(option) => {
                 if (option === "Home") {
-                  window.location.href = "/es/stories";
+                  router.push(`/${typedLang}/stories`);
                 }
               }}
             />
@@ -257,7 +263,7 @@ if (
               options={["l1", "l2", "l3", "l4", "l5"]}
               onSelect={(level) => {
                 const part = currentPart || "part-1";
-                window.location.href = `/es/stories/${storySlug}/${level}/${part}`;
+                router.push(getStoryUrl(storySlug, level, part, typedLang));
               }}
             />
           </div>
@@ -271,7 +277,7 @@ if (
                   key={part}
                   variant="parts"
                   onClick={() => {
-                    window.location.href = `/es/stories/${storySlug}/${currentLevel}/${part}`;
+                    router.push(getStoryUrl(storySlug, currentLevel, part, typedLang));
                   }}
                   className={`px-4 py-2 text-sm sm:text-base rounded-lg sm:rounded-xl hover:scale-105 transition ${isActive ? "ring-2 ring-black" : ""}`}
                 >
@@ -300,8 +306,10 @@ if (
       <a
         className={buttonClass(prevDisabled, "bg-green-600")}
         href={
-          prevDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber - 1}`
-        }
+  prevDisabled
+    ? undefined
+    : getStoryUrl(storySlug, currentLevel, `part-${partNumber - 1}`, typedLang)
+}
         onClick={(e) => prevDisabled && e.preventDefault()}
       >
         ⬅ Prev
@@ -309,8 +317,10 @@ if (
       <a
         className={buttonClass(nextDisabled, "bg-green-700")}
         href={
-          nextDisabled ? undefined : `/es/stories/${storySlug}/${currentLevel}/part-${partNumber + 1}`
-        }
+  nextDisabled
+    ? undefined
+    : getStoryUrl(storySlug, currentLevel, `part-${partNumber + 1}`, typedLang)
+}
         onClick={(e) => nextDisabled && e.preventDefault()}
       >
         Next ➡

@@ -7,6 +7,7 @@ interface CardProps {
   className?: string;
   children: React.ReactNode;
   variant?: keyof typeof cardPresets; // 👈 new
+  style?: React.CSSProperties;
 }
 
 const Card: React.FC<CardProps> = ({ children, className, variant }) => {

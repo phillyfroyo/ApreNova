@@ -1,18 +1,23 @@
-// /src/lib/getStoryContent.ts
+// src/lib/getStoryContent.ts
+import type { Language } from "@/types/i18n";
 
 export async function getStoryContent(
   storySlug: string,
   level: string,
   part: string,
-  lang: "es" | "en"
+  lang: Language
 ) {
   try {
     const file = await import(
-      `../content/${storySlug}/${level}/${part}.${lang}.ts`
+      `@/content/${storySlug}/${level}/part-${part}.${lang}.ts`
     );
-    return file.default; // 🛠️ use `default` instead of `lines`
+    return file.default;
   } catch (err) {
-    console.error("Failed to load story content:", err);
+    console.error(
+      `❌ Failed to load: /content/${storySlug}/${level}/part-${part}.${lang}.ts`,
+      err
+    );
     return [{ en: "Content not available.", es: "Contenido no disponible." }];
   }
 }
+
