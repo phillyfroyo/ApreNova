@@ -8,15 +8,15 @@ import SubscribeButton from "@/components/SubscribeButton";
 import type { Language } from "@/types/i18n";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 
-export default async function PremiumSalesPage({
-  params,
-}: {
-  params: { lang: string };
-}) {
+type PageProps = {
+  params: {
+    lang: string;
+  };
+};
 
-  const session = await getServerSession(authOptions); // ✅ This line was missing
+export default async function PremiumSalesPage({ params }: PageProps) {
+  const session = await getServerSession(authOptions);
   const lang = (["en", "es"].includes(params.lang) ? params.lang : "es") as Language;
-
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
