@@ -45,13 +45,13 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const { lang } = useParams() ?? {};
   const typedLang = (lang as Language) ?? "es";
 
-  const handleSeek = (newTime) => {
-    if (activeAudio?.audio) {
-      activeAudio.audio.pause();
-      activeAudio.audio.currentTime = newTime;
-      setActiveAudio({ ...activeAudio, progress: newTime, isPlaying: false });
-    }
-  };
+  const handleSeek = useCallback((newTime: number) => {
+  if (activeAudio?.audio) {
+    activeAudio.audio.pause();
+    activeAudio.audio.currentTime = newTime;
+    setActiveAudio({ ...activeAudio, progress: newTime, isPlaying: false });
+  }
+}, [activeAudio]);
 
   const handleDrag = useCallback((e: MouseEvent | TouchEvent) => {
   if (!progressBarRef.current || !activeAudio?.duration) return;
