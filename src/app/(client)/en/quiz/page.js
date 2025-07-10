@@ -1,4 +1,5 @@
 // src/app/en/quiz/page.js
+<a href="/en/quiz/start/">Start Quiz</a>
 
 export default function QuizWelcomeEN() {
   return (
@@ -21,13 +22,13 @@ export default function QuizWelcomeEN() {
           <h2 style={headingStyle}>Take the Quiz</h2>
           <p style={{ marginTop: '-0.5rem' }}>(recommended)</p>
           <p style={{ margin: '1rem 0' }}>Let us determine where you start</p>
-          <a href="/en/quiz/start" style={buttonStyle}>Begin Quiz</a>
+          <Link href="/en/quiz/start/">Start Quiz</Link>
         </div>
 
         <div style={cardStyle}>
           <h2 style={headingStyle}>No Thanks</h2>
           <p style={{ margin: '1rem 0' }}>You can choose your level later</p>
-          <a href="/en/stories" style={buttonStyle}>Start Learning</a>
+          <Link href="/en/stories/">Start Learning</Link>
         </div>
       </main>
     </div>
