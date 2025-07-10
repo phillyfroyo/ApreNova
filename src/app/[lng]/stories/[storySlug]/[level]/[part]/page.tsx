@@ -1,4 +1,4 @@
-// src/app/[lang]/stories/[storySlug]/[level]/[part]/page.tsx
+// src/app/[lng]/stories/[storySlug]/[level]/[part]/page.tsx
 import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
@@ -10,20 +10,20 @@ import type { Language } from "@/types/i18n";
 export default async function Page({
   params,
 }: {
-  params: { lang: string; storySlug: string; level: string; part: string };
+  params: { lng: string; storySlug: string; level: string; part: string };
 }) {
-  const { lang, storySlug, level, part } = params;
+  const { lng, storySlug, level, part } = params;
 
   // ✅ Guard + narrow
-  if (lang !== "es" && lang !== "en") return notFound();
-  const typedLang = lang as Language;
+  if (lng !== "es" && lng !== "en") return notFound();
+  const typedLang = lng as Language;
 
   // ✅ Guard against missing params (super rare unless route is malformed)
   if (!storySlug || !level || !part) {
     throw new Error("Missing dynamic route parameters.");
   }
 
-  console.log("📦 Dynamic route loaded with:", { lang, storySlug, level, part });
+  console.log("📦 Dynamic route loaded with:", { lng, storySlug, level, part });
 
   // ✅ Load session if needed (auth, tracking, etc.)
   const session = await getServerSession(authOptions);

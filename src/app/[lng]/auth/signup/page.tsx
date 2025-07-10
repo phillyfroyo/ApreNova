@@ -1,26 +1,29 @@
-// src/app/[lang]/auth/login/page.tsx
+// src/app/[lng]/auth/signup/page.tsx
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef, FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Logo from '@/components/Logo'
 import { Card, Input, Button, H1, Small } from '@/components/ui'
-import { useRouter, useParams } from 'next/navigation';
-import type { Language } from '@/types/i18n';
 import Link from "next/link";
+import { useParams } from 'next/navigation';
+import type { Language } from '@/types/i18n';
 import Image from "next/image";
 
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [language, setLanguage] = useState('es')
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [name, setName] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const { lng } = useParams();
+  const typedLang = lng as Language;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,20 +37,37 @@ export default function LoginPage() {
     }
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess(false)
 
-    const result = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, nativeLanguage: language, name }),
     })
 
-    if (result?.ok) {
-      router.push(`/${language}/stories`)
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || data.message || 'Something went wrong')
     } else {
-      setError('Credenciales incorrectas. Inténtalo de nuevo.')
+      setSuccess(true)
+
+      const result = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      })
+
+      if (result?.ok) {
+        setTimeout(() => {
+          router.push(`/${language}/stories`)
+        }, 300)
+      } else {
+        setError('Login after signup failed.')
+      }
     }
   }
 
@@ -59,7 +79,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
         <Card className="glass-card space-y-6">
-          <H1 className="text-center text-2xl">Iniciar sesión</H1>
+          <H1 className="text-center text-2xl">Create an account</H1>
 
           <div className="flex flex-col gap-1">
             <p className="text-sm text-black/70">
@@ -79,7 +99,7 @@ export default function LoginPage() {
                 <div className="absolute left-0 mt-1 w-full bg-white border rounded-md shadow-md z-10">
                   {language !== 'en' && (
                     <div
-                      onClick={() => router.push('/en/auth/login')}
+                      onClick={() => router.push('/en/auth/signup')}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                     >
                       English
@@ -87,7 +107,7 @@ export default function LoginPage() {
                   )}
                   {language !== 'es' && (
                     <div
-                      onClick={() => router.push(`/${typedLang}/auth/login`)}
+                      onClick={() => router.push(`/${typedLang}/auth/signup`)}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                     >
                       Español
@@ -97,6 +117,22 @@ export default function LoginPage() {
               )}
             </div>
           </div>
+
+          <div className="mb-4">
+          <label htmlFor="name" className="block text-sm font-medium text-white mb-1">
+          First Name
+          </label>
+          <input
+          type="text"
+          name="name"
+          id="name"
+          required
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded-md text-black"
+         />
+         </div>
 
           <Input
             type="email"
@@ -114,12 +150,15 @@ export default function LoginPage() {
             required
           />
 
-          {error && (
-            <p className="text-sm text-center text-red-600">{error}</p>
+          {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+          {success && (
+            <p className="text-green-600 text-sm text-center">
+              Account created! Redirecting...
+            </p>
           )}
 
           <Button type="submit" className="w-full" variant="button1">
-            Iniciar sesión
+            Registrarse
           </Button>
 
           <div className="flex items-center justify-center">
@@ -139,9 +178,15 @@ export default function LoginPage() {
   className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
 />
             <span className="text-sm text-gray-700 font-medium">
-              Inicia sesión con Google
+              Registrarse con Google
             </span>
           </button>
+          <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
+  <span className="text-black">¿Ya tienes una cuenta? </span>
+  <Link href={`/${typedLang}/auth/login`} className="text-[#1000c8] hover:underline">
+    Inicia sesión
+  </Link>
+</p>
         </Card>
       </form>
     </div>

@@ -1,4 +1,4 @@
-// src/app/[lang]/premium/page.tsx
+// src/app/[lng]/premium/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import PremiumDevToggle from "@/components/PremiumDevToggle";
@@ -11,10 +11,10 @@ import { getStoryUrl } from "@/utils/getStoryUrl";
 export default async function PremiumSalesPage({
   params,
 }: {
-  params: { lang: string };
+  params: { lng: string };
 }) {
   const session = await getServerSession(authOptions);
-  const lang = (["en", "es"].includes(params.lang) ? params.lang : "es") as Language;
+  const lng = (["en", "es"].includes(params.lng) ? params.lng : "es") as Language;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -58,7 +58,7 @@ export default async function PremiumSalesPage({
   <div className="mt-8">
     <PremiumDevToggle />
     <div className="mt-4">
-      <Link href={`/${lang}/stories`}>
+      <Link href={`/${lng}/stories`}>
         <Button variant="button1">← Return to Stories</Button>
       </Link>
     </div>

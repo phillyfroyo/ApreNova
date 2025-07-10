@@ -11,12 +11,12 @@ function getLangFromUrl(url: string): string {
 }
 
 export async function POST(request: Request) {
-  const lang = getLangFromUrl(request.url);
+  const lng = getLangFromUrl(request.url);
 
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    return NextResponse.redirect(`/${lang}/login`);
+    return NextResponse.redirect(`/${lng}/login`);
   }
 
   const user = await prisma.user.findUnique({
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.redirect(new URL(`/${lang}/premium`, request.url));
+    return NextResponse.redirect(new URL(`/${lng}/premium`, request.url));
   }
 
   await prisma.user.update({
@@ -38,6 +38,6 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL(`/${lang}/premium`, request.url));
+  return NextResponse.redirect(new URL(`/${lng}/premium`, request.url));
 
 }

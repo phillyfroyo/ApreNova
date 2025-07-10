@@ -1,4 +1,4 @@
-// src/app/[lang]/home/quiz/layout.tsx
+// src/app/[lng]/home/quiz/layout.tsx
 import type { ReactNode } from 'react';
 import Logo from '@/components/Logo';
 

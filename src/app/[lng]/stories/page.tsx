@@ -1,4 +1,4 @@
-// src/app/[lang]/stories/page.tsx
+// src/app/[lng]/stories/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -21,8 +21,8 @@ import Image from "next/image";
 
 function AccountDropdown() {
   const router = useRouter();
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const { lng } = useParams();
+  const typedLang = lng as Language;
 
   const goToQuiz = () => router.push(`/${typedLang}/home/quiz/l1/q1`);
   const goToSettings = () => router.push(`/${typedLang}/settings`);

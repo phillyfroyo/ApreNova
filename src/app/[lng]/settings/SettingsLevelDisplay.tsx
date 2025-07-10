@@ -1,4 +1,4 @@
-// src/app/[lang]/settings/SettingsLevelDisplay
+// src/app/[lng]/settings/SettingsLevelDisplay
 'use client'
 
 import { useUserLevel } from '@/hooks/useUserLevel'
@@ -12,9 +12,9 @@ export default function SettingsLevelDisplay() {
   const [editing, setEditing] = useState(false)
 
   const router = useRouter();
-  const { lang } = useParams();
+  const { lng } = useParams();
   const goToQuiz = () => router.push(`/${typedLang}/home/quiz/l1/q1`);
-  const typedLang = lang as Language;
+  const typedLang = lng as Language;
 
 
   if (!selectedLevel) {

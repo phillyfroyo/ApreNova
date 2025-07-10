@@ -1,4 +1,4 @@
-// src/app/[lang]/home/page.tsx
+// src/app/[lng]/home/page.tsx
 'use client';
 
 import React from 'react';
@@ -11,7 +11,7 @@ import { useTypedLang } from "@/hooks/useTypedLang";
 
 
 export default function QuizWelcome() {
-  const { lang } = useParams();
+  const { lng } = useParams();
   const typedLang = useTypedLang();
   const router = useRouter();
 

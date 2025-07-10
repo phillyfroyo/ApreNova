@@ -5,7 +5,7 @@ export function getStoryUrl(
   storySlug: string,
   level: string,
   part: string,
-  lang: Language
+  lng: Language
 ): string {
-  return `/${lang}/stories/${storySlug}/${level}/${part}`;
+  return `/${lng}/stories/${storySlug}/${level}/${part}`;
 }

@@ -1,4 +1,4 @@
-// src/app/[lang]/home/results/page.js
+// src/app/[lng]/home/results/page.js
 "use client"
 
 import { useEffect, useState } from 'react'

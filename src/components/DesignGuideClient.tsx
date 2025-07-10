@@ -71,7 +71,7 @@ export default function DesignGuideClient() {
             label={language === 'en' ? 'English' : 'Español'}
             variant="auth"
             options={['en', 'es']}
-            onSelect={(lang) => setLanguage(lang)}
+            onSelect={(lng) => setLanguage(lng)}
           />
         </div>
       </section>
@@ -112,7 +112,7 @@ export default function DesignGuideClient() {
       <section>
   <H1 className="mb-8">Card Presets</H1>
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {cardPresets.map((card) => (
+    {Object.entries(cardPresets).map(([key, card]) => (
       <Card key={card.title} className={card.className}>
         <H2 className="mb-2">{card.title}</H2>
         <Body className="mb-4">{card.description}</Body>

@@ -12,7 +12,7 @@ const voice = "en-US-BrianMultilingualNeural";
 
 const synthesizeWithRate = async (text, outputPath, rate) => {
   const ssml = `
-  <speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang='en-US'>
+  <speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lng='en-US'>
     <voice name='${voice}'>
       <mstts:express-as style="default">
         <prosody rate="${rate}" pitch="default">${text}</prosody>

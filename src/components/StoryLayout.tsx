@@ -42,8 +42,8 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const [menuOpen, setMenuOpen] = useState(false);
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
 
-  const { lang } = useParams() ?? {};
-  const typedLang = (lang as Language) ?? "es";
+  const { lng } = useParams() ?? {};
+  const typedLang = (lng as Language) ?? "es";
 
   const handleSeek = useCallback((newTime: number) => {
   if (activeAudio?.audio) {

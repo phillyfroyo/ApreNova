@@ -1,4 +1,4 @@
-// src/app/[lang]/settings/page.tsx
+// src/app/[lng]/settings/page.tsx
 'use client'
 
 import { useSession, signOut, getSession } from 'next-auth/react'
@@ -19,8 +19,8 @@ export default function SettingsPage() {
   const router = useRouter()
   const [sessionKey, setSessionKey] = useState(0)
 
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const { lng } = useParams();
+  const typedLang = lng as Language;
 
   if (status === 'loading') return <p>Loading...</p>
 
@@ -143,7 +143,7 @@ if (!session?.user?.email) {
           value={session.user.nativeLanguage ?? ''}
           inputType="select"
           options={['es', 'en', 'fr', 'de']}
-          onSave={(lang) => updateUserField('nativeLanguage', lang)}
+          onSave={(lng) => updateUserField('nativeLanguage', lng)}
         />
 
         <Suspense fallback={<div className="text-xs mb-4">🎯 Loading level...</div>}>
@@ -153,7 +153,7 @@ if (!session?.user?.email) {
         <div
           className="text-green-700 cursor-pointer hover:underline text-sm"
           onClick={() => {
-            const lang = window.location.pathname.startsWith('/en') ? 'en' : 'es';
+            const lng = window.location.pathname.startsWith('/en') ? 'en' : 'es';
             router.push(`/${typedLang}/home/quiz/l1/q1`);
           }}
         >

@@ -58,10 +58,10 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
 
   // Language logic
   const isLoggedIn = !!session?.user;
-  const lang = session?.user?.nativeLanguage || 'es'; // default to Spanish
+  const lng = session?.user?.nativeLanguage || 'es'; // default to Spanish
   const brand = !isLoggedIn
     ? ['Aprend', 'O']
-    : lang === 'es'
+    : lng === 'es'
       ? ['miAprend', 'O']
       : ['myAprend', 'O'];
 

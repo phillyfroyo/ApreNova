@@ -29,8 +29,8 @@ export default function StoryModal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtTop, setIsAtTop] = useState(true);
   const router = useRouter();
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const { lng } = useParams();
+  const typedLang = lng as Language;
 
 
   const handleScroll = () => {

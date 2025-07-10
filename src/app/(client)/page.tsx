@@ -13,12 +13,12 @@ import { useSession } from "next-auth/react";
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const { lng } = useParams();
+  const typedLang = lng as Language;
 
   if (session) {
-    const lang = session.user?.nativeLanguage ?? 'es';
-redirect(`/${lang}/stories`);
+    const lng = session.user?.nativeLanguage ?? 'es';
+redirect(`/${lng}/stories`);
   }
 
   return (

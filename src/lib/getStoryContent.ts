@@ -5,16 +5,16 @@ export async function getStoryContent(
   storySlug: string,
   level: string,
   part: string,
-  lang: Language
+  lng: Language
 ) {
   try {
     const file = await import(
-      `@/content/${storySlug}/${level}/part-${part}.${lang}.ts`
+      `@/content/${storySlug}/${level}/part-${part}.${lng}.ts`
     );
     return file.default;
   } catch (err) {
     console.error(
-      `❌ Failed to load: /content/${storySlug}/${level}/part-${part}.${lang}.ts`,
+      `❌ Failed to load: /content/${storySlug}/${level}/part-${part}.${lng}.ts`,
       err
     );
     return [{ en: "Content not available.", es: "Contenido no disponible." }];
