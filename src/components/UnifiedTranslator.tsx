@@ -1,8 +1,9 @@
 "use client";
 // src\components\UnifiedTranslator.tsx
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
+
 
 interface Props {
   sentence: string;
@@ -34,11 +35,12 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
 
   const getSelectedText = () => words.slice(startIdx!, endIdx! + 1).join(" ");
 
-  const fetchTranslation = async (start: number, end: number) => {
-      if (readOnlyMode) {
-    setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
-    return;
-  }
+  const fetchTranslation = useCallback(
+  async (start: number, end: number) => {
+    if (readOnlyMode) {
+      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      return;
+    }
     const phrase = words.slice(start, end + 1).join(" ");
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
@@ -82,7 +84,9 @@ if (!isSingleWord) {
     } finally {
       setLoading(false);
     }
-  };
+  },
+  [readOnlyMode] // ✅ include any dependencies it relies on
+);
 
   const handleClick = (index: number) => {
   if (!enabled) return;
@@ -205,7 +209,7 @@ useEffect(() => {
     setEndIdx(words.length - 1);
     fetchTranslation(0, words.length - 1);
   }
-}, [autoTriggerAll]);
+}, [enabled, autoTriggerAll, words.length, fetchTranslation]);
 
 useEffect(() => {
   const handleOutsideClick = (e: MouseEvent) => {
