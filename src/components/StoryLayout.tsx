@@ -14,6 +14,7 @@ import { getMaxPartForStory } from '@/lib/stories';
 import { slugify } from '@/lib/stories';
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
+import { useCallback } from "react"; 
 
 
 type ActiveAudio = {
@@ -44,6 +45,34 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const { lang } = useParams() ?? {};
   const typedLang = (lang as Language) ?? "es";
 
+  const handleDrag = (e: MouseEvent | TouchEvent) => {
+  if (!progressBarRef.current || !activeAudio?.duration) return;
+
+  const rect = progressBarRef.current.getBoundingClientRect();
+
+  let clientX: number;
+  if ("touches" in e) {
+    clientX = e.touches[0].clientX;
+  } else {
+    clientX = e.clientX;
+  }
+
+  const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+  const newTime = (offsetX / rect.width) * activeAudio.duration;
+  handleSeek(newTime);
+};
+
+  const handleGlobalMove = useCallback((e: MouseEvent | TouchEvent) => {
+  if (!isDragging) return;
+  e.preventDefault();
+  handleDrag(e);
+}, [isDragging]); // ✅ no more stale banana errors
+
+const handleGlobalUp = useCallback(() => {
+  setIsDragging(false);
+}, []);
+
+
 useEffect(() => {
   if (storySlug === "aventura") {
     setTranslationMode("premium");
@@ -51,6 +80,7 @@ useEffect(() => {
     setTranslationMode(isPremiumUser ? "premium" : "free");
   }
 }, [storySlug, isPremiumUser]);
+
 
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
 
@@ -94,26 +124,19 @@ const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 }, [storySlug, currentLevel, partNumber]);
 
 
-    const handleGlobalMove = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      handleDrag(e);
-    };
-    const handleGlobalUp = () => setIsDragging(false);
-
     useEffect(() => {
-    window.addEventListener("mousemove", handleGlobalMove);
-    window.addEventListener("touchmove", handleGlobalMove, { passive: false });
-    window.addEventListener("mouseup", handleGlobalUp);
-    window.addEventListener("touchend", handleGlobalUp);
+  window.addEventListener("mousemove", handleGlobalMove);
+  window.addEventListener("touchmove", handleGlobalMove, { passive: false });
+  window.addEventListener("mouseup", handleGlobalUp);
+  window.addEventListener("touchend", handleGlobalUp);
 
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalMove);
-      window.removeEventListener("touchmove", handleGlobalMove);
-      window.removeEventListener("mouseup", handleGlobalUp);
-      window.removeEventListener("touchend", handleGlobalUp);
-    };
-  }, [isDragging]);
+  return () => {
+    window.removeEventListener("mousemove", handleGlobalMove);
+    window.removeEventListener("touchmove", handleGlobalMove);
+    window.removeEventListener("mouseup", handleGlobalUp);
+    window.removeEventListener("touchend", handleGlobalUp);
+  };
+}, [handleGlobalMove, handleGlobalUp]); // ✅ no isDragging here, because it’s inside handleGlobalMove
 
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -190,15 +213,6 @@ if (
     }
   };
 
-  const handleDrag = (e) => {
-    if (!progressBarRef.current || !activeAudio?.duration) return;
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const clientX = e.type.includes("mouse") ? e.clientX : e.touches[0].clientX;
-    const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
-    const newTime = (offsetX / rect.width) * activeAudio.duration;
-    handleSeek(newTime);
-  };
-
   const renderProgressBar = (audio) => {
   const percent = (audio.progress / audio.duration) * 100;
 
@@ -208,14 +222,15 @@ if (
     <div
       ref={progressBarRef}
       className="relative w-full h-[30px] select-none cursor-pointer flex items-center"
-      onMouseDown={(e) => {
-        setIsDragging(true);
-        handleDrag(e);
-      }}
-      onTouchStart={(e) => {
-        setIsDragging(true);
-        handleDrag(e);
-      }}
+      onMouseDown={(e: React.MouseEvent) => {
+  setIsDragging(true);
+  handleDrag(e.nativeEvent); // 🍌 pass the raw banana
+}}
+
+onTouchStart={(e: React.TouchEvent) => {
+  setIsDragging(true);
+  handleDrag(e.nativeEvent); // 🍌 again, raw banana
+}}
     >
       <div className="w-full h-[6px] rounded bg-white/30 backdrop-blur-2xl border border-black/10 shadow-inner" />
       <div
