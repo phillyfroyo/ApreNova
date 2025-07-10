@@ -9,6 +9,7 @@ import { Card, Input, Button, H1, Small } from '@/components/ui'
 import Link from "next/link";
 import { useParams } from 'next/navigation';
 import type { Language } from '@/types/i18n';
+import Image from "next/image";
 
 
 export default function SignupPage() {
@@ -169,11 +170,13 @@ export default function SignupPage() {
             onClick={() => signIn('google', { callbackUrl: `/${language}/stories` })}
             className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group"
           >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
-            />
+            <Image
+  src="https://www.svgrepo.com/show/475656/google-color.svg"
+  alt="Google"
+  width={20}
+  height={20}
+  className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
+/>
             <span className="text-sm text-gray-700 font-medium">
               Registrarse con Google
             </span>

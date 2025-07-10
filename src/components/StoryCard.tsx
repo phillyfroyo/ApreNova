@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui";
 import { STORY_METADATA } from "@/lib/stories";
+import Image from "next/image";
 
 type StoryCardProps = {
   index: number;
@@ -40,17 +41,14 @@ export default function StoryCard({
     scrollSnapAlign: "start",    // ← Carousel snapping
   }}
 >
-  <img
+  <div style={{ position: "relative", width: "100%", aspectRatio: "2/3", borderRadius: "12px", overflow: "hidden" }}>
+  <Image
     src={image}
     alt={title}
-    style={{
-      width: "100%",
-      objectFit: "cover",
-      aspectRatio: "2/3",
-      display: "block",
-      borderRadius: "12px"
-    }}
+    fill
+    style={{ objectFit: "cover", borderRadius: "12px" }}
   />
+</div>
   <p
         style={{
           textAlign: "center",

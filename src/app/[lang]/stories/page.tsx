@@ -16,6 +16,7 @@ import StoryCard from "@/components/StoryCard";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
+import Image from "next/image";
 
 
 function AccountDropdown() {
@@ -45,11 +46,13 @@ function AccountDropdown() {
         }}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <img
-          src={profilePic || "/images/default-avatar.png"}
-          alt="Account"
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        <Image
+  src={profilePic || "/images/default-avatar.png"}
+  alt="Account"
+  width={100} // ✅ you MUST define width + height unless using fill
+  height={100}
+  style={{ objectFit: "cover" }}
+/>
       </div>
 
       {session?.user?.isPremium && (

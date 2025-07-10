@@ -66,7 +66,7 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   if (!isDragging) return;
   e.preventDefault();
   handleDrag(e);
-}, [isDragging]); // ✅ no more stale banana errors
+}, [isDragging, handleDrag]); // ✅ satisfies ESLint
 
 const handleGlobalUp = useCallback(() => {
   setIsDragging(false);
