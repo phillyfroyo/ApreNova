@@ -152,7 +152,7 @@ export default function StoryModal({
                 className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"
 
               >
-                {t(typedLang, "readStory")}
+                {t(typedLang, "stories", "readStory")}
               </Button>
 
               <div className="text-center">
@@ -160,7 +160,7 @@ export default function StoryModal({
                 <p className="my-4 text-sm text-black">{story.description}</p>
 
                 <p className="text-xs font-semibold text-gray-600 mb-2">
-                  {t(typedLang, "availableLevels")}
+                  {t(typedLang, "stories", "availableLevels")}
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-2">
@@ -174,7 +174,7 @@ export default function StoryModal({
 
     return (
       <Badge key={idx} level={badgeLevel}>
-        {t(typedLang, "level")} {lvl.toUpperCase()}
+        {t(typedLang, "stories", "level")} {lvl.toUpperCase()}
       </Badge>
     );
   })}
