@@ -23,6 +23,10 @@ const en = {
   readStory: "Read Me",
   availableLevels: "Available in levels:", 
   level: "Level",
+  storiesAll: "Stories (all)",
+  takeQuiz: "Take the Quiz",
+  myAccount: "My Account",
+  createAccount: "Create an Account"
 },
 
   home: {

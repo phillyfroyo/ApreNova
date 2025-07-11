@@ -22,7 +22,11 @@ const es = {
   back: "Atrás",
   readStory: "Léeme",
   availableLevels: "Disponible en niveles:", 
-  level: "Nivel",  
+  level: "Nivel", 
+  storiesAll: "Historias (todas)",
+  takeQuiz: "Haz el Quiz",
+  myAccount: "Mi Cuenta",
+  createAccount: "Crea una Cuenta"
 },
 
   home: {

@@ -17,6 +17,8 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
 import Image from "next/image";
+import { t } from "@/lib/t";
+
 
 
 function AccountDropdown() {
@@ -93,7 +95,7 @@ function AccountDropdown() {
     <div>{session.user.email}</div>
   ) : (
     <a href={`/${typedLang}/auth/signup`} className="text-blue-800 hover:underline">
-      Create an Account
+      {t(typedLang, "stories", "createAccount")}
     </a>
   )}
 </div>
@@ -103,21 +105,21 @@ function AccountDropdown() {
             onClick={goToQuiz}
             className="text-green-600 cursor-pointer block w-full text-left"
           >
-            Take the Quiz
+            {t(typedLang, "stories", "takeQuiz")}
           </button>
 
           <button
             onClick={goToSettings}
             className="text-blue-800 cursor-pointer block w-full text-left"
           >
-            My Account
+            {t(typedLang, "stories", "myAccount")}
           </button>
 
           <Link
             href={`/${typedLang}/premium`}
             className="text-yellow-700 cursor-pointer block"
           >
-            Go Premium 💎
+            {t(typedLang, "stories", "goPremium")}
           </Link>
         </div>
       </div>
@@ -132,9 +134,12 @@ function StoriesPageContent() {
   const selectedLevel = useUserLevel();
   const [cardPosition, setCardPosition] = useState<DOMRect | null>(null);
   const [activeStory, setActiveStory] = useState<number | null>(null);
+  const { lng } = useParams();
+  const typedLang = lng as Language;
+
 
   function handleLevelClick(lvl) {
-  const locale = "es"; // We'll pull from router later
+  const locale = typedLang;
   const storySlug = "aventura"; // We'll make this dynamic in the future
   const url = getStoryUrl({ locale, storySlug, level: lvl });
   router.push(url);
@@ -168,7 +173,7 @@ function StoriesPageContent() {
 
 <div className="mt-16 mb-4 px-4">
   <h2 className="text-xl font-semibold text-left">
-    Historias ({selectedLevel})
+    {t(typedLang, "stories", "storiesAll")} ({selectedLevel})
   </h2>
 </div>
 
