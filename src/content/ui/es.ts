@@ -41,7 +41,31 @@ const es = {
   haveAccount: "¿Ya tienes una cuenta?",
   whyTitle: "¿Por qué",
   placeholderInfo: "Put your additional information here 🚀",
+},
+
+storiesMetadata: {
+  aventura: {
+    title: "La Adventure",
+    description: "Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc)",
+  },
+  "el-bosque-perdido": {
+    title: "El Bosque Perdido",
+    description: "Misterios y criaturas ocultas en un bosque encantado.",
+  },
+  "misterio-en-la-selva": {
+    title: "Misterio en la Selva",
+    description: "Un arqueólogo desaparece en la selva profunda...",
+  },
+  "el-viaje-magico": {
+    title: "El Viaje Mágico",
+    description: "Un tren, un mapa antiguo, y una puerta a otro mundo.",
+  },
+  "secretos-del-desierto": {
+    title: "Secretos del Desierto",
+    description: "El pasado cobra vida entre las dunas del desierto.",
+  },
 }
+
 
 };
 

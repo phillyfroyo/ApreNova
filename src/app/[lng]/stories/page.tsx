@@ -18,6 +18,7 @@ import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
 import Image from "next/image";
 import { t } from "@/lib/t";
+import { getStoryTitle } from "@/lib/stories";
 
 
 
@@ -194,17 +195,17 @@ function StoriesPageContent() {
         }}
         >
          {STORY_METADATA.map((story, i) => (
-           <StoryCard
-             key={i}
-             index={i}
-             title={story.title}
-             image={story.image}
-             onClick={(rect) => {
-              setCardPosition(rect);
-              setActiveStory(i);
-            }}
-          />
-        ))}
+  <StoryCard
+    key={i}
+    index={i}
+    title={getStoryTitle(typedLang, story.slug)} // ✅ dynamic
+    image={story.image}
+    onClick={(rect) => {
+      setCardPosition(rect);
+      setActiveStory(i);
+    }}
+  />
+))}
       </div>
     </div> {/* Close scroll wrapper */}
 

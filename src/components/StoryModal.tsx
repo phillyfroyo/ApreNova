@@ -10,6 +10,9 @@ import { useParams } from "next/navigation";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
+import { getStoryTitle, getStoryDescription } from "@/lib/stories";
+
+
 
 type StoryModalProps = {
   activeStory: number | null;
@@ -91,7 +94,7 @@ export default function StoryModal({
           {/* 🔽 Background image layer */}
           <motion.img
             src={story.image}
-            alt={story.title}
+            alt={getStoryTitle(typedLang, storySlug)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{
@@ -123,7 +126,7 @@ export default function StoryModal({
 
               <motion.img
                 src={story.image}
-                alt={story.title}
+                alt={getStoryTitle(typedLang, storySlug)}
                 initial={{ borderRadius: "12px" }}
                 animate={{ borderRadius: "12px" }}
                 style={{
@@ -156,8 +159,12 @@ export default function StoryModal({
               </Button>
 
               <div className="text-center">
-                <h3 style={{ fontWeight: "bold" }}>{story.title}</h3>
-                <p className="my-4 text-sm text-black">{story.description}</p>
+                <h3 style={{ fontWeight: "bold" }}>
+                {getStoryTitle(typedLang, storySlug)}
+                </h3>
+                <p className="my-4 text-sm text-black">
+                {getStoryDescription(typedLang, storySlug)}
+                </p>
 
                 <p className="text-xs font-semibold text-gray-600 mb-2">
                   {t(typedLang, "stories", "availableLevels")}

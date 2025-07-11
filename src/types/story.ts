@@ -3,10 +3,8 @@
 export type LevelKey = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
 export type StoryMetadata = {
-  title: string;
   slug: string;
   image: string;
-  description?: string;
   isPremiumOnly?: boolean;
   levels: {
     [key in LevelKey]?: {

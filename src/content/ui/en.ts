@@ -41,7 +41,31 @@ const en = {
   haveAccount: "Already have an account?",
   whyTitle: "Why",
   placeholderInfo: "Put your additional information here 🚀",
+},
+
+storiesMetadata: {
+  aventura: {
+    title: "Aventura",
+    description: "Mysteries and hidden creatures in an enchanted forest. Mysteries and hidden creatures in an enchanted forest.Mysteries and hidden creatures in an enchanted forest.",
+  },
+  "el-bosque-perdido": {
+    title: "The Lost Forest",
+    description: "Mysteries and hidden creatures in an enchanted forest.",
+  },
+  "misterio-en-la-selva": {
+    title: "Jungle Mystery",
+    description: "An archaeologist disappears deep in the jungle...",
+  },
+  "el-viaje-magico": {
+    title: "The Magic Journey",
+    description: "A train, an ancient map, and a door to another world.",
+  },
+  "secretos-del-desierto": {
+    title: "Secrets of the Desert",
+    description: "The past comes alive among the desert dunes.",
+  },
 }
+
 
 };
 
