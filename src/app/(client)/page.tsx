@@ -21,16 +21,6 @@ export default function LanguageSelectPage() {
     }
   }, [session, router]);
 
-  // 🔁 If localStorage already has a preferredLang, redirect
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const preferred = localStorage.getItem("preferredLang");
-      if (preferred === "en" || preferred === "es") {
-        router.replace(`/${preferred}/home`);
-      }
-    }
-  }, [router]);
-
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
       <div className="text-center mb-12">
@@ -48,7 +38,6 @@ export default function LanguageSelectPage() {
             className="w-full"
             variant="button1"
             onClick={() => {
-              localStorage.setItem("preferredLang", "es");
               router.push("/es/home");
             }}
           >
@@ -63,7 +52,6 @@ export default function LanguageSelectPage() {
             className="w-full"
             variant="button1"
             onClick={() => {
-              localStorage.setItem("preferredLang", "en");
               router.push("/en/home");
             }}
           >
@@ -81,9 +69,9 @@ export default function LanguageSelectPage() {
           </Link>
         </p>
         <p className="mt-2">
-          <span className="text-black">New to ApreNova? </span>
-          <Link href="/en/auth/signup" className="text-[#1000c8] hover:underline">
-            Create a free account
+          <span className="text-black">¿Nuevo en ApreNova? </span>
+          <Link href="/es/auth/signup" className="text-[#1000c8] hover:underline">
+            Crea una cuenta gratis
           </Link>
         </p>
       </div>

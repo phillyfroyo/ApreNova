@@ -1,7 +1,6 @@
 // /src/content/ui/es.ts
 const es = {
-  goPremium: "Hazte Premium 💎",
-  premiumDescription: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido.",
+  auth: {
   login: "Iniciar sesión",
   signup: "Crear cuenta",
   logout: "Cerrar sesión",
@@ -10,6 +9,11 @@ const es = {
   confirmPassword: "Confirmar contraseña",
   name: "Nombre",
   welcomeBack: "¡Bienvenido de nuevo!",
+},
+
+  stories: {
+  goPremium: "Hazte Premium 💎",
+  premiumDescription: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido.",
   dashboard: "Panel",
   settings: "Configuración",
   stories: "Historias",
@@ -19,7 +23,24 @@ const es = {
   readStory: "Léeme",
   availableLevels: "Disponible en niveles:", 
   level: "Nivel",  
+},
+
+  home: {
+  subtitle: "Aprende más rápido. Aprende con historias.",
+  quizTitle: "Haz el Quiz",
+  recommended: "(recomendado)",
+  letUsPick: "Déjanos determinar tu nivel",
+  startQuiz: "Empezar Quiz",
+  noThanksTitle: "No Gracias",
+  pickLater: "Puedes elegir tu nivel después",
+  startLearning: "Comenzar Aprendizaje",
+  haveAccount: "¿Ya tienes una cuenta?",
+  whyTitle: "¿Por qué",
+  placeholderInfo: "Put your additional information here 🚀",
+}
+
 };
 
 export default es;
+
 
