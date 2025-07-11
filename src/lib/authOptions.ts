@@ -37,8 +37,8 @@ export const authOptions: AuthOptions = {
   ? {
       id: user.id.toString(),
       email: user.email,
-      name: user.name,
-      nativeLanguage: user.nativeLanguage,
+      name: user.name ?? undefined,
+      nativeLanguage: user.nativeLanguage ?? undefined,
       quizLevel: user.quizLevel,
       isPremium: user.isPremium,
     }
