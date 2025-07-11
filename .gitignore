@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # Dev-only GPT context files
-src/dev/ProjectStructurePage.tsx
-src/dev/InfraPage.tsx
+src/dev/ProjectStructurePage.txt
+src/dev/InfraPage.txt
 
 /src/generated/prisma
