@@ -7,10 +7,28 @@ import Link from 'next/link';
 import Logo from '@/components/Logo';
 import { H1, H2, Body, Small, Button, Badge, Card, Input } from '@/components/ui';
 import { cardPresets } from "@/styles/cardPresets";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
+
 
 export default function DesignGuideClient() {
-  const [language, setLanguage] = useState('es');
+  const [language, setLanguage] = useState<Language>('es');
+
   const levels = ['l1', 'l2', 'l3', 'l4', 'l5'];
+
+  const levelLabels: Record<string, string> = {
+    l1: "Brand New",
+    l2: "Beginner",
+    l3: "Intermediate",
+    l4: "Advanced",
+    l5: "Fluent"
+  };
+
+  const levelOptions = levels.map((lvl) => ({
+    label: levelLabels[lvl],
+    value: lvl
+  }));
+
 
   const logoVariants = {
     default: 'Default',
@@ -46,32 +64,35 @@ export default function DesignGuideClient() {
           <Dropdown
             label="Default ▾"
             variant="default"
-            options={levels}
+            options={levelOptions}
             onSelect={(level) => alert(`Selected ${level}`)}
           />
           <Dropdown
             label="Glass ▾"
             variant="glass"
-            options={levels}
+            options={levelOptions}
             onSelect={(level) => alert(`Selected ${level}`)}
           />
           <Dropdown
             label="Rounded ▾"
             variant="rounded"
-            options={levels}
+            options={levelOptions}
             onSelect={(level) => alert(`Selected ${level}`)}
           />
           <Dropdown
             label="Bold ▾"
             variant="bold"
-            options={levels}
+            options={levelOptions}
             onSelect={(level) => alert(`Selected ${level}`)}
           />
           <Dropdown
             label={language === 'en' ? 'English' : 'Español'}
             variant="auth"
-            options={['en', 'es']}
-            onSelect={(lng) => setLanguage(lng)}
+            options={[
+    { label: 'English', value: 'en' },
+    { label: 'Español', value: 'es' }
+  ]}
+            onSelect={(lng) => setLanguage(lng as Language)}
           />
         </div>
       </section>
