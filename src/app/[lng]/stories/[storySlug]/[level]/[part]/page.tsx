@@ -6,6 +6,7 @@ import { getStoryContent } from "@/lib/getStoryContent";
 import { STORY_METADATA } from "@/lib/stories";
 import StoryLayout from "@/components/StoryLayout";
 import type { Language } from "@/types/i18n";
+import { getStoryTitle } from '@/lib/stories'; 
 
 export default async function Page(props: any) {
   const { lng, storySlug, level, part } = props?.params ?? {};
@@ -30,7 +31,7 @@ export default async function Page(props: any) {
 
   return (
     <StoryLayout
-      title={metadata?.title ?? "Untitled"}
+      title={getStoryTitle(lng, storySlug)}
       storySlug={storySlug}
       sentences={lines}
       initialLevel={level}
