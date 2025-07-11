@@ -7,16 +7,12 @@ import { STORY_METADATA } from "@/lib/stories";
 import StoryLayout from "@/components/StoryLayout";
 import type { Language } from "@/types/i18n";
 
-export default async function Page(props: {
-  params: { lng: string; storySlug: string; level: string; part: string };
-}) {
-  const { params } = props;
-  const { lng, storySlug, level, part } = params;
+export default async function Page(props: any) {
+  const { lng, storySlug, level, part } = props?.params ?? {};
 
   if (lng !== "es" && lng !== "en") return notFound();
   const typedLang = lng as Language;
 
-  // ✅ Guard against missing params (super rare unless route is malformed)
   if (!storySlug || !level || !part) {
     throw new Error("Missing dynamic route parameters.");
   }

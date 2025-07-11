@@ -8,20 +8,18 @@ import SubscribeButton from "@/components/SubscribeButton";
 import type { Language } from "@/types/i18n";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 
-export default async function PremiumPage(props: {
-  params: { lng: string };
-}) {
+export default async function PremiumPage(props: any) {
   const { params } = props;
+  const lng = (["en", "es"].includes(params?.lng) ? params.lng : "es") as "en" | "es";
+
   const session = await getServerSession(authOptions);
-  const lng = (["en", "es"].includes(params.lng) ? params.lng : "es") as Language;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-  <h1 className="text-4xl font-extrabold mb-4 text-yellow-700">Go Premium 💎</h1>
-
-  <p className="text-lg mb-6 text-gray-700">
-    Cuentana Premium unlocks smarter tools for faster learning:
-  </p>
+      <h1 className="text-4xl font-extrabold mb-4 text-yellow-700">Go Premium 💎</h1>
+      <p className="text-lg mb-6 text-gray-700">
+        Cuentana Premium unlocks smarter tools for faster learning:
+      </p>
 
   <ul className="grid gap-4">
     <li className="bg-white rounded-xl shadow-md p-4 border border-yellow-200">

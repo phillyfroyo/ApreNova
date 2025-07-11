@@ -1,0 +1,127 @@
+/* eslint-disable */
+// 📄 Infra Page
+## 🖥️ Development Environment
+
+- **Stack:** React + Tailwind CSS + Framer Motion
+- **IDE:** Visual Studio Code
+- **Audio Playback:** HTML5 Audio API (with TTS fallback)
+- **Tracking:** Session and reading time via reusable hooks + session-aware API routes
+- **Dev DB:** Neon Postgres with Prisma ORM (local via `DATABASE_URL_UNPOOLED`)
+
+---
+
+## 🎨 Frontend Design System
+
+- **Component Primitives:** `Card`, `Button`, `Dropdown`, `Badge`, `EditableField`
+- **Feature Components:** `StoryModal`, `UserStatsCard`, `UnifiedTranslator`
+- **Layouts:** Bilingual content layout via `StoryLayout.tsx` and `[lang]/layout.tsx`
+- **Styling Tools:**
+    - Utility classes in `globals.css`
+    - Theming via `storyThemes.ts` and `cardPresets.ts`
+- **Audio UX:**
+    - Conditional line-by-line rendering
+    - Normal and slow playback
+    - One-click play/pause, seek, and fallback to `speechSynthesis`
+
+---
+
+## 🚦 App Framework: Next.js (App Router)
+
+- **Dynamic Routing:** File-based, bilingual (`[lang]` param)
+- **Dynamic Story Pages:** `/stories/[storySlug]/[level]/[part]`
+- **Server + Client Component Split:** Optimized via `next/dynamic` and `"use client"`
+- **Force-Dynamic Rendering:** `dynamic = 'force-dynamic'` used for session-bound routes
+- **Internationalization:** Fully unified `/[lang]/` routing
+- **Story Injection:** Via `storySlug`, dynamically loaded content (both languages)
+
+---
+
+## 🔐 Authentication – NextAuth.js
+
+- **Providers:** Google OAuth + Email/password (credentials)
+- **Persistence:** Prisma adapter
+- **Session:** Enriched with `user.id`, `name`, `nativeLanguage`, `quizLevel`
+- **Custom Pages:** `/[lang]/auth/login`, `/[lang]/auth/signup`
+- **Personalization:** `nativeLanguage` used in UI text (e.g., “miAprendO”)
+
+---
+
+## 🧠 Backend – Prisma ORM + Neon Postgres
+
+- **Core Models:** `User`, `Account`, `Session`, `VerificationToken`
+- **Custom Models:** `SessionLog`, `CompletedStory`
+- **Local Dev:** Unpooled Prisma DB push (`DATABASE_URL_UNPOOLED`)
+- **Production:** Pooled DB connections (Vercel runtime)
+- **Migrations:** Managed via Prisma CLI (`db push`, `migrate dev`)
+
+---
+
+## 🔊 Audio Playback Infrastructure
+
+- **Storage:** `/public/audio/[storySlug]/[level]/part-[part]/line[n].mp3`
+- **Slow Narration:** Available via `/part-[part]-slow/line[n].mp3` (🐢 button)
+- **UX:**
+    - `<audio>` element with player bar
+    - `audioRefs` and `activeAudio` used for per-line control
+    - TTS fallback enabled if MP3 fails to load
+
+---
+
+## 🧠 GPT-Powered Translation
+
+- **Component:** `UnifiedTranslator.tsx` (renders full sentence, GPT on demand)
+- **API Endpoints:**
+    - `/api/translate-word`
+    - `/api/translate-phrase`
+    - `/api/example-sentence`
+- **Modes:**
+    - Free: View full translation after reading
+    - Premium: Per-word/phrase GPT + tooltip + diamond button auto-translate
+- **Personalization:**
+    - Prompts vary by level (L1–L5)
+    - Tailored to Mexican Spanish
+- **Caching:** In-memory (ready to upgrade to Redis/Vercel KV)
+- **Output Cleaning:** Post-processed to fix malformed GPT output
+
+---
+
+## 💳 Stripe Integration (Premium Flow)
+
+- **Checkout:** Created via `/api/create-checkout-session`
+- **Webhook:** `/api/stripe/webhook` sets `isPremium: true` on success
+- **User Linking:** `client_reference_id = session.user.id`
+- **Secrets:** Stored in `.env.local` (`STRIPE_WEBHOOK_SECRET`)
+- **Testing:** Stripe CLI (`stripe listen`)
+- **Planned Features:**
+    - Premium success/upgrade feedback
+    - Premium-gated story parts
+
+---
+
+## 🚀 Deployment – Vercel
+
+- **Platform:** Vercel (Next.js + serverless APIs)
+- **Build:** Auto-deploy on main branch push
+- **Serverless Routes:** All `/api` endpoints
+- **Environments:**
+    - `.env.local` for local
+    - Vercel Dashboard for production
+
+---
+
+## 📦 GitHub & Version Control
+
+- **Repo:** Git-based source control
+- **Branching:**
+    - `main` → triggers Vercel deploy
+    - Feature branches for experiments
+
+---
+
+## 🔧 Environment Variables
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `NEXTAUTH_SECRET`
+- `DATABASE_URL`, `DATABASE_URL_UNPOOLED`
+- `STRIPE_WEBHOOK_SECRET`
+- Managed locally via `.env.local` and remotely via Vercel dashboard
