@@ -1,4 +1,5 @@
 // src/app/[lng]/stories/[storySlug]/[level]/[part]/page.tsx
+import { type Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
@@ -6,13 +7,24 @@ import { getStoryContent } from "@/lib/getStoryContent";
 import { STORY_METADATA } from "@/lib/stories";
 import StoryLayout from "@/components/StoryLayout";
 import type { Language } from "@/types/i18n";
-import { getStoryTitle } from '@/lib/stories'; 
+import { getStoryTitle } from "@/lib/stories";
 
-export default async function Page(props: any) {
-  const { lng, storySlug, level, part } = props?.params ?? {};
+type Props = {
+  params: {
+    lng: Language;
+    storySlug: string;
+    level: string;
+    part: string;
+  };
+};
 
-  if (lng !== "es" && lng !== "en") return notFound();
-  const typedLang = lng as Language;
+export const dynamic = "force-dynamic";
+
+export default async function Page({ params }: Props) {
+  const { lng, storySlug, level, part } = params;
+
+  if (lng !== "en" && lng !== "es") return notFound();
+  const typedLang = lng;
 
   if (!storySlug || !level || !part) {
     throw new Error("Missing dynamic route parameters.");
@@ -20,11 +32,10 @@ export default async function Page(props: any) {
 
   console.log("📦 Dynamic route loaded with:", { lng, storySlug, level, part });
 
-  // ✅ Load session if needed (auth, tracking, etc.)
   const session = await getServerSession(authOptions);
 
-  // ✅ Load content
-  const lines = await getStoryContent(storySlug, level, part, typedLang);
+  const cleanPart = part.replace(/^part-/, "");
+  const lines = await getStoryContent(storySlug, level, cleanPart, typedLang);
   if (!lines) return notFound();
 
   const metadata = STORY_METADATA.find((s) => s.slug === storySlug);
@@ -38,6 +49,8 @@ export default async function Page(props: any) {
     />
   );
 }
+
+
 
 
 

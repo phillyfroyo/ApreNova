@@ -15,6 +15,7 @@ import { slugify } from '@/lib/stories';
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { useCallback } from "react"; 
+import { t } from '@/lib/t';
 
 
 type ActiveAudio = {
@@ -44,6 +45,7 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
 
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
+  const oppositeLang = typedLang === "en" ? "es" : "en";
 
   const handleSeek = useCallback((newTime: number) => {
   if (activeAudio?.audio) {
@@ -101,7 +103,7 @@ useEffect(() => {
   const currentLevel = pathParts[4] || initialLevel || "l1";
   const currentPart = pathParts[5] || "part-1";
   const partNumber = parseInt(currentPart.replace("part-", ""));
-  const dynamicPartTitle = `Part ${partNumber}`;
+  const dynamicPartTitle = `${t(typedLang, "story", "part")} ${partNumber}`;
 
   const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
   aventura: "alwaysPremium",
@@ -263,25 +265,30 @@ onTouchStart={(e: React.TouchEvent) => {
         <div className="fixed top-16 left-4 right-4 z-40 bg-white/90 backdrop-blur-md shadow-md rounded-xl p-4 space-y-4 border border-emerald-200">
           <div className="flex flex-wrap gap-4">
             <Dropdown
-              label="Navigate ▾"
-              variant="glass"
-              options={["Home"]}
-              onSelect={(option) => {
-                if (option === "Home") {
-                  router.push(`/${typedLang}/stories`);
-                }
-              }}
-            />
-
+  label={t(typedLang, "story", "navigate")}
+  variant="glass"
+  options={[{ label: t(typedLang, "story", "home"), value: "home" }]}
+  onSelect={(option) => {
+    if (option === "home") {
+      router.push(`/${typedLang}/stories`);
+    }
+  }}
+/>
             <Dropdown
-              label={`Level Select ▾ ${currentLevel.toUpperCase()}`}
-              variant="glass"
-              options={["l1", "l2", "l3", "l4", "l5"]}
-              onSelect={(level) => {
-                const part = currentPart || "part-1";
-                router.push(getStoryUrl(storySlug, level, part, typedLang));
-              }}
-            />
+  label={`${t(typedLang, "story", "levelSelect")} ▾ ${t(typedLang, "levels", currentLevel)}`}
+  variant="glass"
+  options={[
+    { label: t(typedLang, "levels", "l1"), value: "l1" },
+    { label: t(typedLang, "levels", "l2"), value: "l2" },
+    { label: t(typedLang, "levels", "l3"), value: "l3" },
+    { label: t(typedLang, "levels", "l4"), value: "l4" },
+    { label: t(typedLang, "levels", "l5"), value: "l5" }
+  ]}
+  onSelect={(selectedValue) => {
+    const part = currentPart || "part-1";
+    router.push(getStoryUrl(storySlug, selectedValue, part, typedLang));
+  }}
+/>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -297,7 +304,7 @@ onTouchStart={(e: React.TouchEvent) => {
                   }}
                   className={`px-4 py-2 text-sm sm:text-base rounded-lg sm:rounded-xl hover:scale-105 transition ${isActive ? "ring-2 ring-black" : ""}`}
                 >
-                  PART {i + 1}
+                  {t(typedLang, "story", "part")} {i + 1}
                 </Button>
               );
             })}
@@ -328,7 +335,7 @@ onTouchStart={(e: React.TouchEvent) => {
 }
         onClick={(e) => prevDisabled && e.preventDefault()}
       >
-        ⬅ Prev
+        ⬅ {t(typedLang, "story", "prev")}
       </a>
       <a
         className={buttonClass(nextDisabled, "bg-green-700")}
@@ -339,7 +346,7 @@ onTouchStart={(e: React.TouchEvent) => {
 }
         onClick={(e) => nextDisabled && e.preventDefault()}
       >
-        Next ➡
+        {t(typedLang, "story", "next")} ➡
       </a>
     </div>
 
@@ -355,10 +362,10 @@ onTouchStart={(e: React.TouchEvent) => {
               level: currentLevel,
               part: `part-${partNumber}`,
             }),
-          }).then(() => alert('✅ Story marked as complete!'));
+          }).then(() => alert(t(typedLang, "story", "markedComplete")));
         }}
       >
-        ✅ Mark this story as complete
+        ✅ {t(typedLang, "story", "markComplete")}
       </button>
     )}
   </div>
@@ -407,7 +414,7 @@ onTouchStart={(e: React.TouchEvent) => {
 
       {/* Translator section */}
 <UnifiedTranslator
-  sentence={s.en}
+  sentence={s[oppositeLang]}
   enabled
   readOnlyMode={translationMode === "free"}
   autoTriggerAll={!!premiumTriggers[i]}

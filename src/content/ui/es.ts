@@ -44,6 +44,25 @@ language: {
   createAccount: "Crea una Cuenta"
 },
 
+story: {
+  part: "Capítulo",
+  navigate: "Navegar ▾",
+  home: "Inicio",
+  levelSelect: "Seleccionar Nivel",
+  prev: "Anterior",
+  next: "Siguiente",
+  markComplete: "Marcar esta historia como completada",
+  markedComplete: "✅ ¡Historia marcada como completada!"
+},
+
+levels: {
+  l1: "Recién empezado",
+  l2: "Principiante",
+  l3: "Intermedio",
+  l4: "Avanzado",
+  l5: "Fluido"
+},
+
   home: {
   subtitle: "Aprende más rápido. Aprende con historias.",
   quizTitle: "Haz el Quiz",
@@ -72,6 +91,17 @@ settings: {
   currentLevel: "Nivel actual",
   levelUndefined: "Nivel actual: indefinido. Haz el quiz",
   changeLevel: "Haz el quiz para cambiar tu nivel",
+},
+
+stats: {
+  loading: "Cargando tus estadísticas...",
+  lessThanOneMinute: "< 1 min",
+  minutes: "min",
+  title: "Tus estadísticas",
+  memberSince: "Miembro desde",
+  timeOnApp: "Tiempo en la app",
+  timeReading: "Tiempo leyendo",
+  storiesCompleted: "Historias completadas"
 },
 
 storiesMetadata: {

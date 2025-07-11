@@ -44,6 +44,25 @@ language: {
   createAccount: "Create an Account"
 },
 
+story: {
+  part: "Chapter",
+  navigate: "Navigate ▾",
+  home: "Home",
+  levelSelect: "Level Select",
+  prev: "Prev",
+  next: "Next",
+  markComplete: "Mark this story as complete",
+  markedComplete: "✅ Story marked as complete!"
+},
+
+levels: {
+  l1: "Brand New",
+  l2: "Beginner",
+  l3: "Intermediate",
+  l4: "Advanced",
+  l5: "Fluent"
+},
+
   home: {
   subtitle: "Learn faster. Learn with stories.",
   quizTitle: "Take the Quiz",
@@ -73,6 +92,17 @@ language: {
   levelUndefined: "Current Level: Undefined. Take the Quiz",
   changeLevel: "Take the quiz to change your level",
   },
+
+  stats: {
+  loading: "Loading your stats...",
+  lessThanOneMinute: "< 1 min",
+  minutes: "min",
+  title: "Your Stats",
+  memberSince: "Member since",
+  timeOnApp: "Time on app",
+  timeReading: "Time reading",
+  storiesCompleted: "Stories completed"
+},
 
 storiesMetadata: {
   aventura: {

@@ -8,9 +8,9 @@ export async function getStoryContent(
   lng: Language
 ) {
   try {
-    const file = await import(
-      `@/content/${storySlug}/${level}/part-${part}.${lng}.ts`
-    );
+    console.log("🌍 getStoryContent called with:", { storySlug, level, part, lng });
+
+    const file = await import(`@/content/${storySlug}/${level}/part-${part}.${lng}.ts`);
     return file.default;
   } catch (err) {
     console.error(

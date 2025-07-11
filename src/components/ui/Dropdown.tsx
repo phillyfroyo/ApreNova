@@ -1,12 +1,15 @@
+// src/components/ui/DropDown.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 
 type DropdownVariant = "default" | "glass" | "blue" | "rounded" | "bold" | "auth";
 
+type DropdownOption = { label: string; value: string };
+
 type DropdownProps = {
   label?: string;
-  options: string[];
+  options: DropdownOption[];
   onSelect: (value: string) => void;
   variant?: DropdownVariant;
 };
@@ -59,18 +62,18 @@ export default function Dropdown({
         <div
           className="absolute top-full left-0 mt-1 w-full bg-white/30 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50"
         >
-          {options.map((option) => (
-            <div
-              key={option}
-              onClick={() => {
-                onSelect(option);
-                setOpen(false);
-              }}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-            >
-              {option === 'en' ? 'English' : option === 'es' ? 'Español' : option.toUpperCase()}
-            </div>
-          ))}
+          {options.map(({ label, value }) => (
+  <div
+    key={value}
+    onClick={() => {
+      onSelect(value);
+      setOpen(false);
+    }}
+    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+  >
+    {label}
+  </div>
+))}
         </div>
       )}
     </div>
