@@ -39,8 +39,8 @@ export const authOptions: AuthOptions = {
       email: user.email,
       name: user.name ?? undefined,
       nativeLanguage: user.nativeLanguage ?? undefined,
-      quizLevel: user.quizLevel,
-      isPremium: user.isPremium,
+      quizLevel: user.quizLevel ?? undefined, // ✅ this is the fix
+      isPremium: user.isPremium ?? false,
     }
   : null;
       },
