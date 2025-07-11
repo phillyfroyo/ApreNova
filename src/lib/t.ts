@@ -11,7 +11,10 @@ export function t(
   key: string,
   variables?: Record<string, string | number>
 ): string {
-  const template = translations[lang][section]?.[key] ?? "";
+    const sectionObject = translations[lang][section];
+
+    // Support nested keys like "benefit1.desc"
+  const template = key.split(".").reduce((obj, part) => obj?.[part], sectionObject) ?? "";
 
   if (!variables) return template;
 

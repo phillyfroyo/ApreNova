@@ -104,6 +104,28 @@ levels: {
   storiesCompleted: "Stories completed"
 },
 
+premium: {
+    benefit1: {
+    title: "Instant GPT Translations",
+    desc: "Translate any word or phrase with full context."
+  },
+  benefit2: {
+    title: "Premium-Only Stories",
+    desc: "Early access to new stories and advanced levels."
+  },
+  benefit3: {
+    title: "Full-Sentence Translation Mode",
+    desc: "One-click whole sentence translation with example usage."
+  },
+  title: "Go Premium 💎",
+  description: "Cuentana Premium unlocks smarter tools for faster learning:",
+  currentPlan: "Current Plan",
+  planPremium: "Premium 💎",
+  planFree: "Free",
+  returnToStories: "Return to Stories",
+  subscribeButton: "Subscribe to Premium"
+},
+
 storiesMetadata: {
   aventura: {
     title: "Aventura",

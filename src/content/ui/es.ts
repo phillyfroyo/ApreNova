@@ -104,6 +104,28 @@ stats: {
   storiesCompleted: "Historias completadas"
 },
 
+premium: {
+  title: "Hazte Premium 💎",
+  description: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido:",
+  benefit1: {
+    title: "Traducciones GPT Instantáneas",
+    desc: "Traduce cualquier palabra o frase con contexto completo."
+  },
+  benefit2: {
+    title: "Historias Exclusivas",
+    desc: "Acceso anticipado a nuevas historias y niveles avanzados."
+  },
+  benefit3: {
+    title: "Modo de Traducción de Oraciones",
+    desc: "Traduce oraciones completas con un solo clic y ejemplos de uso."
+  },
+  currentPlan: "Plan Actual",
+  planPremium: "Premium 💎",
+  planFree: "Gratis",
+  returnToStories: "Volver a las Historias",
+  subscribeButton: "Suscribirme a Premium"
+},
+
 storiesMetadata: {
   aventura: {
     title: "La Adventure",
