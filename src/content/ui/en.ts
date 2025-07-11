@@ -9,6 +9,21 @@ const en = {
   confirmPassword: "Confirm Password",
   name: "Name",
   welcomeBack: "Welcome back!",
+  error: "Incorrect credentials. Please try again.",
+  or: "or",
+  googleLogin: "Log in with Google",
+  languagePrompt: "Native language / Idioma nativo:",
+  createAccountCard: "Create an account",
+  signupError: "Something went wrong. Please try again.",
+  signupSuccess: "Account created! Redirecting...",
+  signupGoogle: "Sign up with Google",
+  alreadyHaveAccount: "Already have an account?",
+  newHere: "New Here?",
+},
+
+language: {
+  en: "English",
+  es: "Español"
 },
 
   stories: {

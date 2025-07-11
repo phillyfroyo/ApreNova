@@ -10,13 +10,13 @@ import Link from "next/link";
 import { useParams } from 'next/navigation';
 import type { Language } from '@/types/i18n';
 import Image from "next/image";
+import { t } from '@/lib/t';
 
 
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [language, setLanguage] = useState('es')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -45,7 +45,7 @@ export default function SignupPage() {
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nativeLanguage: language, name }),
+      body: JSON.stringify({ email, password, nativeLanguage: typedLang, name }),
     })
 
     const data = await res.json()
@@ -63,7 +63,7 @@ export default function SignupPage() {
 
       if (result?.ok) {
         setTimeout(() => {
-          router.push(`/${language}/stories`)
+          router.push(`/${typedLang}/stories`)
         }, 300)
       } else {
         setError('Login after signup failed.')
@@ -79,64 +79,58 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
         <Card className="glass-card space-y-6">
-          <H1 className="text-center text-2xl">Create an account</H1>
+          <H1 className="text-center text-[23px]">{t(typedLang, "auth", "createAccountCard")}</H1>
 
           <div className="flex flex-col gap-1">
             <p className="text-sm text-black/70">
-              Mi idioma nativo es / My native language is:
+              {t(typedLang, "auth", "languagePrompt")}
             </p>
 
             <div className="relative w-full" ref={dropdownRef}>
               <button
                 type="button"
-                className="w-full px-4 py-2 border rounded-lg bg-white text-left"
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-left"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
-                {language === 'en' ? 'English' : 'Español'}
+                {t(typedLang, "language", typedLang)}
               </button>
 
               {dropdownOpen && (
-                <div className="absolute left-0 mt-1 w-full bg-white border rounded-md shadow-md z-10">
-                  {language !== 'en' && (
-                    <div
-                      onClick={() => router.push('/en/auth/signup')}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    >
-                      English
-                    </div>
-                  )}
-                  {language !== 'es' && (
-                    <div
-                      onClick={() => router.push(`/${typedLang}/auth/signup`)}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                    >
-                      Español
-                    </div>
-                  )}
+                <div className="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow-md z-10">
+                  {typedLang !== 'en' && (
+  <div
+    onClick={() => router.push('/en/auth/signup')}
+    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+  >
+    {t(typedLang, "language", "en")}
+  </div>
+)}
+{typedLang !== 'es' && (
+  <div
+    onClick={() => router.push('/es/auth/signup')}
+    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+  >
+    {t(typedLang, "language", "es")}
+  </div>
+)}
                 </div>
               )}
             </div>
           </div>
-
-          <div className="mb-4">
-          <label htmlFor="name" className="block text-sm font-medium text-white mb-1">
-          First Name
-          </label>
           <input
           type="text"
           name="name"
           id="name"
           required
-          placeholder="Name"
+          placeholder={t(typedLang, "auth", "name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 rounded-md text-black"
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 text-black placeholder-gray-400"
          />
-         </div>
 
           <Input
             type="email"
-            placeholder="Correo electrónico"
+            placeholder={t(typedLang, "auth", "email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -144,30 +138,35 @@ export default function SignupPage() {
 
           <Input
             type="password"
-            placeholder="Contraseña"
+            placeholder={t(typedLang, "auth", "password")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          {error && <p className="text-red-600 text-sm text-center">{error}</p>}
-          {success && (
-            <p className="text-green-600 text-sm text-center">
-              Account created! Redirecting...
-            </p>
-          )}
+          {error && (
+  <p className="text-red-600 text-sm text-center">
+    {t(typedLang, "auth", "signupError")}
+  </p>
+)}
+
+{success && (
+  <p className="text-green-600 text-sm text-center">
+    {t(typedLang, "auth", "signupSuccess")}
+  </p>
+)}
 
           <Button type="submit" className="w-full" variant="button1">
-            Registrarse
+           {t(typedLang, "auth", "signup")}
           </Button>
 
           <div className="flex items-center justify-center">
-            <Small className="text-black/90 text-center">o</Small>
+            <Small className="!text-black text-center">{t(typedLang, "auth", "or")}</Small>
           </div>
 
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: `/${language}/stories` })}
+            onClick={() => signIn('google', { callbackUrl: `/${typedLang}/stories` })}
             className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group"
           >
             <Image
@@ -178,13 +177,14 @@ export default function SignupPage() {
   className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
 />
             <span className="text-sm text-gray-700 font-medium">
-              Registrarse con Google
+            {t(typedLang, "auth", "signupGoogle")}
             </span>
+
           </button>
           <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
-  <span className="text-black">¿Ya tienes una cuenta? </span>
+  <span className="text-black">{t(typedLang, "auth", "alreadyHaveAccount")} </span>
   <Link href={`/${typedLang}/auth/login`} className="text-[#1000c8] hover:underline">
-    Inicia sesión
+    {t(typedLang, "auth", "login")}
   </Link>
 </p>
         </Card>

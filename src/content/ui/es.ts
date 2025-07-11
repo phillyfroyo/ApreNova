@@ -9,6 +9,21 @@ const es = {
   confirmPassword: "Confirmar contraseña",
   name: "Nombre",
   welcomeBack: "¡Bienvenido de nuevo!",
+  error: "Credenciales incorrectas. Inténtalo de nuevo.",
+  or: "o",
+  googleLogin: "Inicia sesión con Google",
+  languagePrompt: "Idioma nativo / Native language:",
+  createAccountCard: "Crear una cuenta",
+  signupError: "Algo salió mal. Inténtalo de nuevo.",
+  signupSuccess: "¡Cuenta creada! Redirigiendo...",
+  signupGoogle: "Registrarse con Google",
+  alreadyHaveAccount: "¿Ya tienes una cuenta?",
+  newHere: "¿Eres nuevo?",
+},
+
+language: {
+  en: "English",
+  es: "Español"
 },
 
   stories: {

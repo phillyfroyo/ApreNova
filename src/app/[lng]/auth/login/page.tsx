@@ -9,18 +9,20 @@ import { useRouter, useParams } from 'next/navigation';
 import type { Language } from '@/types/i18n';
 import Link from "next/link";
 import Image from "next/image";
+import { t } from '@/lib/t';
 
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [language, setLanguage] = useState('es')
+  const { lng } = useParams();
+  const typedLang = lng as Language;
+  const language = typedLang
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [error, setError] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { lng } = useParams();
-  const typedLang = lng as Language;
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,25 +61,25 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
         <Card className="glass-card space-y-6">
-          <H1 className="text-center text-2xl">Iniciar sesión</H1>
+          <H1 className="text-center text-2xl">{t(typedLang, "auth", "login")}</H1>
 
           <div className="flex flex-col gap-1">
             <p className="text-sm text-black/70">
-              Mi idioma nativo es / My native language is:
+              {t(typedLang, "auth", "languagePrompt")}
             </p>
 
             <div className="relative w-full" ref={dropdownRef}>
               <button
-                type="button"
-                className="w-full px-4 py-2 border rounded-lg bg-white text-left"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                {language === 'en' ? 'English' : 'Español'}
+                 type="button"
+                 className="w-full px-4 py-2 border rounded-lg bg-white text-left"
+                 onClick={() => setDropdownOpen(!dropdownOpen)}
+                >
+                 {typedLang === 'en' ? 'English' : 'Español'}
               </button>
 
-              {dropdownOpen && (
-                <div className="absolute left-0 mt-1 w-full bg-white border rounded-md shadow-md z-10">
-                  {language !== 'en' && (
+                    {dropdownOpen && (
+                  <div className="absolute left-0 mt-1 w-full bg-white border rounded-md shadow-md z-10">
+                     {typedLang !== 'en' && (
                     <div
                       onClick={() => router.push('/en/auth/login')}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
@@ -85,9 +87,9 @@ export default function LoginPage() {
                       English
                     </div>
                   )}
-                  {language !== 'es' && (
+                  {typedLang !== 'es' && (
                     <div
-                      onClick={() => router.push(`/${typedLang}/auth/login`)}
+                      onClick={() => router.push('/es/auth/login')}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                     >
                       Español
@@ -100,7 +102,7 @@ export default function LoginPage() {
 
           <Input
             type="email"
-            placeholder="Correo electrónico"
+            placeholder={t(typedLang, "auth", "email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -108,22 +110,24 @@ export default function LoginPage() {
 
           <Input
             type="password"
-            placeholder="Contraseña"
+            placeholder={t(typedLang, "auth", "password")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
           {error && (
-            <p className="text-sm text-center text-red-600">{error}</p>
+          <p className="text-sm text-center text-red-600">
+           {t(typedLang, "auth", "error")}
+          </p>
           )}
 
           <Button type="submit" className="w-full" variant="button1">
-            Iniciar sesión
+            {t(typedLang, "auth", "login")}
           </Button>
 
           <div className="flex items-center justify-center">
-            <Small className="text-black/90 text-center">o</Small>
+            <Small className="!text-black text-center">{t(typedLang, "auth", "or")}</Small>
           </div>
 
           <button
@@ -139,9 +143,15 @@ export default function LoginPage() {
   className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
 />
             <span className="text-sm text-gray-700 font-medium">
-              Inicia sesión con Google
+              {t(typedLang, "auth", "googleLogin")}
             </span>
           </button>
+          <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
+  <span className="text-black">{t(typedLang, "auth", "newHere")} </span>
+  <Link href={`/${typedLang}/auth/signup`} className="text-[#1000c8] hover:underline">
+    {t(typedLang, "auth", "createAccountCard")}
+  </Link>
+</p>
         </Card>
       </form>
     </div>
