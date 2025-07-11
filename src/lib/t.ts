@@ -8,7 +8,16 @@ const translations = { en, es };
 export function t(
   lang: Language,
   section: keyof typeof en,
-  key: string
+  key: string,
+  variables?: Record<string, string | number>
 ): string {
-  return translations[lang][section]?.[key] ?? "";
+  const template = translations[lang][section]?.[key] ?? "";
+
+  if (!variables) return template;
+
+  // Replace any {key} in the template with corresponding variable value
+  return template.replace(/\{(\w+)\}/g, (_, variable) =>
+    variables[variable] !== undefined ? String(variables[variable]) : `{${variable}}`
+  );
 }
+

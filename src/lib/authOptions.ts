@@ -33,7 +33,16 @@ export const authOptions: AuthOptions = {
         if (!user?.password) return null;
 
         const isValid = await compare(credentials.password, user.password);
-        return isValid ? { id: user.id.toString(), email: user.email } : null;
+        return isValid
+  ? {
+      id: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      nativeLanguage: user.nativeLanguage,
+      quizLevel: user.quizLevel,
+      isPremium: user.isPremium,
+    }
+  : null;
       },
     }),
   ],
@@ -41,12 +50,11 @@ export const authOptions: AuthOptions = {
   callbacks: {
     jwt: async ({ token, user }) => {
   if (user) {
-    const dbUser = await prisma.user.findUnique({
-      where: {
-        id: user.id || undefined, // Try by ID
-        email: user.email || undefined, // Fallback to email
-      },
-    });
+    const dbUser = user.id
+  ? await prisma.user.findUnique({ where: { id: user.id } })
+  : user.email
+    ? await prisma.user.findUnique({ where: { email: user.email } })
+    : null;
 
     if (dbUser) {
       token.id = dbUser.id;

@@ -58,6 +58,22 @@ language: {
   placeholderInfo: "Put your additional information here 🚀",
 },
 
+  settings: {
+  notLoggedIn: "You sre not logged in.",
+  greeting: "Hi {name}! 🎉",
+  premium: "Premium 💎",
+  free: "Free",
+  memberStatus: "Member Status",
+  nativeLanguage: "My native language:",
+  takeQuiz: "▶️ Take the Quiz",
+  logOut: "🚪 Log Out",
+  loadingLevel: "Loading level...",
+  backToStories: "Back to Stories",
+  currentLevel: "Current Level",
+  levelUndefined: "Current Level: Undefined. Take the Quiz",
+  changeLevel: "Take the quiz to change your level",
+  },
+
 storiesMetadata: {
   aventura: {
     title: "Aventura",

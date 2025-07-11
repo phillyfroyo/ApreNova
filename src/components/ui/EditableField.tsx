@@ -8,7 +8,13 @@ type EditableFieldProps = {
   onSave: (newValue: string) => void
   inputType?: 'text' | 'select'
   options?: string[] // for dropdowns like language or level
+  variant?: 'default' | 'blue';
 }
+
+const variantStyles = {
+  default: "ml-2 text-sm border px-1 rounded",
+  blue: "ml-2 text-sm border border-sky-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-sky-700 font-semibold hover:bg-sky-50 px-4 py-2",
+};
 
 export default function EditableField({
   label,
@@ -16,6 +22,7 @@ export default function EditableField({
   onSave,
   inputType = 'text',
   options = [],
+  variant = 'default',
 }: EditableFieldProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(value)
@@ -32,22 +39,22 @@ export default function EditableField({
         {isEditing ? (
           inputType === 'select' ? (
             <select
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className="ml-2 text-sm border px-1 rounded"
-            >
-              {options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+  value={draft}
+  onChange={(e) => setDraft(e.target.value)}
+  className={variantStyles[variant || 'default']}
+>
+  {options.map((opt) => (
+    <option key={opt} value={opt}>
+      {opt}
+    </option>
+  ))}
+</select>
           ) : (
             <input
-              className="ml-2 text-sm border px-1 rounded"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
+  className={variantStyles[variant || 'default']}
+  value={draft}
+  onChange={(e) => setDraft(e.target.value)}
+/>
           )
         ) : (
           <span className="ml-1">{value}</span>

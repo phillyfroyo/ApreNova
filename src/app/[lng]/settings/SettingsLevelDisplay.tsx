@@ -5,6 +5,8 @@ import { useUserLevel } from '@/hooks/useUserLevel'
 import { useState } from 'react'
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
+import { t } from '@/lib/t';
+
 
 
 export default function SettingsLevelDisplay() {
@@ -23,7 +25,7 @@ export default function SettingsLevelDisplay() {
         className="text-sm text-blue-800 mb-4 cursor-pointer"
         onClick={goToQuiz}
       >
-        🎯 Current Level: Undefined. Take the Quiz
+        {`🎯 ${t(typedLang, 'settings', 'levelUndefined')}`}
       </div>
     )
   }
@@ -31,13 +33,13 @@ export default function SettingsLevelDisplay() {
   return (
     <div className="flex items-center justify-between text-sm mb-2">
       <span className="font-medium">
-        🎯 <span className="text-black">Current Level:</span> {selectedLevel.toUpperCase()}
+        🎯 <span className="text-black">{t(typedLang, 'settings', 'currentLevel')}:</span>{selectedLevel.toUpperCase()}
         {editing && (
           <span
             className="ml-2 text-blue-800 underline cursor-pointer"
             onClick={goToQuiz}
           >
-            take the quiz to change your level
+            {t(typedLang, 'settings', 'changeLevel')}
           </span>
         )}
       </span>

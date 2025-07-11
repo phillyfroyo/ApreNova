@@ -166,7 +166,11 @@ export default function SignupPage() {
 
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: `/${typedLang}/stories` })}
+            onClick={() =>
+            signIn('google', {
+            callbackUrl: `${window.location.origin}/api/post-login?lang=${typedLang}`,
+            })
+          }
             className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group"
           >
             <Image

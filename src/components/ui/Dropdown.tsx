@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
-type DropdownVariant = "default" | "glass" | "rounded" | "bold" | "auth";
+type DropdownVariant = "default" | "glass" | "blue" | "rounded" | "bold" | "auth";
 
 type DropdownProps = {
   label?: string;
@@ -15,6 +15,8 @@ const baseStyles: Record<DropdownVariant, string> = {
   default: "border bg-white rounded shadow hover:bg-gray-100 px-4 py-2",
   glass:
     "border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 px-4 py-2",
+  blue:
+  "border border-sky-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-sky-700 font-semibold hover:bg-sky-50 px-4 py-2",
   rounded:
     "border border-purple-400 bg-purple-50 rounded-full shadow hover:bg-purple-100 text-purple-700 font-bold px-4 py-2",
   bold: "bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 px-4 py-2",

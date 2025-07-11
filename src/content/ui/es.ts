@@ -58,6 +58,22 @@ language: {
   placeholderInfo: "Put your additional information here 🚀",
 },
 
+settings: {
+  notLoggedIn: "No has iniciado sesión.",
+  greeting: "¡Hola {name}! 🎉",
+  premium: "Premium 💎",
+  free: "Gratis",
+  memberStatus: "Estado de miembro",
+  nativeLanguage: "Mi idioma nativo:",
+  takeQuiz: "▶️ Haz el Quiz",
+  logOut: "🚪 Cerrar sesión",
+  loadingLevel: "Cargando nivel...",
+  backToStories: "Volver a historias",
+  currentLevel: "Nivel actual",
+  levelUndefined: "Nivel actual: indefinido. Haz el quiz",
+  changeLevel: "Haz el quiz para cambiar tu nivel",
+},
+
 storiesMetadata: {
   aventura: {
     title: "La Adventure",
