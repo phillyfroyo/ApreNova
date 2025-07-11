@@ -9,15 +9,12 @@ import { STORY_METADATA, getStoryTitle } from "@/lib/stories";
 import StoryLayout from "@/components/StoryLayout";
 import type { Language } from "@/types/i18n";
 
-export default async function Page({
-  params,
-}: {
-  params: Record<string, string>;
-}) {
-  const lng = params["lng"] as Language;
-  const storySlug = params["storySlug"];
-  const level = params["level"];
-  const part = params["part"];
+// ✅ No type annotation — let Next.js handle it internally
+export default async function Page({ params }: any) {
+  const lng = params.lng as Language;
+  const storySlug = params.storySlug;
+  const level = params.level;
+  const part = params.part;
 
   if (lng !== "en" && lng !== "es") return notFound();
   const typedLang = lng;
@@ -36,6 +33,7 @@ export default async function Page({
     />
   );
 }
+
 
 
 
