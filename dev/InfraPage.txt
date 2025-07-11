@@ -1,5 +1,6 @@
 /* eslint-disable */
 // 📄 Infra Page
+
 ## 🖥️ Development Environment
 
 - **Stack:** React + Tailwind CSS + Framer Motion
@@ -14,7 +15,7 @@
 
 - **Component Primitives:** `Card`, `Button`, `Dropdown`, `Badge`, `EditableField`
 - **Feature Components:** `StoryModal`, `UserStatsCard`, `UnifiedTranslator`
-- **Layouts:** Bilingual content layout via `StoryLayout.tsx` and `[lang]/layout.tsx`
+- **Layouts:** Bilingual layout via `[lng]/layout.tsx` and unified dynamic routes (`/en/...`, `/es/...`)
 - **Styling Tools:**
     - Utility classes in `globals.css`
     - Theming via `storyThemes.ts` and `cardPresets.ts`
@@ -27,11 +28,11 @@
 
 ## 🚦 App Framework: Next.js (App Router)
 
-- **Dynamic Routing:** File-based, bilingual (`[lang]` param)
+- **Dynamic Routing:** File-based, bilingual (`[lng]` param)
 - **Dynamic Story Pages:** `/stories/[storySlug]/[level]/[part]`
 - **Server + Client Component Split:** Optimized via `next/dynamic` and `"use client"`
 - **Force-Dynamic Rendering:** `dynamic = 'force-dynamic'` used for session-bound routes
-- **Internationalization:** Fully unified `/[lang]/` routing
+- **Internationalization:** Fully unified `/[lng]/` routing
 - **Story Injection:** Via `storySlug`, dynamically loaded content (both languages)
 
 ---
@@ -41,7 +42,7 @@
 - **Providers:** Google OAuth + Email/password (credentials)
 - **Persistence:** Prisma adapter
 - **Session:** Enriched with `user.id`, `name`, `nativeLanguage`, `quizLevel`
-- **Custom Pages:** `/[lang]/auth/login`, `/[lang]/auth/signup`
+- **Custom Pages:** `/[lng]/auth/login`, `/[lng]/auth/signup`
 - **Personalization:** `nativeLanguage` used in UI text (e.g., “miAprendO”)
 
 ---
@@ -125,3 +126,14 @@
 - `DATABASE_URL`, `DATABASE_URL_UNPOOLED`
 - `STRIPE_WEBHOOK_SECRET`
 - Managed locally via `.env.local` and remotely via Vercel dashboard
+
+### 🌍 **Internationalization & Language Strategy**
+
+- **Language Routing:** Dynamic `[lng]` param (`/en`, `/es`) powers all core routes
+- **UI Translations:** Centralized key-value dictionaries (`content/ui/en.ts`, `es.ts`)
+- **Translation Helper:** `t(lang, key)` abstracts dictionary lookup
+- **Language Memory:**
+    - Stored in `localStorage` as `preferredLang`
+    - Auto-redirect logic on `/` if known
+- **Language Selection Page:** Root `/` route prompts for native language
+- **User-Based Language:** On login, users redirected via `session.user.nativeLanguage`

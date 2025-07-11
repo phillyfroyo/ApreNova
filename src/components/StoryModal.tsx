@@ -1,3 +1,4 @@
+// src/components/StoryModal.tsx
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
+import { t } from "@/lib/t";
 
 type StoryModalProps = {
   activeStory: number | null;
@@ -150,7 +152,7 @@ export default function StoryModal({
                 className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"
 
               >
-                Read me
+                {t(typedLang, "readStory")}
               </Button>
 
               <div className="text-center">
@@ -158,7 +160,7 @@ export default function StoryModal({
                 <p className="my-4 text-sm text-black">{story.description}</p>
 
                 <p className="text-xs font-semibold text-gray-600 mb-2">
-                  Available in levels:
+                  {t(typedLang, "availableLevels")}
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-2">
@@ -172,7 +174,7 @@ export default function StoryModal({
 
     return (
       <Badge key={idx} level={badgeLevel}>
-        Level {lvl.toUpperCase()}
+        {t(typedLang, "level")} {lvl.toUpperCase()}
       </Badge>
     );
   })}

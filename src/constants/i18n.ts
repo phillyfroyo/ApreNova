@@ -1,15 +1,10 @@
 // src/constants/i18n.ts
 import type { Language } from "@/types/i18n";
 
-export const translations: Record<Language, Record<string, string>> = {
-  en: {
-    complete: "Mark as Complete",
-    next: "Next",
-    welcome: "Welcome to AprendO",
-  },
-  es: {
-    complete: "Marcar como completado",
-    next: "Siguiente",
-    welcome: "Bienvenido a AprendO",
-  },
+export const LANGUAGES: Record<Language, { label: string; flag: string }> = {
+  en: { label: "English", flag: "🇺🇸" },
+  es: { label: "Español", flag: "🇲🇽" },
 };
+
+// Optional fallback
+export const DEFAULT_LANGUAGE: Language = "es";
