@@ -15,7 +15,7 @@
 
 - **Component Primitives:** `Card`, `Button`, `Dropdown`, `Badge`, `EditableField`
 - **Feature Components:** `StoryModal`, `UserStatsCard`, `UnifiedTranslator`
-- **Layouts:** Bilingual layout via `[lng]/layout.tsx` and unified dynamic routes (`/en/...`, `/es/...`)
+- **Layouts:** Unified dynamic routes (`/en/...`, `/es/...`) l `[lng]/layout.tsx` reserved for future use
 - **Styling Tools:**
     - Utility classes in `globals.css`
     - Theming via `storyThemes.ts` and `cardPresets.ts`
@@ -62,7 +62,7 @@
 - **Storage:** `/public/audio/[storySlug]/[level]/part-[part]/line[n].mp3`
 - **Slow Narration:** Available via `/part-[part]-slow/line[n].mp3` (🐢 button)
 - **UX:**
-    - `<audio>` element with player bar
+    - ‘`<audio>`' element with player bar
     - `audioRefs` and `activeAudio` used for per-line control
     - TTS fallback enabled if MP3 fails to load
 
@@ -131,7 +131,7 @@
 
 - **Language Routing:** Dynamic `[lng]` param (`/en`, `/es`) powers all core routes
 - **UI Translations:** Centralized key-value dictionaries (`content/ui/en.ts`, `es.ts`)
-- **Translation Helper:** `t(lang, key)` abstracts dictionary lookup
+- **Translation Helper:** `t(lang, section, key)` fetches UI strings from nested dictionaries (`content/ui/en.ts`, `es.ts`)
 - **Language Memory:**
     - Stored in `localStorage` as `preferredLang`
     - Auto-redirect logic on `/` if known
