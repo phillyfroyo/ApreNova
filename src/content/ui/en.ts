@@ -41,7 +41,7 @@ language: {
   storiesAll: "Stories (all)",
   takeQuiz: "Take the Quiz",
   myAccount: "My Account",
-  createAccount: "Create an Account"
+  createAccount: "Create an Account",
 },
 
 story: {
@@ -75,6 +75,8 @@ levels: {
   haveAccount: "Already have an account?",
   whyTitle: "Why",
   placeholderInfo: "Put your additional information here 🚀",
+  aboutLink: "Get to know Cuentana",
+  aboutPrefix: "Get to know"
 },
 
   settings: {

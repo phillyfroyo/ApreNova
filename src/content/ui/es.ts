@@ -41,7 +41,7 @@ language: {
   storiesAll: "Historias (todas)",
   takeQuiz: "Haz el Quiz",
   myAccount: "Mi Cuenta",
-  createAccount: "Crea una Cuenta"
+  createAccount: "Crea una Cuenta",
 },
 
 story: {
@@ -75,6 +75,8 @@ levels: {
   haveAccount: "¿Ya tienes una cuenta?",
   whyTitle: "¿Por qué",
   placeholderInfo: "Put your additional information here 🚀",
+  aboutLink: "Conoce Cuentana",
+  aboutPrefix: "Conoce"
 },
 
 settings: {

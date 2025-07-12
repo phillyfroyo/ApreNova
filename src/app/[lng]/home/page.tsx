@@ -23,7 +23,7 @@ export default function QuizWelcome() {
   return (
     <motion.section
       layout
-      className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6"
+      className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6 pb-20"
       initial={{ y: 10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -74,11 +74,10 @@ export default function QuizWelcome() {
 
 
       {/* Quiz / No Thanks Buttons */}
-      <div className="flex flex-col md:flex-row items-center gap-10">
+      <div className="flex flex-col md:flex-row items-stretch gap-10">
         {/* Quiz Option */}
-        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
+        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative flex flex-col justify-between h-full">
           <p className="text-[24px] font-bold mb-2">{t(typedLang, "home", "quizTitle")}</p>
-          <p className="text-[14px] mb-2">{t(typedLang, "home", "recommended")}</p>
           <p className="mb-4">{t(typedLang, "home", "letUsPick")}</p>
           <Link href={`/${typedLang}/home/quiz/l1/q1`}>
           <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
@@ -88,7 +87,7 @@ export default function QuizWelcome() {
         </div>
 
         {/* No Gracias Option */}
-        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative">
+        <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative flex flex-col justify-between h-full">
           <p className="text-[24px] font-bold mb-2">{t(typedLang, "home", "noThanksTitle")}</p>
           <p className="mb-4">{t(typedLang, "home", "pickLater")}</p>
           <Link href={`/${typedLang}/stories`}>
@@ -99,16 +98,14 @@ export default function QuizWelcome() {
         </div>
       </div>
 
-      {/* Why ApreNova Heading */}
-      <h2 className="mt-12 text-[28px] font-[Alice] text-black text-center">
-        {t(typedLang, "home", "whyTitle")} <span className="text-[#5ce1e6]">Apre</span>
-        <span className="text-[#5100a2]">Nova</span>?
-      </h2>
-
-      {/* Placeholder Info Section */}
-      <p className="mt-4 text-center text-[16px] font-[Open_Sans]">
-        {t(typedLang, "home", "placeholderInfo")}
-      </p>
+{/* About Section */}
+<Link
+  href={`/${typedLang}/about`}
+  className="mt-12 text-base text-black-900 hover:underline inline-flex items-center space-x-1"
+>
+  <span>{t(typedLang, "home", "aboutPrefix")}</span>
+  <Logo variant="classic" size="text-[18px]" />
+</Link>
     </motion.section>
   );
 }
