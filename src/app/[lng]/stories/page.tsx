@@ -21,6 +21,8 @@ import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
 
+type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
+
 function AccountDropdown() {
   const router = useRouter();
   const { lng } = useParams();
@@ -146,11 +148,18 @@ useEffect(() => {
   </div>
 );}
 
+function isLevel(value: unknown): value is Level {
+  return (
+    typeof value === 'string' &&
+    ['l1', 'l2', 'l3', 'l4', 'l5'].includes(value)
+  );
+}
+
 function StoriesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, email, image, name, nativeLanguage } = useUserSession();
-  const selectedLevel = useUserLevel();
+  const [selectedLevel, setSelectedLevel] = useState<Level>('l1');
   const [cardPosition, setCardPosition] = useState<DOMRect | null>(null);
   const [activeStory, setActiveStory] = useState<number | null>(null);
   const { lng } = useParams();
@@ -164,6 +173,17 @@ function StoriesPageContent() {
   const url = getStoryUrl({ locale, storySlug, level: lvl });
   router.push(url);
 }
+
+useEffect(() => {
+  const stored = localStorage.getItem('level') || sessionStorage.getItem('quizLevel');
+  const fallbackLevel = useUserLevel();
+
+  if (isLevel(stored)) {
+    setSelectedLevel(stored); // ✅ TypeScript will now be happy
+  } else if (isLevel(fallbackLevel)) {
+    setSelectedLevel(fallbackLevel);
+  }
+}, []);
 
   useEffect(() => {
     if (activeStory !== null) {

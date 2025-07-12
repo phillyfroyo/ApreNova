@@ -96,21 +96,23 @@ export default function QuizWelcome() {
         <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative flex flex-col justify-between h-full">
           <p className="text-[24px] font-bold mb-2">{t(typedLang, "home", "quizTitle")}</p>
           <p className="mb-4">{t(typedLang, "home", "letUsPick")}</p>
-          <Link href={`/${typedLang}/home/quiz/l1/q1`}>
-          <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
-           {t(typedLang, "home", "startQuiz")}
-          </button>
+          <Link
+           href={`/${typedLang}/home/quiz/placement`}
+           className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition inline-block text-center"
+          >
+          {t(typedLang, "home", "startQuiz")}
           </Link>
-        </div>
+          </div>
 
         {/* No Gracias Option */}
         <div className="bg-[#fff5eb] p-8 rounded-3xl shadow-md max-w-xs text-center relative flex flex-col justify-between h-full">
           <p className="text-[24px] font-bold mb-2">{t(typedLang, "home", "noThanksTitle")}</p>
           <p className="mb-4">{t(typedLang, "home", "pickLater")}</p>
-          <Link href={`/${typedLang}/stories`}>
-            <button className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition">
-              {t(typedLang, "home", "startLearning")}
-            </button>
+          <Link
+           href={`/${typedLang}/stories`}
+           className="bg-[#1000c8] text-white px-6 py-2 rounded-full hover:opacity-90 transition inline-block text-center"
+          >
+           {t(typedLang, "home", "startLearning")}
           </Link>
         </div>
       </div>

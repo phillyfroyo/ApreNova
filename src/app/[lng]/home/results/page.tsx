@@ -1,67 +1,62 @@
-// src/app/[lng]/home/results/page.js
-"use client"
+// /src/app/[lng]/home/results/page.tsx
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
-import { Card } from '@/components/ui'
-import Logo from '@/components/Logo'
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Card, Button } from "@/components/ui";
+import Logo from "@/components/Logo";
+import { usePathname, useRouter } from "next/navigation";
 import type { Language } from "@/types/i18n";
-import { Button } from "@/components/ui";
-import { useRouter } from 'next/navigation'
 
 export default function ResultsPage() {
-  const { lang } = useParams();
-  const typedLang = lang as Language;
+  const pathname = usePathname();
+  const typedLang = pathname.split("/")[1] as Language;
 
-  const [levelLabel, setLevelLabel] = useState('')
-  const { data: session } = useSession()
+  const { data: session } = useSession();
   const router = useRouter();
 
+  const [level, setLevel] = useState<"l1" | "l2" | "l3" | "l4">("l1");
+  const [levelLabel, setLevelLabel] = useState("Brand New");
+  const [description, setDescription] = useState("");
+
   useEffect(() => {
-    async function saveLevelToDB() {
-      const correctCount = Number(sessionStorage.getItem('correctAnswers') || 0)
-let level = 'l1'
+    const quizLevel = (sessionStorage.getItem("quizLevel") || "l1") as
+      | "l1"
+      | "l2"
+      | "l3"
+      | "l4";
 
-if (correctCount >= 3) {
-  level = 'l4'
-} else if (correctCount === 2) {
-  level = 'l3'
-} else if (correctCount === 1) {
-  level = 'l2'
-} else {
-  level = 'l1'
-}
+    setLevel(quizLevel);
 
-      if (session?.user?.id) {
-        try {
-          await fetch('/api/user-level', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: session.user.id, level }),
-          })
-        } catch (err) {
-          console.error('Failed to update level:', err)
-        }
-      }
+    const levelMap = {
+      l1: "Brand New",
+      l2: "Beginner",
+      l3: "Intermediate",
+      l4: "Advanced",
+    };
 
-      // Store level for Leerme reference
-      localStorage.setItem('level', level)
+    const descriptions = {
+      l1: "You’ll begin with ultra-simple stories using just 100 core words and basic present tense.",
+      l2: "You’ll begin with beginner stories using 200 common words and simple past and future tense.",
+      l3: "You’ll begin with stories that balance challenge and comfort — using 500 core words and building multi-clause sentences.",
+      l4: "You’ll begin with advanced stories using 1,000 words, flexible grammar, and native-level structure.",
+    };
 
-      // Set label for display
-      const levelMap = {
-        l1: 'Brand New',
-        l2: 'Beginner',
-        l3: 'Intermediate',
-        l4: 'Advanced',
-      }
+    setLevelLabel(levelMap[quizLevel]);
+    setDescription(descriptions[quizLevel]);
 
-      setLevelLabel(levelMap[level] || 'Brand New')
+    localStorage.setItem("level", quizLevel);
+
+    if (session?.user?.id) {
+      fetch("/api/user-level", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id, level: quizLevel }),
+      }).catch((err) => {
+        console.error("Failed to update level:", err);
+      });
     }
-
-    saveLevelToDB()
-  }, [session])
-
+  }, [session]);
 
   return (
     <div
@@ -79,15 +74,24 @@ if (correctCount >= 3) {
       }}
     >
       <Logo variant="storiesmain" />
-      <Card variant="glass" className="hide-scrollbar" style={{ padding: '2rem', textAlign: 'center', maxWidth: '400px' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Your level: {levelLabel}</h2>
+      <Card
+        variant="glass"
+        className="hide-scrollbar"
+        style={{ padding: "2rem", textAlign: "center", maxWidth: "400px" }}
+      >
+        <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
+          Your level: {levelLabel}
+        </h2>
+        <p className="text-base mb-6">{description}</p>
         <Button
-            onClick={() => router.push(`/${typedLang}/stories`)}
-            className="bg-blue-800 text-white font-bold px-6 py-3 rounded-md"
-          >
-            Start Learning
+          onClick={() => router.push(`/${typedLang}/stories`)}
+          className="bg-blue-800 text-white font-bold px-6 py-3 rounded-md"
+        >
+          Start Learning
         </Button>
       </Card>
     </div>
   );
 }
+
+// include a message like "You’ll begin with stories that balance challenge and comfort — using 500 core words and building multi-clause sentences."
