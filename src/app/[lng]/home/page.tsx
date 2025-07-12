@@ -10,7 +10,7 @@ import type { Language } from "@/types/i18n";
 import { useTypedLang } from "@/hooks/useTypedLang";
 import { t } from '@/lib/t';
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 
 export default function QuizWelcome() {
@@ -18,6 +18,23 @@ export default function QuizWelcome() {
   const typedLang = useTypedLang();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (!menuRef.current?.contains(event.target as Node)) {
+  setMenuOpen(false)
+}
+  }
+
+  if (menuOpen) {
+    document.addEventListener("mousedown", handleClickOutside)
+  }
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside)
+  }
+}, [menuOpen])
 
 
   return (
@@ -30,7 +47,7 @@ export default function QuizWelcome() {
     >
 
       {/* Avatar Menu for Unauthenticated Users */}
-<div className="absolute top-4 right-4 text-sm z-50">
+<div ref={menuRef} className="absolute top-4 right-4 text-sm z-50">
   {/* Avatar icon */}
   <div
     className="cursor-pointer rounded-full overflow-hidden w-8 h-8"

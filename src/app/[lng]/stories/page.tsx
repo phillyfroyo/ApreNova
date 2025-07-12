@@ -2,7 +2,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from '@/components/Logo';
@@ -32,73 +32,92 @@ function AccountDropdown() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const profilePic = session?.user?.image;
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
+
+useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (!dropdownRef.current?.contains(event.target as Node)) {
+      setOpen(false)
+    }
+  }
+
+  if (open) {
+    document.addEventListener("mousedown", handleClickOutside)
+  }
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside)
+  }
+}, [open])
+
 
 
   return (
-  <div>
-    <div style={{ position: "absolute", top: "1rem", right: "1rem", textAlign: "center" }}>
-      <div
-        style={{
-          cursor: "pointer",
-          borderRadius: "50%",
-          overflow: "hidden",
-          width: "32px",
-          height: "32px",
-          margin: "0 auto",
-        }}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <Image
-  src={profilePic || "/images/default-avatar.png"}
-  alt="Account"
-  width={100} // ✅ you MUST define width + height unless using fill
-  height={100}
-  style={{ objectFit: "cover" }}
-/>
-      </div>
-
-      {session?.user?.isPremium && (
-        <div
-          style={{
-            fontSize: "8px",
-            backgroundColor: "rgba(255, 255, 255, 0.6)",
-            padding: "2px 6px",
-            borderRadius: "9999px",
-            backdropFilter: "blur(4px)",
-            fontWeight: "600",
-            color: "#333",
-            display: "inline-block",
-          }}
-        >
-          Premium 💎
-        </div>
-      )}
+<div ref={dropdownRef}>
+  <div style={{ position: "absolute", top: "1rem", right: "1rem", textAlign: "center" }}>
+    <div
+      style={{
+        cursor: "pointer",
+        borderRadius: "50%",
+        overflow: "hidden",
+        width: "32px",
+        height: "32px",
+        margin: "0 auto",
+      }}
+      onClick={() => setOpen((prev) => !prev)}
+    >
+      <Image
+        src={profilePic || "/images/default-avatar.png"}
+        alt="Account"
+        width={100}
+        height={100}
+        style={{ objectFit: "cover" }}
+      />
     </div>
 
-    {open && (
+    {session?.user?.isPremium && (
       <div
         style={{
-          position: "absolute",
-          top: "70px",
-          right: "15px",
-          backgroundColor: "white",
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          width: "200px",
-          padding: "1rem",
-          zIndex: 1000,
+          fontSize: "8px",
+          backgroundColor: "rgba(255, 255, 255, 0.6)",
+          padding: "2px 6px",
+          borderRadius: "9999px",
+          backdropFilter: "blur(4px)",
+          fontWeight: "600",
+          color: "#333",
+          display: "inline-block",
         }}
       >
-        <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
-  {session?.user?.email ? (
-    <div>{session.user.email}</div>
-  ) : (
-    <a href={`/${typedLang}/auth/signup`} className="text-blue-800 hover:underline">
-      {t(typedLang, "stories", "createAccount")}
-    </a>
-  )}
-</div>
+        Premium 💎
+      </div>
+    )}
+  </div>
+
+  {open && (
+    <div
+      style={{
+        position: "absolute",
+        top: "70px",
+        right: "15px",
+        backgroundColor: "white",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        width: "200px",
+        padding: "1rem",
+        zIndex: 1000,
+      }}
+    >
+      <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
+        {session?.user?.email ? (
+          <div>{session.user.email}</div>
+        ) : (
+          <a href={`/${typedLang}/auth/signup`} className="text-blue-800 hover:underline">
+            {t(typedLang, "stories", "createAccount")}
+          </a>
+        )}
+      </div>
+
 
         <div className="space-y-2">
           <button
