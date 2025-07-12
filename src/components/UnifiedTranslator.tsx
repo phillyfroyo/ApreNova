@@ -28,6 +28,9 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const pathname = usePathname() ?? "";
   const pathParts = pathname.split("/");
   const currentLevel = pathParts[4] || "l2"; // Fallback to l1 if undefined
+  const currentLang = pathParts[1] || "es"; // 👈 'es' or 'en'
+  const isSpanishToEnglish = currentLang === "en";
+
 
 
   const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
@@ -46,9 +49,9 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
 
-    const endpoint = isSingleWord
-      ? "/api/translate-word"
-      : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto`;
+const endpoint = isSingleWord
+  ? `/api/translate-word?lang=${currentLang}`
+  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto&lang=${currentLang}`;
 
     const body = isSingleWord
       ? { word: cleanWord, sentence: "", level: currentLevel }
@@ -195,13 +198,21 @@ const fetchExample = async (spanishWord: string) => {
     return i >= startIdx && i <= endIdx;
   };
 
+  const [hasAutoTranslated, setHasAutoTranslated] = useState(false);
+
+
 useEffect(() => {
-  if (enabled && autoTriggerAll) {
+  if (enabled && autoTriggerAll && !hasAutoTranslated) {
     setStartIdx(0);
     setEndIdx(words.length - 1);
     fetchTranslation(0, words.length - 1);
+    setHasAutoTranslated(true); // ✅ Prevent the loop
   }
-}, [enabled, autoTriggerAll, words.length, fetchTranslation]);
+}, [enabled, autoTriggerAll, words.length, fetchTranslation, hasAutoTranslated]);
+
+useEffect(() => {
+  setHasAutoTranslated(false); // safe reset
+}, [sentence]);
 
 useEffect(() => {
   const handleOutsideClick = (e: MouseEvent) => {

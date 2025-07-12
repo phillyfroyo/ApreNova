@@ -1,6 +1,5 @@
-// src\lib\getWordPrompt.ts
-
-export function getWordPrompt(level: number): string {
+// src/lib/getWordPrompt.ts
+export function getWordPrompt(word: string, level: number = 2): string {
   const base = `
 You are a bilingual Spanish-English language tutor.
 
@@ -17,11 +16,11 @@ These should be suitable for learners in Mexico.
 
   const constraints = {
   1: `
-Only use the 100 most common Spanish words.
+Only use the 100 most common Spanish words **whenever possible**.
 Only include literal translations that align directly with the English word. Do not include idiomatic or figurative interpretations.
 `,
   2: `
-Only use the 200 most common Spanish words.
+Only use the 200 most common Spanish words **whenever possible**.
 Include only literal translations. You may include **one** widely used idiomatic translation *if it is extremely common and does not require interpreting the sentence's intent*.
 Do not include figurative or contextual interpretations like “me escapé” or “huí”.
 `,

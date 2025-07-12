@@ -1,15 +1,17 @@
 // src/app/api/translate-word/route.ts
-import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getWordPrompt } from "@/lib/getWordPrompt";
+import { getWordPromptToEnglish } from "@/lib/getWordPromptToEnglish";
+import { NextRequest, NextResponse } from 'next/server';
+
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
 const cache = new Map<string, { translations: string[] }>();
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const { word, level } = await req.json();
 
   console.log("🧪 translate-word input:", { word, level });
@@ -18,7 +20,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing word." }, { status: 400 });
   }
 
-  const prompt = getWordPrompt(level ?? 2);
+  const lang = req.nextUrl.searchParams.get("lang") ?? "es";
+  const isSpanishToEnglish = lang === "en";
+
+  const prompt = isSpanishToEnglish
+    ? getWordPromptToEnglish(word, level)
+    : getWordPrompt(word, level);
+
   const cacheKey = `${word.toLowerCase()}|${level ?? 2}`;
   if (cache.has(cacheKey)) {
     return NextResponse.json(cache.get(cacheKey));
@@ -27,6 +35,7 @@ export async function POST(req: Request) {
   const messages: ChatCompletionMessageParam[] = [
     { role: "user", content: `${prompt}\n\nWord: \"${word}\"` },
   ];
+
 
   try {
     const completion = await openai.chat.completions.create({

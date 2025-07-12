@@ -3,6 +3,8 @@
 import { OpenAI } from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getPhrasePrompt } from '@/lib/getPhrasePrompt';
+import { getPhrasePromptToEnglish } from '@/lib/getPhrasePromptToEnglish';
+
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -19,23 +21,36 @@ export async function GET(req: NextRequest) {
   const sentence = sentenceParam.trim();
   const level = parseInt(levelParam.trim());
 
-  const prompt = getPhrasePrompt(level, phrase, );
+const langParam = req.nextUrl.searchParams.get('lang') ?? 'es';
+const isSpanishToEnglish = langParam === 'en';
+
+const prompt = isSpanishToEnglish
+  ? getPhrasePromptToEnglish(level, phrase)
+  : getPhrasePrompt(level, phrase);
   console.log("🧠 Prompt to GPT:", prompt);
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages: [
-        { role: 'user', content: prompt },
-      ],
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
     });
 
     const result = completion.choices[0]?.message?.content;
+    console.log("🧠 Raw GPT response:", result);
+
     const cleaned = result?.replace(/^```json\n?|```$/g, '').trim();
-    return NextResponse.json(JSON.parse(cleaned!));
+
+    try {
+      const parsed = JSON.parse(cleaned!);
+      if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
+      return NextResponse.json(parsed);
+    } catch (parseErr) {
+      console.error("❌ GPT response parsing failed:", cleaned);
+      return NextResponse.json({ error: "Invalid GPT response format" }, { status: 500 });
+    }
   } catch (e) {
-    console.error('Translation error:', e);
+    console.error("🔥 GPT request failed:", e);
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 });
   }
 }
