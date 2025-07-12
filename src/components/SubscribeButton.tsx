@@ -12,13 +12,18 @@ export default function SubscribeButton() {
   const { lng } = useParams();
   const typedLang: Language = (lng === "en" || lng === "es" ? lng : "es") as Language;
 
-  const handleSubscribe = async () => {
-    const res = await fetch("/api/create-checkout-session", { method: "POST" });
-    const data = await res.json();
-    if (data?.url) {
-      router.push(data.url);
-    }
-  };
+const handleSubscribe = async () => {
+  const res = await fetch("/api/create-checkout-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lng })
+  });
+
+  const data = await res.json();
+  if (data?.url) {
+    router.push(data.url);
+  }
+};
 
   return (
     <Button variant="button1" onClick={handleSubscribe}>

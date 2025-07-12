@@ -15,6 +15,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const { lng } = await req.json();
+
   // ✅ Add this line right after the session check:
   console.log("✅ Logged-in user ID at checkout:", session.user.id);
 
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cancel`,
       client_reference_id: session.user.id,
+      locale: ["es", "en"].includes(lng) ? lng : "auto"
     });
 
     return NextResponse.json({ url: checkoutSession.url });
