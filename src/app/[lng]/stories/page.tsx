@@ -173,17 +173,17 @@ function StoriesPageContent() {
   const url = getStoryUrl({ locale, storySlug, level: lvl });
   router.push(url);
 }
+ const fallbackLevel = useUserLevel();
 
 useEffect(() => {
   const stored = localStorage.getItem('level') || sessionStorage.getItem('quizLevel');
-  const fallbackLevel = useUserLevel();
 
   if (isLevel(stored)) {
-    setSelectedLevel(stored); // ✅ TypeScript will now be happy
+    setSelectedLevel(stored);
   } else if (isLevel(fallbackLevel)) {
     setSelectedLevel(fallbackLevel);
   }
-}, []);
+}, [fallbackLevel]);
 
   useEffect(() => {
     if (activeStory !== null) {
