@@ -15,11 +15,17 @@ export default function LanguageSelectPage() {
 
   // 🧠 If logged in, send to their nativeLanguage
   useEffect(() => {
-    if (session) {
-      const lng = session.user?.nativeLanguage ?? "es";
-      router.replace(`/${lng}/stories`);
+  if (session) {
+    const lng = session.user?.nativeLanguage
+    console.log('🌐 Redirecting to:', lng)
+    if (lng === 'en' || lng === 'es') {
+      router.replace(`/${lng}/stories`)
+    } else {
+      console.warn('⚠️ Invalid or missing language. Defaulting to /es')
+      router.replace('/es/stories')
     }
-  }, [session, router]);
+  }
+}, [session, router])
 
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">

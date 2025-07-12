@@ -19,8 +19,7 @@ import type { Language } from "@/types/i18n";
 import Image from "next/image";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
-
-
+import { updateNativeLanguage } from '@/lib/updateLanguage'
 
 function AccountDropdown() {
   const router = useRouter();
@@ -137,6 +136,7 @@ function StoriesPageContent() {
   const [activeStory, setActiveStory] = useState<number | null>(null);
   const { lng } = useParams();
   const typedLang = lng as Language;
+  const [showLangPrompt, setShowLangPrompt] = useState(false)
 
 
   function handleLevelClick(lvl) {
@@ -156,6 +156,12 @@ function StoriesPageContent() {
       document.body.style.overflow = 'auto';
     };
   }, [activeStory]);
+
+  useEffect(() => {
+  if (user && !nativeLanguage) {
+    setShowLangPrompt(true)
+  }
+}, [user, nativeLanguage])
 
   return (
     <div style={{
@@ -220,6 +226,34 @@ function StoriesPageContent() {
   handleLevelClick={handleLevelClick}
   user={user} // ✅ Add this line
 />
+{showLangPrompt && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl shadow-lg text-center space-y-4 max-w-sm">
+      <p className="text-lg font-semibold">
+        ¿Cuál es tu lengua materna? <br />
+        <span className="text-gray-600">What is your native language?</span>
+      </p>
+      <button
+        className="w-full bg-[#1000c8] text-white py-2 px-4 rounded"
+        onClick={async () => {
+          await updateNativeLanguage('es')
+          setShowLangPrompt(false)
+        }}
+      >
+        Español
+      </button>
+      <button
+        className="w-full bg-gray-800 text-white py-2 px-4 rounded"
+        onClick={async () => {
+          await updateNativeLanguage('en')
+          router.replace('/en/stories')
+        }}
+      >
+        English
+      </button>
+    </div>
+  </div>
+)}
     </div> 
   );
 }
