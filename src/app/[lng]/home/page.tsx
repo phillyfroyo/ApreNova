@@ -9,12 +9,15 @@ import { useParams, useRouter } from "next/navigation";
 import type { Language } from "@/types/i18n";
 import { useTypedLang } from "@/hooks/useTypedLang";
 import { t } from '@/lib/t';
+import Image from 'next/image'
+import { useState } from 'react'
 
 
 export default function QuizWelcome() {
   const { lng } = useParams();
   const typedLang = useTypedLang();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false)
 
 
   return (
@@ -25,13 +28,50 @@ export default function QuizWelcome() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+
+      {/* Avatar Menu for Unauthenticated Users */}
+<div className="absolute top-4 right-4 text-sm z-50">
+  {/* Avatar icon */}
+  <div
+    className="cursor-pointer rounded-full overflow-hidden w-8 h-8"
+    onClick={() => setMenuOpen((prev) => !prev)}
+  >
+    <Image
+      src="/images/default-avatar.png"
+      alt="Account"
+      width={100}
+      height={100}
+      style={{ objectFit: 'cover' }}
+    />
+  </div>
+
+  {/* Dropdown menu */}
+  {menuOpen && (
+    <div className="mt-2 bg-white border border-gray-200 rounded-md shadow-md p-3 w-40 absolute right-0">
+      <a
+        href={`/${typedLang}/auth/login`}
+        className="block text-blue-800 hover:underline mb-2"
+      >
+        {t(typedLang, "auth", "login")}
+      </a>
+      <a
+        href={`/${typedLang}/auth/signup`}
+        className="block text-blue-800 hover:underline"
+      >
+        {t(typedLang, "stories", "createAccount")}
+      </a>
+    </div>
+  )}
+</div>
+
       {/* Logo and subtitle */}
-      <div className="text-center mb-12">
-        <Logo variant="soft" />
-        <p className="mt-4 text-[18px] font-[Alice]">
-          {t(typedLang, "home", "subtitle")}
-        </p>
-      </div>
+      <div className="text-center mt-24 md:mt-12 mb-12">
+  <Logo variant="soft" />
+  <p className="mt-4 text-[18px] font-[Alice]">
+    {t(typedLang, "home", "subtitle")}
+  </p>
+</div>
+
 
       {/* Quiz / No Thanks Buttons */}
       <div className="flex flex-col md:flex-row items-center gap-10">
@@ -58,14 +98,6 @@ export default function QuizWelcome() {
           </Link>
         </div>
       </div>
-
-      {/* Sign-in link */}
-      <p className="mt-6 text-[14px] font-['Open_Sans']">
-        <span className="text-black">{t(typedLang, "home", "haveAccount")} </span>
-        <a href={`/${typedLang}/auth/login`} className="text-[#1000c8] hover:underline">
-          {t(typedLang, "auth", "login")}
-        </a>
-      </p>
 
       {/* Why ApreNova Heading */}
       <h2 className="mt-12 text-[28px] font-[Alice] text-black text-center">
