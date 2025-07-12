@@ -149,7 +149,11 @@ if (!session?.user?.email) {
   value={session.user.nativeLanguage ?? ''}
   inputType="select"
   options={['es', 'en']}
-  onSave={(lng) => updateUserField('nativeLanguage', lng)}
+  onSave={async (lng) => {
+  await updateUserField('nativeLanguage', lng)
+  document.cookie = `preferredLang=${lng}; path=/; max-age=31536000`
+  router.replace(`/${lng}/settings`)
+}}
 />
 
         <Suspense fallback={
