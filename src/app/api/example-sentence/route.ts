@@ -1,21 +1,29 @@
 // src\app\api\example-sentence\route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { OpenAI } from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getExamplePrompt } from "@/lib/getExamplePrompt";
+import { getExamplePromptToEnglish } from "@/lib/getExamplePromptToEnglish";
 
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
-const cache = new Map<string, { english: string; spanish: string }>();
+const cache = new Map<string, { english: string; spanish: string }>();     
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const { spanishWord, englishWord, level } = await req.json();
+  const lang = req.nextUrl.searchParams.get("lang") ?? "es";
+  const isSpanishToEnglish = lang === "en";
+
+  const cacheKey = `${lang}|${spanishWord}|${level ?? 5}`; 
 
   console.log("🧪 example-sentence input:", { spanishWord, englishWord, level });
 
-const prompt = getExamplePrompt(level, englishWord, spanishWord);
+  const prompt = isSpanishToEnglish
+    ? getExamplePromptToEnglish(level, spanishWord, englishWord)
+    : getExamplePrompt(level, englishWord, spanishWord);
+
 
 const messages: ChatCompletionMessageParam[] = [
   { role: "user", content: prompt }

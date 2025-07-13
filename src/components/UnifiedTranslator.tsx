@@ -153,27 +153,30 @@ if (readOnlyMode) {
   setEndIdx(e);
   fetchTranslation(s, e);
   };
-const fetchExample = async (spanishWord: string) => {
-  const englishWord = words.slice(startIdx!, endIdx! + 1).join(" ");
-  const sentenceText = sentence;
-  // 🔁 Toggle: hide if already open
-  if (exampleMap[spanishWord]) {
+
+const fetchExample = async (translation: string) => {
+  const selected = words.slice(startIdx!, endIdx! + 1).join(" ");
+  const sourceWord = isSpanishToEnglish ? translation : selected;
+  const targetWord = isSpanishToEnglish ? selected : translation;
+
+  if (exampleMap[translation]) {
     setExampleMap((prev) => {
       const updated = { ...prev };
-      delete updated[spanishWord];
+      delete updated[translation];
       return updated;
     });
     return;
   }
 
   try {
-    const res = await fetch("/api/example-sentence", {
+    const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        spanishWord,
-        englishWord,
-        originalSentence: sentenceText,
+        spanishWord: isSpanishToEnglish ? sourceWord : targetWord,
+        englishWord: isSpanishToEnglish ? targetWord : sourceWord,
+        originalSentence: sentence,
+        level: currentLevel,
       }),
     });
 
@@ -182,7 +185,7 @@ const fetchExample = async (spanishWord: string) => {
 
     setExampleMap((prev) => ({
       ...prev,
-      [spanishWord]: {
+      [translation]: {
         english: data.english,
         spanish: data.spanish,
       },
