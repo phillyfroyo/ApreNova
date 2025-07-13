@@ -27,8 +27,8 @@ const isSpanishToEnglish = langParam === 'en';
 console.log("🌐 langParam:", langParam, "→ using ToEnglish:", isSpanishToEnglish);
 
 const prompt = isSpanishToEnglish
-  ? getPhrasePromptToEnglish(level, phrase)
-  : getPhrasePrompt(level, phrase);
+  ? getPhrasePromptToEnglish(phrase, sentence, level)
+  : getPhrasePrompt(phrase, sentence, level);
   console.log("🧠 Prompt to GPT:", prompt);
 
   try {
@@ -44,13 +44,19 @@ const prompt = isSpanishToEnglish
     const cleaned = result?.replace(/^```json\n?|```$/g, '').trim();
 
     try {
-      const parsed = JSON.parse(cleaned!);
-      if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
-      return NextResponse.json(parsed);
-    } catch (parseErr) {
-      console.error("❌ GPT response parsing failed:", cleaned);
-      return NextResponse.json({ error: "Invalid GPT response format" }, { status: 500 });
-    }
+  const parsed = JSON.parse(cleaned!);
+
+  if (typeof parsed === "object" && parsed.primary) {
+    return NextResponse.json({ translations: parsed });
+  } else if (Array.isArray(parsed)) {
+    return NextResponse.json({ translations: { primary: parsed[0], otherCommonTranslations: parsed.slice(1) } });
+  } else {
+    throw new Error("Invalid GPT response structure");
+  }
+} catch (parseErr) {
+  console.error("❌ GPT response parsing failed:", cleaned);
+  return NextResponse.json({ error: "Invalid GPT response format" }, { status: 500 });
+}
   } catch (e) {
     console.error("🔥 GPT request failed:", e);
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 });

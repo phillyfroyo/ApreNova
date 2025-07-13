@@ -12,7 +12,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new Map<string, { translations: string[] }>();
 
 export async function POST(req: NextRequest) {
-  const { word, level } = await req.json();
+  const { word, sentence, level } = await req.json();
 
   console.log("🧪 translate-word input:", { word, level });
 
@@ -24,8 +24,14 @@ export async function POST(req: NextRequest) {
   const isSpanishToEnglish = lang === "en";
 
   const prompt = isSpanishToEnglish
-    ? getWordPromptToEnglish(word, level)
-    : getWordPrompt(word, level);
+    ? getWordPromptToEnglish(word, sentence, level)
+    : getWordPrompt(word, sentence, level);
+
+    const fullPrompt = `${prompt}
+
+      Spanish Word: ${word}
+      Sentence: ${sentence}
+    `;
 
   const cacheKey = `${word.toLowerCase()}|${level ?? 2}`;
   if (cache.has(cacheKey)) {
@@ -53,11 +59,13 @@ export async function POST(req: NextRequest) {
 
     try {
       const raw = JSON.parse(cleanReply);
-      if (Array.isArray(raw) && raw.every(item => typeof item === "string")) {
-        translations = raw;
-      } else {
-        throw new Error("Invalid translation format");
-      }
+      if (typeof raw === "object" && raw.primary) {
+  translations = [raw.primary, ...(raw.otherCommonTranslations || [])];
+} else if (Array.isArray(raw)) {
+  translations = raw;
+} else {
+  throw new Error("Invalid translation format");
+}
     } catch (parseError) {
       console.error("❌ Failed to parse GPT response:", parseError);
       return NextResponse.json({ error: "Invalid GPT translation format." }, { status: 500 });

@@ -1,18 +1,46 @@
 // src/lib/getWordPromptToEnglish.ts
 
-export function getWordPromptToEnglish(word: string, level: number = 2): string {
+export function getWordPromptToEnglish(word: string, sentence: string, level: number = 2): string {
   const base = `
-You are a bilingual English-Spanish language tutor.
+You are a bilingual English–Spanish language tutor.
 
-Given a single Spanish word, return up to 3 of the most common English translations — in dictionary/base form (infinitive verbs, base nouns, adjectives).
+You will be given:
+        a single Spanish word, and
+        the sentence it appears in.
 
-These translations should reflect the word's most common meanings across different usage types — for example, "banco" might include "bank", "bench", or "pew".
+Your task is to return:
 
-Avoid returning conjugated forms or overly figurative interpretations. You may assume general usage, but do not rely on sentence context or surrounding phrases.
+        1. Primary Translation (Context-Based)
+Use the sentence to determine the correct English meaning, but always return the word in its dictionary/base form — that means:
+Infinitive verbs only (e.g., “to come” or just “come”, not “came” or “coming”) 
+Base nouns or adjectives (not plural or comparative forms) 
+⚠️ This is required even if the word appears in a different tense or conjugation in the sentence. Do not return the entire sentence translation — just the English meaning of the word as used in that sentence.
+
+        2. Other Common Translations (No Context)
+Then, optionally return up to two additional English translations for the word, ignoring the sentence. These must be distinct from the primary translation, and should reflect the word’s other most common meanings in general usage. Use dictionary/base form — infinitive verbs, nouns, or adjectives. Only omit these if there truly are no other widely used meanings.
+
+Do not include conjugated forms or idiomatic expressions unless they are among the most common definitions. For example, for “rompió,” use break, shatter, etc. — not ruin.
 
 Never include metaphorical or idiomatic meanings like "ruined" for "rompió" unless the Spanish usage clearly implies that (e.g., "rompió su confianza"). For physical objects (like vases, windows, toys), only use translations like "break" or "shatter." Do not include "ruin" or similar verbs for those cases, even as a third option.
 
 These should be suitable for learners in the United States.
+
+You must respond with valid JSON only. No prose, no explanations, no markdown. Do not add “Here’s the translation:” or any other commentary.
+
+Respond with a raw JSON array, like:
+{
+  "primary": "to live",
+  "otherCommonTranslations": ["alive", "lively"]
+}
+
+Important:
+- The output must be valid JSON.
+- Do not include triple backticks.
+- Do not include any surrounding text.
+- Do not use markdown formatting.
+
+Your output will be parsed by a computer. Invalid formatting will break the system.
+
 `.trim();
 
   const constraints = {
@@ -44,10 +72,8 @@ ${base}
 
 ${constraints[level]}
 
-Return a raw JSON array like this:
-["translation1", "translation2", "translation3"]
-
-Do not include keys, markdown, objects, or explanation.
+Spanish Word: ${word}
+Sentence: ${sentence}
 `.trim();
 }
 

@@ -18,12 +18,14 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
+  const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const sentenceRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname() ?? "";
   const pathParts = pathname.split("/");
@@ -53,8 +55,8 @@ const endpoint = isSingleWord
   : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto&lang=${currentLang}`;
 
     const body = isSingleWord
-      ? { word: cleanWord, sentence: "", level: currentLevel }
-      : null;
+  ? { word: cleanWord, sentence, level: currentLevel }
+  : null;
 
     try {
       setLoading(true);
@@ -68,10 +70,20 @@ const endpoint = isSingleWord
       if (data.error) throw new Error(data.error);
 
       if (!isSingleWord) {
-        setTranslations(Array.isArray(data) ? data : [data.translation]);
-      } else {
-        setTranslations(data.translations || []);
-      }
+  if (typeof data.translations === "object" && data.translations.primary) {
+    const merged = [
+      data.translations.primary,
+      ...(data.translations.otherCommonTranslations || [])
+    ];
+    setTranslations(merged);
+  } else if (Array.isArray(data.translations)) {
+    setTranslations(data.translations); // fallback
+  } else {
+    throw new Error("Invalid phrase translation format");
+  }
+} else {
+  setTranslations(data.translations || []);
+}
     } catch (err) {
       console.error(err);
       setError("⚠️ Failed to fetch translation.");
@@ -212,12 +224,12 @@ useEffect(() => {
     setStartIdx(0);
     setEndIdx(words.length - 1);
     fetchTranslation(0, words.length - 1);
-    setHasAutoTranslated(true); // ✅ Prevent the loop
+    setHasAutoTranslated(true);
   }
 }, [enabled, autoTriggerAll, words.length, fetchTranslation, hasAutoTranslated]);
 
 useEffect(() => {
-  setHasAutoTranslated(false); // safe reset
+  setHasAutoTranslated(false);
 }, [sentence]);
 
 useEffect(() => {
@@ -239,9 +251,24 @@ useEffect(() => {
   return () => document.removeEventListener("mousedown", handleOutsideClick);
 }, []);
 
+// ✅ This should be completely separate
+useEffect(() => {
+  if (sentenceRef.current) {
+    const resizeObserver = new ResizeObserver(() => {
+      setSentenceWidth(sentenceRef.current!.offsetWidth);
+    });
+
+    resizeObserver.observe(sentenceRef.current);
+    setSentenceWidth(sentenceRef.current.offsetWidth); // initial sync
+
+    return () => resizeObserver.disconnect();
+  }
+}, [sentence]);
+
           return (
   <div className="p-4 relative">
-    <div ref={containerRef} className="flex flex-wrap justify-center gap-1 text-lg text-center">
+    <div ref={containerRef} className="relative">
+      <div ref={sentenceRef} className="inline-flex flex-wrap justify-center gap-1 text-lg text-center">
       {words.map((word, i) => (
         <button
           ref={(el) => {
@@ -259,69 +286,84 @@ useEffect(() => {
         </button>
       ))}
     </div>
-
+    </div>
 
     {enabled && (translations.length > 0 || loading || error) && (
       <div
-        ref={tooltipRef}
-        className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50 w-fit max-w-[80vw] min-w-[8rem]"
-      >
+  ref={tooltipRef}
+  style={sentenceWidth ? { width: sentenceWidth } : undefined}
+  className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50"
+>
         {error && <div className="text-sm text-red-500">{error}</div>}
-        {(translations.length > 0 || loading) && (
-          <div className="text-sm">
-            <strong className="flex items-center gap-2">
-              {"Translation:"}
-              {loading && <span className="animate-pulse text-lg">🧠</span>}
-            </strong>
 
-            {translations.length > 0 && (
-              <ul className="list-disc list-inside mt-1">
-                {translations.map((t: any, i: number) => {
-                  const translation = typeof t === "string" ? t : t.translation;
-                  const hasExample = !!exampleMap[translation];
+        <div className="text-sm text-left">
+          {loading && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-semibold">Translating…</span>
+              <span className="animate-pulse text-lg">🧠</span>
+            </div>
+          )}
 
-                  return (
-                    <li key={i}>  
-                      <div className="flex items-start gap-2">
-                        <span className="text-lg leading-snug">•</span>
-                        <div>
-                          {!readOnlyMode ? (
-                            <button
-                              onClick={() => fetchExample(translation)}
-                              className="text-blue-600 hover:underline break-words text-left"
-                            >
-                              {translation}
-                            </button>
-                          ) : (
-                            <span className="text-blue-600 break-words text-left opacity-60"> 
-                              {translation}
-                            </span>
-                          )}
+          {translations.length > 0 && (
+            <div className="mt-1 space-y-2">
+              <p className="font-semibold">Translation:</p>
+<ul className="list-disc list-inside">
+  <li>
+    <button
+      onClick={() => fetchExample(translations[0])}
+      className="text-blue-600 hover:underline"
+    >
+      {translations[0]}
+    </button>
+  </li>
+</ul>
+
+              {translations.length > 1 && (
+                <>
+                  <p className="font-semibold mt-2">
+                    Other common uses of{" "}
+                    <span className="italic text-gray-800">
+                      {words.slice(startIdx!, endIdx! + 1).join(" ")}
+                    </span>
+                    :
+                  </p>
+                  <ul className="list-disc list-inside">
+                    {translations.slice(1).map((t, i) => {
+                      const hasExample = !!exampleMap[t];
+                      return (
+                        <li key={i}>
+                          <button
+                            onClick={() => fetchExample(t)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {t}
+                          </button>
                           {hasExample && (
-                            <div className="mt-1 text-sm">
+                            <div className="ml-2 mt-1 text-sm">
                               {showSpanishFirst ? (
                                 <>
-                                 <p className="text-gray-900">&quot;{exampleMap[translation].spanish}&quot;</p>
-                                 <p className="text-gray-600 italic">&quot;{exampleMap[translation].english}&quot;</p>
-                               </>
-                             ) : (
-                              <>
-                               <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
-                               <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
-                             </>
-                           )}
-                         </div>
-                       )}
-                    </div>
-                   </div>
-                  </li>
-                  );
-                })}
-             </ul>
-            )}
-          </div>
-        )}
+                                  <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
+                                  <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
+                                  <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     )}
   </div>
-); }
+  );
+}
