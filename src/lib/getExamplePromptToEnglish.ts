@@ -1,6 +1,16 @@
 // src/lib/getExamplePromptToEnglish.ts
 
-export function getExamplePromptToEnglish(level: number, spanishWord: string, englishWord: string): string {
+type ExamplePromptParams = {
+  level: number;
+  spanishWord: string;
+  englishWord: string;
+};
+
+export function getExamplePromptToEnglish({
+  level,
+  spanishWord,
+  englishWord,
+}: ExamplePromptParams): string {
   const base = `
 You are a bilingual English-Spanish tutor.
 

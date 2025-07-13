@@ -30,6 +30,8 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const currentLevel = pathParts[4] || "l2"; // Fallback to l1 if undefined
   const currentLang = pathParts[1] || "es"; // 👈 'es' or 'en'
   const isSpanishToEnglish = currentLang === "en";
+  const directionLang = currentLang === "en" ? "es" : "en"; // 👈 Flip it!
+
 
 
 
@@ -169,16 +171,17 @@ const fetchExample = async (translation: string) => {
   }
 
   try {
-    const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        spanishWord: isSpanishToEnglish ? sourceWord : targetWord,
-        englishWord: isSpanishToEnglish ? targetWord : sourceWord,
-        originalSentence: sentence,
-        level: currentLevel,
-      }),
-    });
+    const res = await fetch(`/api/example-sentence?lang=${directionLang}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    spanishWord: isSpanishToEnglish ? sourceWord : targetWord,
+    englishWord: isSpanishToEnglish ? targetWord : sourceWord,
+    originalSentence: sentence,
+    level: currentLevel,
+  }),
+});
+
 
     const data = await res.json();
     if (data.error) throw new Error(data.error);

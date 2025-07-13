@@ -20,15 +20,14 @@ export async function POST(req: NextRequest) {
 
   console.log("🧪 example-sentence input:", { spanishWord, englishWord, level });
 
-  const prompt = isSpanishToEnglish
-    ? getExamplePromptToEnglish(level, spanishWord, englishWord)
-    : getExamplePrompt(level, englishWord, spanishWord);
+const prompt = isSpanishToEnglish
+  ? getExamplePromptToEnglish({ level, spanishWord, englishWord })
+  : getExamplePrompt({ level, spanishWord, englishWord });
 
 
 const messages: ChatCompletionMessageParam[] = [
   { role: "user", content: prompt }
 ];
-
 
 try {
     const completion = await openai.chat.completions.create({
@@ -56,8 +55,6 @@ try {
   console.error("❌ Failed to parse GPT response:", parseError);
   return NextResponse.json({ error: "Invalid GPT response format." }, { status: 500 });
 }
-
-const cacheKey = `${spanishWord}|${level ?? 5}`;
 
 cache.set(cacheKey, example);
 return NextResponse.json(example);

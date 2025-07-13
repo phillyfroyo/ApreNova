@@ -68,21 +68,54 @@
 
 ---
 
-## 🧠 GPT-Powered Translation
+**🧠 GPT-Powered Translation**
 
-- **Component:** `UnifiedTranslator.tsx` (renders full sentence, GPT on demand)
+- **Component:** `UnifiedTranslator.tsx`
+    
+    Renders clickable full sentence
+    
+    GPT-powered translation per word or phrase
+    
+    Optional example sentences for deeper learning
+    
 - **API Endpoints:**
-    - `/api/translate-word`
-    - `/api/translate-phrase`
-    - `/api/example-sentence`
+    
+    `/api/translate-word`
+    
+    `/api/translate-phrase`
+    
+    `/api/example-sentence`
+    
 - **Modes:**
-    - Free: View full translation after reading
-    - Premium: Per-word/phrase GPT + tooltip + diamond button auto-translate
-- **Personalization:**
-    - Prompts vary by level (L1–L5)
-    - Tailored to Mexican Spanish
-- **Caching:** In-memory (ready to upgrade to Redis/Vercel KV)
-- **Output Cleaning:** Post-processed to fix malformed GPT output
+    
+    Free: View full sentence translation after reading
+    
+    Premium: Per-word/phrase GPT translation with tooltip + diamond button for auto-translate
+    
+- **Bilingual Support:**
+    
+    Works on both `/es/stories` (English → Spanish) and `/en/stories` (Spanish → English)
+    
+    Auto-detects direction and selects appropriate GPT prompt
+    
+    Prompts dynamically adjust based on user’s level (L1–L5)
+    
+- **Example Sentences:**
+    
+    Optional GPT-generated examples for each translation
+    
+    Matched sentence pairs: Spanish + English
+    
+    Pulled on demand and cached
+    
+- **Caching:**
+    
+    In-memory map (ready for Redis or Vercel KV)
+    
+- **Output Handling:**
+    
+    GPT responses are cleaned, validated, and JSON-parsed with fallback/error logging
+    
 
 ---
 

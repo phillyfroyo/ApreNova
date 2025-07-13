@@ -1,4 +1,14 @@
-export function getExamplePrompt(level: number, englishWord: string, spanishWord: string): string {
+type ExamplePromptParams = {
+  level: number;
+  englishWord: string;
+  spanishWord: string;
+};
+
+export function getExamplePrompt({
+  level,
+  englishWord,
+  spanishWord,
+}: ExamplePromptParams): string {
   const base = `
 You are a bilingual Spanish-English tutor.
 
