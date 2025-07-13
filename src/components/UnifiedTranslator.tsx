@@ -79,7 +79,7 @@ const endpoint = isSingleWord
       setLoading(false);
     }
   },
-  [readOnlyMode, sentence, currentLevel, words] // ✅ FULL LIST
+  [readOnlyMode, sentence, currentLevel, words, currentLang] // ✅ FULL LIST
 );
 
   const handleClick = (index: number) => {
@@ -301,13 +301,13 @@ useEffect(() => {
                             <div className="mt-1 text-sm">
                               {showSpanishFirst ? (
                                 <>
-                                 <p className="text-gray-900">"{exampleMap[translation].spanish}"</p>
-                                 <p className="text-gray-600 italic">"{exampleMap[translation].english}"</p>
+                                 <p className="text-gray-900">&quot;{exampleMap[translation].spanish}&quot;</p>
+                                 <p className="text-gray-600 italic">&quot;{exampleMap[translation].english}&quot;</p>
                                </>
                              ) : (
                               <>
-                               <p className="text-gray-900">"{exampleMap[translation].english}"</p>
-                               <p className="text-gray-600 italic">"{exampleMap[translation].spanish}"</p>
+                               <p className="text-gray-900">&quot;{exampleMap[translation].english}&quot;</p>
+                               <p className="text-gray-600 italic">&quot;{exampleMap[translation].spanish}&quot;</p>
                              </>
                            )}
                          </div>
