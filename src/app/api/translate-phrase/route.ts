@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
 const langParam = req.nextUrl.searchParams.get('lang') ?? 'es';
 const isSpanishToEnglish = langParam === 'en';
 
+console.log("🌐 langParam:", langParam, "→ using ToEnglish:", isSpanishToEnglish);
+
 const prompt = isSpanishToEnglish
   ? getPhrasePromptToEnglish(level, phrase)
   : getPhrasePrompt(level, phrase);

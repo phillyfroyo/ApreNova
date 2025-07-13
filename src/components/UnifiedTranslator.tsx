@@ -30,10 +30,7 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const currentLevel = pathParts[4] || "l2"; // Fallback to l1 if undefined
   const currentLang = pathParts[1] || "es"; // 👈 'es' or 'en'
   const isSpanishToEnglish = currentLang === "en";
-  const directionLang = currentLang === "en" ? "es" : "en"; // 👈 Flip it!
-
-
-
+  const showSpanishFirst = currentLang === "en";
 
   const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
 
@@ -171,17 +168,20 @@ const fetchExample = async (translation: string) => {
   }
 
   try {
-    const res = await fetch(`/api/example-sentence?lang=${directionLang}`, {
+ const payload = {
+  spanishWord: currentLang === "es" ? sourceWord : targetWord,
+  englishWord: currentLang === "es" ? targetWord : sourceWord,
+  originalSentence: sentence,
+  level: currentLevel,
+};
+
+console.log("📤 Example fetch payload:", payload);
+
+const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    spanishWord: isSpanishToEnglish ? sourceWord : targetWord,
-    englishWord: isSpanishToEnglish ? targetWord : sourceWord,
-    originalSentence: sentence,
-    level: currentLevel,
-  }),
+  body: JSON.stringify(payload),
 });
-
 
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -281,37 +281,43 @@ useEffect(() => {
                   const hasExample = !!exampleMap[translation];
 
                   return (
-                    <div key={i} className="flex items-start gap-2">
-                      <span className="text-lg leading-snug">•</span>
-                      <div>
-                        {!readOnlyMode ? (
-  <button
-    onClick={() => fetchExample(translation)}
-    className="text-blue-600 hover:underline break-words text-left"
-  >
-    {translation}
-  </button>
-) : (
-  <span className="text-blue-600 break-words text-left opacity-60">
-    {translation}
-  </span>
-)}
-{readOnlyMode && <span>{translation}</span>}
-                        {hasExample && (
-                          <div className="mt-1 text-sm">
-                            <p className="text-gray-900">
-                              &quot;{exampleMap[translation].english}&quot;
-                            </p>
-                            <p className="text-gray-600 italic">
-                              &quot;{exampleMap[translation].spanish}&quot;
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                    <li key={i}>  
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg leading-snug">•</span>
+                        <div>
+                          {!readOnlyMode ? (
+                            <button
+                              onClick={() => fetchExample(translation)}
+                              className="text-blue-600 hover:underline break-words text-left"
+                            >
+                              {translation}
+                            </button>
+                          ) : (
+                            <span className="text-blue-600 break-words text-left opacity-60"> 
+                              {translation}
+                            </span>
+                          )}
+                          {hasExample && (
+                            <div className="mt-1 text-sm">
+                              {showSpanishFirst ? (
+                                <>
+                                 <p className="text-gray-900">"{exampleMap[translation].spanish}"</p>
+                                 <p className="text-gray-600 italic">"{exampleMap[translation].english}"</p>
+                               </>
+                             ) : (
+                              <>
+                               <p className="text-gray-900">"{exampleMap[translation].english}"</p>
+                               <p className="text-gray-600 italic">"{exampleMap[translation].spanish}"</p>
+                             </>
+                           )}
+                         </div>
+                       )}
                     </div>
+                   </div>
+                  </li>
                   );
                 })}
-              </ul>
+             </ul>
             )}
           </div>
         )}

@@ -2,14 +2,14 @@
 
 type ExamplePromptParams = {
   level: number;
-  spanishWord: string;
   englishWord: string;
+  spanishWord: string;
 };
 
 export function getExamplePromptToEnglish({
   level,
-  spanishWord,
   englishWord,
+  spanishWord,
 }: ExamplePromptParams): string {
   const base = `
 You are a bilingual English-Spanish tutor.
@@ -35,9 +35,9 @@ No formatting, no code blocks, no explanations.
   const constraints = {
     1: `Use only the 100 most common English words. Only present tense. Keep it extremely simple.`,
     2: `Use only the 200 most common English words. Present tense only.`,
-    3: `Use up to the 500 most common English words. You may include present and past tense.`,
-    4: `Use up to the 1000 most common English words. Present, past, and continuous tense allowed.`,
-    5: `No vocabulary restrictions. Use natural, fluent American English.`,
+    3: `Use up to the 500 most common English words. You may include present and simple past.`,
+    4: `Use up to the 1000 most common English words. Present, simple past, and past continuous allowed.`,
+    5: `No vocabulary restrictions. Use natural, fluent English.`,
   };
 
   return `
