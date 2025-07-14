@@ -68,7 +68,7 @@
 
 ---
 
-**🧠 GPT-Powered Translation**
+## **🧠 GPT-Powered Translation**
 
 - **Component:** `UnifiedTranslator.tsx`
     
@@ -114,7 +114,7 @@
     
 - **Output Handling:**
     
-    GPT responses are cleaned, validated, and JSON-parsed with fallback/error logging
+    GPT responses are structured as `{ primary, otherCommonTranslations }` and parsed with fallback/error handling. Phrase and word prompts enforce contextual awareness for primary output, with optional general-use alternatives.
     
 
 ---

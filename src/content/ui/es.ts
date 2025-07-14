@@ -106,6 +106,30 @@ stats: {
   storiesCompleted: "Historias completadas"
 },
 
+feedback: {
+    title1: "Enviar comentarios",
+    title2: "Nos encantaría conocer tus comentarios.",
+    subtitle: "Ayúdanos a mejorar Cuentana para todos",
+    typeLabel: "¿Qué tipo de comentario es?",
+    typePlaceholder: "Selecciona un tipo...",
+    messageLabel: "Tu mensaje",
+    placeholder: "¿En qué estás pensando?",
+    optionalEmail: "Correo (para seguimiento)",
+    cancel: "Cancelar",
+    send: "Enviar Comentario",
+    bug: "🐛 Error",
+    suggestion: "💡 Sugerencia",
+    other: "✏️ Otro",
+    optionalFields: "Campos opcionales",
+    experienceQuestion: "¿Cómo ha sido tu experiencia hasta ahora?",
+    frustrated: "Frustrado/a",
+    neutral: "Neutral",
+    happy: "Feliz",
+    thanks: "¡Gracias por tus comentarios!",
+    successMessage: "El formulario se envió con éxito.",
+    close: "Cerrar",
+  },
+
 premium: {
   title: "Hazte Premium 💎",
   description: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido:",

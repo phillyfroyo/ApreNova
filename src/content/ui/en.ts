@@ -1,6 +1,6 @@
 // /src/content/ui/en.ts
 const en = {
-  auth: {
+auth: {
   login: "Log In",
   signup: "Sign Up",
   logout: "Log Out",
@@ -26,7 +26,7 @@ language: {
   es: "Español"
 },
 
-  stories: {
+stories: {
   goPremium: "Go Premium 💎",
   premiumDescription: "Cuentana Premium unlocks smarter tools for faster learning.",
   dashboard: "Dashboard",
@@ -63,7 +63,7 @@ levels: {
   l5: "Fluent"
 },
 
-  home: {
+home: {
   subtitle: "Learn faster. Learn with stories.",
   quizTitle: "Take the Quiz",
   recommended: "(recommended)",
@@ -79,8 +79,8 @@ levels: {
   aboutPrefix: "Get to know"
 },
 
-  settings: {
-  notLoggedIn: "You sre not logged in.",
+settings: {
+  notLoggedIn: "You are not logged in.",
   greeting: "Hi {name}! 🎉",
   premium: "Premium 💎",
   free: "Free",
@@ -95,7 +95,7 @@ levels: {
   changeLevel: "Take the quiz to change your level",
   },
 
-  stats: {
+stats: {
   loading: "Loading your stats...",
   lessThanOneMinute: "< 1 min",
   minutes: "min",
@@ -105,6 +105,29 @@ levels: {
   timeReading: "Time reading",
   storiesCompleted: "Stories completed"
 },
+feedback: {
+    title1: "Provide Feedback",
+    title2: "We'd love to hear your feedback",
+    subtitle: "Help us improve Cuentana for everyone",
+    typeLabel: "What type of feedback is this?",
+    typePlaceholder: "Select feedback type...",
+    messageLabel: "Your message",
+    placeholder: "What's on your mind?",
+    optionalEmail: "Email (for follow-up)",
+    cancel: "Cancel",
+    send: "Send Feedback",
+    bug: "🐛 Bug",
+    suggestion: "💡 Suggestion",
+    other: "✏️ Other",
+    optionalFields: "Optional Fields",
+    experienceQuestion: "How has your experience been so far?",
+    frustrated: "Frustrated",
+    neutral: "Neutral",
+    happy: "Happy",
+    thanks: "Thanks for the feedback!",
+    successMessage: "The form was submitted successfully.",
+    close: "Close",
+  },
 
 premium: {
     benefit1: {

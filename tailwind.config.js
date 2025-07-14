@@ -5,7 +5,7 @@ module.exports = {
     extend: {
       fontFamily: {
         serif: ['Alice', 'serif'],
-        sans: ['"Open Sans"', 'sans-serif'],
+        sans: ["Inter", '"Open Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       dropShadow: {
   aprenova: '1.5px 1.5px 1px #0cc0df',

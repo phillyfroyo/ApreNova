@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron&family=Raleway&family=Fredoka&family=Baloo+2&family=Press+Start+2P&family=Playfair+Display&family=Quicksand&family=Exo+2&family=Lora&family=Merriweather&family=Changa+One&family=Audiowide&family=Oswald&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
 
 :root {
   --background: #ffffff;

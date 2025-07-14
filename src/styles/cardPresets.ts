@@ -24,4 +24,10 @@ export const cardPresets = {
     className:
       "bg-neutral-50 border border-neutral-200 shadow-sm p-6 rounded-3xl",
   },
+  feedback: {
+    base: "rounded-xl shadow-xl max-w-md w-full max-h-[70vh] overflow-auto",
+    header: "bg-[url('/images/background3.png')] bg-cover bg-center text-black text-center p-4",
+    body: "bg-white p-6 flex flex-col gap-4",
+    footer: "bg-white px-6 pb-6 pt-2 flex justify-end gap-2",
+  },
 };

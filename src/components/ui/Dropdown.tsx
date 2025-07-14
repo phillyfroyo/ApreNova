@@ -48,37 +48,39 @@ export default function Dropdown({
   }, []);
 
   return (
-    <div
-      ref={dropdownRef}
-      className="inline-block relative w-fit"
-    >
-      <button
-  onClick={() => setOpen((prev) => !prev)}
-  className={`${baseStyles[variant]} cursor-pointer w-full text-left`}
->
-  {label}
-</button>
-      {open && (
-        <div
-          className="absolute top-full left-0 mt-1 w-full bg-white/30 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50"
-        >
-          {options.map(({ label, value }) => (
   <div
-    key={value}
-    onClick={() => {
-      onSelect(value);
-      setOpen(false);
-    }}
-    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+    ref={dropdownRef}
+    className="inline-block relative w-[300px]" // 👈 FIXED WIDTH HERE
+    onClick={(e) => e.stopPropagation()}
   >
-    {label}
+    <button
+      type="button"
+      onClick={() => setOpen((prev) => !prev)}
+      className={`${baseStyles[variant]} cursor-pointer w-full text-left`}
+    >
+      {label}
+    </button>
+
+    {open && (
+      <div className="absolute top-full left-0 mt-1 w-full bg-white/30 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50">
+        {options.map(({ label, value }) => (
+          <div
+            key={value}
+            onClick={() => {
+              onSelect(value);
+              setOpen(false);
+            }}
+            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+    )}
   </div>
-))}
-        </div>
-      )}
-    </div>
-  );
+);
 }
+
 
 // DEMO BLOCK (for testing elsewhere — NOT inside this component)
 // import Dropdown from '@/components/ui/Dropdown';
