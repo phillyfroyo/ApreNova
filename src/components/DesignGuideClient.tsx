@@ -133,13 +133,24 @@ export default function DesignGuideClient() {
       <section>
   <H1 className="mb-8">Card Presets</H1>
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {Object.entries(cardPresets).map(([key, card]) => (
+    {Object.entries(cardPresets).map(([key, card]) => {
+  if (
+    "title" in card &&
+    "description" in card &&
+    "className" in card
+  ) {
+    return (
       <Card key={card.title} className={card.className}>
         <H2 className="mb-2">{card.title}</H2>
         <Body className="mb-4">{card.description}</Body>
         <Button variant="button1">Try Me</Button>
       </Card>
-    ))}
+    );
+  }
+
+  // Skip any invalid entries (like { base, header, body, footer })
+  return null;
+})}
   </div>
 </section>
 
