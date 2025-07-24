@@ -41,6 +41,7 @@ export default function ResultsPage() {
       l3: "You’ll begin with stories that balance challenge and comfort — using 500 core words and building multi-clause sentences.",
       l4: "You’ll begin with advanced stories using 1,000 words, flexible grammar, and native-level structure.",
     };
+    // please include more detailed information about the assigned level. the title can be "additional information for the curious mind"
 
     setLevelLabel(levelMap[quizLevel]);
     setDescription(descriptions[quizLevel]);

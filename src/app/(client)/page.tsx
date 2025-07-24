@@ -39,7 +39,7 @@ export default function LanguageSelectPage() {
       <div className="flex flex-col md:flex-row items-center gap-10">
         {/* Spanish native */}
         <Card className="glass-card max-w-xs text-center space-y-4">
-          <p className="text-[24px] font-bold">Mi lengua materna es el español</p>
+          <p className="text-[24px] font-semibold">Mi lengua materna es el español</p>
           <Button
             className="w-full"
             variant="button1"
@@ -53,7 +53,7 @@ export default function LanguageSelectPage() {
 
         {/* English native */}
         <Card className="glass-card max-w-xs text-center space-y-4">
-          <p className="text-[24px] font-bold">My native language is English</p>
+          <p className="text-[24px] font-semibold">My native language is English</p>
           <Button
             className="w-full"
             variant="button1"
