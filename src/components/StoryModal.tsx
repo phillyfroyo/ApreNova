@@ -149,7 +149,7 @@ export default function StoryModal({
                     storedLevel?.toLowerCase?.() ||
                     "l2";
 
-                  const url = getStoryUrl(storySlug, level, "part-1", typedLang);
+                  const url = getStoryUrl(storySlug, level, 1, 1, typedLang);
                   router.push(url);
                 }}
                 className="mx-auto my-4 block !bg-amber-800 hover:!bg-amber-700 text-white"

@@ -10,7 +10,6 @@ import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button"; // ✅ correct for default exports
 import UnifiedTranslator from "@/components/UnifiedTranslator";
 import { useSessionLogger } from '@/hooks/useSessionLogger';
-import { getMaxPartForStory } from '@/lib/stories';
 import { slugify } from '@/lib/stories';
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
@@ -27,8 +26,13 @@ type ActiveAudio = {
   isSlow: boolean;
   progress: number;
 };
-
-export default function StoryLayout({ sentences, initialLevel, storySlug, title }) {
+export default function StoryLayout({
+  sentences,
+  initialLevel,
+  storySlug,
+  title,
+  storyMap, // 🍌 <-- Add this line
+}) {
   useSessionLogger('reading');
 
   const { data: session, status } = useSession();
@@ -41,6 +45,34 @@ export default function StoryLayout({ sentences, initialLevel, storySlug, title 
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  function getPrevNextPage(
+  currentChapter: number,
+  currentPage: number,
+  storyMap: {
+    hasChapters: boolean;
+    chapters: { chapter: number; pages: number[] }[];
+  }
+): {
+  prev: { ch: number; pg: number } | null;
+  next: { ch: number; pg: number } | null;
+} {
+  const flatPages: { ch: number; pg: number }[] = [];
+
+  for (const ch of storyMap.chapters) {
+    for (const pg of ch.pages) {
+      flatPages.push({ ch: ch.chapter, pg });
+    }
+  }
+
+  const index = flatPages.findIndex(
+    (p) => p.ch === currentChapter && p.pg === currentPage
+  );
+
+  return {
+    prev: index > 0 ? flatPages[index - 1] : null,
+    next: index >= 0 && index < flatPages.length - 1 ? flatPages[index + 1] : null,
+  };
+}
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
 
   const { lng } = useParams() ?? {};
@@ -101,9 +133,16 @@ useEffect(() => {
 
   const pathParts = pathname ? pathname.split("/") : [];
   const currentLevel = pathParts[4] || initialLevel || "l1";
-  const currentPart = pathParts[5] || "part-1";
-  const partNumber = parseInt(currentPart.replace("part-", ""));
-  const dynamicPartTitle = `${t(typedLang, "story", "part")} ${partNumber}`;
+  const currentChapter = pathParts[5] || "ch1";
+  const currentPage = pathParts[6] || "page-1";
+
+  const chapterNumber = parseInt(currentChapter.replace("ch", ""));
+  const pageNumber = parseInt(currentPage.replace("page-", ""));
+
+  const dynamicPageTitle = storyMap.hasChapters
+  ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
+  : `${t(typedLang, "story", "page")} ${pageNumber}`;
+
 
   const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
   aventura: "alwaysPremium",
@@ -116,24 +155,11 @@ const readOnlyMode = accessType === "conditional" && !isPremiumUser;
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-  const [isFinalPart, setIsFinalPart] = useState(false);
-
-
- useEffect(() => {
-  const maxPart = getMaxPartForStory(storySlug, currentLevel);
-
-  console.log({
-    slugified: slugify("La Aventura"),
-    storySlug, // the one you're currently viewing
-    currentLevel,
-    partNumber,
-    maxPart,
-    isFinal: partNumber === maxPart,
-  });
-
-  setIsFinalPart(partNumber === maxPart);
-}, [storySlug, currentLevel, partNumber]);
-
+  const [isFinalPage, setIsFinalPage] = useState(false);
+  useEffect(() => {
+  const { next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
+  setIsFinalPage(!next);
+}, [chapterNumber, pageNumber, storyMap]);
 
     useEffect(() => {
   window.addEventListener("mousemove", handleGlobalMove);
@@ -284,99 +310,110 @@ onTouchStart={(e: React.TouchEvent) => {
     { label: t(typedLang, "levels", "l4"), value: "l4" },
     { label: t(typedLang, "levels", "l5"), value: "l5" }
   ]}
+onSelect={(selectedValue) => {
+  router.push(`/${typedLang}/stories/${storySlug}/${selectedValue}/ch${chapterNumber}/page-${pageNumber}`);
+}}
+/>
+{/* Chapter Dropdown – only if hasChapters */}
+{storyMap.chapters.length > 1 && (
+  <Dropdown
+    label={`${t(typedLang, "story", "chapter")} ▾ ${chapterNumber}`}
+    variant="glass"
+    options={storyMap.chapters.map((ch) => ({
+      label: `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
+      value: ch.chapter.toString(),
+    }))}
+    onSelect={(selectedValue) => {
+      const selectedChapter = parseInt(selectedValue);
+      const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
+      router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${selectedChapter}/page-${firstPage}`);
+    }}
+  />
+)}
+
+{/* Page Dropdown – always shown */}
+<Dropdown
+  label={`${t(typedLang, "story", "page")} ▾ ${pageNumber}`}
+  variant="glass"
+  options={
+    (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
+      label: `${t(typedLang, "story", "page")} ${pg}`,
+      value: pg.toString(),
+    }))
+  }
   onSelect={(selectedValue) => {
-    const part = currentPart || "part-1";
-    router.push(getStoryUrl(storySlug, selectedValue, part, typedLang));
+    const selectedPage = parseInt(selectedValue);
+    router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${selectedPage}`);
   }}
 />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {[...Array(10)].map((_, i) => {
-              const part = `part-${i + 1}`;
-              const isActive = currentPart === part;
-              return (
-                <Button
-                  key={part}
-                  variant="parts"
-                  onClick={() => {
-                    router.push(getStoryUrl(storySlug, currentLevel, part, typedLang));
-                  }}
-                  className={`px-4 py-2 text-sm sm:text-base rounded-lg sm:rounded-xl hover:scale-105 transition ${isActive ? "ring-2 ring-black" : ""}`}
-                >
-                  {t(typedLang, "story", "part")} {i + 1}
-                </Button>
-              );
-            })}
           </div>
         </div>
       )}
 
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2">
         {(() => {
-          const partNumber = parseInt(currentPart.replace("part-", ""));
-          const prevDisabled = partNumber === 1;
-          const nextDisabled = partNumber === 10;
+  const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
 
-          const buttonClass = (disabled, color) =>
-            `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
-              disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
-            }`;
+  const buttonClass = (disabled, color) =>
+    `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
+      disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
+    }`;
 
-          return (
-  <div className="flex flex-col items-center space-y-4 mt-8">
-    <div className="flex space-x-4">
-      <a
-        className={buttonClass(prevDisabled, "bg-green-600")}
-        href={
-  prevDisabled
-    ? undefined
-    : getStoryUrl(storySlug, currentLevel, `part-${partNumber - 1}`, typedLang)
-}
-        onClick={(e) => prevDisabled && e.preventDefault()}
-      >
-        ⬅ {t(typedLang, "story", "prev")}
-      </a>
-      <a
-        className={buttonClass(nextDisabled, "bg-green-700")}
-        href={
-  nextDisabled
-    ? undefined
-    : getStoryUrl(storySlug, currentLevel, `part-${partNumber + 1}`, typedLang)
-}
-        onClick={(e) => nextDisabled && e.preventDefault()}
-      >
-        {t(typedLang, "story", "next")} ➡
-      </a>
+  return (
+    <div className="flex flex-col items-center space-y-4 mt-8">
+      <div className="flex space-x-4">
+        <a
+          className={buttonClass(!prev, "bg-green-600")}
+          href={
+            prev
+              ? `/${typedLang}/stories/${storySlug}/${currentLevel}/ch${prev.ch}/page-${prev.pg}`
+              : undefined
+          }
+          onClick={(e) => !prev && e.preventDefault()}
+        >
+          ⬅ {t(typedLang, "story", "prev")}
+        </a>
+        <a
+          className={buttonClass(!next, "bg-green-700")}
+          href={
+            next
+              ? `/${typedLang}/stories/${storySlug}/${currentLevel}/ch${next.ch}/page-${next.pg}`
+              : undefined
+          }
+          onClick={(e) => !next && e.preventDefault()}
+        >
+          {t(typedLang, "story", "next")} ➡
+        </a>
+      </div>
+
+      {isFinalPage && (
+        <button
+          className="text-sm text-green-700 hover:underline"
+          onClick={() => {
+            fetch('/api/mark-complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                storySlug,
+                level: currentLevel,
+                chapter: chapterNumber,
+                page: pageNumber,
+              }),
+            }).then(() => alert(t(typedLang, "story", "markedComplete")));
+          }}
+        >
+          ✅ {t(typedLang, "story", "markComplete")}
+        </button>
+      )}
     </div>
-
-    {isFinalPart && (
-      <button
-        className="text-sm text-green-700 hover:underline"
-        onClick={() => {
-          fetch('/api/mark-complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              storySlug,
-              level: currentLevel,
-              part: `part-${partNumber}`,
-            }),
-          }).then(() => alert(t(typedLang, "story", "markedComplete")));
-        }}
-      >
-        ✅ {t(typedLang, "story", "markComplete")}
-      </button>
-    )}
-  </div>
-);
-        })()}
+  );
+})()}
       </div>
 
       <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap">
         <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-center">{title}</h1>
-          <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPartTitle}</h2>
+          <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPageTitle}</h2>
 
           {sentences.map((s, i) => (
   <div key={i} className="my-12">
@@ -386,8 +423,8 @@ onTouchStart={(e: React.TouchEvent) => {
       <div className="w-full flex items-center gap-3 px-4 sm:px-6">
         {/* Emoji buttons */}
         <div className="flex items-center gap-2">
-          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
-          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/${currentPart}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
+          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
+          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
           {translationMode === "free" && (
             <button onClick={() => {
               const el = translationRefs.current[i];

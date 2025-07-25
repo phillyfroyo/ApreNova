@@ -45,7 +45,8 @@ language: {
 },
 
 story: {
-  part: "Capítulo",
+  page: "Página",
+  chapter: "Capítulo",
   navigate: "Navegar ▾",
   home: "Inicio",
   levelSelect: "Seleccionar Nivel",

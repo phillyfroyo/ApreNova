@@ -1,5 +1,7 @@
 /* eslint-disable */
-// 📄 Infra Page
+// 📦 Updated Infrastructure (as of July 24, 2025)
+
+---
 
 ## 🖥️ Development Environment
 
@@ -29,7 +31,7 @@
 ## 🚦 App Framework: Next.js (App Router)
 
 - **Dynamic Routing:** File-based, bilingual (`[lng]` param)
-- **Dynamic Story Pages:** `/stories/[storySlug]/[level]/[part]`
+- **Dynamic Story Pages:** `/stories/[storySlug]/[level]/[chapter]/[page]`
 - **Server + Client Component Split:** Optimized via `next/dynamic` and `"use client"`
 - **Force-Dynamic Rendering:** `dynamic = 'force-dynamic'` used for session-bound routes
 - **Internationalization:** Fully unified `/[lng]/` routing
@@ -59,8 +61,8 @@
 
 ## 🔊 Audio Playback Infrastructure
 
-- **Storage:** `/public/audio/[storySlug]/[level]/part-[part]/line[n].mp3`
-- **Slow Narration:** Available via `/part-[part]-slow/line[n].mp3` (🐢 button)
+- **Storage:** `/public/audio/[storySlug]/[level]/ch[chapter]/page-[page]/line[n].mp3`
+- **Slow Narration:** Available via `/page-[page]-slow/line[n].mp3` (🐢 button)`
 - **UX:**
     - ‘`<audio>`' element with player bar
     - `audioRefs` and `activeAudio` used for per-line control
@@ -128,7 +130,7 @@
 - **Testing:** Stripe CLI (`stripe listen`)
 - **Planned Features:**
     - Premium success/upgrade feedback
-    - Premium-gated story parts
+    - Premium-gated story features
 
 ---
 

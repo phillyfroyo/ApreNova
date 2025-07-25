@@ -2,17 +2,31 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
-const subscriptionKey = "Cl89u59KRbiXWTugWkTUWh0iNYjjftXHByC40MMwThqMGkD3o1acJQQJ99BGACYeBjFXJ3w3AAAYACOGCDa3";
-const region = "eastus"; // e.g. "eastus"
+// Parse CLI arg
+const lng = process.argv[2]; // "es" or "en"
+if (!lng || !["es", "en"].includes(lng)) {
+  console.error("❌ Usage: node generate-audio.js <es|en>");
+  process.exit(1);
+}
+
+// Core setup
+const subscriptionKey = "YOUR_KEY_HERE";
+const region = "eastus";
 const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
-const baseInputDir = path.join(__dirname, "../stories-json/aventura");
-const baseOutputDir = path.join(__dirname, "../public/audio/aventura");
-const voice = "en-US-BrianMultilingualNeural";
+const storySlug = "aventura";
+const baseInputDir = path.join(__dirname, `../stories-json/${storySlug}`);
+const baseOutputDir = path.join(__dirname, `../public/audio/${lng}/${storySlug}`);
+
+// Determine target language (the one the learner is trying to learn)
+const targetLang = lng === "es" ? "en" : "es";
+const voice = targetLang === "en"
+  ? "en-US-BrianMultilingualNeural"
+  : "es-ES-AlvaroNeural";
 
 const synthesizeWithRate = async (text, outputPath, rate) => {
   const ssml = `
-  <speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lng='en-US'>
+  <speak version='1.0' xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang='${targetLang}'>
     <voice name='${voice}'>
       <mstts:express-as style="default">
         <prosody rate="${rate}" pitch="default">${text}</prosody>
@@ -35,9 +49,22 @@ const synthesizeWithRate = async (text, outputPath, rate) => {
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, response.data);
     console.log(`✅ ${path.relative(baseOutputDir, outputPath)} (${rate})`);
-  } catch (err) {
-    console.error(`❌ Failed to generate ${outputPath}`, err.response?.data || err.message);
+} catch (err) {
+  console.error(`❌ Failed to generate ${outputPath}`);
+
+  if (err.response?.data) {
+    try {
+      // Attempt to parse error as JSON
+      const errorText = Buffer.from(err.response.data).toString("utf8");
+      const parsed = JSON.parse(errorText);
+      console.error("🔍 Azure error:", parsed);
+    } catch (jsonErr) {
+      console.error("🔍 Raw response (non-JSON):", Buffer.from(err.response.data).toString("utf8"));
+    }
+  } else {
+    console.error("🔍 Error:", err.message);
   }
+}
 };
 
 const generateAll = () => {
@@ -45,26 +72,38 @@ const generateAll = () => {
 
   levels.forEach((level) => {
     const levelPath = path.join(baseInputDir, level);
-    const parts = fs.readdirSync(levelPath); // part-1, part-2...
+    const chapters = fs.readdirSync(levelPath); // ch1, ch2, etc.
 
-    parts.forEach((partFile) => {
-      const partName = path.basename(partFile, ".json");
-      const jsonPath = path.join(levelPath, partFile);
-      const sentences = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+    chapters.forEach((chapter) => {
+      const chapterPath = path.join(levelPath, chapter);
+      const pages = fs.readdirSync(chapterPath); // page-1.json, etc.
 
-      sentences.forEach((sentence, i) => {
-        const lineNum = i + 1;
-        // Normal speed
-        const normalPath = path.join(baseOutputDir, level, partName, `line${lineNum}.mp3`);
-synthesizeWithRate(sentence.en, normalPath, "medium");
+      pages.forEach((pageFile) => {
+        const pageName = path.basename(pageFile, ".json"); // e.g. page-1
+        const jsonPath = path.join(chapterPath, pageFile);
+        const sentences = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
 
-// Slow speed
-        const slowPartName = `${partName}-slow`;
-        const slowPath = path.join(baseOutputDir, level, slowPartName, `line${lineNum}.mp3`);
-synthesizeWithRate(sentence.en, slowPath, "x-slow");
+        sentences.forEach((sentence, i) => {
+  const lineNum = i + 1;
+  const text = sentence[targetLang]?.trim();
+
+  if (!text) {
+    console.warn(`⚠️ Skipping empty or missing text on line ${lineNum} in ${level}/${chapter}/${pageName}`);
+    return;
+  }
+
+  // Normal speed
+  const normalPath = path.join(baseOutputDir, level, chapter, pageName, `line${lineNum}.mp3`);
+  synthesizeWithRate(text, normalPath, "medium");
+
+  // Slow speed
+  const slowPath = path.join(baseOutputDir, level, chapter, `${pageName}-slow`, `line${lineNum}.mp3`);
+  synthesizeWithRate(text, slowPath, "x-slow");
+});
       });
     });
   });
 };
 
 generateAll();
+

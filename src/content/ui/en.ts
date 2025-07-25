@@ -45,7 +45,8 @@ stories: {
 },
 
 story: {
-  part: "Chapter",
+  page: "Page",
+  chapter: "Chapter",
   navigate: "Navigate ▾",
   home: "Home",
   levelSelect: "Level Select",

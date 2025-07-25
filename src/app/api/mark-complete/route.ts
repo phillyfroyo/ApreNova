@@ -9,9 +9,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { storySlug, level, part } = await req.json();
+  const { storySlug, level, chapter, page } = await req.json();
 
-  if (!storySlug || !level || !part) {
+  if (!storySlug || !level || chapter === undefined || page === undefined) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
@@ -21,7 +21,8 @@ export async function POST(req: Request) {
         userId: session.user.id,
         storySlug,
         level,
-        part,
+        chapter,
+        page,
       },
     });
 

@@ -170,7 +170,7 @@ function StoriesPageContent() {
   function handleLevelClick(lvl) {
   const locale = typedLang;
   const storySlug = "aventura"; // We'll make this dynamic in the future
-  const url = getStoryUrl({ locale, storySlug, level: lvl });
+  const url = getStoryUrl({ locale, storySlug, level: lvl, chapter: 1, page: 1 });
   router.push(url);
 }
  const fallbackLevel = useUserLevel();

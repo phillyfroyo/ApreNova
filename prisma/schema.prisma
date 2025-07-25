@@ -81,8 +81,11 @@ model CompletedStory {
   userId      String
   storySlug   String
   level       String
-  part        String
+  chapter     Int      @default(1)  
+  page        Int      @default(1)
   completedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, storySlug, level, chapter, page]) // 🍌 enforce uniqueness
 }

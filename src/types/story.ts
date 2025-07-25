@@ -6,11 +6,7 @@ export type StoryMetadata = {
   slug: string;
   image: string;
   isPremiumOnly?: boolean;
-  levels: {
-    [key in LevelKey]?: {
-      parts: number;
-    };
-  };
+  levels: string[];
 };
 
 export type Level = "l1" | "l2" | "l3" | "l4" | "l5";

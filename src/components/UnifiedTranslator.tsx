@@ -255,7 +255,9 @@ useEffect(() => {
 useEffect(() => {
   if (sentenceRef.current) {
     const resizeObserver = new ResizeObserver(() => {
-      setSentenceWidth(sentenceRef.current!.offsetWidth);
+      if (sentenceRef.current) {
+  setSentenceWidth(sentenceRef.current.offsetWidth);
+}
     });
 
     resizeObserver.observe(sentenceRef.current);

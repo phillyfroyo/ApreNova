@@ -4,20 +4,35 @@ import type { Language } from "@/types/i18n";
 export async function getStoryContent(
   storySlug: string,
   level: string,
-  part: string,
+  chapter: string,
+  page: string,
   lng: Language
 ) {
   try {
-    console.log("🌍 getStoryContent called with:", { storySlug, level, part, lng });
+    console.log("🌍 getStoryContent called with:", {
+      storySlug,
+      level,
+      chapter,
+      page,
+      lng,
+    });
 
-    const file = await import(`@/content/${storySlug}/${level}/part-${part}.${lng}.ts`);
+    const file = await import(
+      `@/content/${storySlug}/${level}/${chapter}/${page}.${lng}.ts`
+    );
     return file.default;
   } catch (err) {
     console.error(
-      `❌ Failed to load: /content/${storySlug}/${level}/part-${part}.${lng}.ts`,
+      `❌ Failed to load: /content/${storySlug}/${level}/${chapter}/${page}.${lng}.ts`,
       err
     );
-    return [{ en: "Content not available.", es: "Contenido no disponible." }];
+    return {
+      storySlug,
+      level: parseInt(level),
+      chapter: parseInt(chapter),
+      page: parseInt(page),
+      hasChapters: false,
+      lines: [{ en: "Content not available.", es: "Contenido no disponible." }],
+    };
   }
 }
-
