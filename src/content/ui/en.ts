@@ -107,7 +107,7 @@ stats: {
   storiesCompleted: "Stories completed"
 },
 feedback: {
-    title1: "Provide Feedback",
+    title1: "Feedback",
     title2: "We'd love to hear your feedback",
     subtitle: "Help us improve Cuentana for everyone",
     typeLabel: "What type of feedback is this?",

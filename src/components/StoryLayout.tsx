@@ -143,6 +143,19 @@ useEffect(() => {
   ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
   : `${t(typedLang, "story", "page")} ${pageNumber}`;
 
+  // Calculate current page position within the story
+  let currentPagePosition = 0;
+  let totalPages = 0;
+  
+  for (const chapter of storyMap.chapters) {
+    for (const pg of chapter.pages) {
+      totalPages++;
+      if (chapter.chapter === chapterNumber && pg === pageNumber) {
+        currentPagePosition = totalPages;
+      }
+    }
+  }
+
 
   const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
   aventura: "alwaysPremium",
@@ -350,7 +363,7 @@ onSelect={(selectedValue) => {
         </div>
       )}
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex justify-center gap-2">
         {(() => {
   const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
 
@@ -371,7 +384,7 @@ onSelect={(selectedValue) => {
           }
           onClick={(e) => !prev && e.preventDefault()}
         >
-          ⬅ {t(typedLang, "story", "prev")}
+          ⬅
         </a>
         <a
           className={buttonClass(!next, "bg-green-700")}
@@ -382,7 +395,7 @@ onSelect={(selectedValue) => {
           }
           onClick={(e) => !next && e.preventDefault()}
         >
-          {t(typedLang, "story", "next")} ➡
+          ➡
         </a>
       </div>
 
@@ -410,7 +423,12 @@ onSelect={(selectedValue) => {
 })()}
       </div>
 
-      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap">
+      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
+        {/* Total page count in top right */}
+        <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
+          {currentPagePosition}
+        </div>
+        
         <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-center">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPageTitle}</h2>
@@ -423,8 +441,8 @@ onSelect={(selectedValue) => {
       <div className="w-full flex items-center gap-3 px-4 sm:px-6">
         {/* Emoji buttons */}
         <div className="flex items-center gap-2">
-          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}/line${i + 1}.mp3`, false, s.en)}>🔊</button>
-          <button onClick={() => handlePlay(i, `/audio/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}-slow/line${i + 1}.mp3`, true, s.en)}>🐢</button>
+          <button onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}/line${i + 1}.mp3`, false, s[oppositeLang])}>🔊</button>
+          <button onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}-slow/line${i + 1}.mp3`, true, s[oppositeLang])}>🐢</button>
           {translationMode === "free" && (
             <button onClick={() => {
               const el = translationRefs.current[i];
@@ -460,7 +478,7 @@ onSelect={(selectedValue) => {
   ref={el => { translationRefs.current[i] = el; }}
   className="translation hidden text-muted-foreground text-sm mt-2"
 >
-  {s.es}
+  {s[typedLang]}
 </p>
     </div>
   </div>

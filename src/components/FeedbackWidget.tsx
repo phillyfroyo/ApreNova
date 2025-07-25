@@ -70,20 +70,20 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
     setIsOpen(true);
   }}
   variant="muted"
-  className="px-1 py-0.1 text-xs rounded-xl"
+  className="px-[10px] py-0.1 text-xs rounded-xl"
 >
   💬 {text.title1}
 </Button>
       </div>
 
       {isOpen && (
-  <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-50">
+  <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-[70]">
     <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
     <div className="fixed inset-0 flex items-center justify-center p-4">
       <Dialog.Panel className="overflow-hidden max-h-[90vh]">
         <FeedbackCard
-          title={text.title2}
-          subtitle={text.subtitle}
+          title={hasSubmitted ? "" : text.title2}
+          subtitle={hasSubmitted ? "" : text.subtitle}
 footer={
   hasSubmitted ? (
     <Button variant="muted" onClick={() => {
@@ -153,7 +153,7 @@ id="feedback-form"
                   setTimeout(() => {
                   setHasSubmitted(true); // ✅ show success message instead of form
                   setFly(false);         // ✅ reset animation
-                }, 2000); // match animation duration
+                }, 1900); // match animation duration
                }}
             >
   <Dropdown

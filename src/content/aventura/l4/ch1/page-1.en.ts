@@ -1,9 +1,9 @@
 export const story = {
-  storySlug: "aventura",  // inferred from folder name
-  level: 4,               // from /l1/
-  chapter: 1,             // from /ch1/
-  page: 1,                // from page-1
-  hasChapters: true,     // true only for multi-chapter stories
+  storySlug: "aventura",
+  level: 4,
+  chapter: 1,
+  page: 1,
+  hasChapters: true,
   lines: [
     { es: "Mi nombre es Pedro y vivo en un pueblo tranquilo de Guatemala.", en: "My name is Pedro, and I live in a quiet town in Guatemala." },
     { es: "Una tarde, mi amigo Juan vino con algo en la mano. Era un mapa.", en: "One afternoon, my friend Juan came over with something in his hand. It was a map." },

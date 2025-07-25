@@ -3,15 +3,16 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import FeedbackWidget from "@/components/FeedbackWidget";
 
-export default function Layout({
+export default async function Layout({
   children,
   params,
 }: {
   children: ReactNode;
-  params: { lng: string };
+  params: Promise<{ lng: string }>;
 }) {
   // Validate and fallback to "es"
-  const validLng = params.lng === "en" ? "en" : "es";
+  const { lng } = await params;
+  const validLng = lng === "en" ? "en" : "es";
 
   return (
     <>

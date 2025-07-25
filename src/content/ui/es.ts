@@ -108,7 +108,7 @@ stats: {
 },
 
 feedback: {
-    title1: "Enviar comentarios",
+    title1: "Comentarios",
     title2: "Nos encantaría conocer tus comentarios.",
     subtitle: "Ayúdanos a mejorar Cuentana para todos",
     typeLabel: "¿Qué tipo de comentario es?",
