@@ -126,6 +126,14 @@ useEffect(() => {
 
 
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isAnyDropdownOpen, setIsAnyDropdownOpen] = useState(false);
+  const [showEmojiButtons, setShowEmojiButtons] = useState(false);
+  const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
+  
+  const handleTranslationStateChange = useCallback((index: number, hasActive: boolean) => {
+    setActiveTranslations(prev => ({ ...prev, [index]: hasActive }));
+  }, []);
 
 
   const pathname = usePathname() ?? "";
@@ -186,7 +194,79 @@ const readOnlyMode = accessType === "conditional" && !isPremiumUser;
     window.removeEventListener("mouseup", handleGlobalUp);
     window.removeEventListener("touchend", handleGlobalUp);
   };
-}, [handleGlobalMove, handleGlobalUp]); // ✅ no isDragging here, because it’s inside handleGlobalMove
+}, [handleGlobalMove, handleGlobalUp]); // ✅ no isDragging here, because it's inside handleGlobalMove
+
+  // Handle global clicks with proper state hierarchy
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Don't process clicks on buttons, dropdowns, or interactive elements
+      if (
+        target.tagName === 'BUTTON' ||
+        target.closest('button') ||
+        target.closest('[role="button"]') ||
+        target.closest('.dropdown') ||
+        target.closest('[data-dropdown]') ||
+        target.closest('[data-tooltip]') || // UnifiedTranslator tooltip
+        target.closest('[data-translator]') || // UnifiedTranslator container
+        target.hasAttribute('data-just-closed-translation') // Just closed a translation
+      ) {
+        return;
+      }
+      
+      // State hierarchy: handle highest priority active state first
+      
+      // 1. If menu or dropdown is open, close them (highest priority)
+      if (menuOpen) {
+        setMenuOpen(false);
+        return;
+      }
+      
+      if (isAnyDropdownOpen) {
+        // Dropdowns handle their own closing via click outside
+        return;
+      }
+      
+      // 2. If any translation is active, don't allow emoji toggle (UnifiedTranslator handles its own closing)
+      const hasActiveTranslations = Object.values(activeTranslations).some(Boolean);
+      if (hasActiveTranslations) {
+        return;
+      }
+      
+      // 3. If audio is playing, clear everything simultaneously (better UX)
+      if (activeAudio?.isPlaying) {
+        activeAudio.audio.pause(); // Stop audio
+        setActiveAudio(null); // Hide scrubber
+        setShowEmojiButtons(false); // Hide emojis
+        return;
+      }
+      
+      // 4. If audio scrubber is visible (paused), hide it when toggling emojis off
+      if (activeAudio && !activeAudio.isPlaying && showEmojiButtons) {
+        setActiveAudio(null); // Hide scrubber
+        setShowEmojiButtons(false); // Hide emojis
+        return;
+      }
+      
+      // 5. Toggle emoji button visibility (lowest priority)
+      // Don't toggle for audio/translation control buttons - let them handle their own function
+      if (
+        target.hasAttribute('data-audio-control') ||       // Audio buttons (speaker, turtle, close)
+        target.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond)
+        target.closest('[data-audio-scrubber]') ||         // Audio scrubber area
+        target.closest('[data-audio-control]') ||          // Any audio control element
+        target.closest('[data-translation-control]')       // Any translation control element
+      ) {
+        return; // Don't toggle emoji visibility for these buttons
+      }
+      
+      setShowEmojiButtons(prev => !prev);
+    };
+
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations]);
 
   const speak = (text) => {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -264,6 +344,7 @@ if (
     <div
       ref={progressBarRef}
       className="relative w-full h-[30px] select-none cursor-pointer flex items-center"
+      data-audio-scrubber
       onMouseDown={(e: React.MouseEvent) => {
   setIsDragging(true);
   handleDrag(e.nativeEvent); // 🍌 pass the raw banana
@@ -312,6 +393,10 @@ onTouchStart={(e: React.TouchEvent) => {
       router.push(`/${typedLang}/stories`);
     }
   }}
+  onOpenChange={(isOpen) => {
+    setActiveDropdown(isOpen ? "navigate" : null);
+    setIsAnyDropdownOpen(isOpen);
+  }}
 />
             <Dropdown
   label={`${t(typedLang, "story", "levelSelect")} ▾ ${t(typedLang, "levels", currentLevel)}`}
@@ -325,6 +410,10 @@ onTouchStart={(e: React.TouchEvent) => {
   ]}
 onSelect={(selectedValue) => {
   router.push(`/${typedLang}/stories/${storySlug}/${selectedValue}/ch${chapterNumber}/page-${pageNumber}`);
+}}
+onOpenChange={(isOpen) => {
+  setActiveDropdown(isOpen ? "level" : null);
+  setIsAnyDropdownOpen(isOpen);
 }}
 />
 {/* Chapter Dropdown – only if hasChapters */}
@@ -340,6 +429,10 @@ onSelect={(selectedValue) => {
       const selectedChapter = parseInt(selectedValue);
       const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
       router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${selectedChapter}/page-${firstPage}`);
+    }}
+    onOpenChange={(isOpen) => {
+      setActiveDropdown(isOpen ? "chapter" : null);
+      setIsAnyDropdownOpen(isOpen);
     }}
   />
 )}
@@ -357,6 +450,10 @@ onSelect={(selectedValue) => {
   onSelect={(selectedValue) => {
     const selectedPage = parseInt(selectedValue);
     router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${selectedPage}`);
+  }}
+  onOpenChange={(isOpen) => {
+    setActiveDropdown(isOpen ? "page" : null);
+    setIsAnyDropdownOpen(isOpen);
   }}
 />
           </div>
@@ -429,28 +526,64 @@ onSelect={(selectedValue) => {
           {currentPagePosition}
         </div>
         
-        <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg mx-auto text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-center">{title}</h1>
-          <h2 className="text-lg sm:text-xl text-center mb-6">{dynamicPageTitle}</h2>
+        <div className="flex flex-col items-start w-full max-w-md sm:max-w-lg mx-auto px-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
+          <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
           {sentences.map((s, i) => (
-  <div key={i} className="my-12">
-    <div className="flex flex-col items-center justify-center space-y-2">
+  <div key={i} className="my-12 w-full">
+    <div className="flex flex-col space-y-2 w-full">
 
       {/* Horizontal emoji + audio bar row */}
-      <div className="w-full flex items-center gap-3 px-4 sm:px-6">
-        {/* Emoji buttons */}
-        <div className="flex items-center gap-2">
-          <button onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}/line${i + 1}.mp3`, false, s[oppositeLang])}>🔊</button>
-          <button onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}-slow/line${i + 1}.mp3`, true, s[oppositeLang])}>🐢</button>
+      <div className="flex items-center gap-3 justify-start px-2">
+        {/* Emoji buttons - conditionally visible */}
+        <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <button 
+            onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}/line${i + 1}.mp3`, false, s[oppositeLang])}
+            className="hover:scale-110 transition"
+            data-audio-control="speaker"
+          >
+            🔊
+          </button>
+          <button 
+            onClick={() => handlePlay(i, `/audio/${typedLang}/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${pageNumber}-slow/line${i + 1}.mp3`, true, s[oppositeLang])}
+            className="hover:scale-110 transition"
+            data-audio-control="turtle"
+          >
+            🐢
+          </button>
           {translationMode === "free" && (
-            <button onClick={() => {
-              const el = translationRefs.current[i];
-              if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-            }} className="hover:scale-110 transition">✍️</button>
+            <button 
+              onClick={() => {
+                const el = translationRefs.current[i];
+                if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
+              }} 
+              className="hover:scale-110 transition"
+              data-translation-control="pencil"
+            >
+              ✍️
+            </button>
           )}
           {translationMode === "premium" && (
-            <button onClick={() => setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))} className="hover:scale-110 transition">💎</button>
+            <>
+              <button 
+                onClick={() => {
+                  const el = translationRefs.current[i];
+                  if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
+                }} 
+                className="hover:scale-110 transition"
+                data-translation-control="pencil"
+              >
+                ✍️
+              </button>
+              <button 
+                onClick={() => setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))} 
+                className="hover:scale-110 transition"
+                data-translation-control="diamond"
+              >
+                💎
+              </button>
+            </>
           )}
         </div>
 
@@ -459,7 +592,7 @@ onSelect={(selectedValue) => {
           {activeAudio?.index === i ? (
             <>
               {renderProgressBar(activeAudio)}
-              <button onClick={() => setActiveAudio(null)} className="ml-2 text-xl hover:scale-110 transition z-10">✖️</button>
+              <button onClick={() => setActiveAudio(null)} className="ml-2 text-xl hover:scale-110 transition z-10" data-audio-control="close">✖️</button>
             </>
           ) : (
             <div className="w-full h-[6px] bg-transparent" />
@@ -467,25 +600,23 @@ onSelect={(selectedValue) => {
         </div>
       </div>
 
-      {/* Main sentence display with HTML support */}
-      <div 
-        className="text-lg text-center mb-4 px-4"
-        dangerouslySetInnerHTML={{ __html: s[oppositeLang] }}
-      />
 
-      {/* Translator section */}
-<UnifiedTranslator
-  sentence={s[oppositeLang]}
-  enabled
-  readOnlyMode={translationMode === "free"}
-  autoTriggerAll={!!premiumTriggers[i]}
-/>
-<p
-  ref={el => { translationRefs.current[i] = el; }}
-  className="translation hidden text-muted-foreground text-sm mt-2"
->
-  {s[typedLang]}
-</p>
+      {/* Text content - ensure consistent left alignment */}
+      <div className="w-full px-2">
+        <UnifiedTranslator
+          sentence={s[oppositeLang]}
+          enabled={!isAnyDropdownOpen && !menuOpen}
+          readOnlyMode={translationMode === "free"}
+          autoTriggerAll={premiumTriggers[i] || false}
+          onTranslationStateChange={(hasActive) => handleTranslationStateChange(i, hasActive)}
+        />
+        <p
+          ref={el => { translationRefs.current[i] = el; }}
+          className="translation hidden text-muted-foreground text-sm mt-2 text-left"
+        >
+          {s[typedLang]}
+        </p>
+      </div>
     </div>
   </div>
 ))}

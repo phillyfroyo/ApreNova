@@ -3,18 +3,21 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
+import { t } from '@/lib/t';
+import type { Language } from "@/types/i18n";
 
 
 interface Props {
   sentence: string;
   enabled?: boolean;
-  autoTriggerAll?: boolean;
+  autoTriggerAll?: boolean | number;
   readOnlyMode?: boolean; // 🍌 NEW: disables real GPT fetch
+  onTranslationStateChange?: (hasActiveTranslation: boolean) => void;
 }
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -22,6 +25,12 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const [translations, setTranslations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Notify parent of translation state changes
+  useEffect(() => {
+    const hasActiveTranslation = translations.length > 0 || loading || error !== "";
+    onTranslationStateChange?.(hasActiveTranslation);
+  }, [translations.length, loading, error]); // Removed onTranslationStateChange from deps
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -30,7 +39,7 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const pathname = usePathname() ?? "";
   const pathParts = pathname.split("/");
   const currentLevel = pathParts[4] || "l2"; // Fallback to l1 if undefined
-  const currentLang = pathParts[1] || "es"; // 👈 'es' or 'en'
+  const currentLang = (pathParts[1] as Language) || "es"; // 👈 'es' or 'en'
   const isSpanishToEnglish = currentLang === "en";
   const showSpanishFirst = currentLang === "en";
 
@@ -216,30 +225,50 @@ const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
     return i >= startIdx && i <= endIdx;
   };
 
-  const [hasAutoTranslated, setHasAutoTranslated] = useState(false);
-
+  const [lastAutoTriggerCount, setLastAutoTriggerCount] = useState(0);
 
 useEffect(() => {
-  if (enabled && autoTriggerAll && !hasAutoTranslated) {
-    setStartIdx(0);
-    setEndIdx(words.length - 1);
-    fetchTranslation(0, words.length - 1);
-    setHasAutoTranslated(true);
+  if (enabled && autoTriggerAll) {
+    const currentTriggerCount = typeof autoTriggerAll === 'number' ? autoTriggerAll : 1;
+    if (currentTriggerCount !== lastAutoTriggerCount) {
+      setStartIdx(0);
+      setEndIdx(words.length - 1);
+      fetchTranslation(0, words.length - 1);
+      setLastAutoTriggerCount(currentTriggerCount);
+    }
   }
-}, [enabled, autoTriggerAll, words.length, fetchTranslation, hasAutoTranslated]);
+}, [enabled, autoTriggerAll, words.length, fetchTranslation, lastAutoTriggerCount]);
 
 useEffect(() => {
-  setHasAutoTranslated(false);
+  setLastAutoTriggerCount(0);
 }, [sentence]);
 
 useEffect(() => {
   const handleOutsideClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    // ALWAYS exempt audio/translation controls - don't rely on timing
+    if (
+      target.hasAttribute('data-audio-control') ||       // Audio buttons (speaker, turtle, close)
+      target.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond)
+      target.closest('[data-audio-scrubber]') ||         // Audio scrubber area
+      target.closest('[data-audio-control]') ||          // Any audio control element
+      target.closest('[data-translation-control]')       // Any translation control element
+    ) {
+      console.log('🎯 UnifiedTranslator: Exempting audio/translation control - not closing translation');
+      return; // Never close translation for these elements
+    }
+    
     if (
       containerRef.current &&
       !containerRef.current.contains(e.target as Node) &&
       tooltipRef.current &&
       !tooltipRef.current.contains(e.target as Node)
     ) {
+      // Mark this element as having just closed a translation
+      target.setAttribute('data-just-closed-translation', 'true');
+      setTimeout(() => target.removeAttribute('data-just-closed-translation'), 10);
+      
       setStartIdx(null);
       setEndIdx(null);
       setTranslations([]);
@@ -247,8 +276,8 @@ useEffect(() => {
     }
   };
 
-  document.addEventListener("mousedown", handleOutsideClick);
-  return () => document.removeEventListener("mousedown", handleOutsideClick);
+  document.addEventListener("mousedown", handleOutsideClick, true); // Use capture phase
+  return () => document.removeEventListener("mousedown", handleOutsideClick, true);
 }, []);
 
 // ✅ This should be completely separate
@@ -268,9 +297,9 @@ useEffect(() => {
 }, [sentence]);
 
           return (
-  <div className="p-4 relative">
+  <div className="relative" data-translator>
     <div ref={containerRef} className="relative">
-      <div ref={sentenceRef} className="hidden inline-flex flex-wrap justify-center gap-1 text-lg text-center">
+      <div ref={sentenceRef} className="flex flex-wrap justify-start gap-1 text-lg text-left w-full">
       {words.map((word, i) => (
         <button
           ref={(el) => {
@@ -295,20 +324,21 @@ useEffect(() => {
   ref={tooltipRef}
   style={sentenceWidth ? { width: sentenceWidth } : undefined}
   className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50"
+  data-tooltip
 >
         {error && <div className="text-sm text-red-500">{error}</div>}
 
         <div className="text-sm text-left">
           {loading && (
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-semibold">Translating…</span>
+              <span className="font-semibold">{t(currentLang, "translator", "translating")}…</span>
               <span className="animate-pulse text-lg">🧠</span>
             </div>
           )}
 
           {translations.length > 0 && (
             <div className="mt-1 space-y-2">
-              <p className="font-semibold">Translation:</p>
+              <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
 <ul className="list-disc list-inside">
   <li>
     <button
@@ -323,7 +353,7 @@ useEffect(() => {
               {translations.length > 1 && (
                 <>
                   <p className="font-semibold mt-2">
-                    Other common uses of{" "}
+                    {t(currentLang, "translator", "otherCommonUses")}{" "}
                     <span className="italic text-gray-800">
                       {words.slice(startIdx!, endIdx! + 1).join(" ")}
                     </span>

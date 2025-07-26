@@ -153,6 +153,12 @@ premium: {
   subscribeButton: "Suscribirme a Premium"
 },
 
+translator: {
+  translation: "Traducción",
+  otherCommonUses: "Otros usos comunes de",
+  translating: "Traduciendo"
+},
+
 storiesMetadata: {
   aventura: {
     title: "La Adventure",

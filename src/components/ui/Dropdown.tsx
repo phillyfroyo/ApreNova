@@ -12,6 +12,7 @@ type DropdownProps = {
   options: DropdownOption[];
   onSelect: (value: string) => void;
   variant?: DropdownVariant;
+  onOpenChange?: (isOpen: boolean) => void;
 };
 
 const baseStyles: Record<DropdownVariant, string> = {
@@ -31,14 +32,20 @@ export default function Dropdown({
   options,
   onSelect,
   variant = "default",
+  onOpenChange,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
+        handleOpenChange(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -52,10 +59,11 @@ export default function Dropdown({
     ref={dropdownRef}
     className="inline-block relative w-[300px]" // 👈 FIXED WIDTH HERE
     onClick={(e) => e.stopPropagation()}
+    data-dropdown
   >
     <button
       type="button"
-      onClick={() => setOpen((prev) => !prev)}
+      onClick={() => handleOpenChange(!open)}
       className={`${baseStyles[variant]} cursor-pointer w-full text-left`}
     >
       {label}
@@ -68,7 +76,7 @@ export default function Dropdown({
             key={value}
             onClick={() => {
               onSelect(value);
-              setOpen(false);
+              handleOpenChange(false);
             }}
             className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
           >

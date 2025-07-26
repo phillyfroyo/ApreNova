@@ -152,6 +152,12 @@ premium: {
   subscribeButton: "Subscribe to Premium"
 },
 
+translator: {
+  translation: "Translation",
+  otherCommonUses: "Other common uses of",
+  translating: "Translating"
+},
+
 storiesMetadata: {
   aventura: {
     title: "Aventura",
