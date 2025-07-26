@@ -10,7 +10,7 @@ if (!lng || !["es", "en"].includes(lng)) {
   console.error("❌ Usage: node generate-audio.js <es|en> [storySlug]");
   console.error("   Examples:");
   console.error("     node generate-audio.js es aventura");
-  console.error("     node generate-audio.js en el-bosque-perdido");
+  console.error("     node generate-audio.js en the-last-word");
   process.exit(1);
 }
 

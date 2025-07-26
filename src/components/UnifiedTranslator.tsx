@@ -270,7 +270,7 @@ useEffect(() => {
           return (
   <div className="p-4 relative">
     <div ref={containerRef} className="relative">
-      <div ref={sentenceRef} className="inline-flex flex-wrap justify-center gap-1 text-lg text-center">
+      <div ref={sentenceRef} className="hidden inline-flex flex-wrap justify-center gap-1 text-lg text-center">
       {words.map((word, i) => (
         <button
           ref={(el) => {

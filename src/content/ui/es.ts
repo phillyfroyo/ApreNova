@@ -158,8 +158,8 @@ storiesMetadata: {
     title: "La Adventure",
     description: "Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc)",
   },
-  "el-bosque-perdido": {
-    title: "El Bosque Perdido",
+  "the-last-word": {
+    title: "La Última Palabra",
     description: "Misterios y criaturas ocultas en un bosque encantado.",
   },
   "misterio-en-la-selva": {

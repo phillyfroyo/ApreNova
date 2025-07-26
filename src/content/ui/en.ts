@@ -157,8 +157,8 @@ storiesMetadata: {
     title: "Aventura",
     description: "Mysteries and hidden creatures in an enchanted forest. Mysteries and hidden creatures in an enchanted forest.Mysteries and hidden creatures in an enchanted forest.",
   },
-  "el-bosque-perdido": {
-    title: "The Lost Forest",
+  "the-last-word": {
+    title: "The Last Word",
     description: "Mysteries and hidden creatures in an enchanted forest.",
   },
   "misterio-en-la-selva": {

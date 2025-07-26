@@ -119,7 +119,7 @@ const handleGlobalUp = useCallback(() => {
 useEffect(() => {
   if (storySlug === "aventura") {
     setTranslationMode("premium");
-  } else if (storySlug === "el-bosque-perdido") {
+  } else if (storySlug === "the-last-word") {
     setTranslationMode(isPremiumUser ? "premium" : "free");
   }
 }, [storySlug, isPremiumUser]);
@@ -159,7 +159,7 @@ useEffect(() => {
 
   const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
   aventura: "alwaysPremium",
-  "el-bosque-perdido": "conditional",
+  "the-last-word": "conditional",
   // add more stories here later
 };
 const accessType = storyAccessMap[storySlug] || "alwaysFree";
@@ -466,6 +466,12 @@ onSelect={(selectedValue) => {
           )}
         </div>
       </div>
+
+      {/* Main sentence display with HTML support */}
+      <div 
+        className="text-lg text-center mb-4 px-4"
+        dangerouslySetInnerHTML={{ __html: s[oppositeLang] }}
+      />
 
       {/* Translator section */}
 <UnifiedTranslator

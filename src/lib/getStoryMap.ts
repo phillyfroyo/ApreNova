@@ -10,27 +10,24 @@ export async function getStoryMap(storySlug: string, level: string): Promise<{
     pages: number[];
   }[];
 }> {
-  const basePath = path.join(process.cwd(), "src", "content", storySlug, level);
-  const chapterDirs = fs
-    .readdirSync(basePath, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory() && dirent.name.startsWith("ch"))
-    .map((dirent) => dirent.name);
+  try {
+    const consolidatedFile = await import(`@/content/${storySlug}/${level}/content.ts`);
+    const levelContent = consolidatedFile.default || consolidatedFile.levelContent;
+    const chapters = Object.keys(levelContent.chapters).map((chapterKey) => {
+      const chapterNum = parseInt(chapterKey);
+      const pages = Object.keys(levelContent.chapters[chapterNum].pages).map(pageKey => parseInt(pageKey));
+      return { chapter: chapterNum, pages: pages.sort((a, b) => a - b) };
+    });
 
-  const hasChapters = chapterDirs.length > 1;
-
-  const chapters = chapterDirs.map((chName) => {
-    const chNum = parseInt(chName.replace("ch", ""));
-    const pageFiles = fs
-      .readdirSync(path.join(basePath, chName))
-      .filter((f) => f.endsWith(".en.ts") && f.startsWith("page-"));
-    const pageNums = pageFiles.map((f) =>
-      parseInt(f.replace("page-", "").replace(".en.ts", ""))
-    );
-    return { chapter: chNum, pages: pageNums.sort((a, b) => a - b) };
-  });
-
-  return {
-    hasChapters,
-    chapters: chapters.sort((a, b) => a.chapter - b.chapter),
-  };
+    return {
+      hasChapters: levelContent.hasChapters,
+      chapters: chapters.sort((a, b) => a.chapter - b.chapter),
+    };
+  } catch (err) {
+    console.error(`Failed to load consolidated file for ${storySlug}/${level}:`, err);
+    return {
+      hasChapters: false,
+      chapters: [],
+    };
+  }
 }

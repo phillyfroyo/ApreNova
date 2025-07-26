@@ -36,8 +36,8 @@ export const STORY_METADATA: StoryMetadata[] = [
     isPremiumOnly: false,
   },
   {
-    slug: slugify("El Bosque Perdido"),
-    image: "/images/placeholder1.png",
+    slug: "the-last-word",
+    image: "/images/the-last-word-thumbnail.png",
     levels: ["l1", "l2", "l3", "l4", "l5"],
     isPremiumOnly: false,
   },
