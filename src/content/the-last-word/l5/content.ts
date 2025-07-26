@@ -121,7 +121,6 @@ export const levelContent = {
         },
         10: {
           lines: [
-            { en: "Then she closed her eyes. \"Just like at home,\" she told herself. \"Just like reading with Dad.\"", es: "Entonces cerró los ojos. \"Como en casa,\" se dijo. \"Como cuando leía con papá.\"" },
             { en: "\"Just like at home,\" she told herself. \"Just like reading with Dad.\"", es: "\"Como en casa,\" se dijo. \"Como cuando leía con papá.\"" },
             { en: "And she began. Her voice was soft, but she didn't stop.", es: "Y comenzó. Su voz era suave, pero no se detuvo." },
             { en: "She spoke about school. She spoke about life. She spoke about her dog.", es: "Habló de la escuela. Habló de la vida. Habló de su perro." },
