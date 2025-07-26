@@ -2,12 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { quizL1_en } from '@/content/quiz/l1.en';
-import { quizL1_es } from '@/content/quiz/l1.es';
-import { quizL2_en } from '@/content/quiz/l2.en';
-import { quizL2_es } from '@/content/quiz/l2.es';
-import { quizL3_en } from '@/content/quiz/l3.en';
-import { quizL3_es } from '@/content/quiz/l3.es';
+import { quizL1_en } from '@/content/quiz/l1';
+import { quizL2_en } from '@/content/quiz/l2';
+import { quizL3_en } from '@/content/quiz/l3';
 
 type QuizQuestion = {
   id: string;
@@ -19,9 +16,9 @@ type QuizQuestion = {
 type QuizLevel = 'l1' | 'l2' | 'l3';
 
 const getQuizSet = (lang: string) => ({
-  l1: lang === 'es' ? quizL1_es : quizL1_en,
-  l2: lang === 'es' ? quizL2_es : quizL2_en,
-  l3: lang === 'es' ? quizL3_es : quizL3_en,
+  l1: quizL1_en,
+  l2: quizL2_en,
+  l3: quizL3_en,
 });
 
 export function useQuizFlow(typedLang: string) {
