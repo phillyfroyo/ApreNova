@@ -89,7 +89,7 @@ export default function StoryLayoutAzureSimple({
             <div className="space-y-3">
               {/* English TTS Testing */}
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">🇺🇸 ENGLISH (American): "{sentence.en}"</div>
+                <div className="text-xs font-medium text-gray-500 mb-2">🇺🇸 ENGLISH (American): &quot;{sentence.en}&quot;</div>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => testAzureTTS(sentence.en, 'normal', 'en')}
@@ -111,7 +111,7 @@ export default function StoryLayoutAzureSimple({
 
               {/* Spanish TTS Testing */}
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">🇲🇽 SPANISH (Mexican): "{sentence.es}"</div>
+                <div className="text-xs font-medium text-gray-500 mb-2">🇲🇽 SPANISH (Mexican): &quot;{sentence.es}&quot;</div>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => testAzureTTS(sentence.es, 'normal', 'es')}
