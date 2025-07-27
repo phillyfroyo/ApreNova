@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/6eac5dd1b4bc3e472121ce5a22cafb718d4db14ba031d599ec30899242b8c963.mp3",
+  "wordTimings": [
+    {
+      "word": "Mi",
+      "startTime": 0.05,
+      "endTime": 0.2,
+      "confidence": 1
+    },
+    {
+      "word": "nombre",
+      "startTime": 0.2125,
+      "endTime": 0.675,
+      "confidence": 1
+    },
+    {
+      "word": "es",
+      "startTime": 0.6875,
+      "endTime": 0.8625,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 0.875,
+      "endTime": 1.275,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.275,
+  "createdAt": 1753637429338,
+  "accessedAt": 1753637429338,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "83acf4594bfd7c2d13cffe9692cb4046"
+}
