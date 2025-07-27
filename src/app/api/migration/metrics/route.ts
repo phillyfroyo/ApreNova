@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Only allow admins to view metrics
-    if (!session?.user?.isAdmin) {
+    // Basic authentication check - require logged in user
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
