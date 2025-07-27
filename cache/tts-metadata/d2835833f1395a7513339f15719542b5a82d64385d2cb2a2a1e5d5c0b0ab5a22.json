@@ -1,0 +1,71 @@
+{
+  "audioUrl": "/cache/tts-audio/d2835833f1395a7513339f15719542b5a82d64385d2cb2a2a1e5d5c0b0ab5a22.mp3",
+  "wordTimings": [
+    {
+      "word": "My",
+      "startTime": 0.071437,
+      "endTime": 0.428562,
+      "confidence": 1
+    },
+    {
+      "word": "name",
+      "startTime": 0.732125,
+      "endTime": 1.142812,
+      "confidence": 1
+    },
+    {
+      "word": "is",
+      "startTime": 1.375,
+      "endTime": 1.875,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 2.089312,
+      "endTime": 2.821437,
+      "confidence": 1
+    },
+    {
+      "word": ", and",
+      "startTime": 3.089312,
+      "endTime": 3.410749,
+      "confidence": 1
+    },
+    {
+      "word": "I",
+      "startTime": 3.660687,
+      "endTime": 3.910687,
+      "confidence": 1
+    },
+    {
+      "word": "live",
+      "startTime": 4.25,
+      "endTime": 4.660687,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 4.875,
+      "endTime": 5.125,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 5.392875,
+      "endTime": 5.589312,
+      "confidence": 1
+    },
+    {
+      "word": "quiet",
+      "startTime": 5.928562,
+      "endTime": 6.696437,
+      "confidence": 1
+    }
+  ],
+  "duration": 6.696437,
+  "createdAt": 1753628499271,
+  "accessedAt": 1753628499271,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "9bf947f7c4ae31e9de526ce047279499"
+}

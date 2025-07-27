@@ -1,0 +1,101 @@
+{
+  "audioUrl": "/cache/tts-audio/53746affbdbf849910d057b6371e3fcb8e622a7184c33c79e98ee7fbda63477a.mp3",
+  "wordTimings": [
+    {
+      "word": "The",
+      "startTime": 0.071437,
+      "endTime": 0.303562,
+      "confidence": 1
+    },
+    {
+      "word": "next",
+      "startTime": 0.321437,
+      "endTime": 0.785749,
+      "confidence": 1
+    },
+    {
+      "word": "morning",
+      "startTime": 0.803562,
+      "endTime": 1.339249,
+      "confidence": 1
+    },
+    {
+      "word": "we",
+      "startTime": 1.785687,
+      "endTime": 1.964249,
+      "confidence": 1
+    },
+    {
+      "word": "packed",
+      "startTime": 1.982125,
+      "endTime": 2.410687,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 2.428562,
+      "endTime": 2.517874,
+      "confidence": 1
+    },
+    {
+      "word": "few",
+      "startTime": 2.535687,
+      "endTime": 2.821374,
+      "confidence": 1
+    },
+    {
+      "word": "things",
+      "startTime": 2.839312,
+      "endTime": 3.374999,
+      "confidence": 1
+    },
+    {
+      "word": "and",
+      "startTime": 3.392875,
+      "endTime": 3.589312,
+      "confidence": 1
+    },
+    {
+      "word": "left",
+      "startTime": 3.607125,
+      "endTime": 4.071437,
+      "confidence": 1
+    },
+    {
+      "word": "before",
+      "startTime": 4.089312,
+      "endTime": 4.499999,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 4.517875,
+      "endTime": 4.66075,
+      "confidence": 1
+    },
+    {
+      "word": "sun",
+      "startTime": 4.678562,
+      "endTime": 5.017874,
+      "confidence": 1
+    },
+    {
+      "word": "was",
+      "startTime": 5.035687,
+      "endTime": 5.232124,
+      "confidence": 1
+    },
+    {
+      "word": "high",
+      "startTime": 5.25,
+      "endTime": 5.857125,
+      "confidence": 1
+    }
+  ],
+  "duration": 5.857125,
+  "createdAt": 1753620721158,
+  "accessedAt": 1753620826093,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "9db5b119c2bdb5f4e626215e547e1ee2"
+}

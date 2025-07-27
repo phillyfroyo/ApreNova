@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
 import { getStoryContent } from "@/lib/getStoryContent";
 import { STORY_METADATA, getStoryTitle } from "@/lib/stories";
-import StoryLayout from "@/components/StoryLayout";
+import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
 import type { Language } from "@/types/i18n";
 import { getStoryMap } from "@/lib/getStoryMap";
 
@@ -29,7 +29,7 @@ if (!story || !story.lines) return notFound();
 
 
   return (
-    <StoryLayout
+    <StoryLayoutWithAzureTTS
       title={getStoryTitle(lng, storySlug)}
       storySlug={storySlug}
       sentences={story.lines}

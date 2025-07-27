@@ -52,6 +52,7 @@ export default function StoryLayoutWithAzureTTS({
   const {
     playbackState,
     playTTS,
+    playTTSSegment,
     pause,
     resume,
     stop,
@@ -87,6 +88,9 @@ export default function StoryLayoutWithAzureTTS({
   const [isAnyDropdownOpen, setIsAnyDropdownOpen] = useState(false);
   const [showEmojiButtons, setShowEmojiButtons] = useState(false);
   const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
+  const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
+  const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
+  const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
   
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
@@ -102,36 +106,10 @@ export default function StoryLayoutWithAzureTTS({
   const chapterNumber = parseInt(currentChapter.replace("ch", ""));
   const pageNumber = parseInt(currentPage.replace("page-", ""));
 
-  // Pre-cache TTS for current page
+  // Disabled aggressive pre-caching to avoid rate limits
   useEffect(() => {
-    const preCachePage = async () => {
-      const requests = [];
-      
-      for (let i = 0; i < sentences.length; i++) {
-        const sentence = sentences[i];
-        const text = typedLang === "es" ? sentence.es : sentence.en;
-        const language = typedLang === "es" ? "es-ES" : "en-US";
-        
-        if (text && text.trim()) {
-          // Cache both normal and slow speeds
-          requests.push(
-            createRequest(text, language, "normal", storySlug, `${currentChapter}-${currentPage}`),
-            createRequest(text, language, "slow", storySlug, `${currentChapter}-${currentPage}`)
-          );
-        }
-      }
-      
-      if (requests.length > 0) {
-        try {
-          await preCache(requests);
-        } catch (error) {
-          console.warn('Pre-caching failed:', error);
-        }
-      }
-    };
-
-    preCachePage();
-  }, [sentences, typedLang, storySlug, currentChapter, currentPage, preCache, createRequest]);
+    console.log('Azure TTS ready for on-demand generation');
+  }, [sentences, typedLang, storySlug, currentChapter, currentPage]);
 
   // Sync playback state with activeAudio
   useEffect(() => {
@@ -146,11 +124,40 @@ export default function StoryLayoutWithAzureTTS({
     } else if (!playbackState.isPlaying && activeAudio?.isPlaying) {
       setActiveAudio(prev => prev ? { ...prev, isPlaying: false } : null);
     }
-  }, [playbackState, activeAudio]);
+  }, [playbackState.isPlaying, playbackState.currentTime, playbackState.duration, playbackState.currentWordIndex]);
 
   const handleTranslationStateChange = useCallback((index: number, hasActive: boolean) => {
     setActiveTranslations(prev => ({ ...prev, [index]: hasActive }));
   }, []);
+
+  const handleWordSelectionChange = useCallback((index: number, selection: { start: number; end: number } | null) => {
+    setWordSelections(prev => ({ ...prev, [index]: selection }));
+    
+    // Show emoji buttons when words are selected
+    if (selection) {
+      setShowEmojiButtons(true);
+    }
+  }, []); // Remove showEmojiButtons from dependency array to prevent infinite loop
+
+  const handleManualTranslate = useCallback((index: number, translateFn: () => void) => {
+    setManualTranslateFunctions(prev => ({ ...prev, [index]: translateFn }));
+  }, []);
+
+  const handleClearSelection = useCallback((index: number, clearFn: () => void) => {
+    setClearSelectionFunctions(prev => ({ ...prev, [index]: clearFn }));
+  }, []);
+
+  // Helper function to check if any words are currently selected
+  const hasSelectedWords = useCallback(() => {
+    return Object.values(wordSelections).some(selection => selection !== null);
+  }, [wordSelections]);
+
+  // Helper function to clear all word selections
+  const clearAllWordSelections = useCallback(() => {
+    setWordSelections({});
+    // Clear internal selection state in all UnifiedTranslator components
+    Object.values(clearSelectionFunctions).forEach(clearFn => clearFn());
+  }, [clearSelectionFunctions]);
 
   const dynamicPageTitle = storyMap.hasChapters
     ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
@@ -254,7 +261,11 @@ export default function StoryLayoutWithAzureTTS({
     });
 
     try {
-      const language = typedLang === "es" ? "es-ES" : "en-US";
+      // Determine language based on which text is being spoken
+      // If we're on /en/ route, we speak Spanish text (oppositeLang), so use Spanish voice
+      // If we're on /es/ route, we speak English text (oppositeLang), so use English voice
+      const isSpanishText = typedLang === "en"; // /en/ route = Spanish text being spoken
+      const language = isSpanishText ? "es-ES" : "en-US";
       const speed = isSlow ? "slow" : "normal";
       
       const request = createRequest(
@@ -265,7 +276,11 @@ export default function StoryLayoutWithAzureTTS({
         `${currentChapter}-${currentPage}-line${index + 1}`
       );
 
-      await playTTS(request);
+      // Check if there's a word selection for this sentence
+      const wordSelection = wordSelections[index];
+      
+      // Always use playTTSSegment which handles both word selection and slow speed comma logic
+      await playTTSSegment(request, wordSelection);
 
       // Update line width for progress bar
       const width = textRefs.current[index]?.offsetWidth || 0;
@@ -386,12 +401,19 @@ export default function StoryLayoutWithAzureTTS({
         return;
       }
       
+      // Priority 1: If words are selected, deselect them first
+      if (hasSelectedWords()) {
+        clearAllWordSelections();
+        return;
+      }
+      
+      // Priority 2: Toggle emoji visibility (only when no words are selected)
       setShowEmojiButtons(prev => !prev);
     };
 
     document.addEventListener('click', handleGlobalClick);
     return () => document.removeEventListener('click', handleGlobalClick);
-  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations, pause]);
+  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations, pause, hasSelectedWords, clearAllWordSelections]);
 
   const renderProgressBar = (audio: ActiveAudio) => {
     const percent = audio.duration > 0 ? (audio.progress / audio.duration) * 100 : 0;
@@ -420,17 +442,11 @@ export default function StoryLayoutWithAzureTTS({
           <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/10 rounded-full shadow-lg shadow-black/50 pointer-events-auto" />
         </div>
         
-        {/* Word highlighting indicator */}
-        {audio.currentWordIndex >= 0 && (
-          <div className="absolute top-0 bottom-0 flex items-center">
-            <div className="text-xs text-white/80 bg-black/50 px-2 py-1 rounded">
-              Word {audio.currentWordIndex + 1}
-            </div>
-          </div>
-        )}
+        
       </div>
     );
   };
+
 
   return (
     <div
@@ -566,7 +582,7 @@ export default function StoryLayoutWithAzureTTS({
               <div className="flex flex-col space-y-2 w-full">
                 {/* Horizontal emoji + audio bar row */}
                 <div className="flex items-center gap-3 justify-start px-2">
-                  {/* Enhanced emoji buttons with loading states */}
+                  {/* Enhanced emoji buttons with loading states and selection indicators */}
                   <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <button 
                       onClick={() => handlePlay(i, false, s[oppositeLang])}
@@ -574,14 +590,20 @@ export default function StoryLayoutWithAzureTTS({
                         playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow 
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''
+                      } ${
+                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
                       }`}
                       data-audio-control="speaker"
                       disabled={playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow}
+                      title={wordSelections[i] ? 'Play selected words' : 'Play full sentence'}
                     >
                       {playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Volume2 className="h-5 w-5" />
+                        <Volume2 className={`h-5 w-5 ${wordSelections[i] ? 'text-blue-600' : ''}`} />
+                      )}
+                      {wordSelections[i] && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
                       )}
                     </button>
                     
@@ -591,51 +613,48 @@ export default function StoryLayoutWithAzureTTS({
                         playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow 
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''
+                      } ${
+                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
                       }`}
                       data-audio-control="turtle"
                       disabled={playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow}
+                      title={wordSelections[i] ? 'Play selected words (slow)' : 'Play full sentence (slow)'}
                     >
                       {playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Turtle className="h-5 w-5" />
+                        <Turtle className={`h-5 w-5 ${wordSelections[i] ? 'text-blue-600' : ''}`} />
+                      )}
+                      {wordSelections[i] && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                      )}
+                    </button>
+
+                    <button 
+                      onClick={() => manualTranslateFunctions[i]?.()}
+                      className={`hover:scale-110 transition relative ${
+                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
+                      }`}
+                      data-translation-control="diamond"
+                      title={wordSelections[i] ? 'Translate selected words' : 'Translate full sentence'}
+                    >
+                      <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>💎</span>
+                      {wordSelections[i] && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
                       )}
                     </button>
                     
-                    {/* Translation buttons (same as original) */}
-                    {translationMode === "free" && (
-                      <button 
-                        onClick={() => {
-                          const el = translationRefs.current[i];
-                          if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                        }} 
-                        className="hover:scale-110 transition"
-                        data-translation-control="pencil"
-                      >
-                        ✍️
-                      </button>
-                    )}
-                    {translationMode === "premium" && (
-                      <>
-                        <button 
-                          onClick={() => {
-                            const el = translationRefs.current[i];
-                            if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                          }} 
-                          className="hover:scale-110 transition"
-                          data-translation-control="pencil"
-                        >
-                          ✍️
-                        </button>
-                        <button 
-                          onClick={() => setPremiumTriggers(prev => ({ ...prev, [i]: (prev[i] || 0) + 1 }))} 
-                          className="hover:scale-110 transition"
-                          data-translation-control="diamond"
-                        >
-                          💎
-                        </button>
-                      </>
-                    )}
+                    {/* Pencil button for static translations */}
+                    <button 
+                      onClick={() => {
+                        const el = translationRefs.current[i];
+                        if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
+                      }} 
+                      className="hover:scale-110 transition"
+                      data-translation-control="pencil"
+                    >
+                      ✍️
+                    </button>
                   </div>
 
                   {/* Enhanced audio bar with word timing */}
@@ -668,6 +687,9 @@ export default function StoryLayoutWithAzureTTS({
                     readOnlyMode={translationMode === "free"}
                     autoTriggerAll={premiumTriggers[i] || false}
                     onTranslationStateChange={(hasActive) => handleTranslationStateChange(i, hasActive)}
+                    onSelectionChange={(selection) => handleWordSelectionChange(i, selection)}
+                    onManualTranslate={(translateFn) => handleManualTranslate(i, translateFn)}
+                    onClearSelection={(clearFn) => handleClearSelection(i, clearFn)}
                   />
                   <p
                     ref={el => { translationRefs.current[i] = el; }}

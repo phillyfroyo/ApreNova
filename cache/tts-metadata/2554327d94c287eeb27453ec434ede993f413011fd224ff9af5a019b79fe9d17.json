@@ -1,0 +1,23 @@
+{
+  "audioUrl": "/cache/tts-audio/2554327d94c287eeb27453ec434ede993f413011fd224ff9af5a019b79fe9d17.mp3",
+  "wordTimings": [
+    {
+      "word": "Yo",
+      "startTime": 0.071437,
+      "endTime": 0.607124,
+      "confidence": 1
+    },
+    {
+      "word": "estuve",
+      "startTime": 0.928562,
+      "endTime": 1.821437,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.821437,
+  "createdAt": 1753630819511,
+  "accessedAt": 1753630819511,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "988a3f1d31a86c2c90cdfb108dfc78dd"
+}

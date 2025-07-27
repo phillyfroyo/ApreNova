@@ -1,0 +1,89 @@
+{
+  "audioUrl": "/cache/tts-audio/302b4dc1cc432aa547630f22b24b7628c2e94711f3e3fcaab79883741441b1fc.mp3",
+  "wordTimings": [
+    {
+      "word": "Most",
+      "startTime": 0.071437,
+      "endTime": 0.624999,
+      "confidence": 1
+    },
+    {
+      "word": "of",
+      "startTime": 0.642875,
+      "endTime": 0.732187,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 0.75,
+      "endTime": 0.875,
+      "confidence": 1
+    },
+    {
+      "word": "time",
+      "startTime": 0.892875,
+      "endTime": 1.464312,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 1.714312,
+      "endTime": 1.874999,
+      "confidence": 1
+    },
+    {
+      "word": "only",
+      "startTime": 1.892875,
+      "endTime": 2.357187,
+      "confidence": 1
+    },
+    {
+      "word": "sounds",
+      "startTime": 2.375,
+      "endTime": 2.946437,
+      "confidence": 1
+    },
+    {
+      "word": "were",
+      "startTime": 2.964312,
+      "endTime": 3.124999,
+      "confidence": 1
+    },
+    {
+      "word": "our",
+      "startTime": 3.142875,
+      "endTime": 3.303562,
+      "confidence": 1
+    },
+    {
+      "word": "steps",
+      "startTime": 3.321437,
+      "endTime": 3.928562,
+      "confidence": 1
+    },
+    {
+      "word": "and",
+      "startTime": 3.946437,
+      "endTime": 4.124999,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 4.142875,
+      "endTime": 4.267875,
+      "confidence": 1
+    },
+    {
+      "word": "wind",
+      "startTime": 4.285687,
+      "endTime": 4.946374,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.946374,
+  "createdAt": 1753620722962,
+  "accessedAt": 1753620826108,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "13737c0c96fb5dbecb47e71e06b7376b"
+}

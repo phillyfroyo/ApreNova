@@ -1,0 +1,83 @@
+{
+  "audioUrl": "/cache/tts-audio/ff87941d13379310f292b43c8f9fbb685f7663295bb47af23d511415d7bb8051.mp3",
+  "wordTimings": [
+    {
+      "word": "El",
+      "startTime": 0.071437,
+      "endTime": 0.267874,
+      "confidence": 1
+    },
+    {
+      "word": "papel",
+      "startTime": 0.285687,
+      "endTime": 0.749999,
+      "confidence": 1
+    },
+    {
+      "word": "parecía",
+      "startTime": 0.767875,
+      "endTime": 1.357187,
+      "confidence": 1
+    },
+    {
+      "word": "viejo",
+      "startTime": 1.375,
+      "endTime": 1.964312,
+      "confidence": 1
+    },
+    {
+      "word": "como",
+      "startTime": 2.410687,
+      "endTime": 2.696374,
+      "confidence": 1
+    },
+    {
+      "word": "si",
+      "startTime": 2.714312,
+      "endTime": 2.910749,
+      "confidence": 1
+    },
+    {
+      "word": "hubiera",
+      "startTime": 2.928562,
+      "endTime": 3.249999,
+      "confidence": 1
+    },
+    {
+      "word": "estado",
+      "startTime": 3.267875,
+      "endTime": 3.75,
+      "confidence": 1
+    },
+    {
+      "word": "escondido",
+      "startTime": 3.767875,
+      "endTime": 4.589312,
+      "confidence": 1
+    },
+    {
+      "word": "por",
+      "startTime": 4.607125,
+      "endTime": 4.875,
+      "confidence": 1
+    },
+    {
+      "word": "mucho",
+      "startTime": 4.892875,
+      "endTime": 5.357187,
+      "confidence": 1
+    },
+    {
+      "word": "tiempo",
+      "startTime": 5.375,
+      "endTime": 6,
+      "confidence": 1
+    }
+  ],
+  "duration": 6,
+  "createdAt": 1753629635216,
+  "accessedAt": 1753629635216,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "44260d756a5429446cd6043d56432acd"
+}

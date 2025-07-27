@@ -31,6 +31,7 @@ export default function MigrationDashboard() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -101,6 +102,53 @@ export default function MigrationDashboard() {
     // const interval = setInterval(fetchHealth, 30000);
     // return () => clearInterval(interval);
   }, []);
+
+  const handleMigrationAction = async (action: string) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch('/api/migration/control', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Migration action result:', result);
+        
+        // Update the health state to reflect the change
+        if (health) {
+          const newPhase = action === 'start_experimental' ? 'experimental' :
+                          action === 'advance_beta' ? 'beta' :
+                          action === 'full_rollout' ? 'production' :
+                          action === 'rollback' ? 'rollback' : health.migration.phase;
+          
+          const newPercentage = action === 'start_experimental' ? 5 :
+                               action === 'advance_beta' ? 25 :
+                               action === 'full_rollout' ? 100 :
+                               action === 'rollback' ? 0 : health.migration.userPercentage;
+
+          setHealth({
+            ...health,
+            migration: {
+              ...health.migration,
+              phase: newPhase as any,
+              userPercentage: newPercentage,
+              azureUsers: Math.round((newPercentage / 100) * health.migration.totalUsers)
+            }
+          });
+        }
+      } else {
+        console.error('Migration action failed:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Migration action error:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -346,27 +394,32 @@ export default function MigrationDashboard() {
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                disabled={health.migration.phase !== 'experimental'}
+                disabled={actionLoading || health.migration.phase === 'experimental'}
+                onClick={() => handleMigrationAction('start_experimental')}
               >
-                🧪 Start Experimental
+                🧪 {health.migration.phase === 'experimental' ? 'Experimental Active' : 'Start Experimental'}
               </Button>
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                disabled={health.migration.phase !== 'experimental'}
+                disabled={actionLoading || health.migration.phase !== 'experimental'}
+                onClick={() => handleMigrationAction('advance_beta')}
               >
                 🚀 Advance to Beta
               </Button>
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                disabled={health.migration.phase !== 'beta'}
+                disabled={actionLoading || health.migration.phase !== 'beta'}
+                onClick={() => handleMigrationAction('full_rollout')}
               >
                 ✅ Full Rollout
               </Button>
               <Button 
                 variant="destructive" 
                 className="flex items-center gap-2"
+                disabled={actionLoading}
+                onClick={() => handleMigrationAction('rollback')}
               >
                 ⬅️ Emergency Rollback
               </Button>

@@ -1,0 +1,65 @@
+{
+  "audioUrl": "/cache/tts-audio/e0a2ea1c15906b3e5139c7afae9419362db7a5e59cabce51ac696c88a91a011f.mp3",
+  "wordTimings": [
+    {
+      "word": "Faded",
+      "startTime": 0.05,
+      "endTime": 0.475,
+      "confidence": 1
+    },
+    {
+      "word": "lines",
+      "startTime": 0.4875,
+      "endTime": 0.8625,
+      "confidence": 1
+    },
+    {
+      "word": "ran",
+      "startTime": 0.875,
+      "endTime": 1.0875,
+      "confidence": 1
+    },
+    {
+      "word": "across",
+      "startTime": 1.1,
+      "endTime": 1.4875,
+      "confidence": 1
+    },
+    {
+      "word": "it",
+      "startTime": 1.5,
+      "endTime": 1.6625,
+      "confidence": 1
+    },
+    {
+      "word": "leading",
+      "startTime": 1.9,
+      "endTime": 2.2125,
+      "confidence": 1
+    },
+    {
+      "word": "into",
+      "startTime": 2.225,
+      "endTime": 2.4,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 2.4125,
+      "endTime": 2.525,
+      "confidence": 1
+    },
+    {
+      "word": "forest",
+      "startTime": 2.5375,
+      "endTime": 3.15,
+      "confidence": 1
+    }
+  ],
+  "duration": 3.15,
+  "createdAt": 1753620720493,
+  "accessedAt": 1753620826208,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "e2c1beb70c28e0f4ce4087c645bef8c3"
+}

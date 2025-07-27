@@ -1,0 +1,23 @@
+{
+  "audioUrl": "/cache/tts-audio/515ca7ec690c15bf966a9f483e1cabd43ecfb191c170b9663dfa1120dd346354.mp3",
+  "wordTimings": [
+    {
+      "word": "One",
+      "startTime": 0.071437,
+      "endTime": 0.678562,
+      "confidence": 1
+    },
+    {
+      "word": "afternoon",
+      "startTime": 0.928562,
+      "endTime": 1.928562,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.928562,
+  "createdAt": 1753629969488,
+  "accessedAt": 1753629969488,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "33ab257bb977af675de0de902e2828e9"
+}

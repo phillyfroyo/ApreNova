@@ -20,9 +20,9 @@ export default function StoryLayoutAzureSimple({
   const typedLang = (lng as Language) ?? "es";
   const oppositeLang = typedLang === "en" ? "es" : "en";
 
-  const testAzureTTS = async (text: string, speed: 'normal' | 'slow') => {
+  const testAzureTTS = async (text: string, speed: 'normal' | 'slow', language: 'en' | 'es') => {
     setIsGenerating(true);
-    setAudioStatus(`Generating ${speed} speed audio...`);
+    setAudioStatus(`Generating ${speed} speed audio (${language.toUpperCase()})...`);
 
     try {
       const response = await fetch('/api/azure-tts/generate', {
@@ -32,7 +32,7 @@ export default function StoryLayoutAzureSimple({
         },
         body: JSON.stringify({
           text: text,
-          language: typedLang === 'en' ? 'en-US' : 'es-ES',
+          language: language === 'en' ? 'en-US' : 'es-ES',
           speed: speed,
           storySlug: storySlug,
         }),
@@ -86,30 +86,58 @@ export default function StoryLayoutAzureSimple({
               </div>
             </div>
 
-            <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={() => testAzureTTS(sentence[oppositeLang], 'normal')}
-                disabled={isGenerating}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                🔊 Normal Speed {isGenerating && '(Generating...)'}
-              </button>
-              
-              <button
-                onClick={() => testAzureTTS(sentence[oppositeLang], 'slow')}
-                disabled={isGenerating}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                🐢 Slow Speed {isGenerating && '(Generating...)'}
-              </button>
+            <div className="space-y-3">
+              {/* English TTS Testing */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">🇺🇸 ENGLISH (American): "{sentence.en}"</div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => testAzureTTS(sentence.en, 'normal', 'en')}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🔊 Normal
+                  </button>
+                  
+                  <button
+                    onClick={() => testAzureTTS(sentence.en, 'slow', 'en')}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🐢 Slow
+                  </button>
+                </div>
+              </div>
+
+              {/* Spanish TTS Testing */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">🇲🇽 SPANISH (Mexican): "{sentence.es}"</div>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => testAzureTTS(sentence.es, 'normal', 'es')}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🔊 Normal
+                  </button>
+                  
+                  <button
+                    onClick={() => testAzureTTS(sentence.es, 'slow', 'es')}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-400 text-white rounded-md hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    🐢 Slow
+                  </button>
+                </div>
+              </div>
 
               <button
                 onClick={() => {
                   setAudioStatus('Ready');
                 }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
               >
-                🔄 Reset
+                🔄 Reset Status
               </button>
             </div>
           </div>
@@ -125,11 +153,15 @@ export default function StoryLayoutAzureSimple({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>
-              <span>Normal and slow speeds work</span>
+              <span>🇺🇸 English uses clear American accent (en-US-AriaNeural)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>
-              <span>Audio quality is acceptable</span>
+              <span>🇲🇽 Spanish uses Mexican accent (es-MX-DaliaNeural)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 bg-gray-200 rounded-full"></span>
+              <span>Normal and slow speeds work for both languages</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>

@@ -1,0 +1,83 @@
+{
+  "audioUrl": "/cache/tts-audio/021b2df6bf809c1d95b8064a5aaa2e3f88a217ae6cdfd768e911bc5aa1cacfc7.mp3",
+  "wordTimings": [
+    {
+      "word": "\"Tal",
+      "startTime": 0.071437,
+      "endTime": 0.482124,
+      "confidence": 1
+    },
+    {
+      "word": "vez",
+      "startTime": 0.928562,
+      "endTime": 1.517874,
+      "confidence": 1
+    },
+    {
+      "word": "conduce",
+      "startTime": 1.857125,
+      "endTime": 2.71425,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 3.053562,
+      "endTime": 3.339249,
+      "confidence": 1
+    },
+    {
+      "word": "algo",
+      "startTime": 3.678562,
+      "endTime": 4.178562,
+      "confidence": 1
+    },
+    {
+      "word": "importante",
+      "startTime": 4.571437,
+      "endTime": 5.553562,
+      "confidence": 1
+    },
+    {
+      "word": "\", dijo",
+      "startTime": 6.035687,
+      "endTime": 6.607124,
+      "confidence": 1
+    },
+    {
+      "word": "Juan",
+      "startTime": 6.982125,
+      "endTime": 7.428562,
+      "confidence": 1
+    },
+    {
+      "word": ", Yo",
+      "startTime": 7.803562,
+      "endTime": 8.196437,
+      "confidence": 1
+    },
+    {
+      "word": "estuve",
+      "startTime": 8.517875,
+      "endTime": 9.303562,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 9.678562,
+      "endTime": 9.946437,
+      "confidence": 1
+    },
+    {
+      "word": "acuerdo",
+      "startTime": 10.303562,
+      "endTime": 11.107124,
+      "confidence": 1
+    }
+  ],
+  "duration": 11.107124,
+  "createdAt": 1753630759851,
+  "accessedAt": 1753630759851,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "160bf1caf7b6cc51e61d7fe856fcde7e"
+}

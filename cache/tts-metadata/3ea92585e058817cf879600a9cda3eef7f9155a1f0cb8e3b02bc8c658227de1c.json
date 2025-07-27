@@ -1,0 +1,53 @@
+{
+  "audioUrl": "/cache/tts-audio/3ea92585e058817cf879600a9cda3eef7f9155a1f0cb8e3b02bc8c658227de1c.mp3",
+  "wordTimings": [
+    {
+      "word": "Still",
+      "startTime": 0.05,
+      "endTime": 0.575,
+      "confidence": 1
+    },
+    {
+      "word": "I",
+      "startTime": 0.7625,
+      "endTime": 0.85,
+      "confidence": 1
+    },
+    {
+      "word": "felt",
+      "startTime": 0.8625,
+      "endTime": 1.15,
+      "confidence": 1
+    },
+    {
+      "word": "something",
+      "startTime": 1.1625,
+      "endTime": 1.5125,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 1.525,
+      "endTime": 1.6,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 1.6125,
+      "endTime": 1.6875,
+      "confidence": 1
+    },
+    {
+      "word": "air",
+      "startTime": 1.7,
+      "endTime": 2.0875,
+      "confidence": 1
+    }
+  ],
+  "duration": 2.0875,
+  "createdAt": 1753620723523,
+  "accessedAt": 1753620826132,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "c5745cba83d024fa91155d8498bb4965"
+}

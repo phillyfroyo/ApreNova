@@ -1,0 +1,71 @@
+{
+  "audioUrl": "/cache/tts-audio/6492710676e59dbc0c7ae94ff08f9ff7bd547fef514692a52b26333e1b0d0a26.mp3",
+  "wordTimings": [
+    {
+      "word": "We",
+      "startTime": 0.071437,
+      "endTime": 0.321437,
+      "confidence": 1
+    },
+    {
+      "word": "studied",
+      "startTime": 0.339312,
+      "endTime": 0.892874,
+      "confidence": 1
+    },
+    {
+      "word": "it",
+      "startTime": 0.910687,
+      "endTime": 1.035687,
+      "confidence": 1
+    },
+    {
+      "word": "together",
+      "startTime": 1.0535619,
+      "endTime": 1.7678739,
+      "confidence": 1
+    },
+    {
+      "word": "trying",
+      "startTime": 2.035687,
+      "endTime": 2.482124,
+      "confidence": 1
+    },
+    {
+      "word": "to",
+      "startTime": 2.5,
+      "endTime": 2.642875,
+      "confidence": 1
+    },
+    {
+      "word": "understand",
+      "startTime": 2.660687,
+      "endTime": 3.553562,
+      "confidence": 1
+    },
+    {
+      "word": "what",
+      "startTime": 3.571437,
+      "endTime": 3.732124,
+      "confidence": 1
+    },
+    {
+      "word": "it",
+      "startTime": 3.75,
+      "endTime": 3.875,
+      "confidence": 1
+    },
+    {
+      "word": "meant",
+      "startTime": 3.892875,
+      "endTime": 4.446437,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.446437,
+  "createdAt": 1753620720451,
+  "accessedAt": 1753620826230,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "c14a5f7dd4fc8a0476537334f578eff2"
+}

@@ -13,11 +13,14 @@ interface Props {
   autoTriggerAll?: boolean | number;
   readOnlyMode?: boolean; // 🍌 NEW: disables real GPT fetch
   onTranslationStateChange?: (hasActiveTranslation: boolean) => void;
+  onSelectionChange?: (selectedIndices: { start: number; end: number } | null) => void;
+  onManualTranslate?: (translateFn: () => void) => void; // Provides manual translation function to parent
+  onClearSelection?: (clearFn: () => void) => void; // Provides clear selection function to parent
 }
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -31,6 +34,15 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     const hasActiveTranslation = translations.length > 0 || loading || error !== "";
     onTranslationStateChange?.(hasActiveTranslation);
   }, [translations.length, loading, error]); // Removed onTranslationStateChange from deps
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (startIdx !== null && endIdx !== null) {
+      onSelectionChange?.({ start: startIdx, end: endIdx });
+    } else {
+      onSelectionChange?.(null);
+    }
+  }, [startIdx, endIdx]); // Removed onSelectionChange from deps to prevent infinite loop
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -103,30 +115,72 @@ const endpoint = isSingleWord
   [readOnlyMode, sentence, currentLevel, words, currentLang] // ✅ FULL LIST
 );
 
+  // Use ref to store the latest function without causing re-renders
+  const triggerManualTranslationRef = useRef<() => void>();
+  
+  // Update the ref whenever dependencies change
+  triggerManualTranslationRef.current = () => {
+    // If translations are already showing, hide them (toggle off)
+    if (translations.length > 0 || error) {
+      setTranslations([]);
+      setError("");
+      return;
+    }
+
+    if (readOnlyMode) {
+      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      return;
+    }
+
+    if (startIdx !== null && endIdx !== null) {
+      // Translate selected words
+      fetchTranslation(startIdx, endIdx);
+    } else {
+      // Translate entire sentence
+      setStartIdx(0);
+      setEndIdx(words.length - 1);
+      fetchTranslation(0, words.length - 1);
+    }
+  };
+
+  // Stable function that uses the ref
+  const triggerManualTranslation = useCallback(() => {
+    triggerManualTranslationRef.current?.();
+  }, []);
+
+  // Clear selection function
+  const clearSelection = useCallback(() => {
+    setStartIdx(null);
+    setEndIdx(null);
+    setTranslations([]);
+    setError("");
+  }, []);
+
+  // Provide manual translation function to parent only once
+  useEffect(() => {
+    if (onManualTranslate) {
+      onManualTranslate(triggerManualTranslation);
+    }
+  }, []); // Empty dependency array - only run once
+
+  // Provide clear selection function to parent only once
+  useEffect(() => {
+    if (onClearSelection) {
+      onClearSelection(clearSelection);
+    }
+  }, []); // Empty dependency array - only run once
+
   const handleClick = (index: number) => {
   if (!enabled) return;
 
-// If in readOnlyMode, still allow full range selection but skip GPT
-if (readOnlyMode) {
-  if (startIdx === null || endIdx === null) {
-    setStartIdx(index);
-    setEndIdx(index);
-  } else {
-    const newStart = Math.min(startIdx, index);
-    const newEnd = Math.max(endIdx, index);
-    setStartIdx(newStart);
-    setEndIdx(newEnd);
-  }
-  setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
-  return;
-}
+  // Clear any existing translations when selecting new words
+  setTranslations([]);
+  setError("");
 
-  
   if (startIdx === null && endIdx === null) {
-    // First word clicked
+    // First word clicked - just select, don't auto-translate
     setStartIdx(index);
     setEndIdx(index);
-    fetchTranslation(index, index);
     return;
   }
 
@@ -134,8 +188,6 @@ if (readOnlyMode) {
     // Deselect single-word selection
     setStartIdx(null);
     setEndIdx(null);
-    setTranslations([]);
-    setError("");
     return;
   }
 
@@ -146,22 +198,17 @@ if (readOnlyMode) {
       const newEnd = Math.max(endIdx, index);
       setStartIdx(newStart);
       setEndIdx(newEnd);
-      fetchTranslation(newStart, newEnd);
     } else if (index > startIdx && index < endIdx) {
       // Shrink from right
       setEndIdx(index);
-      fetchTranslation(startIdx, index);
     } else if (index === startIdx && startIdx !== endIdx) {
       // Shrink from left
       const newStart = startIdx + 1;
       setStartIdx(newStart);
-      fetchTranslation(newStart, endIdx);
     } else {
       // Fallback: Reset everything
       setStartIdx(null);
       setEndIdx(null);
-      setTranslations([]);
-      setError("");
     }
     return;
   }
@@ -171,7 +218,6 @@ if (readOnlyMode) {
   const e = Math.max(startIdx!, endIdx!, index);
   setStartIdx(s);
   setEndIdx(e);
-  fetchTranslation(s, e);
   };
 
 const fetchExample = async (translation: string) => {

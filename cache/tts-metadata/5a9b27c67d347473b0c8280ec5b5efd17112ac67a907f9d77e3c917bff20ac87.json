@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/5a9b27c67d347473b0c8280ec5b5efd17112ac67a907f9d77e3c917bff20ac87.mp3",
+  "wordTimings": [
+    {
+      "word": "escondido",
+      "startTime": 0.05,
+      "endTime": 0.9,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.9,
+  "createdAt": 1753629595543,
+  "accessedAt": 1753629595543,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "43c75cf52510dbfa174f10d39c5a2db0"
+}

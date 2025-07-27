@@ -1,0 +1,23 @@
+{
+  "audioUrl": "/cache/tts-audio/5244fa9f96a92a3b47bf7088ed728823a3db96e9723f8e61060aebc88b89b439.mp3",
+  "wordTimings": [
+    {
+      "word": "quiet",
+      "startTime": 0.05,
+      "endTime": 0.4625,
+      "confidence": 1
+    },
+    {
+      "word": "town",
+      "startTime": 0.475,
+      "endTime": 0.9375,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.9375,
+  "createdAt": 1753630351344,
+  "accessedAt": 1753630351344,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "dd85ac1c9b341f881d33fe99296e0ae9"
+}
