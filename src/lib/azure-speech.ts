@@ -54,7 +54,7 @@ export class AzureSpeechService {
     this.speechConfig = sdk.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
     
     // Configure audio format for high quality
-    this.speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz128KBitRateMonoMp3;
+    this.speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz192KBitRateMonoMp3;
   }
 
   /**

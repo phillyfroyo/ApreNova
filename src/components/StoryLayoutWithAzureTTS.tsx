@@ -280,7 +280,7 @@ export default function StoryLayoutWithAzureTTS({
       const wordSelection = wordSelections[index];
       
       // Always use playTTSSegment which handles both word selection and slow speed comma logic
-      await playTTSSegment(request, wordSelection);
+      await playTTSSegment(request, wordSelection || undefined);
 
       // Update line width for progress bar
       const width = textRefs.current[index]?.offsetWidth || 0;

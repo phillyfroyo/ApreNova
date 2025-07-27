@@ -116,7 +116,7 @@ const endpoint = isSingleWord
 );
 
   // Use ref to store the latest function without causing re-renders
-  const triggerManualTranslationRef = useRef<() => void>();
+  const triggerManualTranslationRef = useRef<() => void>(() => {});
   
   // Update the ref whenever dependencies change
   triggerManualTranslationRef.current = () => {

@@ -1,0 +1,77 @@
+{
+  "audioUrl": "/cache/tts-audio/5364d12968deb5295f40fc6360580274aac9aea3efdd124c4af34db398d2f380.mp3",
+  "wordTimings": [
+    {
+      "word": "El",
+      "startTime": 0.071437,
+      "endTime": 0.464291,
+      "confidence": 1
+    },
+    {
+      "word": "nombre",
+      "startTime": 0.946437,
+      "endTime": 1.482145,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 1.892854,
+      "endTime": 2.142854,
+      "confidence": 1
+    },
+    {
+      "word": "Maya",
+      "startTime": 2.625,
+      "endTime": 3.214291,
+      "confidence": 1
+    },
+    {
+      "word": "estaba",
+      "startTime": 3.607145,
+      "endTime": 4.321436,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 4.678562,
+      "endTime": 5.017853,
+      "confidence": 1
+    },
+    {
+      "word": "tercer",
+      "startTime": 5.357145,
+      "endTime": 6.107145,
+      "confidence": 1
+    },
+    {
+      "word": "lugar",
+      "startTime": 6.607145,
+      "endTime": 7.196436,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 7.625,
+      "endTime": 7.928562,
+      "confidence": 1
+    },
+    {
+      "word": "la",
+      "startTime": 8.357145,
+      "endTime": 8.58929,
+      "confidence": 1
+    },
+    {
+      "word": "lista",
+      "startTime": 9.071437,
+      "endTime": 9.785728,
+      "confidence": 1
+    }
+  ],
+  "duration": 9.785728,
+  "createdAt": 1753637533003,
+  "accessedAt": 1753637533003,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "0ea5855357b23366b776876a69c3bb25"
+}
