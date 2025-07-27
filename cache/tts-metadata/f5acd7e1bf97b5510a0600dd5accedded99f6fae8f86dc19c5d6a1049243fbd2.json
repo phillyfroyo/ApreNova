@@ -1,0 +1,29 @@
+{
+  "audioUrl": "/cache/tts-audio/f5acd7e1bf97b5510a0600dd5accedded99f6fae8f86dc19c5d6a1049243fbd2.mp3",
+  "wordTimings": [
+    {
+      "word": "Hello",
+      "startTime": 0.071437,
+      "endTime": 0.589312,
+      "confidence": 1
+    },
+    {
+      "word": "world",
+      "startTime": 0.589312,
+      "endTime": 1.178624,
+      "confidence": 1
+    },
+    {
+      "word": ".",
+      "startTime": 1.2143119,
+      "endTime": 1.3036239,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.97325,
+  "createdAt": 1753575661318,
+  "accessedAt": 1753575661318,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "764569e58f53ea8b6404f6fa7fc0247f"
+}
