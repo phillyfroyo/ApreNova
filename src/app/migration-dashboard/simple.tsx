@@ -3,8 +3,15 @@
 
 import { useEffect, useState } from 'react';
 
+interface DashboardData {
+  azureTTS: string;
+  cache: { hitRate: number };
+  migration: { phase: string; userPercentage: number };
+  performance: { avgGenerationTime: number; errorRate: number; successRate: number };
+}
+
 export default function SimpleDashboard() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
