@@ -260,7 +260,13 @@ function aggregateMetrics(metrics: PerformanceMetrics[]) {
   
   // Hourly breakdown (last 24 hours)
   const now = Date.now();
-  const hourlyBreakdown = [];
+  const hourlyBreakdown: Array<{
+    hour: number;
+    timestamp: number;
+    events: number;
+    avgLoadTime: number;
+    errorCount: number;
+  }> = [];
   for (let i = 23; i >= 0; i--) {
     const hourStart = now - (i * 60 * 60 * 1000);
     const hourEnd = hourStart + (60 * 60 * 1000);
