@@ -1,0 +1,89 @@
+{
+  "audioUrl": "/cache/tts-audio/d75ac21a340431323b430482f984b8a81c1c9f26d5d6b00c210dadd856259a82.mp3",
+  "wordTimings": [
+    {
+      "word": "My",
+      "startTime": 0.05,
+      "endTime": 0.3125,
+      "confidence": 1
+    },
+    {
+      "word": "name",
+      "startTime": 0.525,
+      "endTime": 0.7875,
+      "confidence": 1
+    },
+    {
+      "word": "is",
+      "startTime": 0.9375,
+      "endTime": 1.275,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 1.425,
+      "endTime": 1.9375,
+      "confidence": 1
+    },
+    {
+      "word": ", and",
+      "startTime": 2.125,
+      "endTime": 2.35,
+      "confidence": 1
+    },
+    {
+      "word": "I",
+      "startTime": 2.5125,
+      "endTime": 2.675,
+      "confidence": 1
+    },
+    {
+      "word": "live",
+      "startTime": 2.9,
+      "endTime": 3.2125,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 3.35,
+      "endTime": 3.5125,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 3.6875,
+      "endTime": 3.8375,
+      "confidence": 1
+    },
+    {
+      "word": "quiet",
+      "startTime": 4.075,
+      "endTime": 4.5375,
+      "confidence": 1
+    },
+    {
+      "word": "town",
+      "startTime": 4.75,
+      "endTime": 5.175,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 5.3625,
+      "endTime": 5.6625,
+      "confidence": 1
+    },
+    {
+      "word": "Guatemala",
+      "startTime": 5.85,
+      "endTime": 6.5125,
+      "confidence": 1
+    }
+  ],
+  "duration": 6.5125,
+  "createdAt": 1753628511310,
+  "accessedAt": 1753628511310,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "b836dc322e288a8b4cc9a27af4be27ae"
+}

@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/92fd100869f4204c378ffa162aa6794f32b2da3440b52336aba30e8307abf758.mp3",
+  "wordTimings": [
+    {
+      "word": "The",
+      "startTime": 0.05,
+      "endTime": 0.2375,
+      "confidence": 1
+    },
+    {
+      "word": "paper",
+      "startTime": 0.45,
+      "endTime": 0.9,
+      "confidence": 1
+    },
+    {
+      "word": "looked",
+      "startTime": 1.0625,
+      "endTime": 1.3375,
+      "confidence": 1
+    },
+    {
+      "word": "old",
+      "startTime": 1.525,
+      "endTime": 1.875,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.875,
+  "createdAt": 1753629941996,
+  "accessedAt": 1753629941996,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "5dbf827f29e3154608659fc30a290432"
+}

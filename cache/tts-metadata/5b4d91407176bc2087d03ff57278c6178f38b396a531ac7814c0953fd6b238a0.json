@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/5b4d91407176bc2087d03ff57278c6178f38b396a531ac7814c0953fd6b238a0.mp3",
+  "wordTimings": [
+    {
+      "word": "El",
+      "startTime": 0.071437,
+      "endTime": 0.535749,
+      "confidence": 1
+    },
+    {
+      "word": "papel",
+      "startTime": 0.910687,
+      "endTime": 1.624999,
+      "confidence": 1
+    },
+    {
+      "word": "parecía",
+      "startTime": 1.964312,
+      "endTime": 2.821437,
+      "confidence": 1
+    },
+    {
+      "word": "viejo",
+      "startTime": 3.285687,
+      "endTime": 4.017812,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.017812,
+  "createdAt": 1753629658989,
+  "accessedAt": 1753629658989,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "b55c1ea0cb291edff04305e4ce0261cb"
+}

@@ -1,0 +1,101 @@
+{
+  "audioUrl": "/cache/tts-audio/18305ab263389bf0354c77ac30bbcc4253a21a25e05e3095fc872d701b78fd41.mp3",
+  "wordTimings": [
+    {
+      "word": "The",
+      "startTime": 0.05,
+      "endTime": 0.2125,
+      "confidence": 1
+    },
+    {
+      "word": "next",
+      "startTime": 0.225,
+      "endTime": 0.55,
+      "confidence": 1
+    },
+    {
+      "word": "morning",
+      "startTime": 0.5625,
+      "endTime": 0.9375,
+      "confidence": 1
+    },
+    {
+      "word": "we",
+      "startTime": 1.25,
+      "endTime": 1.375,
+      "confidence": 1
+    },
+    {
+      "word": "packed",
+      "startTime": 1.3875,
+      "endTime": 1.6875,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 1.7,
+      "endTime": 1.7625,
+      "confidence": 1
+    },
+    {
+      "word": "few",
+      "startTime": 1.775,
+      "endTime": 1.975,
+      "confidence": 1
+    },
+    {
+      "word": "things",
+      "startTime": 1.9875,
+      "endTime": 2.3625,
+      "confidence": 1
+    },
+    {
+      "word": "and",
+      "startTime": 2.375,
+      "endTime": 2.5125,
+      "confidence": 1
+    },
+    {
+      "word": "left",
+      "startTime": 2.525,
+      "endTime": 2.85,
+      "confidence": 1
+    },
+    {
+      "word": "before",
+      "startTime": 2.8625,
+      "endTime": 3.15,
+      "confidence": 1
+    },
+    {
+      "word": "the",
+      "startTime": 3.1625,
+      "endTime": 3.2625,
+      "confidence": 1
+    },
+    {
+      "word": "sun",
+      "startTime": 3.275,
+      "endTime": 3.5125,
+      "confidence": 1
+    },
+    {
+      "word": "was",
+      "startTime": 3.525,
+      "endTime": 3.6625,
+      "confidence": 1
+    },
+    {
+      "word": "high",
+      "startTime": 3.675,
+      "endTime": 4.1,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.1,
+  "createdAt": 1753620727766,
+  "accessedAt": 1753620826081,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "9db5b119c2bdb5f4e626215e547e1ee2"
+}

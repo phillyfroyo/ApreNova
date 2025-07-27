@@ -1,0 +1,47 @@
+{
+  "audioUrl": "/cache/tts-audio/5eb1fb939f9e9d937cc61a7ce18848a01f5b507102b4431d64aa1c59723a7d4c.mp3",
+  "wordTimings": [
+    {
+      "word": "Mi",
+      "startTime": 0.05,
+      "endTime": 0.325,
+      "confidence": 1
+    },
+    {
+      "word": "nombre",
+      "startTime": 0.6,
+      "endTime": 1.0375,
+      "confidence": 1
+    },
+    {
+      "word": "es",
+      "startTime": 1.3,
+      "endTime": 1.7125,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 1.9125,
+      "endTime": 2.325,
+      "confidence": 1
+    },
+    {
+      "word": "y",
+      "startTime": 2.575,
+      "endTime": 2.8,
+      "confidence": 1
+    },
+    {
+      "word": "vivo",
+      "startTime": 3.0625,
+      "endTime": 3.425,
+      "confidence": 1
+    }
+  ],
+  "duration": 3.425,
+  "createdAt": 1753629516635,
+  "accessedAt": 1753629516635,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "689d61bd008de43a4c2eb7ed0fc54688"
+}

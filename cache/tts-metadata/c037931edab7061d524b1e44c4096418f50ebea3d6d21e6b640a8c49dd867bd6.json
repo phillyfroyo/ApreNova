@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/c037931edab7061d524b1e44c4096418f50ebea3d6d21e6b640a8c49dd867bd6.mp3",
+  "wordTimings": [
+    {
+      "word": "This",
+      "startTime": 0.05,
+      "endTime": 0.325,
+      "confidence": 1
+    },
+    {
+      "word": "is",
+      "startTime": 0.3375,
+      "endTime": 0.45,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 0.4625,
+      "endTime": 0.5375,
+      "confidence": 1
+    },
+    {
+      "word": "test",
+      "startTime": 0.55,
+      "endTime": 1.0875,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.0875,
+  "createdAt": 1753619947884,
+  "accessedAt": 1753619947884,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "120ea8a25e5d487bf68b5f7096440019"
+}

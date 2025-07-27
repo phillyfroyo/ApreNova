@@ -1,0 +1,107 @@
+{
+  "audioUrl": "/cache/tts-audio/25245cf1b0153c5ae5e39c42da85e1bdaac055be9003b552638d8b9931ab5598.mp3",
+  "wordTimings": [
+    {
+      "word": "One",
+      "startTime": 0.05,
+      "endTime": 0.325,
+      "confidence": 1
+    },
+    {
+      "word": "afternoon",
+      "startTime": 0.3375,
+      "endTime": 0.9625,
+      "confidence": 1
+    },
+    {
+      "word": "my",
+      "startTime": 1.2875,
+      "endTime": 1.4125,
+      "confidence": 1
+    },
+    {
+      "word": "friend",
+      "startTime": 1.425,
+      "endTime": 1.725,
+      "confidence": 1
+    },
+    {
+      "word": "Juan",
+      "startTime": 1.7375,
+      "endTime": 1.975,
+      "confidence": 1
+    },
+    {
+      "word": "came",
+      "startTime": 1.9875,
+      "endTime": 2.225,
+      "confidence": 1
+    },
+    {
+      "word": "over",
+      "startTime": 2.2375,
+      "endTime": 2.5,
+      "confidence": 1
+    },
+    {
+      "word": "with",
+      "startTime": 2.5125,
+      "endTime": 2.65,
+      "confidence": 1
+    },
+    {
+      "word": "something",
+      "startTime": 2.6625,
+      "endTime": 3.025,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 3.0375,
+      "endTime": 3.1125,
+      "confidence": 1
+    },
+    {
+      "word": "his",
+      "startTime": 3.125,
+      "endTime": 3.275,
+      "confidence": 1
+    },
+    {
+      "word": "hand",
+      "startTime": 3.2875,
+      "endTime": 3.775,
+      "confidence": 1
+    },
+    {
+      "word": "It",
+      "startTime": 4.65,
+      "endTime": 4.825,
+      "confidence": 1
+    },
+    {
+      "word": "was",
+      "startTime": 4.8375,
+      "endTime": 4.975,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 4.9875,
+      "endTime": 5.05,
+      "confidence": 1
+    },
+    {
+      "word": "map",
+      "startTime": 5.0625,
+      "endTime": 5.5375,
+      "confidence": 1
+    }
+  ],
+  "duration": 5.5375,
+  "createdAt": 1753620719560,
+  "accessedAt": 1753624001285,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "88747b39406b3ad9738029a1acd756c0"
+}

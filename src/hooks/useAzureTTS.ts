@@ -33,6 +33,10 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wordTimingsRef = useRef<WordTiming[]>([]);
   const currentRequestRef = useRef<string | null>(null);
+  const optionsRef = useRef(options);
+
+  // Update options ref when options change
+  optionsRef.current = options;
 
   /**
    * Generate cache key for TTS request
@@ -79,15 +83,76 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setPlaybackState(prev => ({ ...prev, error: errorMessage }));
-      options.onError?.(error instanceof Error ? error : new Error(errorMessage));
+      optionsRef.current.onError?.(error instanceof Error ? error : new Error(errorMessage));
       throw error;
     } finally {
       setPlaybackState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [cache, generateCacheKey, options]);
+  }, [cache, generateCacheKey]);
 
   /**
-   * Play TTS audio with word highlighting
+   * Play TTS audio segment based on word indices
+   */
+  const playTTSSegment = useCallback(async (
+    request: TTSRequest, 
+    wordIndices?: { start: number; end: number }
+  ): Promise<void> => {
+    // If word indices provided, generate new TTS with smart comma placement
+    if (wordIndices) {
+      const words = request.text.split(' ');
+      const selectedWords = words.slice(wordIndices.start, wordIndices.end + 1);
+      
+      let segmentText: string;
+      
+      if (request.speed === 'slow') {
+        // Slow speed: comma after every word for maximum clarity
+        segmentText = selectedWords.join(', ') + ',';
+      } else {
+        // Normal speed: clean flow with only end comma for buffer
+        segmentText = selectedWords.join(' ') + ',';
+      }
+      
+      console.log('Generating segment TTS:', {
+        originalText: request.text,
+        selectedWords,
+        speed: request.speed,
+        segmentText
+      });
+      
+      // Create new request for just the selected words
+      const segmentRequest = {
+        ...request,
+        text: segmentText
+      };
+      
+      // Use regular playTTS for the comma-separated segment
+      return playTTS(segmentRequest);
+    }
+    
+    // No word indices but slow speed - add commas between all words
+    if (request.speed === 'slow') {
+      const words = request.text.split(' ');
+      const slowText = words.join(', ') + ',';
+      
+      console.log('Generating slow full sentence TTS:', {
+        originalText: request.text,
+        slowText
+      });
+      
+      const slowRequest = {
+        ...request,
+        text: slowText
+      };
+      
+      return playTTS(slowRequest);
+    }
+    
+    // Regular full sentence playback
+    return playTTS(request);
+  }, [generateTTS, generateCacheKey]);
+
+  /**
+   * Play TTS audio with word highlighting (backward compatible)
    */
   const playTTS = useCallback(async (request: TTSRequest): Promise<void> => {
     try {
@@ -136,10 +201,15 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
           }
         );
 
-        if (currentWordIndex !== -1 && currentWordIndex !== playbackState.currentWordIndex) {
+        if (currentWordIndex !== -1) {
           const currentWord = wordTimingsRef.current[currentWordIndex];
-          setPlaybackState(prev => ({ ...prev, currentWordIndex }));
-          options.onWordUpdate?.(currentWord.word, currentWordIndex);
+          setPlaybackState(prev => {
+            if (prev.currentWordIndex !== currentWordIndex) {
+              optionsRef.current.onWordUpdate?.(currentWord.word, currentWordIndex);
+              return { ...prev, currentWordIndex };
+            }
+            return prev;
+          });
         }
       });
 
@@ -150,13 +220,13 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
           currentTime: 0,
           currentWordIndex: -1
         }));
-        options.onPlaybackComplete?.();
+        optionsRef.current.onPlaybackComplete?.();
       });
 
       audio.addEventListener('error', (e) => {
         const error = new Error('Audio playback failed');
         setPlaybackState(prev => ({ ...prev, error: error.message, isPlaying: false }));
-        options.onError?.(error);
+        optionsRef.current.onError?.(error);
       });
 
       // Start playback
@@ -166,7 +236,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     } catch (error) {
       console.error('TTS playback error:', error);
     }
-  }, [generateTTS, generateCacheKey, options, playbackState.currentWordIndex]);
+  }, [generateTTS, generateCacheKey]);
 
   /**
    * Pause current playback
@@ -272,6 +342,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     
     // Actions
     playTTS,
+    playTTSSegment,
     pause,
     resume,
     stop,

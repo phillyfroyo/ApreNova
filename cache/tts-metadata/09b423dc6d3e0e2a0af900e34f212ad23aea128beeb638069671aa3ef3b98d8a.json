@@ -1,0 +1,83 @@
+{
+  "audioUrl": "/cache/tts-audio/09b423dc6d3e0e2a0af900e34f212ad23aea128beeb638069671aa3ef3b98d8a.mp3",
+  "wordTimings": [
+    {
+      "word": "Mi",
+      "startTime": 0.05,
+      "endTime": 0.2875,
+      "confidence": 1
+    },
+    {
+      "word": "nombre",
+      "startTime": 0.3,
+      "endTime": 0.7125,
+      "confidence": 1
+    },
+    {
+      "word": "es",
+      "startTime": 0.725,
+      "endTime": 1.0625,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 1.075,
+      "endTime": 1.55,
+      "confidence": 1
+    },
+    {
+      "word": "y",
+      "startTime": 1.5625,
+      "endTime": 1.75,
+      "confidence": 1
+    },
+    {
+      "word": "vivo",
+      "startTime": 1.7625,
+      "endTime": 2.1875,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 2.2,
+      "endTime": 2.45,
+      "confidence": 1
+    },
+    {
+      "word": "un",
+      "startTime": 2.4625,
+      "endTime": 2.625,
+      "confidence": 1
+    },
+    {
+      "word": "pueblo",
+      "startTime": 2.6375,
+      "endTime": 3.075,
+      "confidence": 1
+    },
+    {
+      "word": "tranquilo",
+      "startTime": 3.0875,
+      "endTime": 3.675,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 3.6875,
+      "endTime": 3.8125,
+      "confidence": 1
+    },
+    {
+      "word": "Guatemala",
+      "startTime": 3.825,
+      "endTime": 4.575,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.575,
+  "createdAt": 1753620968266,
+  "accessedAt": 1753621418894,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "445bae1e8e34d075a9c9871bf02f0522"
+}

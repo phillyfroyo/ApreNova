@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/20a66cb66d8b4b948a6669c753c660f0bff21e597c09e6ebe5c5b691c31a67ea.mp3",
+  "wordTimings": [
+    {
+      "word": "My",
+      "startTime": 0.05,
+      "endTime": 0.325,
+      "confidence": 1
+    },
+    {
+      "word": "name",
+      "startTime": 0.5375,
+      "endTime": 0.825,
+      "confidence": 1
+    },
+    {
+      "word": "is",
+      "startTime": 0.975,
+      "endTime": 1.325,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 1.475,
+      "endTime": 2.1125,
+      "confidence": 1
+    }
+  ],
+  "duration": 2.1125,
+  "createdAt": 1753629452779,
+  "accessedAt": 1753629452779,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "8d5cb2b49cdea12074a0dee277b7ed1b"
+}

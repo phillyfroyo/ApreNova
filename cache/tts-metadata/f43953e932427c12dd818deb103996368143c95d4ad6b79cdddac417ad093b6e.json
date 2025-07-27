@@ -1,0 +1,41 @@
+{
+  "audioUrl": "/cache/tts-audio/f43953e932427c12dd818deb103996368143c95d4ad6b79cdddac417ad093b6e.mp3",
+  "wordTimings": [
+    {
+      "word": "One",
+      "startTime": 0.05,
+      "endTime": 0.4625,
+      "confidence": 1
+    },
+    {
+      "word": "afternoon",
+      "startTime": 0.6,
+      "endTime": 1.2125,
+      "confidence": 1
+    },
+    {
+      "word": ", my",
+      "startTime": 1.4625,
+      "endTime": 1.7125,
+      "confidence": 1
+    },
+    {
+      "word": "friend",
+      "startTime": 1.9125,
+      "endTime": 2.2875,
+      "confidence": 1
+    },
+    {
+      "word": "Juan",
+      "startTime": 2.4875,
+      "endTime": 2.925,
+      "confidence": 1
+    }
+  ],
+  "duration": 2.925,
+  "createdAt": 1753629980384,
+  "accessedAt": 1753629980384,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "702d03b708b2b63f6f24ea16503bbb93"
+}

@@ -1,0 +1,83 @@
+{
+  "audioUrl": "/cache/tts-audio/9d05f8b52fc0546d8511771b13b97a04258dcc518d6053d91140f90b547bfed9.mp3",
+  "wordTimings": [
+    {
+      "word": "The road",
+      "startTime": 0.071437,
+      "endTime": 0.767812,
+      "confidence": 1
+    },
+    {
+      "word": "was",
+      "startTime": 0.785687,
+      "endTime": 1.017812,
+      "confidence": 1
+    },
+    {
+      "word": "long",
+      "startTime": 1.0356869,
+      "endTime": 1.4285619,
+      "confidence": 1
+    },
+    {
+      "word": "and",
+      "startTime": 1.4464369,
+      "endTime": 1.5357489,
+      "confidence": 1
+    },
+    {
+      "word": "hot",
+      "startTime": 1.5535619,
+      "endTime": 2.2321239,
+      "confidence": 1
+    },
+    {
+      "word": "We",
+      "startTime": 3.464312,
+      "endTime": 3.714312,
+      "confidence": 1
+    },
+    {
+      "word": "passed",
+      "startTime": 3.732125,
+      "endTime": 4.267812,
+      "confidence": 1
+    },
+    {
+      "word": "trees",
+      "startTime": 4.285687,
+      "endTime": 4.946374,
+      "confidence": 1
+    },
+    {
+      "word": "birds",
+      "startTime": 5.142875,
+      "endTime": 5.767875,
+      "confidence": 1
+    },
+    {
+      "word": "and",
+      "startTime": 5.982125,
+      "endTime": 6.232125,
+      "confidence": 1
+    },
+    {
+      "word": "small",
+      "startTime": 6.25,
+      "endTime": 6.732125,
+      "confidence": 1
+    },
+    {
+      "word": "rivers",
+      "startTime": 6.75,
+      "endTime": 7.535687,
+      "confidence": 1
+    }
+  ],
+  "duration": 7.535687,
+  "createdAt": 1753620721760,
+  "accessedAt": 1753620826108,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "73d263d9cae99388d1418a62af58830d"
+}

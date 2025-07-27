@@ -1,0 +1,41 @@
+{
+  "audioUrl": "/cache/tts-audio/46dbb867459bba5457e09325113e9fb37e44e88d3cc847ef2ab28f1f8bce7cb1.mp3",
+  "wordTimings": [
+    {
+      "word": "como",
+      "startTime": 0.071437,
+      "endTime": 0.482124,
+      "confidence": 1
+    },
+    {
+      "word": "si",
+      "startTime": 0.875,
+      "endTime": 1.160687,
+      "confidence": 1
+    },
+    {
+      "word": "hubiera",
+      "startTime": 1.5356869,
+      "endTime": 2.1071239,
+      "confidence": 1
+    },
+    {
+      "word": "estado",
+      "startTime": 2.5,
+      "endTime": 3.25,
+      "confidence": 1
+    },
+    {
+      "word": "escondido",
+      "startTime": 3.607125,
+      "endTime": 4.6606869,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.6606869,
+  "createdAt": 1753629715967,
+  "accessedAt": 1753629715967,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "26dde6bc26679fe75b30da80ebac8221"
+}

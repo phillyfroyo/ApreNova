@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/9f3226e97f0d7a66c141c236db081030ff98be6bff55871e5aa908eb86221ef0.mp3",
+  "wordTimings": [
+    {
+      "word": "quiet",
+      "startTime": 0.05,
+      "endTime": 0.6375,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.6375,
+  "createdAt": 1753628485042,
+  "accessedAt": 1753628485042,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "58f2cd5072179e8c147ccfceae92bbff"
+}

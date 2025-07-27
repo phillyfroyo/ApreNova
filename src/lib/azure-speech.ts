@@ -16,12 +16,12 @@ import type {
 // Voice configuration for different languages and speeds
 const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
-    normal: 'es-ES-ElviraNeural',
-    slow: 'es-ES-ElviraNeural'
+    normal: 'es-MX-DaliaNeural',
+    slow: 'es-MX-DaliaNeural'
   },
   'en-US': {
-    normal: 'en-US-JennyNeural', 
-    slow: 'en-US-JennyNeural'
+    normal: 'en-US-AriaNeural', 
+    slow: 'en-US-AriaNeural'
   }
 };
 
@@ -131,12 +131,16 @@ export class AzureSpeechService {
       return new Promise((resolve, reject) => {
         // Set up word boundary event handler
         this.synthesizer!.wordBoundary = (sender, event) => {
-          wordTimings.push({
-            word: event.text,
-            startTime: event.audioOffset / 10000000, // Convert to seconds
-            endTime: (event.audioOffset + event.duration) / 10000000,
-            confidence: 1.0
-          });
+          // Filter out empty words, punctuation-only, and whitespace
+          const word = event.text?.trim();
+          if (word && word.length > 0 && /\w/.test(word)) {
+            wordTimings.push({
+              word: word,
+              startTime: event.audioOffset / 10000000, // Convert to seconds
+              endTime: (event.audioOffset + event.duration) / 10000000,
+              confidence: 1.0
+            });
+          }
         };
 
         // Perform synthesis
@@ -145,7 +149,11 @@ export class AzureSpeechService {
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               const audioData = result.audioData;
-              const duration = this.calculateAudioDuration(audioData);
+              
+              // Calculate accurate duration from word timings (last word end time)
+              const duration = wordTimings.length > 0 
+                ? Math.max(...wordTimings.map(w => w.endTime))
+                : this.calculateAudioDuration(audioData); // Fallback to file size estimation
               
               resolve({
                 audioUrl: '', // Will be set by caching layer
@@ -198,12 +206,16 @@ export class AzureSpeechService {
       return new Promise((resolve, reject) => {
         // Set up word boundary event handler
         this.synthesizer!.wordBoundary = (sender, event) => {
-          wordTimings.push({
-            word: event.text,
-            startTime: event.audioOffset / 10000000, // Convert to seconds
-            endTime: (event.audioOffset + event.duration) / 10000000,
-            confidence: 1.0
-          });
+          // Filter out empty words, punctuation-only, and whitespace
+          const word = event.text?.trim();
+          if (word && word.length > 0 && /\w/.test(word)) {
+            wordTimings.push({
+              word: word,
+              startTime: event.audioOffset / 10000000, // Convert to seconds
+              endTime: (event.audioOffset + event.duration) / 10000000,
+              confidence: 1.0
+            });
+          }
         };
 
         // Perform synthesis
@@ -212,7 +224,11 @@ export class AzureSpeechService {
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               const audioData = result.audioData;
-              const duration = this.calculateAudioDuration(audioData);
+              
+              // Calculate accurate duration from word timings (last word end time)
+              const duration = wordTimings.length > 0 
+                ? Math.max(...wordTimings.map(w => w.endTime))
+                : this.calculateAudioDuration(audioData); // Fallback to file size estimation
               
               resolve({
                 buffer: audioData,

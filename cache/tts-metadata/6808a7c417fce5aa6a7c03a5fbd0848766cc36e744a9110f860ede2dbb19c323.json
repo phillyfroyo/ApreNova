@@ -1,0 +1,53 @@
+{
+  "audioUrl": "/cache/tts-audio/6808a7c417fce5aa6a7c03a5fbd0848766cc36e744a9110f860ede2dbb19c323.mp3",
+  "wordTimings": [
+    {
+      "word": "El",
+      "startTime": 0.05,
+      "endTime": 0.3625,
+      "confidence": 1
+    },
+    {
+      "word": "papel",
+      "startTime": 0.6,
+      "endTime": 1.1,
+      "confidence": 1
+    },
+    {
+      "word": "parecía",
+      "startTime": 1.3125,
+      "endTime": 1.8875,
+      "confidence": 1
+    },
+    {
+      "word": "viejo",
+      "startTime": 2.225,
+      "endTime": 2.6875,
+      "confidence": 1
+    },
+    {
+      "word": ", como",
+      "startTime": 3,
+      "endTime": 3.25,
+      "confidence": 1
+    },
+    {
+      "word": "si",
+      "startTime": 3.55,
+      "endTime": 3.7625,
+      "confidence": 1
+    },
+    {
+      "word": "hubiera",
+      "startTime": 4.0375,
+      "endTime": 4.5375,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.5375,
+  "createdAt": 1753629820293,
+  "accessedAt": 1753629820293,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "6e73742818779e9a830bf85e959ac3ea"
+}

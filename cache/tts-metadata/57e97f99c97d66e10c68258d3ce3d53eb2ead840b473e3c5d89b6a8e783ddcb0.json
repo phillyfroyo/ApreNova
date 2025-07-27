@@ -1,0 +1,107 @@
+{
+  "audioUrl": "/cache/tts-audio/57e97f99c97d66e10c68258d3ce3d53eb2ead840b473e3c5d89b6a8e783ddcb0.mp3",
+  "wordTimings": [
+    {
+      "word": "One",
+      "startTime": 0.071437,
+      "endTime": 0.464312,
+      "confidence": 1
+    },
+    {
+      "word": "afternoon",
+      "startTime": 0.482125,
+      "endTime": 1.375,
+      "confidence": 1
+    },
+    {
+      "word": "my",
+      "startTime": 1.839312,
+      "endTime": 2.017874,
+      "confidence": 1
+    },
+    {
+      "word": "friend",
+      "startTime": 2.035687,
+      "endTime": 2.464249,
+      "confidence": 1
+    },
+    {
+      "word": "Juan",
+      "startTime": 2.482125,
+      "endTime": 2.821437,
+      "confidence": 1
+    },
+    {
+      "word": "came",
+      "startTime": 2.839312,
+      "endTime": 3.178624,
+      "confidence": 1
+    },
+    {
+      "word": "over",
+      "startTime": 3.196437,
+      "endTime": 3.571437,
+      "confidence": 1
+    },
+    {
+      "word": "with",
+      "startTime": 3.589312,
+      "endTime": 3.785749,
+      "confidence": 1
+    },
+    {
+      "word": "something",
+      "startTime": 3.803562,
+      "endTime": 4.321437,
+      "confidence": 1
+    },
+    {
+      "word": "in",
+      "startTime": 4.339312,
+      "endTime": 4.446437,
+      "confidence": 1
+    },
+    {
+      "word": "his",
+      "startTime": 4.464312,
+      "endTime": 4.678624,
+      "confidence": 1
+    },
+    {
+      "word": "hand",
+      "startTime": 4.696437,
+      "endTime": 5.392874,
+      "confidence": 1
+    },
+    {
+      "word": "It",
+      "startTime": 6.642875,
+      "endTime": 6.892875,
+      "confidence": 1
+    },
+    {
+      "word": "was",
+      "startTime": 6.910687,
+      "endTime": 7.107124,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 7.125,
+      "endTime": 7.214312,
+      "confidence": 1
+    },
+    {
+      "word": "map",
+      "startTime": 7.232125,
+      "endTime": 7.910687,
+      "confidence": 1
+    }
+  ],
+  "duration": 7.910687,
+  "createdAt": 1753620719561,
+  "accessedAt": 1753623755342,
+  "language": "en-US",
+  "speed": "slow",
+  "textHash": "88747b39406b3ad9738029a1acd756c0"
+}

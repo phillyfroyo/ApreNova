@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/da8108732f0113e8fdd1e9bd03a7c8e53e5e984f174dded3db5fedc336d007df.mp3",
+  "wordTimings": [
+    {
+      "word": "Yo",
+      "startTime": 0.071437,
+      "endTime": 0.553562,
+      "confidence": 1
+    },
+    {
+      "word": "estuve",
+      "startTime": 0.910687,
+      "endTime": 1.732124,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 2.071437,
+      "endTime": 2.374999,
+      "confidence": 1
+    },
+    {
+      "word": "acuerdo",
+      "startTime": 2.732125,
+      "endTime": 3.571437,
+      "confidence": 1
+    }
+  ],
+  "duration": 3.571437,
+  "createdAt": 1753630824373,
+  "accessedAt": 1753630824373,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "29414799a54e57e4e021733ad0bab806"
+}

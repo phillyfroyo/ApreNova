@@ -1,0 +1,71 @@
+{
+  "audioUrl": "/cache/tts-audio/48c2995f2968b25ba5a94f2e3be12de932b759ce7c0cc9c6b6e950df0405946c.mp3",
+  "wordTimings": [
+    {
+      "word": "\"Maybe",
+      "startTime": 0.05,
+      "endTime": 0.45,
+      "confidence": 1
+    },
+    {
+      "word": "it",
+      "startTime": 0.4625,
+      "endTime": 0.5875,
+      "confidence": 1
+    },
+    {
+      "word": "leads",
+      "startTime": 0.6,
+      "endTime": 0.875,
+      "confidence": 1
+    },
+    {
+      "word": "to",
+      "startTime": 0.8875,
+      "endTime": 0.975,
+      "confidence": 1
+    },
+    {
+      "word": "something",
+      "startTime": 0.9875,
+      "endTime": 1.3625,
+      "confidence": 1
+    },
+    {
+      "word": "important",
+      "startTime": 1.375,
+      "endTime": 1.925,
+      "confidence": 1
+    },
+    {
+      "word": "\" Juan",
+      "startTime": 2.125,
+      "endTime": 2.4125,
+      "confidence": 1
+    },
+    {
+      "word": "said",
+      "startTime": 2.425,
+      "endTime": 2.825,
+      "confidence": 1
+    },
+    {
+      "word": "I",
+      "startTime": 3.6875,
+      "endTime": 3.8875,
+      "confidence": 1
+    },
+    {
+      "word": "agreed",
+      "startTime": 3.9,
+      "endTime": 4.4875,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.4875,
+  "createdAt": 1753620726583,
+  "accessedAt": 1753620826230,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "17bee98bf7322a6c4a4ca700b9f95a00"
+}

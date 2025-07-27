@@ -1,0 +1,89 @@
+{
+  "audioUrl": "/cache/tts-audio/c121f047f51cdde1ede3c753ffadaecbec456a9b09bdbf0fdd99d2e925f25041.mp3",
+  "wordTimings": [
+    {
+      "word": "The",
+      "startTime": 0.05,
+      "endTime": 0.2125,
+      "confidence": 1
+    },
+    {
+      "word": "paper",
+      "startTime": 0.225,
+      "endTime": 0.575,
+      "confidence": 1
+    },
+    {
+      "word": "looked",
+      "startTime": 0.5875,
+      "endTime": 0.825,
+      "confidence": 1
+    },
+    {
+      "word": "old",
+      "startTime": 0.8375,
+      "endTime": 1.125,
+      "confidence": 1
+    },
+    {
+      "word": "like",
+      "startTime": 1.3875,
+      "endTime": 1.5625,
+      "confidence": 1
+    },
+    {
+      "word": "it",
+      "startTime": 1.575,
+      "endTime": 1.6375,
+      "confidence": 1
+    },
+    {
+      "word": "had",
+      "startTime": 1.65,
+      "endTime": 1.7625,
+      "confidence": 1
+    },
+    {
+      "word": "been",
+      "startTime": 1.775,
+      "endTime": 1.9125,
+      "confidence": 1
+    },
+    {
+      "word": "hidden",
+      "startTime": 1.925,
+      "endTime": 2.2375,
+      "confidence": 1
+    },
+    {
+      "word": "for",
+      "startTime": 2.25,
+      "endTime": 2.3875,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 2.4,
+      "endTime": 2.4625,
+      "confidence": 1
+    },
+    {
+      "word": "long",
+      "startTime": 2.475,
+      "endTime": 2.7375,
+      "confidence": 1
+    },
+    {
+      "word": "time",
+      "startTime": 2.75,
+      "endTime": 3.2375,
+      "confidence": 1
+    }
+  ],
+  "duration": 3.2375,
+  "createdAt": 1753620719561,
+  "accessedAt": 1753629884299,
+  "language": "en-US",
+  "speed": "normal",
+  "textHash": "5f0e91b9b13c06f6612b0f1c236b3408"
+}
