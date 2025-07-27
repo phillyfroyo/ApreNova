@@ -18,9 +18,12 @@ import {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { audioId: string } }
+  { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { audioId: rawAudioId } = await params;
+
     // Rate limiting
     const clientId = getClientIdentifier(request);
     const rateLimiter = getRateLimiter('retrieve');
@@ -46,7 +49,7 @@ export async function GET(
     // Validate audioId parameter
     let audioId: string;
     try {
-      audioId = validateAudioId(params.audioId);
+      audioId = validateAudioId(rawAudioId);
     } catch (error) {
       if (error instanceof ValidationError) {
         return createValidationErrorResponse(error);
@@ -151,13 +154,16 @@ export async function GET(
  */
 export async function HEAD(
   request: NextRequest,
-  { params }: { params: { audioId: string } }
+  { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { audioId: rawAudioId } = await params;
+
     // Validate audioId parameter
     let audioId: string;
     try {
-      audioId = validateAudioId(params.audioId);
+      audioId = validateAudioId(rawAudioId);
     } catch (error) {
       return new Response(null, { status: 400 });
     }
@@ -191,9 +197,12 @@ export async function HEAD(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { audioId: string } }
+  { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { audioId: rawAudioId } = await params;
+
     // TODO: Add authentication/authorization check here
     // For now, return 403 as this should be admin-only
     return createErrorResponse('Forbidden: Admin access required', 403);
@@ -202,7 +211,7 @@ export async function DELETE(
     // Future implementation:
     let audioId: string;
     try {
-      audioId = validateAudioId(params.audioId);
+      audioId = validateAudioId(rawAudioId);
     } catch (error) {
       if (error instanceof ValidationError) {
         return createValidationErrorResponse(error);
