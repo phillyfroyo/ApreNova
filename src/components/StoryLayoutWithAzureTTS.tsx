@@ -502,7 +502,64 @@ export default function StoryLayoutWithAzureTTS({
                 setIsAnyDropdownOpen(isOpen);
               }}
             />
-            {/* Add other dropdowns as in original */}
+            <Dropdown
+              label={`${t(typedLang, "story", "levelSelect")} ▾ ${t(typedLang, "levels", currentLevel)}`}
+              variant="glass"
+              options={[
+                { label: t(typedLang, "levels", "l1"), value: "l1" },
+                { label: t(typedLang, "levels", "l2"), value: "l2" },
+                { label: t(typedLang, "levels", "l3"), value: "l3" },
+                { label: t(typedLang, "levels", "l4"), value: "l4" },
+                { label: t(typedLang, "levels", "l5"), value: "l5" }
+              ]}
+              onSelect={(selectedValue) => {
+                router.push(`/${typedLang}/stories/${storySlug}/${selectedValue}/ch${chapterNumber}/page-${pageNumber}`);
+              }}
+              onOpenChange={(isOpen) => {
+                setActiveDropdown(isOpen ? "level" : null);
+                setIsAnyDropdownOpen(isOpen);
+              }}
+            />
+            {/* Chapter Dropdown – only if hasChapters */}
+            {storyMap.chapters.length > 1 && (
+              <Dropdown
+                label={`${t(typedLang, "story", "chapter")} ▾ ${chapterNumber}`}
+                variant="glass"
+                options={storyMap.chapters.map((ch) => ({
+                  label: `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
+                  value: ch.chapter.toString(),
+                }))}
+                onSelect={(selectedValue) => {
+                  const selectedChapter = parseInt(selectedValue);
+                  const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
+                  router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${selectedChapter}/page-${firstPage}`);
+                }}
+                onOpenChange={(isOpen) => {
+                  setActiveDropdown(isOpen ? "chapter" : null);
+                  setIsAnyDropdownOpen(isOpen);
+                }}
+              />
+            )}
+
+            {/* Page Dropdown – always shown */}
+            <Dropdown
+              label={`${t(typedLang, "story", "page")} ▾ ${pageNumber}`}
+              variant="glass"
+              options={
+                (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
+                  label: `${t(typedLang, "story", "page")} ${pg}`,
+                  value: pg.toString(),
+                }))
+              }
+              onSelect={(selectedValue) => {
+                const selectedPage = parseInt(selectedValue);
+                router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${selectedPage}`);
+              }}
+              onOpenChange={(isOpen) => {
+                setActiveDropdown(isOpen ? "page" : null);
+                setIsAnyDropdownOpen(isOpen);
+              }}
+            />
           </div>
         </div>
       )}
