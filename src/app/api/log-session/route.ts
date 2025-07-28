@@ -26,7 +26,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
 
-  console.log(`📝 Logged session: ${type} - ${ms}ms`);
+  // Get the current user session
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    console.warn("⚠️ Session logging attempted without valid user session");
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  return NextResponse.json({ status: 'ok' });
+  try {
+    // Save session log to database
+    await prisma.sessionLog.create({
+      data: {
+        userId: session.user.id,
+        ms: ms,
+        type: type
+      }
+    });
+
+    console.log(`📝 Logged session to DB: ${type} - ${ms}ms for user ${session.user.id}`);
+    return NextResponse.json({ status: 'ok' });
+  } catch (error) {
+    console.error("❌ Failed to save session log:", error);
+    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+  }
 }
