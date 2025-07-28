@@ -112,7 +112,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
         segmentText = selectedWords.join(' ') + ',';
       }
       
-      console.log('Generating segment TTS:', {
+      console.log('🐢 Generating segment TTS:', {
         originalText: request.text,
         selectedWords,
         speed: request.speed,
@@ -134,8 +134,9 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       const words = request.text.split(' ');
       const slowText = words.join(', ') + ',';
       
-      console.log('Generating slow full sentence TTS:', {
+      console.log('🐢 Generating slow full sentence TTS:', {
         originalText: request.text,
+        speed: request.speed,
         slowText
       });
       
@@ -148,8 +149,12 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     }
     
     // Regular full sentence playback
+    console.log('▶️ Generating normal full sentence TTS:', {
+      text: request.text,
+      speed: request.speed
+    });
     return playTTS(request);
-  }, [generateTTS, generateCacheKey]);
+  }, []);
 
   /**
    * Play TTS audio with word highlighting (backward compatible)

@@ -70,7 +70,7 @@ export default function Dropdown({
     </button>
 
     {open && (
-      <div className="absolute top-full left-0 mt-1 w-full bg-white/30 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50">
+      <div className="absolute top-full left-0 mt-1 w-full bg-white/90 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50">
         {options.map(({ label, value }) => (
           <div
             key={value}
