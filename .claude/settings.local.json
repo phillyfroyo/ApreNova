@@ -5,7 +5,10 @@
       "Bash(mkdir:*)",
       "Bash(rm:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
