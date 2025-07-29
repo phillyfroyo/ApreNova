@@ -643,12 +643,12 @@ export default function StoryLayoutWithAzureTTS({
                   <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <button 
                       onClick={() => handlePlay(i, false, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative ${
+                      className={`hover:scale-110 transition relative rounded p-1 ${
                         playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow 
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''
                       } ${
-                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
+                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       data-audio-control="speaker"
                       disabled={playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow}
@@ -666,12 +666,12 @@ export default function StoryLayoutWithAzureTTS({
                     
                     <button 
                       onClick={() => handlePlay(i, true, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative ${
+                      className={`hover:scale-110 transition relative rounded p-1 ${
                         playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow 
                           ? 'opacity-50 cursor-not-allowed' 
                           : ''
                       } ${
-                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
+                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       data-audio-control="turtle"
                       disabled={playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow}
@@ -689,8 +689,8 @@ export default function StoryLayoutWithAzureTTS({
 
                     <button 
                       onClick={() => manualTranslateFunctions[i]?.()}
-                      className={`hover:scale-110 transition relative ${
-                        wordSelections[i] ? 'bg-blue-100 rounded p-1' : ''
+                      className={`hover:scale-110 transition relative rounded p-1 ${
+                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       data-translation-control="diamond"
                       title={wordSelections[i] ? 'Translate selected words' : 'Translate full sentence'}
