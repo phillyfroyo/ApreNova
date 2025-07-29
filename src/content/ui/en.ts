@@ -167,9 +167,9 @@ storiesMetadata: {
     title: "The Last Word",
     description: "Mysteries and hidden creatures in an enchanted forest.",
   },
-  "misterio-en-la-selva": {
-    title: "Jungle Mystery",
-    description: "An archaeologist disappears deep in the jungle...",
+  "diego-unplugged": {
+    title: "Diego Unplugged",
+    description: "A young man's journey of self-discovery when he disconnects from the digital world.",
   },
   "el-viaje-magico": {
     title: "The Magic Journey",

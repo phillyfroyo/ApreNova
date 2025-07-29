@@ -1,0 +1,29 @@
+{
+  "audioUrl": "/cache/tts-audio/21967c8805b07498473264b7aff6712f924d3ebfdf91f69f4b0d054c1f72b92b.mp3",
+  "wordTimings": [
+    {
+      "word": "nombre",
+      "startTime": 0.05,
+      "endTime": 0.55,
+      "confidence": 1
+    },
+    {
+      "word": "es",
+      "startTime": 0.5625,
+      "endTime": 0.7375,
+      "confidence": 1
+    },
+    {
+      "word": "Pedro",
+      "startTime": 0.75,
+      "endTime": 1.15,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.15,
+  "createdAt": 1753711213520,
+  "accessedAt": 1753711213520,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "0eb26139130fc8d362532a67a39b7c07"
+}

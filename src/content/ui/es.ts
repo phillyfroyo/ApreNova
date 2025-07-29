@@ -168,9 +168,9 @@ storiesMetadata: {
     title: "La Última Palabra",
     description: "Misterios y criaturas ocultas en un bosque encantado.",
   },
-  "misterio-en-la-selva": {
-    title: "Misterio en la Selva",
-    description: "Un arqueólogo desaparece en la selva profunda...",
+  "diego-unplugged": {
+    title: "Diego Desconectado",
+    description: "El viaje de autodescubrimiento de un joven cuando se desconecta del mundo digital.",
   },
   "el-viaje-magico": {
     title: "El Viaje Mágico",

@@ -1,0 +1,53 @@
+{
+  "audioUrl": "/cache/tts-audio/67e74164901040a06038866b08ed43758eb4313f5096f4dc698d4ce34f511de4.mp3",
+  "wordTimings": [
+    {
+      "word": "A",
+      "startTime": 0.071437,
+      "endTime": 0.464291,
+      "confidence": 1
+    },
+    {
+      "word": "Maya",
+      "startTime": 0.892854,
+      "endTime": 1.428562,
+      "confidence": 1
+    },
+    {
+      "word": "le",
+      "startTime": 1.892854,
+      "endTime": 2.124999,
+      "confidence": 1
+    },
+    {
+      "word": "dolía",
+      "startTime": 2.571437,
+      "endTime": 3.267874,
+      "confidence": 1
+    },
+    {
+      "word": "el",
+      "startTime": 3.660708,
+      "endTime": 3.982145,
+      "confidence": 1
+    },
+    {
+      "word": "estómago",
+      "startTime": 4.428562,
+      "endTime": 5.285707,
+      "confidence": 1
+    },
+    {
+      "word": "mientras",
+      "startTime": 5.714291,
+      "endTime": 6.589291,
+      "confidence": 1
+    }
+  ],
+  "duration": 6.589291,
+  "createdAt": 1753713348500,
+  "accessedAt": 1753713348500,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "928957e25f206575b7d7bfa94584e6a5"
+}
