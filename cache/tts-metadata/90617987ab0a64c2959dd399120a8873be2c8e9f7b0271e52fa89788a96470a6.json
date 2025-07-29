@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/90617987ab0a64c2959dd399120a8873be2c8e9f7b0271e52fa89788a96470a6.mp3",
+  "wordTimings": [
+    {
+      "word": "nombre",
+      "startTime": 0.05,
+      "endTime": 0.625,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.625,
+  "createdAt": 1753819865766,
+  "accessedAt": 1753819865766,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "e21f5146f085187734139b6348ae1f2d"
+}

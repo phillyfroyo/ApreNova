@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/b155c0d29b665eab168af775aaf62e4e129689e63d7dc9115c40cccf1a2d96b2.mp3",
+  "wordTimings": [
+    {
+      "word": "nombre",
+      "startTime": 0.05,
+      "endTime": 0.4625,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 0.475,
+      "endTime": 0.5875,
+      "confidence": 1
+    },
+    {
+      "word": "Maya",
+      "startTime": 0.6,
+      "endTime": 0.925,
+      "confidence": 1
+    },
+    {
+      "word": "estaba",
+      "startTime": 0.9375,
+      "endTime": 1.4,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.4,
+  "createdAt": 1753717983541,
+  "accessedAt": 1753717983541,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "05260ea6c96ee02c2263fb076cef577e"
+}

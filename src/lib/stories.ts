@@ -42,10 +42,11 @@ export const STORY_METADATA: StoryMetadata[] = [
     isPremiumOnly: false,
   },
   {
-    slug: slugify("Misterio en la Selva"),
+    slug: "diego-unplugged",
     image: "/images/placeholder2.png",
     levels: ["l1", "l2", "l3", "l4", "l5"],
-    },
+    isPremiumOnly: false,
+  },
   {
     slug: slugify("El Viaje Mágico"),
     image: "/images/placeholder3.png",
