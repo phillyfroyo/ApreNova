@@ -353,10 +353,10 @@ useEffect(() => {
           }}
           key={i}
           onClick={() => handleClick(i)}
-          className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 ${
+          className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md ${
             enabled && isSelected(i)
-              ? "bg-white/10 backdrop-blur-sm border-[1.5px] border-black/10 rounded-md shadow-md shadow-black/20"
-              : "text-black"
+              ? "bg-white/10 backdrop-blur-sm border-black/10 shadow-md shadow-black/20"
+              : "text-black border-transparent"
           }`}
         >
           {word}
