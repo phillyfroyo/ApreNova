@@ -1,8 +1,8 @@
 // src\lib\getPhrasePrompt.ts
 
-export function getPhrasePrompt(phrase: string, sentence: string, level: number = 2): string {
-  const base =  `
-You are a bilingual Spanish-English language tutor helping Spanish-speaking learners understand English phrases and expressions in context.
+export function getPhrasePrompt(phrase: string, sentence: string, level: number = 2, context?: any): string {
+  const base = `
+You are a bilingual English-Spanish language tutor helping Spanish-speaking learners understand English phrases and expressions in context.
 
 You will be given:
 - a selected English phrase
@@ -22,7 +22,7 @@ Translate only the selected phrase — do not include the rest of the sentence u
 If only a short phrase is selected, you may return 1 or 2 "Other Common Translations".  
 The longer the phrase, the more likely you are to return only the "Primary" translation
 
-You must respond with valid JSON only. No prose, no explanations, no markdown. Do not add “Here’s the translation:” or any other commentary.
+You must respond with valid JSON only. No prose, no explanations, no markdown. Do not add "Here's the translation:" or any other commentary.
 
 Respond with a raw JSON object, like:
 {
@@ -39,43 +39,28 @@ Important:
 `.trim();
 
   const constraints = {
-    1: `
-Use only the 100 most common Spanish words.
-Only present tense.
-Only include literal translations that align directly with the English phrase.
-Do not include idiomatic or figurative interpretations.
-`.trim(),
-
-    2: `
-Use only the 200 most common Spanish words.
-Present tense and simple past and future tenses only.
-Include only literal translations. You may include **one** widely used idiomatic translation *if it is extremely common and does not require interpreting the sentence's intent*.
-Do not include figurative or contextual interpretations like “me escapé” or “huí”.
-Prefer literal translations first.
-`.trim(),
-
-    3: `
-Use up to the 500 most common Spanish words.
-You may include present and preterite tense.
-Include literal and idiomatic translations, ordered by frequency and naturalness in English.
-`.trim(),
-
-    4: `
-Use up to the 1000 most common Spanish words.
-Present, preterite, and imperfect allowed.
-Include literal, idiomatic, and contextual or figurative translations.
-`.trim(),
-
-    5: `
-No vocabulary restrictions — use natural, fluent Mexican Spanish.
-Include literal, idiomatic, and figurative/contextual translations to reflect real-world usage across meanings.
-`.trim(),
+    1: `CEFR level A1.`,
+    2: `CEFR level A2.`,
+    3: `CEFR level B1.`,
+    4: `CEFR level B2.`,
+    5: `CEFR level C1.`,
   };
+
+  const contextInfo = context ? `
+
+STORY CONTEXT (for better understanding of pronouns and references):
+${context.previous ? `Previous sentence: "${context.previous.en}" / "${context.previous.es}"` : ''}
+Current sentence: "${context.current?.en || sentence}" / "${context.current?.es || sentence}"
+${context.next ? `Next sentence: "${context.next.en}" / "${context.next.es}"` : ''}
+
+Use this context to better understand who pronouns refer to and the story's narrative flow.
+` : '';
 
   return `
 ${base}
 
 ${constraints[level]}
+${contextInfo}
 
   English Phrase: ${phrase}
   Sentence: ${sentence}

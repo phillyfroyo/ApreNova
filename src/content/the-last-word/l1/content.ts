@@ -9,9 +9,7 @@ export const levelContent = {
           lines: [
 { en: "The teacher writes three names at the front of the classroom.", es: "La maestra escribe tres nombres al frente del salón." },
 
-{ en: "Maya's name is number three on the list.", es: "El nombre de Maya está en el número tres de la lista." },
-
-{ en: "Daniel, Jo, Maya", es: "Daniel, Jo, Maya" },
+{ en: "Maya's name is number three on the list. Daniel, Jo, Maya.", es: "El nombre de Maya está en el número tres de la lista. Daniel, Jo, Maya." },
 
 { en: "She looks at the list.", es: "Ella mira la lista." },
 

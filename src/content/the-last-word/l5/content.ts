@@ -8,8 +8,7 @@ export const levelContent = {
         1: {
           lines: [
             { en: "Maya's name was third on the list.", es: "El nombre de Maya estaba en tercer lugar en la lista." },
-            { en: "She stared at it, written on the white board at the front of the classroom:", es: "Lo miró fijamente, escrito en la pizarra blanca al frente del salón:" },
-            { en: "1. Daniel  |  2. Jo  |  3. Maya", es: "1. Daniel  |  2. Jo  |  3. Maya" },
+            { en: "She stared at it, written on the white board at the front of the classroom: Daniel, Jo, Maya.", es: "Lo miró fijamente, escrito en la pizarra blanca al frente del salón: Daniel, Jo, Maya." },
             { en: "Her note cards shook in her hands.", es: "Sus tarjetas temblaban en sus manos." },
             { en: "She had practiced the history presentation ten times the night before.", es: "Había practicado la presentación de historia diez veces la noche anterior." },
             { en: "She practiced in her bedroom, into the mirror, even to her dog.", es: "Practicó en su habitación, frente al espejo, incluso con su perro." },

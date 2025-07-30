@@ -43,7 +43,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   },
   {
     slug: "diego-unplugged",
-    image: "/images/placeholder2.png",
+    image: "/images/diego-unplugged-thumbnail.png",
     levels: ["l1", "l2", "l3", "l4", "l5"],
     isPremiumOnly: false,
   },

@@ -155,7 +155,7 @@ premium: {
 
 translator: {
   translation: "Traducción",
-  otherCommonUses: "Otros usos comunes de",
+  otherCommonUses: "también puede significar",
   translating: "Traduciendo"
 },
 

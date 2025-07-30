@@ -16,16 +16,26 @@ interface Props {
   onSelectionChange?: (selectedIndices: { start: number; end: number } | null) => void;
   onManualTranslate?: (translateFn: () => void) => void; // Provides manual translation function to parent
   onClearSelection?: (clearFn: () => void) => void; // Provides clear selection function to parent
+  // Context for better translations
+  sentenceIndex?: number;
+  contextSentences?: Array<{ es: string; en: string }>;
 }
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
+  const [enhancedTranslation, setEnhancedTranslation] = useState<{
+    contextTranslation?: string;
+    isDerivative?: boolean;
+    rootWord?: string;
+    rootTranslation?: string;
+    otherCommonTranslations?: string[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -59,6 +69,24 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
 
 
   const getSelectedText = () => words.slice(startIdx!, endIdx! + 1).join(" ");
+  
+  const getCleanSelectedText = () => {
+    const selectedText = words.slice(startIdx!, endIdx! + 1).join(" ");
+    return selectedText.replace(/[.,!?;:()"]+/g, "");
+  };
+
+  const getContextSentences = () => {
+    if (!contextSentences || sentenceIndex === undefined) return null;
+    
+    const prevSentence = sentenceIndex > 0 ? contextSentences[sentenceIndex - 1] : null;
+    const nextSentence = sentenceIndex < contextSentences.length - 1 ? contextSentences[sentenceIndex + 1] : null;
+    
+    return {
+      previous: prevSentence,
+      current: contextSentences[sentenceIndex],
+      next: nextSentence
+    };
+  };
 
   const fetchTranslation = useCallback(
   async (start: number, end: number) => {
@@ -71,40 +99,58 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
     const isSingleWord = start === end;
 
-const endpoint = isSingleWord
-  ? `/api/translate-word?lang=${currentLang}`
-  : `/api/translate-phrase?input=${encodeURIComponent(cleanWord)}&sentence=${encodeURIComponent(sentence)}&level=${currentLevel}&mode=auto&lang=${currentLang}`;
+    const context = getContextSentences();
+    
+    const endpoint = isSingleWord
+      ? `/api/translate-word?lang=${currentLang}`
+      : `/api/translate-phrase?lang=${currentLang}`;
 
     const body = isSingleWord
-  ? { word: cleanWord, sentence, level: currentLevel }
-  : null;
+      ? { word: cleanWord, sentence, level: currentLevel, context }
+      : { phrase: cleanWord, sentence, level: currentLevel, context };
 
     try {
       setLoading(true);
       setError("");
       const res = await fetch(endpoint, {
-        method: isSingleWord ? "POST" : "GET",
-        headers: isSingleWord ? { "Content-Type": "application/json" } : undefined,
-        body: isSingleWord ? JSON.stringify(body) : undefined,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
       if (!isSingleWord) {
-  if (typeof data.translations === "object" && data.translations.primary) {
-    const merged = [
-      data.translations.primary,
-      ...(data.translations.otherCommonTranslations || [])
-    ];
-    setTranslations(merged);
-  } else if (Array.isArray(data.translations)) {
-    setTranslations(data.translations); // fallback
-  } else {
-    throw new Error("Invalid phrase translation format");
-  }
-} else {
-  setTranslations(data.translations || []);
-}
+        // Handle phrase translations (unchanged)
+        if (typeof data.translations === "object" && data.translations.primary) {
+          const merged = [
+            data.translations.primary,
+            ...(data.translations.otherCommonTranslations || [])
+          ];
+          setTranslations(merged);
+        } else if (Array.isArray(data.translations)) {
+          setTranslations(data.translations); // fallback
+        } else {
+          throw new Error("Invalid phrase translation format");
+        }
+        setEnhancedTranslation(null); // Clear enhanced data for phrases
+      } else {
+        // Handle single word translations with enhanced data
+        if (data.contextTranslation) {
+          setEnhancedTranslation({
+            contextTranslation: data.contextTranslation,
+            isDerivative: data.isDerivative,
+            rootWord: data.rootWord,
+            rootTranslation: data.rootTranslation,
+            otherCommonTranslations: data.otherCommonTranslations
+          });
+          setTranslations(data.translations || [data.contextTranslation]);
+        } else {
+          // Fallback to legacy format
+          setTranslations(data.translations || []);
+          setEnhancedTranslation(null);
+        }
+      }
     } catch (err) {
       console.error(err);
       setError("⚠️ Failed to fetch translation.");
@@ -123,6 +169,7 @@ const endpoint = isSingleWord
     // If translations are already showing, hide them (toggle off)
     if (translations.length > 0 || error) {
       setTranslations([]);
+      setEnhancedTranslation(null);
       setError("");
       return;
     }
@@ -153,6 +200,7 @@ const endpoint = isSingleWord
     setStartIdx(null);
     setEndIdx(null);
     setTranslations([]);
+    setEnhancedTranslation(null);
     setError("");
   }, []);
 
@@ -175,6 +223,7 @@ const endpoint = isSingleWord
 
   // Clear any existing translations when selecting new words
   setTranslations([]);
+  setEnhancedTranslation(null);
   setError("");
 
   if (startIdx === null && endIdx === null) {
@@ -384,57 +433,112 @@ useEffect(() => {
 
           {translations.length > 0 && (
             <div className="mt-1 space-y-2">
-              <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
-<ul className="list-disc list-inside">
-  <li>
-    <button
-      onClick={() => fetchExample(translations[0])}
-      className="text-blue-600 hover:underline"
-    >
-      {translations[0]}
-    </button>
-  </li>
-</ul>
-
-              {translations.length > 1 && (
+              {/* Enhanced single word translation format */}
+              {enhancedTranslation && startIdx === endIdx ? (
                 <>
-                  <p className="font-semibold mt-2">
-                    {t(currentLang, "translator", "otherCommonUses")}{" "}
-                    <span className="italic text-gray-800">
-                      {words.slice(startIdx!, endIdx! + 1).join(" ")}
-                    </span>
-                    :
-                  </p>
-                  <ul className="list-disc list-inside">
-                    {translations.slice(1).map((t, i) => {
-                      const hasExample = !!exampleMap[t];
-                      return (
-                        <li key={i}>
-                          <button
-                            onClick={() => fetchExample(t)}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {t}
-                          </button>
-                          {hasExample && (
-                            <div className="ml-2 mt-1 text-sm">
-                              {showSpanishFirst ? (
-                                <>
-                                  <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
-                                  <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
-                                </>
-                              ) : (
-                                <>
-                                  <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
-                                  <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
-                                </>
+                  <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
+                  <div className="text-lg font-medium text-gray-900">
+                    <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.contextTranslation}
+                  </div>
+
+                  {enhancedTranslation.isDerivative && enhancedTranslation.rootWord && (
+                    <div className="mt-3">
+                      <p className="font-semibold text-sm text-gray-700">Root word:</p>
+                      <div className="text-sm text-gray-800">
+                        <span className="font-medium">{enhancedTranslation.rootWord}</span> = {enhancedTranslation.rootTranslation}
+                      </div>
+                    </div>
+                  )}
+
+                  {enhancedTranslation.otherCommonTranslations && enhancedTranslation.otherCommonTranslations.length > 0 && (
+                    <>
+                      <p className="font-normal mt-2">
+                        <span className="font-bold italic text-gray-800">
+                          {getCleanSelectedText()}
+                        </span>
+                        {" "}{t(currentLang, "translator", "otherCommonUses")}:
+                      </p>
+                      <ul className="list-disc list-inside">
+                        {enhancedTranslation.otherCommonTranslations.map((t, i) => {
+                          const hasExample = !!exampleMap[t];
+                          return (
+                            <li key={i}>
+                              <button
+                                onClick={() => fetchExample(t)}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {t}
+                              </button>
+                              {hasExample && (
+                                <div className="ml-2 mt-1 text-sm">
+                                  {showSpanishFirst ? (
+                                    <>
+                                      <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
+                                    </>
+                                  )}
+                                </div>
                               )}
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                </>
+              ) : (
+                /* Legacy format for phrases and fallback */
+                <>
+                  <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
+                  <div className="text-lg font-medium text-gray-900">
+                    {translations[0]}
+                  </div>
+
+                  {translations.length > 1 && (
+                    <>
+                      <p className="font-normal mt-2">
+                        <span className="font-bold italic text-gray-800">
+                          {getCleanSelectedText()}
+                        </span>
+                        {" "}{t(currentLang, "translator", "otherCommonUses")}:
+                      </p>
+                      <ul className="list-disc list-inside">
+                        {translations.slice(1).map((t, i) => {
+                          const hasExample = !!exampleMap[t];
+                          return (
+                            <li key={i}>
+                              <button
+                                onClick={() => fetchExample(t)}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {t}
+                              </button>
+                              {hasExample && (
+                                <div className="ml-2 mt-1 text-sm">
+                                  {showSpanishFirst ? (
+                                    <>
+                                      <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
                 </>
               )}
             </div>

@@ -179,6 +179,7 @@ export default function StoryLayoutWithAzureTTS({
   const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
     aventura: "alwaysPremium",
     "the-last-word": "conditional",
+    "diego-unplugged": "alwaysPremium",
   };
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
@@ -226,6 +227,8 @@ export default function StoryLayoutWithAzureTTS({
     if (storySlug === "aventura") {
       setTranslationMode("premium");
     } else if (storySlug === "the-last-word") {
+      setTranslationMode(isPremiumUser ? "premium" : "free");
+    } else if (storySlug === "diego-unplugged") {
       setTranslationMode(isPremiumUser ? "premium" : "free");
     }
   }, [storySlug, isPremiumUser]);
@@ -657,10 +660,7 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Volume2 className={`h-5 w-5 ${wordSelections[i] ? 'text-blue-600' : ''}`} />
-                      )}
-                      {wordSelections[i] && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                        <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>🔊</span>
                       )}
                     </button>
                     
@@ -680,10 +680,7 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Turtle className={`h-5 w-5 ${wordSelections[i] ? 'text-blue-600' : ''}`} />
-                      )}
-                      {wordSelections[i] && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                        <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>🐢</span>
                       )}
                     </button>
 
@@ -696,9 +693,6 @@ export default function StoryLayoutWithAzureTTS({
                       title={wordSelections[i] ? 'Translate selected words' : 'Translate full sentence'}
                     >
                       <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>💎</span>
-                      {wordSelections[i] && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
-                      )}
                     </button>
                     
                     {/* Pencil button for static translations */}
@@ -737,7 +731,7 @@ export default function StoryLayoutWithAzureTTS({
                 </div>
 
                 {/* Text content - ensure consistent left alignment */}
-                <div className="w-full px-2">
+                <div className="w-full px-2 relative">
                   <UnifiedTranslator
                     sentence={s[oppositeLang]}
                     enabled={!isAnyDropdownOpen && !menuOpen}
@@ -747,10 +741,12 @@ export default function StoryLayoutWithAzureTTS({
                     onSelectionChange={(selection) => handleWordSelectionChange(i, selection)}
                     onManualTranslate={(translateFn) => handleManualTranslate(i, translateFn)}
                     onClearSelection={(clearFn) => handleClearSelection(i, clearFn)}
+                    sentenceIndex={i}
+                    contextSentences={sentences}
                   />
                   <p
                     ref={el => { translationRefs.current[i] = el; }}
-                    className="translation hidden text-muted-foreground text-sm mt-2 text-left"
+                    className="translation hidden text-muted-foreground text-sm text-left absolute z-10 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm mt-1"
                   >
                     {s[typedLang]}
                   </p>
