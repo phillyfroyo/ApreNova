@@ -69,20 +69,24 @@ export async function POST(request: NextRequest) {
     const speechService = getAzureSpeechService();
     const cacheService = getTTSCacheService();
 
-    // Check cache first
-    const cached = await cacheService.getCached(requestData);
-    if (cached) {
-      return new Response(
-        JSON.stringify(cached),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=2592000', // 30 days
-            ...createRateLimitHeaders(info)
+    // Check cache first (skip caching on Vercel)
+    const isVercel = process.env.VERCEL === '1';
+    let cached = null;
+    if (!isVercel) {
+      cached = await cacheService.getCached(requestData);
+      if (cached) {
+        return new Response(
+          JSON.stringify(cached),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'public, max-age=2592000', // 30 days
+              ...createRateLimitHeaders(info)
+            }
           }
-        }
-      );
+        );
+      }
     }
 
     // Validate the request with speech service
@@ -91,13 +95,20 @@ export async function POST(request: NextRequest) {
     // Generate new TTS audio
     const result = await speechService.generateSpeechBuffer(requestData);
     
-    // Save to cache
-    const audioUrl = await cacheService.saveToCache(
-      requestData,
-      result.buffer,
-      result.wordTimings,
-      result.duration
-    );
+    // Save to cache (skip on Vercel)
+    let audioUrl = '';
+    if (!isVercel) {
+      audioUrl = await cacheService.saveToCache(
+        requestData,
+        result.buffer,
+        result.wordTimings,
+        result.duration
+      );
+    } else {
+      // On Vercel, return base64 data URL for immediate use
+      const base64Audio = Buffer.from(result.buffer).toString('base64');
+      audioUrl = `data:audio/mp3;base64,${base64Audio}`;
+    }
 
     const response: TTSResponse = {
       audioUrl,
