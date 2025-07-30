@@ -1,0 +1,41 @@
+{
+  "audioUrl": "/cache/tts-audio/3b121a59cecf4fdde8471a7debf60c2d0e1eaf3673a69ade605f5e15796a74cf.mp3",
+  "wordTimings": [
+    {
+      "word": "Lo",
+      "startTime": 0.071437,
+      "endTime": 0.624999,
+      "confidence": 1
+    },
+    {
+      "word": "miró",
+      "startTime": 1.0535619,
+      "endTime": 1.5892699,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 1.946437,
+      "endTime": 2.339291,
+      "confidence": 1
+    },
+    {
+      "word": "la",
+      "startTime": 2.767854,
+      "endTime": 3.107145,
+      "confidence": 1
+    },
+    {
+      "word": "pizarra",
+      "startTime": 3.553562,
+      "endTime": 4.46427,
+      "confidence": 1
+    }
+  ],
+  "duration": 4.46427,
+  "createdAt": 1753880657663,
+  "accessedAt": 1753880657663,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "9675919ca36209e474a83195a21ddc85"
+}

@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/8d6e3063ea0bd82d86ad8b9ba32fd8ae8acb77ebc1a232c2fa7cd38808e8b335.mp3",
+  "wordTimings": [
+    {
+      "word": "hoja",
+      "startTime": 0.05,
+      "endTime": 0.5625,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.5625,
+  "createdAt": 1753896779523,
+  "accessedAt": 1753896779523,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "e7be314e9e6b5ab5ece7862c3d06dfc1"
+}

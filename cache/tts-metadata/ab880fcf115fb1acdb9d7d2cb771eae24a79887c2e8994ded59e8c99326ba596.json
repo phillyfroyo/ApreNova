@@ -1,0 +1,65 @@
+{
+  "audioUrl": "/cache/tts-audio/ab880fcf115fb1acdb9d7d2cb771eae24a79887c2e8994ded59e8c99326ba596.mp3",
+  "wordTimings": [
+    {
+      "word": "Diego",
+      "startTime": 0.071437,
+      "endTime": 0.803582,
+      "confidence": 1
+    },
+    {
+      "word": "nunca",
+      "startTime": 1.25,
+      "endTime": 1.928562,
+      "confidence": 1
+    },
+    {
+      "word": "iba",
+      "startTime": 2.410708,
+      "endTime": 2.892853,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 3.196437,
+      "endTime": 3.499999,
+      "confidence": 1
+    },
+    {
+      "word": "ningún",
+      "startTime": 3.928562,
+      "endTime": 4.624999,
+      "confidence": 1
+    },
+    {
+      "word": "lado",
+      "startTime": 5.071437,
+      "endTime": 5.589291,
+      "confidence": 1
+    },
+    {
+      "word": "sin",
+      "startTime": 5.946437,
+      "endTime": 6.357145,
+      "confidence": 1
+    },
+    {
+      "word": "su",
+      "startTime": 6.785708,
+      "endTime": 7.232145,
+      "confidence": 1
+    },
+    {
+      "word": "teléfono",
+      "startTime": 7.589291,
+      "endTime": 8.499999,
+      "confidence": 1
+    }
+  ],
+  "duration": 8.499999,
+  "createdAt": 1753901698162,
+  "accessedAt": 1753901698162,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "1ce5b26a5f88dde59eb35b68852e50cb"
+}

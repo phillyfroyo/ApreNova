@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/f468ce4913ef8af13547567cef2cfa23cc5e96c32251aa9993efdbb5d38592a4.mp3",
+  "wordTimings": [
+    {
+      "word": "fijamente",
+      "startTime": 0.05,
+      "endTime": 0.9,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.9,
+  "createdAt": 1753880526072,
+  "accessedAt": 1753880526072,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "f86977755533a0870337b03c9571f85e"
+}

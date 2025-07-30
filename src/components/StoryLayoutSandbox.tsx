@@ -691,7 +691,7 @@ export default function StoryLayoutSandbox({
           <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
             <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
               <p className="text-sm text-gray-600 mb-2">
-                <strong>AI Tutor:</strong> Hi! I'm here to help you understand this story better. 
+                <strong>AI Tutor:</strong> Hi! I&apos;m here to help you understand this story better. 
                 Ask me about grammar, vocabulary, or cultural context!
               </p>
               <p className="text-xs text-gray-400 italic">
