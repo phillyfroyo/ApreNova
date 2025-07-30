@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Check cache first (skip caching on Vercel)
     const isVercel = process.env.VERCEL === '1';
-    let cached = null;
+    let cached: TTSResponse | null = null;
     if (!isVercel) {
       cached = await cacheService.getCached(requestData);
       if (cached) {
