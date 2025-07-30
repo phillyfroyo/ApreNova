@@ -570,7 +570,7 @@ export default function StoryLayoutSandbox({
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
           {sentences.map((s, i) => (
-            <div key={i} className="my-12 w-full">
+            <div key={i} className="my-6 w-full">
               <div className="flex flex-col space-y-2 w-full">
                 {/* Horizontal emoji + audio bar row */}
                 <div className="flex items-center gap-3 justify-start px-2">
