@@ -1,0 +1,29 @@
+{
+  "audioUrl": "/cache/tts-audio/7c534baf17dbd33b8f95b7d3256fc853e25f16e8440d04a205c027d620ff7df7.mp3",
+  "wordTimings": [
+    {
+      "word": "Lo",
+      "startTime": 0.05,
+      "endTime": 0.2125,
+      "confidence": 1
+    },
+    {
+      "word": "miró",
+      "startTime": 0.225,
+      "endTime": 0.475,
+      "confidence": 1
+    },
+    {
+      "word": "fijamente",
+      "startTime": 0.4875,
+      "endTime": 1.2875,
+      "confidence": 1
+    }
+  ],
+  "duration": 1.2875,
+  "createdAt": 1753880507915,
+  "accessedAt": 1753880514747,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "137242ba70ba9a28615490465f35cc71"
+}

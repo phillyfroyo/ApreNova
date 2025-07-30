@@ -1,0 +1,119 @@
+{
+  "audioUrl": "/cache/tts-audio/46156ea05579bb3d2ccff124d397990a9e2c5200a1eed73731ad517d28fb271e.mp3",
+  "wordTimings": [
+    {
+      "word": "Lo",
+      "startTime": 0.071437,
+      "endTime": 0.535728,
+      "confidence": 1
+    },
+    {
+      "word": "miró",
+      "startTime": 0.928562,
+      "endTime": 1.410707,
+      "confidence": 1
+    },
+    {
+      "word": "fijamente",
+      "startTime": 1.821437,
+      "endTime": 2.821437,
+      "confidence": 1
+    },
+    {
+      "word": ", escrito",
+      "startTime": 3.267854,
+      "endTime": 4.124999,
+      "confidence": 1
+    },
+    {
+      "word": "con",
+      "startTime": 4.5,
+      "endTime": 4.857145,
+      "confidence": 1
+    },
+    {
+      "word": "marcador",
+      "startTime": 5.321437,
+      "endTime": 6.107145,
+      "confidence": 1
+    },
+    {
+      "word": "negro",
+      "startTime": 6.517854,
+      "endTime": 7.142854,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 7.5,
+      "endTime": 7.821437,
+      "confidence": 1
+    },
+    {
+      "word": "la",
+      "startTime": 8.25,
+      "endTime": 8.553562,
+      "confidence": 1
+    },
+    {
+      "word": "pizarra",
+      "startTime": 8.964291,
+      "endTime": 9.767853,
+      "confidence": 1
+    },
+    {
+      "word": "blanca",
+      "startTime": 10.214291,
+      "endTime": 10.803582,
+      "confidence": 1
+    },
+    {
+      "word": "al",
+      "startTime": 11.107145,
+      "endTime": 11.428582,
+      "confidence": 1
+    },
+    {
+      "word": "frente",
+      "startTime": 11.839291,
+      "endTime": 12.446436,
+      "confidence": 1
+    },
+    {
+      "word": "del",
+      "startTime": 12.857145,
+      "endTime": 13.21429,
+      "confidence": 1
+    },
+    {
+      "word": "salón",
+      "startTime": 13.625,
+      "endTime": 14.285708,
+      "confidence": 1
+    },
+    {
+      "word": "Daniel",
+      "startTime": 14.75,
+      "endTime": 15.428562,
+      "confidence": 1
+    },
+    {
+      "word": ", Jo",
+      "startTime": 15.714291,
+      "endTime": 16.071436,
+      "confidence": 1
+    },
+    {
+      "word": ", Maya",
+      "startTime": 16.5,
+      "endTime": 17.142854,
+      "confidence": 1
+    }
+  ],
+  "duration": 17.142854,
+  "createdAt": 1753880573399,
+  "accessedAt": 1753880573399,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "33352e81db11272e6081ca8b36c4f8a2"
+}
