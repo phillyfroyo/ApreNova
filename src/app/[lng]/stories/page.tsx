@@ -105,14 +105,15 @@ useEffect(() => {
         border: "1px solid #ccc",
         borderRadius: "8px",
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        width: "200px",
+        minWidth: "200px",
+        maxWidth: "300px",
         padding: "1rem",
         zIndex: 1000,
       }}
     >
       <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
         {session?.user?.email ? (
-          <div>{session.user.email}</div>
+          <div style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>{session.user.email}</div>
         ) : (
           <a href={`/${typedLang}/auth/signup`} className="text-blue-800 hover:underline">
             {t(typedLang, "stories", "createAccount")}
@@ -233,6 +234,8 @@ useEffect(() => {
           overflowX: "auto",
           paddingLeft: "1rem",
           paddingRight: "1rem",
+          paddingTop: "0.75rem",              // 👈 Add top padding for hover expansion
+          paddingBottom: "0.75rem",           // 👈 Add bottom padding for hover expansion
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
           scrollbarWidth: "none",

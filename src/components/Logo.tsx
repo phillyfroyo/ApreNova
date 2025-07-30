@@ -14,10 +14,10 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
 
   const label =
     session?.user?.nativeLanguage === 'es'
-      ? 'miAprendO'
+      ? 'miCuentana'
       : session?.user?.nativeLanguage === 'en'
-      ? 'myAprendO'
-      : 'AprendO';
+      ? 'myCuentana'
+      : 'Cuentana';
 
   const variants: Record<string, [string, string, string?]> = {
     default: ['text-[#1000c8]', 'text-[#5100a2]', 'font-[Alice]'],
@@ -60,10 +60,10 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
   const isLoggedIn = !!session?.user;
   const lng = session?.user?.nativeLanguage || 'es'; // default to Spanish
   const brand = !isLoggedIn
-    ? ['Aprend', 'O']
+    ? ['Cuent', 'ana']
     : lng === 'es'
-      ? ['miAprend', 'O']
-      : ['myAprend', 'O'];
+      ? ['miCuent', 'ana']
+      : ['myCuent', 'ana'];
 
   return (
     <h1 className={`font-bold leading-none ${font} ${size} ${className}`}>

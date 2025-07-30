@@ -45,6 +45,7 @@ export default function StoryLayoutSandbox({
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   function getPrevNextPage(
     currentChapter: number,
@@ -659,6 +660,65 @@ export default function StoryLayoutSandbox({
 
         </div>
       </div>
+
+      {/* AI Tutor Button */}
+      <button
+        onClick={() => setAiChatOpen(!aiChatOpen)}
+        className="fixed bottom-6 left-6 w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-105"
+        title="AI Language Tutor"
+      >
+        <span className="text-lg">🤖</span>
+      </button>
+
+      {/* AI Chat Modal */}
+      {aiChatOpen && (
+        <div className="fixed bottom-24 left-6 w-80 h-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col">
+          {/* Chat Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-50 rounded-t-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🤖</span>
+              <h3 className="font-semibold text-gray-800">AI Language Tutor</h3>
+            </div>
+            <button
+              onClick={() => setAiChatOpen(false)}
+              className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Chat Content */}
+          <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+            <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>AI Tutor:</strong> Hi! I'm here to help you understand this story better. 
+                Ask me about grammar, vocabulary, or cultural context!
+              </p>
+              <p className="text-xs text-gray-400 italic">
+                (AI features coming soon)
+              </p>
+            </div>
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Ask about the story..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                disabled
+              />
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

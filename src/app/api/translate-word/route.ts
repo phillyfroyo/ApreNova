@@ -12,7 +12,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new Map<string, { translations: string[] }>();
 
 export async function POST(req: NextRequest) {
-  const { word, sentence, level } = await req.json();
+  const { word, sentence, level, context } = await req.json();
 
   console.log("🧪 translate-word input:", { word, level });
 
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   const isSpanishToEnglish = lang === "en";
 
   const prompt = isSpanishToEnglish
-    ? getWordPromptToEnglish(word, sentence, level)
-    : getWordPrompt(word, sentence, level);
+    ? getWordPromptToEnglish(word, sentence, level, context)
+    : getWordPrompt(word, sentence, level, context);
 
     const fullPrompt = `${prompt}
 
@@ -55,26 +55,53 @@ export async function POST(req: NextRequest) {
 
     const cleanReply = reply.replace(/```json|```/g, "").trim();
 
-    let translations: string[] = [];
+    let result: any = {};
 
     try {
       const raw = JSON.parse(cleanReply);
-      if (typeof raw === "object" && raw.primary) {
-  translations = [raw.primary, ...(raw.otherCommonTranslations || [])];
-} else if (Array.isArray(raw)) {
-  translations = raw;
-} else {
-  throw new Error("Invalid translation format");
-}
+      
+      // Handle new enhanced format
+      if (typeof raw === "object" && raw.contextTranslation) {
+        result = {
+          contextTranslation: raw.contextTranslation,
+          isDerivative: raw.isDerivative || false,
+          rootWord: raw.rootWord || null,
+          rootTranslation: raw.rootTranslation || null,
+          otherCommonTranslations: raw.otherCommonTranslations || [],
+          // Legacy support - map contextTranslation to first item in translations
+          translations: [raw.contextTranslation, ...(raw.otherCommonTranslations || [])]
+        };
+      }
+      // Handle legacy format for backwards compatibility
+      else if (typeof raw === "object" && raw.primary) {
+        result = {
+          contextTranslation: raw.primary,
+          isDerivative: false,
+          rootWord: null,
+          rootTranslation: null,
+          otherCommonTranslations: raw.otherCommonTranslations || [],
+          translations: [raw.primary, ...(raw.otherCommonTranslations || [])]
+        };
+      } else if (Array.isArray(raw)) {
+        result = {
+          contextTranslation: raw[0] || "",
+          isDerivative: false,
+          rootWord: null,
+          rootTranslation: null,
+          otherCommonTranslations: raw.slice(1) || [],
+          translations: raw
+        };
+      } else {
+        throw new Error("Invalid translation format");
+      }
     } catch (parseError) {
       console.error("❌ Failed to parse GPT response:", parseError);
       return NextResponse.json({ error: "Invalid GPT translation format." }, { status: 500 });
     }
 
-    const parsed = { translations };
-    cache.set(cacheKey, parsed);
+    cache.set(cacheKey, result);
 
-    return NextResponse.json(parsed);
+    return NextResponse.json(result);
   } catch (err) {
     console.error("❌ OpenAI error:", err);
     return NextResponse.json({ error: "Failed to fetch translation." }, { status: 500 });

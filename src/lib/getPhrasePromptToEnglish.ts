@@ -1,6 +1,6 @@
 // src/lib/getPhrasePromptToEnglish.ts
 
-export function getPhrasePromptToEnglish(phrase: string, sentence: string, level: number = 2): string {
+export function getPhrasePromptToEnglish(phrase: string, sentence: string, level: number = 2, context?: any): string {
   const base = `
 You are a bilingual Spanish-English language tutor helping English-speaking learners understand Spanish phrases and expressions in context.
 
@@ -39,43 +39,28 @@ Important:
 `.trim();
 
   const constraints = {
-    1: `
-Use only the 100 most common English words.
-Only present tense.
-Only include literal translations that align directly with the English phrase.
-Do not include idiomatic or figurative interpretations.
-`.trim(),
-
-    2: `
-Use only the 200 most common English words.
-Present tense and simple past and future tenses only.
-Include only literal translations. You may include **one** widely used idiomatic translation *if it is extremely common and does not require interpreting the sentence's intent*.
-Do not include figurative or contextual interpretations like “ran off” or “got away”.
-Prefer literal translations first.
-`.trim(),
-
-    3: `
-Use up to the 500 most common English words.
-You may include present and simple past tense.
-Include literal and idiomatic translations, ordered by frequency and naturalness in Spanish.
-`.trim(),
-
-    4: `
-Use up to the 1000 most common English words.
-Present, preterite, and imperfect allowed.
-Include literal, idiomatic, and contextual or figurative translations.
-`.trim(),
-
-    5: `
-No vocabulary restrictions — use natural, fluent Spanish.
-Include literal, idiomatic, and figurative/contextual translations to reflect real-world usage across meanings.
-`.trim(),
+    1: `CEFR level A1.`,
+    2: `CEFR level A2.`,
+    3: `CEFR level B1.`,
+    4: `CEFR level B2.`,
+    5: `CEFR level C1.`,
   };
+
+  const contextInfo = context ? `
+
+STORY CONTEXT (for better understanding of pronouns and references):
+${context.previous ? `Previous sentence: "${context.previous.es}" / "${context.previous.en}"` : ''}
+Current sentence: "${context.current?.es || sentence}" / "${context.current?.en || sentence}"
+${context.next ? `Next sentence: "${context.next.es}" / "${context.next.en}"` : ''}
+
+Use this context to better understand who pronouns refer to and the story's narrative flow.
+` : '';
 
   return `
 ${base}
 
 ${constraints[level]}
+${contextInfo}
 
   Spanish Phrase: ${phrase}
   Sentence: ${sentence}

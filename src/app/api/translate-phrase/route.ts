@@ -8,18 +8,12 @@ import { getPhrasePromptToEnglish } from '@/lib/getPhrasePromptToEnglish';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function GET(req: NextRequest) {
-  const inputParam = req.nextUrl.searchParams.get('input');
-  const sentenceParam = req.nextUrl.searchParams.get('sentence');
-  const levelParam = req.nextUrl.searchParams.get('level');
+export async function POST(req: NextRequest) {
+  const { phrase, sentence, level, context } = await req.json();
 
-  if (!inputParam || !sentenceParam || !levelParam) {
+  if (!phrase || !sentence || !level) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
   }
-
-  const phrase = inputParam.trim();
-  const sentence = sentenceParam.trim();
-  const level = parseInt(levelParam.trim());
 
 const langParam = req.nextUrl.searchParams.get('lang') ?? 'es';
 const isSpanishToEnglish = langParam === 'en';
@@ -27,8 +21,8 @@ const isSpanishToEnglish = langParam === 'en';
 console.log("🌐 langParam:", langParam, "→ using ToEnglish:", isSpanishToEnglish);
 
 const prompt = isSpanishToEnglish
-  ? getPhrasePromptToEnglish(phrase, sentence, level)
-  : getPhrasePrompt(phrase, sentence, level);
+  ? getPhrasePromptToEnglish(phrase, sentence, level, context)
+  : getPhrasePrompt(phrase, sentence, level, context);
   console.log("🧠 Prompt to GPT:", prompt);
 
   try {

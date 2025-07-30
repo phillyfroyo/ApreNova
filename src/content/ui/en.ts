@@ -154,7 +154,7 @@ premium: {
 
 translator: {
   translation: "Translation",
-  otherCommonUses: "Other common uses of",
+  otherCommonUses: "can also mean",
   translating: "Translating"
 },
 

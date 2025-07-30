@@ -12,32 +12,39 @@ export function getExamplePromptToEnglish({
   spanishWord,
 }: ExamplePromptParams): string {
   const base = `
-You are a bilingual English-Spanish tutor.
+You are a bilingual English–Spanish tutor.
 
-Given a Spanish word and its English translation, return:
+Given:
+- a Spanish word: "${spanishWord}"
+- a target English meaning: "${englishWord}"
 
-1. A short, natural Spanish sentence that includes the **exact Spanish word**: "${spanishWord}"
-2. A matching English sentence that uses the **exact English word**: "${englishWord}"
+Your task is to create a natural sentence pair that illustrates how the Spanish word can be used in the context of the English word.
 
-Both sentences must describe the same context or scenario. Do not paraphrase or substitute synonyms. Do not change the Spanish word.
+The Spanish sentence must:
+- Use the exact "${spanishWord}". Do not use any other form of the spanish word. It must be used exactly as given, no exceptions.
+- Clearly express the intended meaning behind "${englishWord}" (e.g., if "${englishWord}" is "instant", the Spanish must convey *suddenness* or *immediacy*)
 
-⚠️ You must use the exact Spanish word and English word in your examples.
+The English sentence must:
+- Be the most natural and accurate translation of the Spanish sentence
+- Use "${englishWord}" naturally and meaningfully in context
+
+Use natural, everyday language — not overly formal or poetic.
 
 Respond only with a raw JSON object like this:
 {
-  "spanish": "Ella administra ese negocio muy bien.",
-  "english": "She runs that business really well."
+  "spanish": "Él toca la planta.",
+  "english": "He touches the plant."
 }
 
 No formatting, no code blocks, no explanations.
 `.trim();
 
   const constraints = {
-    1: `Use only the 100 most common English words. Only present tense. Keep it extremely simple.`,
-    2: `Use only the 200 most common English words. Present tense only.`,
-    3: `Use up to the 500 most common English words. You may include present and simple past.`,
-    4: `Use up to the 1000 most common English words. Present, simple past, and past continuous allowed.`,
-    5: `No vocabulary restrictions. Use natural, fluent English.`,
+    1: `CEFR level A1.`,
+    2: `CEFR level A2.`,
+    3: `CEFR level B1.`,
+    4: `CEFR level B2.`,
+    5: `CEFR level C1.`,
   };
 
   return `

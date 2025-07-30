@@ -10,32 +10,39 @@ export function getExamplePrompt({
   spanishWord,
 }: ExamplePromptParams): string {
   const base = `
-You are a bilingual Spanish-English tutor.
+You are a bilingual Spanish–English tutor.
 
-Given an English word and its Spanish translation, return:
+Given:
+- an English word: "${englishWord}"
+- a target Spanish meaning: "${spanishWord}"
 
-1. A short, natural English sentence that includes the **exact English word**: "${englishWord}" 
-2. A matching Spanish sentence that uses the **exact Spanish word**: "${spanishWord}"
+Your task is to create a natural sentence pair that illustrates how the English word can be used in the context of the Spanish word.
 
-Both sentences must describe the same context or scenario. Do not paraphrase or substitute synonyms. Do not change the English word.
+The English sentence must:
+- Use the exact "${englishWord}". Do not use any other form of the english word. It must be used exactly as given, no exceptions.
+- Clearly express the intended meaning behind "${spanishWord}" (e.g., if "${spanishWord}" is "instantáneo", the English must convey *suddenness* or *immediacy*)
 
-⚠️ You must use the exact English word and Spanish word in your examples.
+The Spanish sentence must:
+- Be the most natural and accurate translation of the English sentence
+- Use "${spanishWord}" naturally and meaningfully in context
+
+Use natural, everyday language — not overly formal or poetic.
 
 Respond only with a raw JSON object like this:
 {
-  "english": "She runs that business really well.",
-  "spanish": "Ella administra ese negocio muy bien."
+  "english": "He touches the plant.",
+  "spanish": "Él toca la planta."
 }
 
 No formatting, no code blocks, no explanations.
 `.trim();
 
   const constraints = {
-    1: `Use only the 100 most common Spanish words. Only present tense. Keep it extremely simple.`,
-    2: `Use only the 200 most common Spanish words. Present tense only.`,
-    3: `Use up to the 500 most common Spanish words. You may include present and preterite.`,
-    4: `Use up to the 1000 most common Spanish words. Present, preterite, and imperfect allowed.`,
-    5: `No vocabulary restrictions. Use natural, fluent Mexican Spanish.`,
+    1: `CEFR level A1.`,
+    2: `CEFR level A2.`,
+    3: `CEFR level B1.`,
+    4: `CEFR level B2.`,
+    5: `CEFR level C1.`,
   };
 
   return `
