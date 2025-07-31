@@ -161,19 +161,27 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    */
   const playTTS = useCallback(async (request: TTSRequest): Promise<void> => {
     try {
-      currentRequestRef.current = generateCacheKey(request);
+      const requestKey = generateCacheKey(request);
       
       // Stop any currently playing audio
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.removeEventListener('loadedmetadata', () => {});
+        audioRef.current.removeEventListener('timeupdate', () => {});
+        audioRef.current.removeEventListener('ended', () => {});
+        audioRef.current.removeEventListener('error', () => {});
         audioRef.current = null;
       }
+
+      // Set current request before async operation
+      currentRequestRef.current = requestKey;
 
       // Generate or retrieve TTS
       const ttsResponse = await generateTTS(request);
       
       // Check if this request is still current (user might have triggered another)
-      if (currentRequestRef.current !== generateCacheKey(request)) {
+      if (currentRequestRef.current !== requestKey) {
+        console.log('Request cancelled, ignoring response');
         return;
       }
 
@@ -183,63 +191,86 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       wordTimingsRef.current = ttsResponse.wordTimings;
 
       // Set up audio event listeners
-      audio.addEventListener('loadedmetadata', () => {
-        setPlaybackState(prev => ({
-          ...prev,
-          duration: audio.duration,
-          currentTime: 0,
-          currentWordIndex: -1,
-          error: null
-        }));
-      });
-
-      audio.addEventListener('timeupdate', () => {
-        const currentTime = audio.currentTime;
-        setPlaybackState(prev => ({ ...prev, currentTime }));
-
-        // Find current word based on timing
-        const currentWordIndex = wordTimingsRef.current.findIndex(
-          (timing, index) => {
-            const nextTiming = wordTimingsRef.current[index + 1];
-            return currentTime >= timing.startTime && 
-                   (!nextTiming || currentTime < nextTiming.startTime);
-          }
-        );
-
-        if (currentWordIndex !== -1) {
-          const currentWord = wordTimingsRef.current[currentWordIndex];
-          setPlaybackState(prev => {
-            if (prev.currentWordIndex !== currentWordIndex) {
-              optionsRef.current.onWordUpdate?.(currentWord.word, currentWordIndex);
-              return { ...prev, currentWordIndex };
-            }
-            return prev;
-          });
+      const handleLoadedMetadata = () => {
+        // Check if this audio element is still current
+        if (audioRef.current === audio) {
+          setPlaybackState(prev => ({
+            ...prev,
+            duration: audio.duration,
+            currentTime: 0,
+            currentWordIndex: -1,
+            error: null
+          }));
         }
-      });
+      };
 
-      audio.addEventListener('ended', () => {
-        setPlaybackState(prev => ({
-          ...prev,
-          isPlaying: false,
-          currentTime: 0,
-          currentWordIndex: -1
-        }));
-        optionsRef.current.onPlaybackComplete?.();
-      });
+      const handleTimeUpdate = () => {
+        // Check if this audio element is still current
+        if (audioRef.current === audio) {
+          const currentTime = audio.currentTime;
+          setPlaybackState(prev => ({ ...prev, currentTime }));
 
-      audio.addEventListener('error', (e) => {
-        const error = new Error('Audio playback failed');
-        setPlaybackState(prev => ({ ...prev, error: error.message, isPlaying: false }));
-        optionsRef.current.onError?.(error);
-      });
+          // Find current word based on timing
+          const currentWordIndex = wordTimingsRef.current.findIndex(
+            (timing, index) => {
+              const nextTiming = wordTimingsRef.current[index + 1];
+              return currentTime >= timing.startTime && 
+                     (!nextTiming || currentTime < nextTiming.startTime);
+            }
+          );
 
-      // Start playback
-      await audio.play();
-      setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+          if (currentWordIndex !== -1) {
+            const currentWord = wordTimingsRef.current[currentWordIndex];
+            setPlaybackState(prev => {
+              if (prev.currentWordIndex !== currentWordIndex) {
+                optionsRef.current.onWordUpdate?.(currentWord.word, currentWordIndex);
+                return { ...prev, currentWordIndex };
+              }
+              return prev;
+            });
+          }
+        }
+      };
+
+      const handleEnded = () => {
+        // Check if this audio element is still current
+        if (audioRef.current === audio) {
+          setPlaybackState(prev => ({
+            ...prev,
+            isPlaying: false,
+            currentTime: 0,
+            currentWordIndex: -1
+          }));
+          optionsRef.current.onPlaybackComplete?.();
+        }
+      };
+
+      const handleError = () => {
+        // Check if this audio element is still current
+        if (audioRef.current === audio) {
+          const error = new Error('Audio playback failed');
+          setPlaybackState(prev => ({ ...prev, error: error.message, isPlaying: false }));
+          optionsRef.current.onError?.(error);
+        }
+      };
+
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+
+      // Start playback - check once more that this is still the current request
+      if (currentRequestRef.current === requestKey) {
+        await audio.play();
+        setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+      }
 
     } catch (error) {
       console.error('TTS playback error:', error);
+      // Only update state if this is still the current request
+      if (currentRequestRef.current === generateCacheKey(request)) {
+        setPlaybackState(prev => ({ ...prev, error: 'Playback failed', isPlaying: false }));
+      }
     }
   }, [generateTTS, generateCacheKey]);
 

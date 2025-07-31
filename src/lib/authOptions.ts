@@ -6,17 +6,18 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { AuthOptions, SessionStrategy } from "next-auth";
+import { getEnv } from "@/lib/env-validation";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: getEnv('GOOGLE_CLIENT_ID'),
+      clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
     }),
     FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      clientId: getEnv('FACEBOOK_CLIENT_ID'),
+      clientSecret: getEnv('FACEBOOK_CLIENT_SECRET'),
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -96,5 +97,5 @@ export const authOptions: AuthOptions = {
     signIn: "/es/auth/login",
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: getEnv('NEXTAUTH_SECRET'),
 };

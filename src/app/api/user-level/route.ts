@@ -1,15 +1,20 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { requireAuth, createAuthResponse, AuthError, validateUserOwnership } from '@/lib/auth-helpers'
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('userId')
-
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400 })
-  }
-
   try {
+    const authenticatedUser = await requireAuth()
+    const { searchParams } = new URL(req.url)
+    const userId = searchParams.get('userId')
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400 })
+    }
+
+    // Prevent users from accessing other users' data
+    validateUserOwnership(authenticatedUser.id, userId)
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { quizLevel: true },
@@ -20,29 +25,38 @@ export async function GET(req: Request) {
     }
 
     return new Response(JSON.stringify({ level: user.quizLevel }), { status: 200 })
-  } catch (err) {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return createAuthResponse(error)
+    }
     return new Response(JSON.stringify({ error: 'Failed to fetch user level' }), { status: 500 })
   }
 }
 
 
 export async function POST(req: Request) {
-  const body = await req.json()
-  const { userId, level } = body
-  
-
-  if (!userId || !level) {
-    return new Response(JSON.stringify({ error: 'Missing userId or level' }), { status: 400 })
-  }
-
   try {
+    const authenticatedUser = await requireAuth()
+    const body = await req.json()
+    const { userId, level } = body
+
+    if (!userId || level === undefined) {
+      return new Response(JSON.stringify({ error: 'Missing userId or level' }), { status: 400 })
+    }
+
+    // Prevent users from updating other users' data
+    validateUserOwnership(authenticatedUser.id, userId)
+
     await prisma.user.update({
       where: { id: userId },
       data: { quizLevel: level },
     })
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })
-  } catch (err) {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return createAuthResponse(error)
+    }
     return new Response(JSON.stringify({ error: 'Failed to update user level' }), { status: 500 })
   }
 }
