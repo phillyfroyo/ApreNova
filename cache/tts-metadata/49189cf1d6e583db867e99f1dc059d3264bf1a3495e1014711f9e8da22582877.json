@@ -1,0 +1,53 @@
+{
+  "audioUrl": "/cache/tts-audio/49189cf1d6e583db867e99f1dc059d3264bf1a3495e1014711f9e8da22582877.mp3",
+  "wordTimings": [
+    {
+      "word": "Diego",
+      "startTime": 0.05,
+      "endTime": 0.575,
+      "confidence": 1
+    },
+    {
+      "word": "siempre",
+      "startTime": 0.5875,
+      "endTime": 1,
+      "confidence": 1
+    },
+    {
+      "word": "tenía",
+      "startTime": 1.0125,
+      "endTime": 1.325,
+      "confidence": 1
+    },
+    {
+      "word": "su",
+      "startTime": 1.3375,
+      "endTime": 1.475,
+      "confidence": 1
+    },
+    {
+      "word": "teléfono",
+      "startTime": 1.4875,
+      "endTime": 1.95,
+      "confidence": 1
+    },
+    {
+      "word": "con",
+      "startTime": 1.9625,
+      "endTime": 2.125,
+      "confidence": 1
+    },
+    {
+      "word": "él",
+      "startTime": 2.1375,
+      "endTime": 2.3625,
+      "confidence": 1
+    }
+  ],
+  "duration": 2.3625,
+  "createdAt": 1753914891245,
+  "accessedAt": 1753914891245,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "f9d79734c9ad8106c68a96af16c8af20"
+}
