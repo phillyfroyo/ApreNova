@@ -68,15 +68,25 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
 
 
-  const getSelectedText = () => words.slice(startIdx!, endIdx! + 1).join(" ");
+  const getSelectedText = () => {
+    if (startIdx === null || endIdx === null || startIdx < 0 || endIdx >= words.length) {
+      return "";
+    }
+    return words.slice(startIdx, endIdx + 1).join(" ");
+  };
   
   const getCleanSelectedText = () => {
-    const selectedText = words.slice(startIdx!, endIdx! + 1).join(" ");
+    if (startIdx === null || endIdx === null || startIdx < 0 || endIdx >= words.length) {
+      return "";
+    }
+    const selectedText = words.slice(startIdx, endIdx + 1).join(" ");
     return selectedText.replace(/[.,!?;:()"]+/g, "");
   };
 
   const getContextSentences = () => {
-    if (!contextSentences || sentenceIndex === undefined) return null;
+    if (!contextSentences || sentenceIndex === undefined || sentenceIndex < 0 || sentenceIndex >= contextSentences.length) {
+      return null;
+    }
     
     const prevSentence = sentenceIndex > 0 ? contextSentences[sentenceIndex - 1] : null;
     const nextSentence = sentenceIndex < contextSentences.length - 1 ? contextSentences[sentenceIndex + 1] : null;
@@ -92,6 +102,12 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   async (start: number, end: number) => {
     if (readOnlyMode) {
       setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      return;
+    }
+
+    // Validate indices
+    if (start < 0 || end >= words.length || start > end) {
+      setError("Invalid text selection");
       return;
     }
 

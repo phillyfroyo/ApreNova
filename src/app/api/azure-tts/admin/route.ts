@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getTTSCacheService } from '@/lib/tts-cache';
 import { getAzureSpeechService } from '@/lib/azure-speech';
 import { createErrorResponse, createSuccessResponse } from '@/lib/validation';
+import { requireAdminAuth, createAuthResponse, AuthError } from '@/lib/auth-helpers';
 
 /**
  * GET /api/azure-tts/admin
@@ -10,8 +11,8 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/validation';
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add authentication/authorization check here
-    // For now, return limited info for security
+    // Require admin authentication
+    await requireAdminAuth();
 
     const cacheService = getTTSCacheService();
     const speechService = getAzureSpeechService();
@@ -59,6 +60,9 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return createAuthResponse(error);
+    }
     console.error('Admin endpoint error:', error);
     return createErrorResponse('Unable to retrieve service statistics', 500);
   }
@@ -70,12 +74,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add proper authentication/authorization
-    return createErrorResponse('Admin actions require authentication', 403);
+    // Require admin authentication
+    await requireAdminAuth();
 
-    /*
-    // Future implementation with proper auth:
-    
     const { action, ...params } = await request.json();
     const cacheService = getTTSCacheService();
 
@@ -106,9 +107,11 @@ export async function POST(request: NextRequest) {
       default:
         return createErrorResponse('Unknown admin action', 400);
     }
-    */
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return createAuthResponse(error);
+    }
     console.error('Admin action error:', error);
     return createErrorResponse('Admin action failed', 500);
   }
