@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/9f46fb2017e062f1408475455d5e560556511d0f8b8e7ef56419b53677dc879d.mp3",
+  "wordTimings": [
+    {
+      "word": "tenía",
+      "startTime": 0.05,
+      "endTime": 0.65,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.65,
+  "createdAt": 1753913461348,
+  "accessedAt": 1753913461348,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "e0f3ac8d95d9db016e30e537046f99ed"
+}
