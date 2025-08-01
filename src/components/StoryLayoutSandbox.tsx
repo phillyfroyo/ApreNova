@@ -26,13 +26,21 @@ type ActiveAudio = {
   progress: number;
 };
 
+interface StoryLayoutSandboxProps {
+  sentences: Array<{ es: string; en: string; }>;
+  initialLevel: string;
+  storySlug: string;
+  title: string;
+  storyMap: any;
+}
+
 export default function StoryLayoutSandbox({
   sentences,
   initialLevel,
   storySlug,
   title,
   storyMap,
-}) {
+}: StoryLayoutSandboxProps) {
   useSessionLogger('reading');
 
   const { data: session, status } = useSession();
@@ -177,7 +185,7 @@ export default function StoryLayoutSandbox({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
@@ -273,13 +281,13 @@ export default function StoryLayoutSandbox({
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations]);
 
-  const speak = (text) => {
+  const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
   };
 
-  const handlePlay = (index, path, isSlow, text) => {
+  const handlePlay = (index: number, path: string, isSlow: boolean, text: string) => {
     // Reuse same audio if same index + slow mode
     if (
       activeAudio &&
@@ -339,7 +347,7 @@ export default function StoryLayoutSandbox({
     }
   };
 
-  const renderProgressBar = (audio) => {
+  const renderProgressBar = (audio: ActiveAudio) => {
     const percent = (audio.progress / audio.duration) * 100;
 
     if (status === "loading") return null;
@@ -423,7 +431,7 @@ export default function StoryLayoutSandbox({
               <Dropdown
                 label={`Chapter ▾ ${chapterNumber} (Disabled)`}
                 variant="glass"
-                options={storyMap.chapters.map((ch) => ({
+                options={storyMap.chapters.map((ch: any) => ({
                   label: `Chapter ${ch.chapter} (Disabled)`,
                   value: `ch${ch.chapter}-disabled`,
                 }))}
@@ -440,7 +448,7 @@ export default function StoryLayoutSandbox({
               label={`Page ▾ ${pageNumber}`}
               variant="glass"
               options={
-                (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
+                (storyMap.chapters.find((c: any) => c.chapter === chapterNumber)?.pages || []).map((pg: any) => ({
                   label: `Page ${pg}`,
                   value: pg.toString(),
                 }))
@@ -500,7 +508,7 @@ export default function StoryLayoutSandbox({
         {(() => {
           const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
 
-          const buttonClass = (disabled, color) =>
+          const buttonClass = (disabled: boolean, color: string) =>
             `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
               disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
             }`;

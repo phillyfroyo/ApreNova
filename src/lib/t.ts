@@ -14,12 +14,12 @@ export function t(
     const sectionObject = translations[lang][section];
 
     // Support nested keys like "benefit1.desc"
-  const template = key.split(".").reduce((obj, part) => obj?.[part], sectionObject) ?? "";
+  const template = key.split(".").reduce((obj: any, part: string) => obj?.[part], sectionObject) ?? "";
 
   if (!variables) return template;
 
   // Replace any {key} in the template with corresponding variable value
-  return template.replace(/\{(\w+)\}/g, (_, variable) =>
+  return template.replace(/\{(\w+)\}/g, (_: string, variable: string) =>
     variables[variable] !== undefined ? String(variables[variable]) : `{${variable}}`
   );
 }

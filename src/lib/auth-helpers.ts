@@ -8,7 +8,7 @@ export interface AuthenticatedUser {
   email: string;
   name?: string;
   nativeLanguage?: string;
-  quizLevel?: number;
+  quizLevel?: number | string;
   isPremium: boolean;
 }
 

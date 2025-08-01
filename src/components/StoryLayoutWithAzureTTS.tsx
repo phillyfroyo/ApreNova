@@ -184,7 +184,7 @@ export default function StoryLayoutWithAzureTTS({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
