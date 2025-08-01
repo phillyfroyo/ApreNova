@@ -26,13 +26,21 @@ type ActiveAudio = {
   progress: number;
 };
 
+interface StoryLayoutExperimentalProps {
+  sentences: Array<{ es: string; en: string; }>;
+  initialLevel: string;
+  storySlug: string;
+  title: string;
+  storyMap: any;
+}
+
 export default function StoryLayoutExperimental({
   sentences,
   initialLevel,
   storySlug,
   title,
   storyMap,
-}) {
+}: StoryLayoutExperimentalProps) {
   useSessionLogger('reading');
 
   const { data: session, status } = useSession();
@@ -176,7 +184,7 @@ export default function StoryLayoutExperimental({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
@@ -286,13 +294,13 @@ export default function StoryLayoutExperimental({
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations]);
 
-  const speak = (text) => {
+  const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
   };
 
-  const handlePlay = (index, path, isSlow, text) => {
+  const handlePlay = (index: number, path: string, isSlow: boolean, text: string) => {
     // Reuse same audio if same index + slow mode
     if (
       activeAudio &&

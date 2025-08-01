@@ -26,13 +26,21 @@ type ActiveAudio = {
   isSlow: boolean;
   progress: number;
 };
+interface StoryLayoutProps {
+  sentences: Array<{ es: string; en: string; }>;
+  initialLevel: string;
+  storySlug: string;
+  title: string;
+  storyMap: any;
+}
+
 export default function StoryLayout({
   sentences,
   initialLevel,
   storySlug,
   title,
-  storyMap, // 🍌 <-- Add this line
-}) {
+  storyMap,
+}: StoryLayoutProps) {
   useSessionLogger('reading');
 
   const { data: session, status } = useSession();
@@ -173,7 +181,7 @@ useEffect(() => {
 const accessType = storyAccessMap[storySlug] || "alwaysFree";
 const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
@@ -268,13 +276,13 @@ const readOnlyMode = accessType === "conditional" && !isPremiumUser;
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations]);
 
-  const speak = (text) => {
+  const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
   };
 
-  const handlePlay = (index, path, isSlow, text) => {
+  const handlePlay = (index: number, path: string, isSlow: boolean, text: string) => {
 
 // Reuse same audio if same index + slow mode
 if (
@@ -335,7 +343,7 @@ if (
 }
   };
 
-  const renderProgressBar = (audio) => {
+  const renderProgressBar = (audio: ActiveAudio) => {
   const percent = (audio.progress / audio.duration) * 100;
 
   if (status === "loading") return null;
@@ -421,13 +429,13 @@ onOpenChange={(isOpen) => {
   <Dropdown
     label={`${t(typedLang, "story", "chapter")} ▾ ${chapterNumber}`}
     variant="glass"
-    options={storyMap.chapters.map((ch) => ({
+    options={storyMap.chapters.map((ch: any) => ({
       label: `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
       value: ch.chapter.toString(),
     }))}
     onSelect={(selectedValue) => {
       const selectedChapter = parseInt(selectedValue);
-      const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
+      const firstPage = storyMap.chapters.find((c: any) => c.chapter === selectedChapter)?.pages[0] || 1;
       router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${selectedChapter}/page-${firstPage}`);
     }}
     onOpenChange={(isOpen) => {
@@ -442,7 +450,7 @@ onOpenChange={(isOpen) => {
   label={`${t(typedLang, "story", "page")} ▾ ${pageNumber}`}
   variant="glass"
   options={
-    (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
+    (storyMap.chapters.find((c: any) => c.chapter === chapterNumber)?.pages || []).map((pg: any) => ({
       label: `${t(typedLang, "story", "page")} ${pg}`,
       value: pg.toString(),
     }))
@@ -464,7 +472,7 @@ onOpenChange={(isOpen) => {
         {(() => {
   const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
 
-  const buttonClass = (disabled, color) =>
+  const buttonClass = (disabled: boolean, color: string) =>
     `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
       disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
     }`;

@@ -168,7 +168,7 @@ function StoriesPageContent() {
   const [showLangPrompt, setShowLangPrompt] = useState(false)
 
 
-  function handleLevelClick(lvl) {
+  function handleLevelClick(lvl: string) {
   const locale = typedLang;
   const storySlug = "aventura"; // We'll make this dynamic in the future
   const url = getStoryUrl({ locale, storySlug, level: lvl, chapter: 1, page: 1 });
