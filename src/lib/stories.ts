@@ -7,11 +7,11 @@ import type { Language } from "@/types/i18n";
 const translations = { en, es };
 
 export function getStoryTitle(lang: Language, slug: string): string {
-  return translations[lang]?.storiesMetadata?.[slug]?.title ?? slug;
+  return (translations as any)[lang]?.storiesMetadata?.[slug]?.title ?? slug;
 }
 
 export function getStoryDescription(lang: Language, slug: string): string {
-  return translations[lang]?.storiesMetadata?.[slug]?.description ?? "";
+  return (translations as any)[lang]?.storiesMetadata?.[slug]?.description ?? "";
 }
 
 export function slugify(title: string): string {

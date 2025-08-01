@@ -37,7 +37,7 @@ Respond only with a raw JSON object like this:
 No formatting, no code blocks, no explanations.
 `.trim();
 
-  const constraints = {
+  const constraints: Record<number, string> = {
     1: `CEFR level A1.`,
     2: `CEFR level A2.`,
     3: `CEFR level B1.`,

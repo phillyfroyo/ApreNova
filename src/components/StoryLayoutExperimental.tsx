@@ -360,7 +360,7 @@ export default function StoryLayoutExperimental({
     }
   };
 
-  const renderProgressBar = (audio) => {
+  const renderProgressBar = (audio: ActiveAudio) => {
     const percent = (audio.progress / audio.duration) * 100;
 
     if (status === "loading") return null;
@@ -444,7 +444,7 @@ export default function StoryLayoutExperimental({
               <Dropdown
                 label={`Chapter ▾ ${chapterNumber} (Disabled)`}
                 variant="glass"
-                options={storyMap.chapters.map((ch) => ({
+                options={storyMap.chapters.map((ch: any) => ({
                   label: `Chapter ${ch.chapter} (Disabled)`,
                   value: `ch${ch.chapter}-disabled`,
                 }))}
@@ -461,7 +461,7 @@ export default function StoryLayoutExperimental({
               label={`Page ▾ ${pageNumber}`}
               variant="glass"
               options={
-                (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
+                (storyMap.chapters.find((c: any) => c.chapter === chapterNumber)?.pages || []).map((pg: any) => ({
                   label: `Page ${pg}`,
                   value: pg.toString(),
                 }))
@@ -521,7 +521,7 @@ export default function StoryLayoutExperimental({
         {(() => {
           const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
 
-          const buttonClass = (disabled, color) =>
+          const buttonClass = (disabled: boolean, color: string) =>
             `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
               disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
             }`;

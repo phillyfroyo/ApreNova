@@ -38,7 +38,7 @@ Important:
 - Your output will be parsed by a computer. Invalid formatting will break the system.
 `.trim();
 
-  const constraints = {
+  const constraints: Record<number, string> = {
     1: `CEFR level A1.`,
     2: `CEFR level A2.`,
     3: `CEFR level B1.`,
