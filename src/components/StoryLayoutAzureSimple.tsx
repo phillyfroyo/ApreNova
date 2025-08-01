@@ -5,6 +5,14 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import type { Language } from "@/types/i18n";
 
+interface StoryLayoutAzureSimpleProps {
+  sentences: Array<{ es: string; en: string; }>;
+  initialLevel: string;
+  storySlug: string;
+  title: string;
+  storyMap: any;
+}
+
 // Simple Azure TTS testing component
 export default function StoryLayoutAzureSimple({
   sentences,
@@ -12,7 +20,7 @@ export default function StoryLayoutAzureSimple({
   storySlug,
   title,
   storyMap,
-}) {
+}: StoryLayoutAzureSimpleProps) {
   const [audioStatus, setAudioStatus] = useState<string>('Ready');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -51,7 +59,7 @@ export default function StoryLayoutAzureSimple({
         setAudioStatus(`❌ Failed: HTTP ${response.status}`);
       }
     } catch (error) {
-      setAudioStatus(`❌ Error: ${error.message}`);
+      setAudioStatus(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }

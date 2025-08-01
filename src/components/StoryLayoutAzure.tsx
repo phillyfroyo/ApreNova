@@ -136,7 +136,7 @@ export default function StoryLayoutAzure({
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
   // Theme
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
   const dynamicPageTitle = storyMap.hasChapters
     ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
     : `${t(typedLang, "story", "page")} ${pageNumber}`;
@@ -359,7 +359,7 @@ export default function StoryLayoutAzure({
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex justify-center gap-2">
         {(() => {
           const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
-          const buttonClass = (disabled, color) =>
+          const buttonClass = (disabled: boolean, color: string) =>
             `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
               disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
             }`;

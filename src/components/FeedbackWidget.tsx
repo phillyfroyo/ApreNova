@@ -51,7 +51,7 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
     successMessage: t(lng, "feedback", "successMessage"),
     close: t(lng, "feedback", "close"),
   };
-  const optionLabels = {
+  const optionLabels: Record<string, string> = {
     bug: t(lng, "feedback", "bug"),
     suggestion: t(lng, "feedback", "suggestion"),
     other: t(lng, "feedback", "other"),
