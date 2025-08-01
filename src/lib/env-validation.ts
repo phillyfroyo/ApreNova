@@ -3,8 +3,6 @@
 interface RequiredEnvVars {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  FACEBOOK_CLIENT_ID: string;
-  FACEBOOK_CLIENT_SECRET: string;
   NEXTAUTH_SECRET: string;
   DATABASE_URL: string;
   OPENAI_API_KEY: string;
@@ -48,8 +46,6 @@ export function validateAllRequiredEnvVars(): void {
   const required: (keyof RequiredEnvVars)[] = [
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET', 
-    'FACEBOOK_CLIENT_ID',
-    'FACEBOOK_CLIENT_SECRET',
     'NEXTAUTH_SECRET',
     'DATABASE_URL',
     'OPENAI_API_KEY',
