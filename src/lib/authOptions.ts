@@ -8,17 +8,27 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import type { AuthOptions, SessionStrategy } from "next-auth";
 import { getEnv } from "@/lib/env-validation";
 
+const providers: any[] = [
+  GoogleProvider({
+    clientId: getEnv('GOOGLE_CLIENT_ID'),
+    clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
+  }),
+];
+
+// Only add Facebook provider if credentials are available
+if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
+  providers.push(
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    })
+  );
+}
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
-      clientId: getEnv('GOOGLE_CLIENT_ID'),
-      clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
-    }),
-    FacebookProvider({
-      clientId: getEnv('FACEBOOK_CLIENT_ID'),
-      clientSecret: getEnv('FACEBOOK_CLIENT_SECRET'),
-    }),
+    ...providers,
     CredentialsProvider({
       name: "Credentials",
       credentials: {
