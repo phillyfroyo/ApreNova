@@ -175,7 +175,7 @@ if (!session?.user?.email) {
 
         <div
   className="text-red-600 cursor-pointer hover:underline text-sm"
-  onClick={() => signOut({ callbackUrl: '/' })}
+  onClick={() => signOut({ callbackUrl: `/${typedLang}/auth/login`, redirect: true })}
 >
   {t(typedLang, "settings", "logOut")}
 </div>
