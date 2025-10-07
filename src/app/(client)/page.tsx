@@ -10,12 +10,13 @@ import Link from "next/link";
 
 
 export default function LanguageSelectPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   // 🧠 If logged in, send to their nativeLanguage
   useEffect(() => {
-  if (session) {
+  // Only redirect if we have a confirmed session (not loading)
+  if (status === 'authenticated' && session) {
     const lng = session.user?.nativeLanguage
     console.log('🌐 Redirecting to:', lng)
     if (lng === 'en' || lng === 'es') {
@@ -25,7 +26,7 @@ export default function LanguageSelectPage() {
       router.replace('/es/stories')
     }
   }
-}, [session, router])
+}, [session, status, router])
 
   return (
     <section className="min-h-screen flex flex-col items-center justify-center bg-[url('/images/background3.png')] bg-cover bg-center text-black px-6">
