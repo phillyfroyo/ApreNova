@@ -62,8 +62,12 @@ export default function SignupPage() {
       })
 
       if (result?.ok) {
+        // Fetch user's native language from the session
+        const response = await fetch('/api/auth/session')
+        const session = await response.json()
+        const userLang = session?.user?.nativeLanguage || typedLang
         setTimeout(() => {
-          router.push(`/${typedLang}/stories`)
+          router.push(`/${userLang}/stories`)
         }, 300)
       } else {
         setError('Login after signup failed.')
