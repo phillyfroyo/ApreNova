@@ -62,13 +62,16 @@ export default function SignupPage() {
       })
 
       if (result?.ok) {
+        // Small delay to ensure session cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100))
+
         // Fetch user's native language from the session
         const response = await fetch('/api/auth/session')
         const session = await response.json()
         const userLang = session?.user?.nativeLanguage || typedLang
-        setTimeout(() => {
-          router.push(`/${userLang}/stories`)
-        }, 300)
+
+        // Force a hard navigation to ensure session is picked up
+        window.location.href = `/${userLang}/stories`
       } else {
         setError('Login after signup failed.')
       }
