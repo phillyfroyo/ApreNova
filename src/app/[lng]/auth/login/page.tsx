@@ -47,7 +47,11 @@ export default function LoginPage() {
     })
 
     if (result?.ok) {
-      router.push(`/${language}/stories`)
+      // Fetch user's native language from the session
+      const response = await fetch('/api/auth/session')
+      const session = await response.json()
+      const userLang = session?.user?.nativeLanguage || language
+      router.push(`/${userLang}/stories`)
     } else {
       setError('Credenciales incorrectas. Inténtalo de nuevo.')
     }
