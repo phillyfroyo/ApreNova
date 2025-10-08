@@ -59,6 +59,46 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
+    signIn: async ({ user, account }) => {
+      // Allow credential-based sign-ins
+      if (account?.provider === "credentials") return true;
+
+      // For OAuth providers (Google, Facebook), check if user exists with this email
+      if (account && user.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          include: { accounts: true },
+        });
+
+        // If user exists but doesn't have this provider linked, link it
+        if (existingUser) {
+          const accountExists = existingUser.accounts.find(
+            (acc) => acc.provider === account.provider
+          );
+
+          if (!accountExists) {
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                refresh_token: account.refresh_token,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                session_state: account.session_state,
+              },
+            });
+          }
+        }
+      }
+
+      return true;
+    },
+
     jwt: async ({ token, user }) => {
   if (user) {
     const dbUser = user.id
