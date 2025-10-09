@@ -60,39 +60,57 @@ export const authOptions: AuthOptions = {
 
   callbacks: {
     signIn: async ({ user, account }) => {
+      console.log('🔐 signIn callback triggered', { provider: account?.provider, email: user.email });
+
       // Allow credential-based sign-ins
       if (account?.provider === "credentials") return true;
 
       // For OAuth providers (Google, Facebook), check if user exists with this email
       if (account && user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-          include: { accounts: true },
-        });
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            include: { accounts: true },
+          });
 
-        // If user exists but doesn't have this provider linked, link it
-        if (existingUser) {
-          const accountExists = existingUser.accounts.find(
-            (acc) => acc.provider === account.provider
-          );
+          console.log('👤 Existing user check:', {
+            found: !!existingUser,
+            email: user.email,
+            existingAccounts: existingUser?.accounts.map(a => a.provider)
+          });
 
-          if (!accountExists) {
-            await prisma.account.create({
-              data: {
-                userId: existingUser.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                refresh_token: account.refresh_token,
-                access_token: account.access_token,
-                expires_at: account.expires_at,
-                token_type: account.token_type,
-                scope: account.scope,
-                id_token: account.id_token,
-                session_state: account.session_state,
-              },
-            });
+          // If user exists but doesn't have this provider linked, link it
+          if (existingUser) {
+            const accountExists = existingUser.accounts.find(
+              (acc) => acc.provider === account.provider
+            );
+
+            if (!accountExists) {
+              console.log('🔗 Linking new account:', { provider: account.provider, userId: existingUser.id });
+              await prisma.account.create({
+                data: {
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  refresh_token: account.refresh_token,
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                  session_state: account.session_state,
+                },
+              });
+              console.log('✅ Account linked successfully');
+            } else {
+              console.log('ℹ️ Account already linked');
+            }
           }
+        } catch (error) {
+          console.error('❌ Error in signIn callback:', error);
+          // Return false to prevent sign in on error
+          return false;
         }
       }
 
