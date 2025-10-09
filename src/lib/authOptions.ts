@@ -12,7 +12,6 @@ const providers: any[] = [
   GoogleProvider({
     clientId: getEnv('GOOGLE_CLIENT_ID'),
     clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
-    allowDangerousEmailAccountLinking: true,
   }),
 ];
 
@@ -22,7 +21,6 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
     })
   );
 }
@@ -78,40 +76,35 @@ export const authOptions: AuthOptions = {
           console.log('👤 Existing user check:', {
             found: !!existingUser,
             email: user.email,
+            hasPassword: !!existingUser?.password,
             existingAccounts: existingUser?.accounts.map(a => a.provider)
           });
 
-          // If user exists but doesn't have this provider linked, link it
-          if (existingUser) {
+          // SECURITY: Block OAuth sign-in if email exists with password (credentials account)
+          // User must explicitly link accounts through authenticated flow
+          if (existingUser?.password) {
             const accountExists = existingUser.accounts.find(
               (acc) => acc.provider === account.provider
             );
 
+            // If this OAuth provider isn't already linked, block sign-in
             if (!accountExists) {
-              console.log('🔗 Linking new account:', { provider: account.provider, userId: existingUser.id });
-              await prisma.account.create({
-                data: {
-                  userId: existingUser.id,
-                  type: account.type,
-                  provider: account.provider,
-                  providerAccountId: account.providerAccountId,
-                  refresh_token: account.refresh_token,
-                  access_token: account.access_token,
-                  expires_at: account.expires_at,
-                  token_type: account.token_type,
-                  scope: account.scope,
-                  id_token: account.id_token,
-                  session_state: account.session_state,
-                },
-              });
-              console.log('✅ Account linked successfully');
-            } else {
-              console.log('ℹ️ Account already linked');
+              console.log('⛔ OAuth sign-in blocked: Email exists with password. User must link accounts explicitly.');
+              // Return false to trigger OAuthAccountNotLinked error
+              // This will redirect to the error page where user can be informed
+              return false;
             }
+
+            console.log('✅ OAuth account already linked, allowing sign-in');
           }
+
+          // Allow sign-in if:
+          // 1. No existing user (new OAuth registration)
+          // 2. Existing user without password (was created via OAuth)
+          // 3. Existing user with this OAuth account already linked
+          return true;
         } catch (error) {
           console.error('❌ Error in signIn callback:', error);
-          // Return false to prevent sign in on error
           return false;
         }
       }
