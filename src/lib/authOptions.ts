@@ -12,6 +12,7 @@ const providers: any[] = [
   GoogleProvider({
     clientId: getEnv('GOOGLE_CLIENT_ID'),
     clientSecret: getEnv('GOOGLE_CLIENT_SECRET'),
+    allowDangerousEmailAccountLinking: true,
   }),
 ];
 
@@ -21,6 +22,7 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     })
   );
 }
