@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
@@ -13,9 +14,9 @@
       "Bash(npm run build:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "WebFetch(domain:portal.azure.com)"
+      "WebFetch(domain:portal.azure.com)",
+      "Bash(cat:*)"
     ],
     "deny": []
-  },
-  "$schema": "https://json.schemastore.org/claude-code-settings.json"
+  }
 }
