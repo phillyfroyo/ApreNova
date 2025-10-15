@@ -9,6 +9,7 @@ import { Menu, X, Volume2, Turtle, Loader2, AlertCircle } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import UnifiedTranslator from "@/components/UnifiedTranslator";
+import StoryTutorChat from "@/components/StoryTutorChat";
 import { useSessionLogger } from '@/hooks/useSessionLogger';
 import { useAzureTTS } from '@/hooks/useAzureTTS';
 import { slugify } from '@/lib/stories';
@@ -91,7 +92,13 @@ export default function StoryLayoutWithAzureTTS({
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
-  
+  const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
+  const [tutorContext, setTutorContext] = useState<{
+    lineIndex: number;
+    fullLine: string;
+    selectedText?: string;
+  } | null>(null);
+
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
   const oppositeLang = typedLang === "en" ? "es" : "en";
@@ -609,7 +616,7 @@ export default function StoryLayoutWithAzureTTS({
       )}
 
       {/* Navigation buttons (same as original) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] flex justify-center gap-2">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2">
         {(() => {
           const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
           const buttonClass = (disabled: boolean, color: string) =>
@@ -673,8 +680,11 @@ export default function StoryLayoutWithAzureTTS({
         <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
           {currentPagePosition}
         </div>
-        
-        <div className="flex flex-col items-start w-full max-w-md sm:max-w-lg mx-auto px-4">
+
+        {/* Story Content - slides out on mobile, stays on desktop */}
+        <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg mx-auto px-4 transition-transform duration-300 lg:transition-none ${
+          isStoryTutorOpen ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'
+        }`}>
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
@@ -725,11 +735,25 @@ export default function StoryLayoutWithAzureTTS({
                       )}
                     </button>
 
-                    {/* Question mark button for AI story tutor - placeholder for now */}
+                    {/* Question mark button for AI story tutor */}
                     <button
                       onClick={() => {
-                        console.log('AI Story Tutor clicked for line', i);
-                        // Functionality will be added in task #3
+                        const fullLine = s[oppositeLang];
+                        const selection = wordSelections[i];
+                        let selectedText: string | undefined;
+
+                        // If there's a word selection, extract the selected text
+                        if (selection) {
+                          const words = fullLine.split(' ');
+                          selectedText = words.slice(selection.start, selection.end + 1).join(' ');
+                        }
+
+                        setTutorContext({
+                          lineIndex: i,
+                          fullLine,
+                          selectedText
+                        });
+                        setIsStoryTutorOpen(true);
                       }}
                       className={`hover:scale-110 transition relative rounded p-0.5 ${
                         wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
@@ -810,6 +834,24 @@ export default function StoryLayoutWithAzureTTS({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* AI Story Tutor Chat Panel - slides in on mobile, side-by-side on desktop */}
+        <div className={`fixed inset-y-0 right-0 w-full lg:relative lg:w-96 transition-transform duration-300 z-50 ${
+          isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          {isStoryTutorOpen && (
+            <StoryTutorChat
+              storySlug={storySlug}
+              currentPageText={sentences.map(s => s[oppositeLang])}
+              onClose={() => {
+                setIsStoryTutorOpen(false);
+                setTutorContext(null);
+              }}
+              isOpen={isStoryTutorOpen}
+              initialContext={tutorContext}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -20,39 +20,51 @@ export default function TutorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialScrollRef = useRef(false);
+  const hasLoadedHistoryRef = useRef(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (instant = false) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
   };
 
   // Load conversation history on mount
   useEffect(() => {
+    if (!session?.user) return;
+
+    // Prevent double-loading on React strict mode double-render
+    if (hasLoadedHistoryRef.current) return;
+
     const loadHistory = async () => {
       try {
         const response = await fetch("/api/tutor");
         if (response.ok) {
           const data = await response.json();
+          hasLoadedHistoryRef.current = true;
           setMessages(data.messages || []);
         }
       } catch (error) {
         console.error("Failed to load conversation history:", error);
-      } finally {
-        setIsLoadingHistory(false);
       }
     };
 
-    if (session?.user) {
-      loadHistory();
-    } else {
-      setIsLoadingHistory(false);
-    }
+    loadHistory();
   }, [session]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Scroll to bottom when messages change
+    // Use instant scroll on first render, smooth thereafter
+    if (messages.length > 0) {
+      if (!isInitialScrollRef.current) {
+        // First time we have messages - instant scroll
+        setTimeout(() => scrollToBottom(true), 0);
+        isInitialScrollRef.current = true;
+      } else {
+        // Subsequent updates - smooth scroll
+        scrollToBottom();
+      }
+    }
   }, [messages]);
 
   // Auto-resize textarea
@@ -65,10 +77,11 @@ export default function TutorPage() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim()) return;
 
     const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const currentMessages = [...messages, userMessage];
+    setMessages(currentMessages);
     setInput("");
     setIsLoading(true);
 
@@ -76,7 +89,7 @@ export default function TutorPage() {
       const response = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ messages: currentMessages }),
       });
 
       if (!response.ok) {
@@ -93,10 +106,7 @@ export default function TutorPage() {
       console.error("Error:", error);
       const errorMessage: Message = {
         role: "assistant",
-        content:
-          typedLang === "en"
-            ? "Sorry, I encountered an error. Please try again."
-            : "Lo siento, encontré un error. Por favor intenta de nuevo.",
+        content: t(typedLang, "aiTutor", "errorMessage"),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -129,26 +139,16 @@ export default function TutorPage() {
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-3xl mx-auto space-y-6">
-          {isLoadingHistory ? (
-            <div className="text-center text-gray-500 mt-20">
-              <p className="text-lg">
-                {typedLang === "en" ? "Loading..." : "Cargando..."}
-              </p>
-            </div>
-          ) : messages.length === 0 ? (
+          {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-500 mt-20">
               <p className="text-lg mb-2">
-                {typedLang === "en"
-                  ? "Start a conversation with your AI tutor"
-                  : "Inicia una conversación con tu tutor IA"}
+                {t(typedLang, "aiTutor", "startConversation")}
               </p>
               <p className="text-sm">
-                {typedLang === "en"
-                  ? "Practice your language skills through conversation"
-                  : "Practica tus habilidades lingüísticas conversando"}
+                {t(typedLang, "aiTutor", "practiceSkills")}
               </p>
             </div>
-          ) : null}
+          )}
 
           {messages.map((message, index) => (
             <div
@@ -194,22 +194,17 @@ export default function TutorPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                typedLang === "en"
-                  ? "Type your message..."
-                  : "Escribe tu mensaje..."
-              }
+              placeholder={t(typedLang, "aiTutor", "placeholder")}
               className="flex-1 pl-4 pr-[72px] py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
               style={{ minHeight: "52px", maxHeight: "200px" }}
-              disabled={isLoading}
               rows={1}
             />
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim()}
               className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
-              {typedLang === "en" ? "Send" : "Enviar"}
+              {t(typedLang, "aiTutor", "send")}
             </button>
           </div>
         </form>

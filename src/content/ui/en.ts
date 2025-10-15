@@ -159,6 +159,29 @@ translator: {
   translating: "Translating"
 },
 
+storyTutor: {
+  title: "Story Tutor",
+  loadingConversation: "Loading conversation...",
+  askAnything: "Ask me anything about this story!",
+  helpWith: "I can help with vocabulary, grammar, or story comprehension.",
+  placeholder: "Ask a question...",
+  send: "Send",
+  autoMessageWord: "What does \"{word}\" mean?",
+  autoMessageVerb: "What does \"{word}\" mean? If it's a verb, can you show me the conjugation?",
+  autoMessageSentence: "Can you help me understand this sentence?",
+  errorMessage: "Sorry, I encountered an error. Please try again.",
+  youSelected: "You selected \"{text}\""
+},
+
+aiTutor: {
+  loading: "Loading...",
+  startConversation: "Start a conversation with your AI tutor",
+  practiceSkills: "Practice your language skills through conversation",
+  placeholder: "Type your message...",
+  send: "Send",
+  errorMessage: "Sorry, I encountered an error. Please try again."
+},
+
 storiesMetadata: {
   aventura: {
     title: "Aventura",
