@@ -1,0 +1,89 @@
+{
+  "audioUrl": "/cache/tts-audio/bb33e40b370f17606f55ada8c67acab6706ca7ed82cdff003fd8ba0061ce5cf3.mp3",
+  "wordTimings": [
+    {
+      "word": "Lo",
+      "startTime": 0.05,
+      "endTime": 0.2,
+      "confidence": 1
+    },
+    {
+      "word": "llevaba",
+      "startTime": 0.2125,
+      "endTime": 0.675,
+      "confidence": 1
+    },
+    {
+      "word": "afuera",
+      "startTime": 0.6875,
+      "endTime": 1.1125,
+      "confidence": 1
+    },
+    {
+      "word": "Lo",
+      "startTime": 1.9875,
+      "endTime": 2.1375,
+      "confidence": 1
+    },
+    {
+      "word": "llevaba",
+      "startTime": 2.15,
+      "endTime": 2.6875,
+      "confidence": 1
+    },
+    {
+      "word": "a",
+      "startTime": 2.7,
+      "endTime": 2.725,
+      "confidence": 1
+    },
+    {
+      "word": "la",
+      "startTime": 2.7375,
+      "endTime": 2.8625,
+      "confidence": 1
+    },
+    {
+      "word": "cocina",
+      "startTime": 2.875,
+      "endTime": 3.375,
+      "confidence": 1
+    },
+    {
+      "word": "Lo",
+      "startTime": 4.2375,
+      "endTime": 4.425,
+      "confidence": 1
+    },
+    {
+      "word": "usaba",
+      "startTime": 4.4375,
+      "endTime": 4.95,
+      "confidence": 1
+    },
+    {
+      "word": "en",
+      "startTime": 4.9625,
+      "endTime": 5.05,
+      "confidence": 1
+    },
+    {
+      "word": "el",
+      "startTime": 5.0625,
+      "endTime": 5.1875,
+      "confidence": 1
+    },
+    {
+      "word": "baño",
+      "startTime": 5.2,
+      "endTime": 5.5875,
+      "confidence": 1
+    }
+  ],
+  "duration": 5.5875,
+  "createdAt": 1760499635333,
+  "accessedAt": 1760499635333,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "d12572a7dbf1d2f972bbefcd862a0234"
+}

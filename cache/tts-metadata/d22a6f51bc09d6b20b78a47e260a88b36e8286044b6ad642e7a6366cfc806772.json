@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/d22a6f51bc09d6b20b78a47e260a88b36e8286044b6ad642e7a6366cfc806772.mp3",
+  "wordTimings": [
+    {
+      "word": "siempre",
+      "startTime": 0.071437,
+      "endTime": 0.982145,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.982145,
+  "createdAt": 1760499420081,
+  "accessedAt": 1760499420081,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "ef4e499ad1a6788e5241e6ddd2fbaa64"
+}

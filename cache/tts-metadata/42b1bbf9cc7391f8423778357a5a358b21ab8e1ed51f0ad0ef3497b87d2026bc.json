@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/42b1bbf9cc7391f8423778357a5a358b21ab8e1ed51f0ad0ef3497b87d2026bc.mp3",
+  "wordTimings": [
+    {
+      "word": "llevaba",
+      "startTime": 0.071437,
+      "endTime": 0.999999,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.999999,
+  "createdAt": 1760499560701,
+  "accessedAt": 1760499560701,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "29341ee53e0a72e12cfa1a9570191fe2"
+}
