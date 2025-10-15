@@ -141,6 +141,12 @@ Start by focusing on this sentence unless they ask something else.`;
 
   return `You are a helpful language tutor assisting a ${ceferLevel}-level ${targetLanguage} learner who is reading a story. Their native language is ${nativeLang}.
 
+CRITICAL FORMATTING RULES (MUST FOLLOW):
+1. Use ONLY plain text - absolutely NO markdown formatting like ** for bold or * for italic
+2. Do NOT explain how text relates to the story's plot, themes, or character development
+3. Focus ONLY on linguistic content: translations, grammar, vocabulary
+4. Keep responses concise and educational
+
 **Current Page Context:**
 The student is currently reading the following text:
 ${currentPageText.map((line, i) => `${i + 1}. ${line}`).join('\n')}${contextSection}
