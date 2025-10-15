@@ -86,7 +86,7 @@ export default function StoryLayoutWithAzureTTS({
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isAnyDropdownOpen, setIsAnyDropdownOpen] = useState(false);
-  const [showEmojiButtons, setShowEmojiButtons] = useState(false);
+  const [showEmojiButtons, setShowEmojiButtons] = useState<Record<number, boolean>>({});
   const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
@@ -132,12 +132,12 @@ export default function StoryLayoutWithAzureTTS({
 
   const handleWordSelectionChange = useCallback((index: number, selection: { start: number; end: number } | null) => {
     setWordSelections(prev => ({ ...prev, [index]: selection }));
-    
-    // Show emoji buttons when words are selected
+
+    // Show emoji buttons for this specific line when words are selected
     if (selection) {
-      setShowEmojiButtons(true);
+      setShowEmojiButtons(prev => ({ ...prev, [index]: true }));
     }
-  }, []); // Remove showEmojiButtons from dependency array to prevent infinite loop
+  }, []);
 
   const handleManualTranslate = useCallback((index: number, translateFn: () => void) => {
     setManualTranslateFunctions(prev => ({ ...prev, [index]: translateFn }));
@@ -349,11 +349,11 @@ export default function StoryLayoutWithAzureTTS({
     };
   }, [handleGlobalMove, handleGlobalUp]);
 
-  // Global click handler (same as original)
+  // Global click handler with line-specific emoji toggle
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      
+
       if (
         target.tagName === 'BUTTON' ||
         target.closest('button') ||
@@ -366,34 +366,35 @@ export default function StoryLayoutWithAzureTTS({
       ) {
         return;
       }
-      
+
       if (menuOpen) {
         setMenuOpen(false);
         return;
       }
-      
+
       if (isAnyDropdownOpen) {
         return;
       }
-      
+
       const hasActiveTranslations = Object.values(activeTranslations).some(Boolean);
       if (hasActiveTranslations) {
         return;
       }
-      
+
       if (activeAudio?.isPlaying) {
         pause();
         setActiveAudio(null);
-        setShowEmojiButtons(false);
+        setShowEmojiButtons({});
         return;
       }
-      
-      if (activeAudio && !activeAudio.isPlaying && showEmojiButtons) {
+
+      const hasAnyEmojiButtons = Object.values(showEmojiButtons).some(Boolean);
+      if (activeAudio && !activeAudio.isPlaying && hasAnyEmojiButtons) {
         setActiveAudio(null);
-        setShowEmojiButtons(false);
+        setShowEmojiButtons({});
         return;
       }
-      
+
       if (
         target.hasAttribute('data-audio-control') ||
         target.hasAttribute('data-translation-control') ||
@@ -403,15 +404,24 @@ export default function StoryLayoutWithAzureTTS({
       ) {
         return;
       }
-      
+
       // Priority 1: If words are selected, deselect them first
       if (hasSelectedWords()) {
         clearAllWordSelections();
         return;
       }
-      
-      // Priority 2: Toggle emoji visibility (only when no words are selected)
-      setShowEmojiButtons(prev => !prev);
+
+      // Priority 2: Find which line was clicked and toggle emoji visibility for that line
+      const clickedLine = target.closest('[data-sentence-index]');
+      if (clickedLine) {
+        const lineIndex = parseInt(clickedLine.getAttribute('data-sentence-index') || '-1');
+        if (lineIndex >= 0) {
+          setShowEmojiButtons(prev => ({
+            ...prev,
+            [lineIndex]: !prev[lineIndex]
+          }));
+        }
+      }
     };
 
     document.addEventListener('click', handleGlobalClick);
@@ -638,12 +648,12 @@ export default function StoryLayoutWithAzureTTS({
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
           {sentences.map((s, i) => (
-            <div key={i} className="my-6 w-full">
+            <div key={i} className="my-6 w-full" data-sentence-index={i}>
               <div className="flex flex-col space-y-2 w-full">
                 {/* Horizontal emoji + audio bar row */}
                 <div className="flex items-center gap-3 justify-start px-2">
                   {/* Enhanced emoji buttons with loading states and selection indicators */}
-                  <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                  <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons[i] ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <button 
                       onClick={() => handlePlay(i, false, s[oppositeLang])}
                       className={`hover:scale-110 transition relative rounded p-1 ${
