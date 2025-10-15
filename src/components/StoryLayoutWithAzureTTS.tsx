@@ -361,10 +361,21 @@ export default function StoryLayoutWithAzureTTS({
         target.closest('.dropdown') ||
         target.closest('[data-dropdown]') ||
         target.closest('[data-tooltip]') ||
-        target.closest('[data-translator]') ||
         target.hasAttribute('data-just-closed-translation')
       ) {
         return;
+      }
+
+      // For translator areas, only block clicks if actually clicking on text
+      const translatorElement = target.closest('[data-translator]');
+      if (translatorElement) {
+        // Check if we clicked on actual text content
+        if (target.nodeType === Node.TEXT_NODE ||
+            target.closest('[data-word]') ||
+            (target as HTMLElement).hasAttribute('data-word')) {
+          return;
+        }
+        // If clicked in empty space of translator, allow it to pass through
       }
 
       if (menuOpen) {
@@ -507,13 +518,6 @@ export default function StoryLayoutWithAzureTTS({
         </div>
       )}
 
-      {/* Loading indicator */}
-      {playbackState.isLoading && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md rounded-lg px-4 py-2 flex items-center">
-          <Loader2 className="animate-spin mr-2 h-4 w-4" />
-          <span>Generating audio...</span>
-        </div>
-      )}
 
       <header className="fixed top-4 left-4 z-50">
         <button
@@ -680,12 +684,12 @@ export default function StoryLayoutWithAzureTTS({
                 {/* Horizontal emoji + audio bar row */}
                 <div className="flex items-center gap-3 justify-start px-2">
                   {/* Enhanced emoji buttons with loading states and selection indicators */}
-                  <div className={`flex items-center gap-2 transition-opacity duration-200 ${showEmojiButtons[i] ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <button 
+                  <div className={`flex items-center gap-1 transition-opacity duration-200 ${showEmojiButtons[i] ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <button
                       onClick={() => handlePlay(i, false, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative rounded p-1 ${
-                        playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow 
-                          ? 'opacity-50 cursor-not-allowed' 
+                      className={`hover:scale-110 transition relative rounded p-0.5 ${
+                        playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow
+                          ? 'opacity-50 cursor-not-allowed'
                           : ''
                       } ${
                         wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
@@ -697,15 +701,15 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>🔊</span>
+                        <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>🔊</span>
                       )}
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => handlePlay(i, true, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative rounded p-1 ${
-                        playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow 
-                          ? 'opacity-50 cursor-not-allowed' 
+                      className={`hover:scale-110 transition relative rounded p-0.5 ${
+                        playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow
+                          ? 'opacity-50 cursor-not-allowed'
                           : ''
                       } ${
                         wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
@@ -717,31 +721,46 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>🐢</span>
+                        <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>🐢</span>
                       )}
                     </button>
 
-                    <button 
+                    {/* Question mark button for AI story tutor - placeholder for now */}
+                    <button
+                      onClick={() => {
+                        console.log('AI Story Tutor clicked for line', i);
+                        // Functionality will be added in task #3
+                      }}
+                      className={`hover:scale-110 transition relative rounded p-0.5 ${
+                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
+                      }`}
+                      data-translation-control="question"
+                      title="Ask AI Tutor about this line"
+                    >
+                      <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>❓</span>
+                    </button>
+
+                    <button
                       onClick={() => manualTranslateFunctions[i]?.()}
-                      className={`hover:scale-110 transition relative rounded p-1 ${
+                      className={`hover:scale-110 transition relative rounded p-0.5 ${
                         wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       data-translation-control="diamond"
                       title={wordSelections[i] ? 'Translate selected words' : 'Translate full sentence'}
                     >
-                      <span className={`text-xl ${wordSelections[i] ? 'text-blue-600' : ''}`}>💎</span>
+                      <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>💎</span>
                     </button>
-                    
+
                     {/* Pencil button for static translations */}
-                    <button 
+                    <button
                       onClick={() => {
                         const el = translationRefs.current[i];
                         if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                      }} 
-                      className="hover:scale-110 transition"
+                      }}
+                      className="hover:scale-110 transition p-0.5"
                       data-translation-control="pencil"
                     >
-                      ✍️
+                      <span className="text-lg">✍️</span>
                     </button>
                   </div>
 
