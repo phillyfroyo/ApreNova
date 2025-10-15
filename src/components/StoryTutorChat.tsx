@@ -116,7 +116,7 @@ export default function StoryTutorChat({
           // Check if we should send to GPT (only if not recently addressed)
           const textToCheck = initialContext.selectedText || initialContext.fullLine;
           const shouldSendToGPT = loadedMessages.length === 0 ||
-            !loadedMessages.slice(-3).some(m => m.content.includes(textToCheck));
+            !loadedMessages.slice(-3).some((m: Message) => m.content.includes(textToCheck));
 
           // Send the "You selected" message to backend and get GPT response
           setTimeout(async () => {
