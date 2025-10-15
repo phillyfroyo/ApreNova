@@ -27,8 +27,9 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  sessionLogs      SessionLog[] // ✅ now inside User model
-  completedStories CompletedStory[] // ✅ now inside User model
+  sessionLogs      SessionLog[]
+  completedStories CompletedStory[]
+  tutorMessages    TutorMessage[]
 }
 
 model Account {
@@ -81,11 +82,23 @@ model CompletedStory {
   userId      String
   storySlug   String
   level       String
-  chapter     Int      @default(1)  
+  chapter     Int      @default(1)
   page        Int      @default(1)
   completedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
-  @@unique([userId, storySlug, level, chapter, page]) // 🍌 enforce uniqueness
+  @@unique([userId, storySlug, level, chapter, page])
+}
+
+model TutorMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" or "assistant"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

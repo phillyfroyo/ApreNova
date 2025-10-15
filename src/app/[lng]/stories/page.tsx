@@ -28,7 +28,7 @@ function AccountDropdown() {
   const { lng } = useParams();
   const typedLang = lng as Language;
 
-  const goToQuiz = () => router.push(`/${typedLang}/home/quiz/l1/q1`);
+  const goToQuiz = () => router.push(`/${typedLang}/home/quiz/placement`);
   const goToSettings = () => router.push(`/${typedLang}/settings`);
 
   const { data: session } = useSession();
@@ -123,6 +123,13 @@ useEffect(() => {
 
 
         <div className="space-y-2">
+          <Link
+            href={`/${typedLang}/tutor`}
+            className="text-purple-600 cursor-pointer block"
+          >
+            {t(typedLang, "stories", "aiTutor")}
+          </Link>
+
           <button
             onClick={goToQuiz}
             className="text-green-600 cursor-pointer block w-full text-left"

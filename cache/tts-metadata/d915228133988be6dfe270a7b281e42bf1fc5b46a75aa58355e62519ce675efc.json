@@ -1,0 +1,35 @@
+{
+  "audioUrl": "/cache/tts-audio/d915228133988be6dfe270a7b281e42bf1fc5b46a75aa58355e62519ce675efc.mp3",
+  "wordTimings": [
+    {
+      "word": "El",
+      "startTime": 0.071437,
+      "endTime": 0.464291,
+      "confidence": 1
+    },
+    {
+      "word": "nombre",
+      "startTime": 0.910708,
+      "endTime": 1.499999,
+      "confidence": 1
+    },
+    {
+      "word": "de",
+      "startTime": 1.892854,
+      "endTime": 2.178562,
+      "confidence": 1
+    },
+    {
+      "word": "Maya",
+      "startTime": 2.678562,
+      "endTime": 3.374999,
+      "confidence": 1
+    }
+  ],
+  "duration": 3.374999,
+  "createdAt": 1760027132898,
+  "accessedAt": 1760027132898,
+  "language": "es-ES",
+  "speed": "slow",
+  "textHash": "2f87f28f75a90db7fa1d6f2f9ead2259"
+}
