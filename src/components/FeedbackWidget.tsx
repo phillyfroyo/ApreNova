@@ -62,7 +62,7 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
     <>
       <div className="fixed bottom-4 right-4 z-50">
 
-{/* Open form button */} 
+{/* Open form button */}
 <Button
   onClick={() => {
     resetForm();
@@ -70,9 +70,10 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
     setIsOpen(true);
   }}
   variant="muted"
-  className="px-[10px] py-0.1 text-xs rounded-xl"
+  className="!px-3 !py-2 text-xl rounded-full leading-none min-w-0"
+  aria-label={text.title1}
 >
-  💬 {text.title1}
+  💬
 </Button>
       </div>
 

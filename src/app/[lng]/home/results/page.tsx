@@ -12,7 +12,7 @@ export default function ResultsPage() {
   const pathname = usePathname();
   const typedLang = pathname.split("/")[1] as Language;
 
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const router = useRouter();
 
   const [level, setLevel] = useState<"l1" | "l2" | "l3" | "l4">("l1");
@@ -49,13 +49,27 @@ export default function ResultsPage() {
     localStorage.setItem("level", quizLevel);
 
     if (session?.user?.id) {
+      console.log("💾 Saving quiz level:", { userId: session.user.id, level: quizLevel });
       fetch("/api/user-level", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: session.user.id, level: quizLevel }),
-      }).catch((err) => {
-        console.error("Failed to update level:", err);
-      });
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("❌ Failed to save quiz level. Status:", res.status, "Response:", errorText);
+          } else {
+            console.log("✅ Quiz level saved successfully");
+            // Update session to reflect new quiz level
+            await updateSession();
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Network error saving quiz level:", err);
+        });
+    } else {
+      console.warn("⚠️ No session user ID found, cannot save quiz level");
     }
   }, [session]);
 
