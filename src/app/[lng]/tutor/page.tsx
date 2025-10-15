@@ -188,7 +188,7 @@ export default function TutorPage() {
       {/* Input Container */}
       <div className="bg-white border-t border-gray-200 px-4 py-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="flex gap-2 items-end">
+          <div className="relative flex items-end">
             <textarea
               ref={textareaRef}
               value={input}
@@ -199,7 +199,7 @@ export default function TutorPage() {
                   ? "Type your message..."
                   : "Escribe tu mensaje..."
               }
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
+              className="flex-1 pl-4 pr-[72px] py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
               style={{ minHeight: "52px", maxHeight: "200px" }}
               disabled={isLoading}
               rows={1}
@@ -207,7 +207,7 @@ export default function TutorPage() {
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {typedLang === "en" ? "Send" : "Enviar"}
             </button>
