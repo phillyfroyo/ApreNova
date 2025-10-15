@@ -160,6 +160,29 @@ translator: {
   translating: "Traduciendo"
 },
 
+storyTutor: {
+  title: "Tutor de Historia",
+  loadingConversation: "Cargando conversación...",
+  askAnything: "¡Pregúntame lo que quieras sobre esta historia!",
+  helpWith: "Puedo ayudarte con vocabulario, gramática o comprensión de la historia.",
+  placeholder: "Haz una pregunta...",
+  send: "Enviar",
+  autoMessageWord: "¿Qué significa \"{word}\"?",
+  autoMessageVerb: "¿Qué significa \"{word}\"? Si es un verbo, ¿puedes mostrarme la conjugación?",
+  autoMessageSentence: "¿Puedes ayudarme a entender esta oración?",
+  errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo.",
+  youSelected: "Seleccionaste \"{text}\""
+},
+
+aiTutor: {
+  loading: "Cargando...",
+  startConversation: "Inicia una conversación con tu tutor IA",
+  practiceSkills: "Practica tus habilidades lingüísticas conversando",
+  placeholder: "Escribe tu mensaje...",
+  send: "Enviar",
+  errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo."
+},
+
 storiesMetadata: {
   aventura: {
     title: "La Adventure",

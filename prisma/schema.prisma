@@ -27,9 +27,10 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  sessionLogs      SessionLog[]
-  completedStories CompletedStory[]
-  tutorMessages    TutorMessage[]
+  sessionLogs         SessionLog[]
+  completedStories    CompletedStory[]
+  tutorMessages       TutorMessage[]
+  storyTutorMessages  StoryTutorMessage[]
 }
 
 model Account {
@@ -101,4 +102,17 @@ model TutorMessage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model StoryTutorMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  storySlug String
+  role      String   // "user" or "assistant"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storySlug, createdAt])
 }
