@@ -186,9 +186,9 @@ export default function TutorPage() {
       </div>
 
       {/* Input Container */}
-      <div className="bg-white border-t border-gray-200 px-4 py-4">
+      <div className="bg-white border-t border-gray-200 py-4 pl-2 pr-4 sm:pl-4 md:pl-8 lg:pl-16">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="relative flex items-end">
+          <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
               ref={textareaRef}
               value={input}
