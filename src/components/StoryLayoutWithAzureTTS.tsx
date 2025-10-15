@@ -412,6 +412,7 @@ export default function StoryLayoutWithAzureTTS({
       }
 
       // Priority 2: Find which line was clicked and toggle emoji visibility for that line
+      // Check if we clicked within a sentence container
       const clickedLine = target.closest('[data-sentence-index]');
       if (clickedLine) {
         const lineIndex = parseInt(clickedLine.getAttribute('data-sentence-index') || '-1');
@@ -420,6 +421,32 @@ export default function StoryLayoutWithAzureTTS({
             ...prev,
             [lineIndex]: !prev[lineIndex]
           }));
+          return;
+        }
+      }
+
+      // If not within a sentence container, find which line's vertical space we're in
+      const allLines = document.querySelectorAll('[data-sentence-index]');
+      const clickY = e.clientY;
+
+      for (let i = 0; i < allLines.length; i++) {
+        const lineElement = allLines[i] as HTMLElement;
+        const rect = lineElement.getBoundingClientRect();
+        const nextLine = allLines[i + 1] as HTMLElement | undefined;
+        const nextRect = nextLine?.getBoundingClientRect();
+
+        // Check if click is within this line's vertical range (from line top to next line top, or to bottom if last line)
+        const lineBottom = nextRect ? nextRect.top : rect.bottom + 1000; // Large number for last line
+
+        if (clickY >= rect.top && clickY < lineBottom) {
+          const lineIndex = parseInt(lineElement.getAttribute('data-sentence-index') || '-1');
+          if (lineIndex >= 0) {
+            setShowEmojiButtons(prev => ({
+              ...prev,
+              [lineIndex]: !prev[lineIndex]
+            }));
+          }
+          return;
         }
       }
     };
