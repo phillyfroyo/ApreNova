@@ -167,7 +167,7 @@ if (!session?.user?.email) {
         <div
   className="text-green-700 cursor-pointer hover:underline text-sm"
   onClick={() => {
-    router.push(`/${typedLang}/home/quiz/l1/q1`)
+    router.push(`/${typedLang}/home/quiz/placement`)
   }}
 >
   {t(typedLang, "settings", "takeQuiz")}

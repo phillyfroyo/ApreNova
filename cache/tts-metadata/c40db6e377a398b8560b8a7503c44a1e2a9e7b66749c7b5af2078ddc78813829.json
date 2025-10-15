@@ -1,0 +1,17 @@
+{
+  "audioUrl": "/cache/tts-audio/c40db6e377a398b8560b8a7503c44a1e2a9e7b66749c7b5af2078ddc78813829.mp3",
+  "wordTimings": [
+    {
+      "word": "Maya",
+      "startTime": 0.05,
+      "endTime": 0.6625,
+      "confidence": 1
+    }
+  ],
+  "duration": 0.6625,
+  "createdAt": 1760027127799,
+  "accessedAt": 1760027127799,
+  "language": "es-ES",
+  "speed": "normal",
+  "textHash": "784f043fbf49b0b7fc923bdc8193d289"
+}

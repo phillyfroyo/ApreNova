@@ -1,0 +1,219 @@
+// src/app/[lng]/tutor/page.tsx
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import type { Language } from "@/types/i18n";
+import { t } from "@/lib/t";
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export default function TutorPage() {
+  const { lng } = useParams();
+  const typedLang = lng as Language;
+  const { data: session } = useSession();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Load conversation history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const response = await fetch("/api/tutor");
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.messages || []);
+        }
+      } catch (error) {
+        console.error("Failed to load conversation history:", error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    if (session?.user) {
+      loadHistory();
+    } else {
+      setIsLoadingHistory(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/tutor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [...messages, userMessage] }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: data.message,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content:
+          typedLang === "en"
+            ? "Sorry, I encountered an error. Please try again."
+            : "Lo siento, encontré un error. Por favor intenta de nuevo.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-800">
+          {t(typedLang, "stories", "aiTutor")}
+        </h1>
+        <Link
+          href={`/${typedLang}/stories`}
+          className="text-blue-600 hover:text-blue-800 text-sm"
+        >
+          {t(typedLang, "settings", "backToStories")}
+        </Link>
+      </div>
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto space-y-6">
+          {isLoadingHistory ? (
+            <div className="text-center text-gray-500 mt-20">
+              <p className="text-lg">
+                {typedLang === "en" ? "Loading..." : "Cargando..."}
+              </p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center text-gray-500 mt-20">
+              <p className="text-lg mb-2">
+                {typedLang === "en"
+                  ? "Start a conversation with your AI tutor"
+                  : "Inicia una conversación con tu tutor IA"}
+              </p>
+              <p className="text-sm">
+                {typedLang === "en"
+                  ? "Practice your language skills through conversation"
+                  : "Practica tus habilidades lingüísticas conversando"}
+              </p>
+            </div>
+          ) : null}
+
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  message.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-800 border border-gray-200"
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-white text-gray-800 border border-gray-200">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input Container */}
+      <div className="bg-white border-t border-gray-200 px-4 py-4">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          <div className="flex gap-2 items-end">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                typedLang === "en"
+                  ? "Type your message..."
+                  : "Escribe tu mensaje..."
+              }
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
+              style={{ minHeight: "52px", maxHeight: "200px" }}
+              disabled={isLoading}
+              rows={1}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            >
+              {typedLang === "en" ? "Send" : "Enviar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
