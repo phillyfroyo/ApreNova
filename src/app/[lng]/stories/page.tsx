@@ -184,12 +184,15 @@ function StoriesPageContent() {
  const fallbackLevel = useUserLevel();
 
 useEffect(() => {
-  const stored = localStorage.getItem('level') || sessionStorage.getItem('quizLevel');
-
-  if (isLevel(stored)) {
-    setSelectedLevel(stored);
-  } else if (isLevel(fallbackLevel)) {
+  // Always prioritize the user's actual CEFR level from database
+  if (isLevel(fallbackLevel)) {
     setSelectedLevel(fallbackLevel);
+  } else {
+    // Only use localStorage/sessionStorage if no database level exists
+    const stored = localStorage.getItem('level') || sessionStorage.getItem('quizLevel');
+    if (isLevel(stored)) {
+      setSelectedLevel(stored);
+    }
   }
 }, [fallbackLevel]);
 
@@ -227,7 +230,7 @@ useEffect(() => {
 
 <div className="mt-16 mb-4 px-4">
   <h2 className="text-xl font-semibold text-left">
-    {t(typedLang, "stories", "storiesAll")} ({selectedLevel})
+    {t(typedLang, "stories", "storiesAll")}
   </h2>
 </div>
 

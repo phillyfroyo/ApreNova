@@ -23,6 +23,9 @@ interface StoryTutorChatProps {
     fullLine: string;
     selectedText?: string;
   } | null;
+  preloadedMessages?: any[] | null;
+  onMessagesUpdate?: (messages: any[]) => void;
+  backgroundImage?: string;
 }
 
 export default function StoryTutorChat({
@@ -31,6 +34,9 @@ export default function StoryTutorChat({
   onClose,
   isOpen,
   initialContext,
+  preloadedMessages,
+  onMessagesUpdate,
+  backgroundImage,
 }: StoryTutorChatProps) {
   const { lng } = useParams();
   const typedLang = (lng as Language) ?? "es";
@@ -76,12 +82,19 @@ export default function StoryTutorChat({
 
     const loadHistory = async () => {
       try {
-        // Step 1: Load conversation history first
-        const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
-        if (!response.ok) throw new Error("Failed to load history");
+        // Step 1: Use preloaded messages if available, otherwise fetch
+        let loadedMessages: Message[];
 
-        const data = await response.json();
-        const loadedMessages = data.messages || [];
+        if (preloadedMessages && preloadedMessages.length > 0) {
+          console.log(`✨ Using ${preloadedMessages.length} pre-loaded messages - instant load!`);
+          loadedMessages = preloadedMessages;
+        } else {
+          const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
+          if (!response.ok) throw new Error("Failed to load history");
+
+          const data = await response.json();
+          loadedMessages = data.messages || [];
+        }
 
         // Step 2: Check if this is a new context (different from last processed)
         const isNewContext = contextId && contextId !== lastProcessedContextRef.current;
@@ -123,8 +136,10 @@ export default function StoryTutorChat({
             setIsLoading(true);
 
             try {
-              // Send "You selected" message - this will be saved to DB and sent to GPT
-              const apiResponse = await fetch("/api/story-tutor", {
+              // Use proactive endpoint if sending to GPT, otherwise just save the message
+              const endpoint = shouldSendToGPT ? "/api/story-tutor-proactive" : "/api/story-tutor";
+
+              const apiResponse = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -132,7 +147,7 @@ export default function StoryTutorChat({
                   storySlug,
                   currentPageText,
                   context: initialContext,
-                  isInitialProactiveResponse: shouldSendToGPT, // Only use special formatting if sending proactively
+                  routeLanguage: typedLang,
                 }),
               });
 
@@ -185,7 +200,12 @@ export default function StoryTutorChat({
         scrollToBottom();
       }
     }
-  }, [messages]);
+
+    // Sync messages back to parent to keep preloaded cache fresh
+    if (onMessagesUpdate && messages.length > 0) {
+      onMessagesUpdate(messages);
+    }
+  }, [messages, onMessagesUpdate]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -217,6 +237,7 @@ export default function StoryTutorChat({
           storySlug,
           currentPageText,
           context: initialContext,
+          routeLanguage: typedLang,
         }),
       });
 
@@ -250,9 +271,12 @@ export default function StoryTutorChat({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div
+      className="flex flex-col h-full bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: backgroundImage ? `url('${backgroundImage}')` : undefined }}
+    >
       {/* Header */}
-      <div className="bg-purple-600 text-white px-4 py-3 flex items-center justify-between border-b">
+      <div className="bg-purple-600/95 backdrop-blur-sm text-white px-4 py-3 flex items-center justify-between border-b border-purple-700">
         <h2 className="text-lg font-semibold">❓ {t(typedLang, "storyTutor", "title")}</h2>
         <button
           onClick={onClose}
@@ -263,11 +287,11 @@ export default function StoryTutorChat({
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white/40 backdrop-blur-md max-h-[calc(100vh-200px)]">
+        <div>
           {messages.length === 0 && !isLoading && (
-            <div className="text-center text-gray-500 mt-10">
-              <p className="text-base mb-2">👋 {t(typedLang, "storyTutor", "askAnything")}</p>
+            <div className="text-center text-gray-700 mt-10 bg-white/80 backdrop-blur-sm rounded-xl p-6 mx-auto max-w-md">
+              <p className="text-base mb-2 font-semibold">👋 {t(typedLang, "storyTutor", "askAnything")}</p>
               <p className="text-sm">{t(typedLang, "storyTutor", "helpWith")}</p>
             </div>
           )}
@@ -276,24 +300,24 @@ export default function StoryTutorChat({
             <div
               key={index}
               className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
+                message.role === "user" ? "justify-end mt-20 mb-4" : "justify-start"
               }`}
             >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2 ${
-                  message.role === "user"
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-              </div>
+              {message.role === "user" ? (
+                <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-purple-600/95 backdrop-blur-sm text-white shadow-lg">
+                  <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                </div>
+              ) : (
+                <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">
+                  <p className="whitespace-pre-wrap text-sm text-gray-800">{message.content}</p>
+                </div>
+              )}
             </div>
           ))}
 
           {isLoading && (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-gray-100 text-gray-800">
+              <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-white/90 backdrop-blur-sm text-gray-800 shadow-md">
                 <div className="flex space-x-2">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
@@ -308,7 +332,7 @@ export default function StoryTutorChat({
       </div>
 
       {/* Input Container */}
-      <div className="border-t bg-gray-50 px-4 py-3">
+      <div className="border-t border-purple-300/50 bg-white/80 backdrop-blur-md px-4 py-3">
         <form onSubmit={handleSubmit}>
           <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
@@ -324,7 +348,7 @@ export default function StoryTutorChat({
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-2 bottom-2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {t(typedLang, "storyTutor", "send")}
             </button>

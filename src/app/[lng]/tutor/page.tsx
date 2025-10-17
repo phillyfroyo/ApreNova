@@ -138,7 +138,7 @@ export default function TutorPage() {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-3xl mx-auto">
           {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-500 mt-20">
               <p className="text-lg mb-2">
@@ -154,18 +154,18 @@ export default function TutorPage() {
             <div
               key={index}
               className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
+                message.role === "user" ? "justify-end mt-20 mb-4" : "justify-start"
               }`}
             >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-800 border border-gray-200"
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              </div>
+              {message.role === "user" ? (
+                <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-600 text-white">
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+              ) : (
+                <div className="max-w-[80%]">
+                  <p className="whitespace-pre-wrap text-gray-800">{message.content}</p>
+                </div>
+              )}
             </div>
           ))}
 

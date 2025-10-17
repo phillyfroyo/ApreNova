@@ -38,7 +38,7 @@ stories: {
   readStory: "Read Me",
   availableLevels: "Available in levels:",
   level: "Level",
-  storiesAll: "Stories (all)",
+  storiesAll: "Stories",
   aiTutor: "AI Tutor",
   takeQuiz: "Take the Quiz",
   myAccount: "My Account",

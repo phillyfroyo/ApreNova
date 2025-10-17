@@ -38,7 +38,7 @@ language: {
   readStory: "Léeme",
   availableLevels: "Disponible en niveles:",
   level: "Nivel",
-  storiesAll: "Historias (todas)",
+  storiesAll: "Historias",
   aiTutor: "Tutor IA",
   takeQuiz: "Haz el Quiz",
   myAccount: "Mi Cuenta",

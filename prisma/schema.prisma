@@ -31,6 +31,7 @@ model User {
   completedStories    CompletedStory[]
   tutorMessages       TutorMessage[]
   storyTutorMessages  StoryTutorMessage[]
+  storyBookmarks      StoryBookmark[]
 }
 
 model Account {
@@ -115,4 +116,19 @@ model StoryTutorMessage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, storySlug, createdAt])
+}
+
+model StoryBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  storySlug String
+  level     String
+  chapter   Int
+  page      Int
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storySlug])
+  @@index([userId])
 }
