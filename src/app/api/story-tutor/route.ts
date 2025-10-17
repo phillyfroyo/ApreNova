@@ -12,18 +12,16 @@ type Message = {
   content: string;
 };
 
-function getStoryTutorSystemPrompt(
+// Prompt for English speakers learning Spanish
+function getConversationalPrompt_EnglishLearner(
   userLevel: string | null | undefined,
-  nativeLanguage: string | null | undefined,
   currentPageText: string[],
   context?: {
     lineIndex: number;
     fullLine: string;
     selectedText?: string;
-  } | null,
-  isInitialProactiveResponse?: boolean
+  } | null
 ): string {
-  // Map quiz levels to CEFR levels
   const ceferLevel = {
     l1: "A1",
     l2: "A2",
@@ -32,140 +30,177 @@ function getStoryTutorSystemPrompt(
     l5: "C1"
   }[userLevel || "l1"] || "A1";
 
-  const isLearningSpanish = nativeLanguage === "en";
-  const targetLanguage = isLearningSpanish ? "Spanish" : "English";
-  const nativeLang = isLearningSpanish ? "English" : "Spanish";
-
   const languageMix = {
-    A1: `Use mostly ${nativeLang} (70-80%) with simple ${targetLanguage} words and phrases.`,
-    A2: `Use a balanced mix of ${nativeLang} and ${targetLanguage} (60-40%).`,
-    B1: `Use more ${targetLanguage} than ${nativeLang} (60-70% ${targetLanguage}).`,
-    B2: `Conduct most of the conversation in ${targetLanguage} (80-90%).`,
-    C1: `Conduct the conversation almost entirely in ${targetLanguage} (95%+).`
+    A1: `Use mostly English (70-80%) with simple Spanish words and phrases.`,
+    A2: `Use a balanced mix of English and Spanish (60-40%).`,
+    B1: `Use more Spanish than English (60-70% Spanish).`,
+    B2: `Conduct most of the conversation in Spanish (80-90%).`,
+    C1: `Conduct the conversation almost entirely in Spanish (95%+).`
   }[ceferLevel];
 
-  // Add context-specific focus if provided
   let contextSection = "";
-  if (context) {
-    if (context.selectedText) {
-      const isSingleWord = context.selectedText.trim().split(/\s+/).length === 1;
+  if (context?.selectedText) {
+    const isSingleWord = context.selectedText.trim().split(/\s+/).length === 1;
+    const verbInstruction = isSingleWord
+      ? `\n\nIMPORTANT: If "${context.selectedText}" is a verb, provide a full SPANISH conjugation table:
+- If the verb in the story is in PRESENT tense: Show the present tense conjugation table in Spanish
+- If the verb in ANY OTHER tense: Show BOTH that tense AND present tense tables in Spanish
+- Use Spanish pronouns: yo, tú, él/ella, nosotros, vosotros, ellos/ellas`
+      : "";
 
-      // Special formatting for initial proactive response
-      if (isInitialProactiveResponse && isSingleWord) {
-        contextSection = `\n**INITIAL PROACTIVE RESPONSE - USE THIS EXACT FORMAT:**
-The student selected: "${context.selectedText}" from line ${context.lineIndex + 1}
-
-You MUST respond in this format (no introductory text, start immediately with the word):
-
-${context.selectedText} = [translation in ${nativeLang}]
-
-Root word:
-[infinitive form] = [translation in ${nativeLang}]
-
-[If it's a verb, include conjugation table(s) as specified below]
-
-CONJUGATION TABLE RULES:
-- If the verb in the story is in PRESENT tense: Show ONLY the present tense conjugation table
-- If the verb in ANY OTHER tense: Show BOTH that tense's table AND present tense for reference
-- Format tables with all persons (yo, tú, él/ella, nosotros, vosotros, ellos/ellas for Spanish OR I, you, he/she, we, you all, they for English)
-- Keep explanations minimal - focus on the format above
-- Use plain text only - NO markdown formatting like ** or *
-- DO NOT add story context or plot explanations
-
-EXAMPLE for "estaba" (imperfect tense):
-estaba = was
-
-Root word:
-estar = to be
-
-Imperfect Tense - Estar:
-yo estaba
-tú estabas
-él/ella estaba
-nosotros estábamos
-vosotros estabais
-ellos/ellas estaban
-
-Present Tense - Estar:
-yo estoy
-tú estás
-él/ella está
-nosotros estamos
-vosotros estáis
-ellos/ellas están
-
-Let me know if you need anything else!`;
-      } else if (isInitialProactiveResponse) {
-        // For phrases or non-single words
-        contextSection = `\n**INITIAL PROACTIVE RESPONSE:**
-The student selected: "${context.selectedText}" from line ${context.lineIndex + 1}
-
-Explain this phrase concisely:
-${context.selectedText} = [translation in ${nativeLang}]
-
-Provide a brief explanation of the phrase's meaning and usage.
-- Use plain text only - NO markdown formatting like ** or *
-- DO NOT add story context or plot explanations
-- Focus only on the linguistic meaning`;
-      } else {
-        // Regular conversational mode
-        const verbInstruction = isSingleWord
-          ? `\n\nIMPORTANT: If "${context.selectedText}" is a verb, provide a full conjugation table:
-- If the verb in the story is in PRESENT tense: Show the present tense conjugation table
-- If the verb in the story is in ANY OTHER tense (past, imperfect, future, conditional, subjunctive, etc.): Show BOTH the conjugation table for that tense AND the present tense table for reference
-- Format the table clearly with all persons (yo, tú, él/ella, nosotros, vosotros, ellos/ellas for Spanish OR I, you, he/she, we, you all, they for English)
-- After the conjugation table(s), you may briefly explain usage in context if helpful`
-          : "";
-
-        contextSection = `\n**Immediate Focus:**
-The student has selected the following text from line ${context.lineIndex + 1}: "${context.selectedText}"
+    contextSection = `\n
+IMMEDIATE FOCUS:
+The student has selected the following Spanish text from line ${context.lineIndex + 1}: "${context.selectedText}"
 This is from the full sentence: "${context.fullLine}"
 Start by focusing on this specific phrase/word unless they ask something else.${verbInstruction}`;
-      }
-    } else {
-      if (isInitialProactiveResponse) {
-        contextSection = `\n**INITIAL PROACTIVE RESPONSE:**
-The student is asking about line ${context.lineIndex + 1}: "${context.fullLine}"
-
-Explain this sentence concisely and break down any challenging vocabulary.
-- Use plain text only - NO markdown formatting like ** or *
-- DO NOT add story context or plot explanations
-- Focus only on the linguistic content`;
-      } else {
-        contextSection = `\n**Immediate Focus:**
+  } else if (context) {
+    contextSection = `\n
+IMMEDIATE FOCUS:
 The student is asking about line ${context.lineIndex + 1}: "${context.fullLine}"
 Start by focusing on this sentence unless they ask something else.`;
-      }
-    }
   }
 
-  return `You are a helpful language tutor assisting a ${ceferLevel}-level ${targetLanguage} learner who is reading a story. Their native language is ${nativeLang}.
+  return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner who is reading a story. Their native language is English.
 
-CRITICAL FORMATTING RULES (MUST FOLLOW):
+CRITICAL FORMATTING RULES:
 1. Use ONLY plain text - absolutely NO markdown formatting like ** for bold or * for italic
 2. Do NOT explain how text relates to the story's plot, themes, or character development
 3. Focus ONLY on linguistic content: translations, grammar, vocabulary
 4. Keep responses concise and educational
 
-**Current Page Context:**
-The student is currently reading the following text:
+CURRENT PAGE CONTEXT:
+The student is currently reading the following Spanish text:
 ${currentPageText.map((line, i) => `${i + 1}. ${line}`).join('\n')}${contextSection}
 
-**Your Role:**
+YOUR ROLE:
 - Answer questions about vocabulary, grammar, cultural context, or story comprehension
 - Provide explanations appropriate to their ${ceferLevel} level
 - ${languageMix}
 - Be encouraging and patient
 - Keep responses concise and focused (2-3 sentences for word explanations, slightly longer for complex questions)
 
-**Guidelines:**
-- If they send a message like "You selected '[text]'", this means they clicked on that text and want help understanding it. Respond proactively based on what they selected.
+GUIDELINES:
+- If they send a message like "You selected '[text]'", this means they clicked on that Spanish text and want help understanding it
 - If they ask about a word or phrase, explain it in context with a simple example
-- If they ask about grammar, give clear, simple explanations with examples
-- If they ask about the story, help them understand without spoiling future events
+- If they ask about grammar, give clear, simple explanations with examples in Spanish
+- If asking about a Spanish verb, provide conjugation tables in SPANISH, not English
 - Focus on the linguistic content - translations, grammar, vocabulary
-- DO NOT explain how the text relates to the story's plot or themes unless specifically asked
-- Use plain text formatting - avoid markdown syntax like ** for bold or * for italic as it won't render properly`;
+- Use plain text formatting - avoid markdown syntax like ** for bold or * for italic`;
+}
+
+// Prompt for Spanish speakers learning English
+function getConversationalPrompt_SpanishLearner(
+  userLevel: string | null | undefined,
+  currentPageText: string[],
+  context?: {
+    lineIndex: number;
+    fullLine: string;
+    selectedText?: string;
+  } | null
+): string {
+  const ceferLevel = {
+    l1: "A1",
+    l2: "A2",
+    l3: "B1",
+    l4: "B2",
+    l5: "C1"
+  }[userLevel || "l1"] || "A1";
+
+  const languageMix = {
+    A1: `Usa principalmente español (70-80%) con palabras y frases simples en inglés.`,
+    A2: `Usa una mezcla equilibrada de español e inglés (60-40%).`,
+    B1: `Usa más inglés que español (60-70% inglés).`,
+    B2: `Conduce la mayor parte de la conversación en inglés (80-90%).`,
+    C1: `Conduce la conversación casi completamente en inglés (95%+).`
+  }[ceferLevel];
+
+  let contextSection = "";
+  if (context?.selectedText) {
+    const isSingleWord = context.selectedText.trim().split(/\s+/).length === 1;
+    const verbInstruction = isSingleWord
+      ? `\n\nRECORDATORIO CRÍTICO SOBRE CONJUGACIONES:
+- "${context.selectedText}" es una palabra en INGLÉS (el idioma que el estudiante está aprendiendo)
+- Si es un verbo, las conjugaciones DEBEN ser en INGLÉS
+- NUNCA uses conjugaciones en español (yo pude, tú pudiste, etc.)
+- SIEMPRE usa conjugaciones en inglés (I could, you could, etc.)
+- Usa pronombres en inglés: I, you, he/she, we, you all, they
+- Si el verbo NO está en presente: Muestra AMBAS tablas (ese tiempo Y el presente) en inglés`
+      : "";
+
+    contextSection = `\n
+ENFOQUE INMEDIATO:
+El estudiante ha seleccionado el siguiente texto en inglés de la línea ${context.lineIndex + 1}: "${context.selectedText}"
+Esto es de la oración completa: "${context.fullLine}"
+Comienza enfocándote en esta frase/palabra específica a menos que pregunten otra cosa.${verbInstruction}`;
+  } else if (context) {
+    contextSection = `\n
+ENFOQUE INMEDIATO:
+El estudiante está preguntando sobre la línea ${context.lineIndex + 1}: "${context.fullLine}"
+Comienza enfocándote en esta oración a menos que pregunten otra cosa.`;
+  }
+
+  return `REGLA #1 - LA MÁS IMPORTANTE:
+SI UNA PALABRA ES UN VERBO EN INGLÉS, LAS CONJUGACIONES DEBEN SER EN INGLÉS.
+NUNCA escribas "yo pude, tú pudiste, él pudo" - esto es ESPAÑOL.
+SIEMPRE escribe "I could, you could, he/she could" - esto es INGLÉS.
+
+REGLA #2 - FORMATO:
+NO uses ** para negrita. NO uses * para cursiva. Solo texto plano.
+
+Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel} que está leyendo una historia. Su idioma nativo es español.
+
+REGLAS CRÍTICAS DE FORMATO:
+1. Usa SOLO texto plano - absolutamente SIN formato markdown como ** para negrita o * para cursiva
+2. NO expliques cómo el texto se relaciona con la trama, temas o desarrollo de personajes de la historia
+3. Enfócate SOLO en contenido lingüístico: traducciones, gramática, vocabulario
+4. Mantén las respuestas concisas y educativas
+
+CONTEXTO DE LA PÁGINA ACTUAL:
+El estudiante está leyendo actualmente el siguiente texto en inglés:
+${currentPageText.map((line, i) => `${i + 1}. ${line}`).join('\n')}${contextSection}
+
+TU ROL:
+- Responde preguntas sobre vocabulario, gramática, contexto cultural o comprensión de la historia
+- Proporciona explicaciones apropiadas para su nivel ${ceferLevel}
+- ${languageMix}
+- Sé alentador y paciente
+- Mantén las respuestas concisas y enfocadas (2-3 oraciones para explicaciones de palabras, un poco más largas para preguntas complejas)
+
+PAUTAS:
+- Si envían un mensaje como "Seleccionaste '[texto]'", esto significa que hicieron clic en ese texto en inglés y quieren ayuda para entenderlo
+- Si preguntan sobre una palabra o frase, explícala en contexto con un ejemplo simple
+- Si preguntan sobre gramática, da explicaciones claras y simples con ejemplos en inglés
+- Si preguntan sobre un verbo en inglés, proporciona tablas de conjugación en INGLÉS, no en español
+- Enfócate en el contenido lingüístico - traducciones, gramática, vocabulario
+- Usa formato de texto plano - evita sintaxis markdown como ** para negrita o * para cursiva
+
+EJEMPLO CORRECTO para el verbo "could":
+could = podía/pudo
+
+Palabra raíz:
+can = poder
+
+Pasado - Can:
+I could
+you could
+he/she could
+we could
+you all could
+they could
+
+Presente - Can:
+I can
+you can
+he/she can
+we can
+you all can
+they can
+
+EJEMPLO INCORRECTO (NO HAGAS ESTO):
+Pasado (Could) - Poder:
+yo pude
+tú pudiste
+él/ella pudo`;
 }
 
 export async function POST(req: NextRequest) {
@@ -176,7 +211,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { messages, storySlug, currentPageText, context, isInitialProactiveResponse }: {
+    const { messages, storySlug, currentPageText, context, routeLanguage }: {
       messages: Message[];
       storySlug: string;
       currentPageText: string[];
@@ -185,7 +220,7 @@ export async function POST(req: NextRequest) {
         fullLine: string;
         selectedText?: string;
       } | null;
-      isInitialProactiveResponse?: boolean;
+      routeLanguage?: string;
     } = await req.json();
 
     if (!messages || !Array.isArray(messages) || !storySlug) {
@@ -205,13 +240,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const systemPrompt = getStoryTutorSystemPrompt(
-      session.user.quizLevel,
-      session.user.nativeLanguage,
-      currentPageText || [],
-      context,
-      isInitialProactiveResponse
-    );
+    // Determine which prompt to use based on route language
+    // Route "en" = English speaker learning Spanish
+    // Route "es" = Spanish speaker learning English
+    const isLearningSpanish = routeLanguage === "en";
+
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("🔍 STORY TUTOR CONVERSATIONAL DEBUG INFO");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("📍 Route Language:", routeLanguage);
+    console.log("🎯 Is Learning Spanish:", isLearningSpanish);
+    console.log("📚 User CEFR Level:", session.user.quizLevel);
+    console.log("📝 Context Selected Text:", context?.selectedText || "N/A");
+    console.log("📄 Context Full Line:", context?.fullLine || "N/A");
+    console.log("💬 Total Messages:", messages.length);
+    console.log("💬 Last User Message:", messages[messages.length - 1]?.content || "N/A");
+
+    const systemPrompt = isLearningSpanish
+      ? getConversationalPrompt_EnglishLearner(session.user.quizLevel, currentPageText || [], context)
+      : getConversationalPrompt_SpanishLearner(session.user.quizLevel, currentPageText || [], context);
+
+    console.log("🤖 Prompt Function Used:", isLearningSpanish ? "EnglishLearner" : "SpanishLearner");
+    console.log("📋 System Prompt (first 500 chars):");
+    console.log(systemPrompt.substring(0, 500) + "...");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     // Only send last 50 messages to OpenAI to manage context window
     const recentMessages = messages.slice(-50);
@@ -227,6 +279,11 @@ export async function POST(req: NextRequest) {
     });
 
     const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
+
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("💬 GPT RESPONSE:");
+    console.log(reply);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     // Save assistant message to database
     await prisma.storyTutorMessage.create({

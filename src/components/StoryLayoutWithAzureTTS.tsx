@@ -98,6 +98,13 @@ export default function StoryLayoutWithAzureTTS({
     fullLine: string;
     selectedText?: string;
   } | null>(null);
+  const [preloadedMessages, setPreloadedMessages] = useState<any[] | null>(null);
+  const hasPreloadedRef = useRef(false);
+
+  // Callback to update preloaded messages when new messages are added
+  const handleMessagesUpdate = useCallback((newMessages: any[]) => {
+    setPreloadedMessages(newMessages);
+  }, []);
 
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
@@ -239,6 +246,59 @@ export default function StoryLayoutWithAzureTTS({
       setTranslationMode(isPremiumUser ? "premium" : "free");
     }
   }, [storySlug, isPremiumUser]);
+
+  // Intelligent pre-loading of chat history
+  useEffect(() => {
+    if (!session?.user || hasPreloadedRef.current) return;
+
+    // Wait 2 seconds to ensure user is actually reading
+    const preloadTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
+        if (response.ok) {
+          const data = await response.json();
+          const messages = data.messages || [];
+
+          // Only store if user has history (optimization)
+          if (messages.length > 0) {
+            setPreloadedMessages(messages);
+            console.log(`✅ Pre-loaded ${messages.length} messages for ${storySlug}`);
+          }
+        }
+        hasPreloadedRef.current = true;
+      } catch (error) {
+        console.error('Pre-load failed:', error);
+        hasPreloadedRef.current = true; // Don't retry
+      }
+    }, 2000); // 2 second delay
+
+    return () => clearTimeout(preloadTimer);
+  }, [session, storySlug]);
+
+  // Save bookmark when page changes
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const saveBookmark = async () => {
+      try {
+        await fetch('/api/story-bookmark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storySlug,
+            level: currentLevel,
+            chapter: chapterNumber,
+            page: pageNumber,
+          }),
+        });
+        console.log(`📖 Bookmark saved: ${storySlug} - ${currentLevel} - Ch${chapterNumber} - Page${pageNumber}`);
+      } catch (error) {
+        console.error('Failed to save bookmark:', error);
+      }
+    };
+
+    saveBookmark();
+  }, [session, storySlug, currentLevel, chapterNumber, pageNumber]);
 
   // Enhanced TTS play function
   const handlePlay = async (index: number, isSlow: boolean, text: string) => {
@@ -508,7 +568,7 @@ export default function StoryLayoutWithAzureTTS({
 
   return (
     <div
-      className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-16 bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
+      className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
       style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
     >
       {/* TTS Error Display */}
@@ -675,15 +735,15 @@ export default function StoryLayoutWithAzureTTS({
         })()}
       </div>
 
-      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
+      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
         {/* Total page count in top right */}
         <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
           {currentPagePosition}
         </div>
 
-        {/* Story Content - slides out on mobile, stays on desktop */}
-        <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg mx-auto px-4 transition-transform duration-300 lg:transition-none ${
-          isStoryTutorOpen ? '-translate-x-full lg:translate-x-0' : 'translate-x-0'
+        {/* Story Content - slides left when chat opens, centered by default */}
+        <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg px-4 transition-transform duration-300 ${
+          isStoryTutorOpen ? '-translate-x-full lg:-translate-x-[50%]' : 'translate-x-0 lg:translate-x-0 mx-auto'
         }`}>
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
@@ -836,8 +896,42 @@ export default function StoryLayoutWithAzureTTS({
           ))}
         </div>
 
-        {/* AI Story Tutor Chat Panel - slides in on mobile, side-by-side on desktop */}
-        <div className={`fixed inset-y-0 right-0 w-full lg:relative lg:w-96 transition-transform duration-300 z-50 ${
+        {/* Tab for story page - visible on all screen sizes, fades when chat opens */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Story tab clicked - opening chat');
+            setTutorContext(null);
+            setIsStoryTutorOpen(true);
+          }}
+          className={`fixed right-0 top-1/2 -translate-y-1/2 z-[100] bg-amber-100 px-1.5 py-3 rounded-l-lg shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center ${
+            isStoryTutorOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          title="Open Story Tutor"
+        >
+          <span className="text-gray-600 text-sm font-bold">||</span>
+        </button>
+
+        {/* Tab to close chat - visible on all screen sizes when chat is open */}
+        {isStoryTutorOpen && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Close tab clicked - closing chat');
+              setIsStoryTutorOpen(false);
+              setTutorContext(null);
+            }}
+            className="fixed left-0 top-1/2 -translate-y-1/2 lg:left-auto lg:right-[400px] z-[100] bg-amber-100 px-1.5 py-3 rounded-r-lg lg:rounded-l-lg lg:rounded-r-none shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center"
+            title="Close Story Tutor"
+          >
+            <span className="text-gray-600 text-sm font-bold">||</span>
+          </button>
+        )}
+
+        {/* AI Story Tutor Chat Panel - slides in from right on all screen sizes */}
+        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 ${
           isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
           {isStoryTutorOpen && (
@@ -850,6 +944,9 @@ export default function StoryLayoutWithAzureTTS({
               }}
               isOpen={isStoryTutorOpen}
               initialContext={tutorContext}
+              preloadedMessages={preloadedMessages}
+              onMessagesUpdate={handleMessagesUpdate}
+              backgroundImage={theme.backgroundImage}
             />
           )}
         </div>
