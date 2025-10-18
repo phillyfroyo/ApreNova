@@ -1,7 +1,7 @@
 // src/app/[lng]/tutor/page.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -14,8 +14,8 @@ type Message = {
 };
 
 // Simple markdown renderer for bold and italic
-function renderMarkdown(text: string): JSX.Element {
-  const parts: (string | JSX.Element)[] = [];
+function renderMarkdown(text: string): React.ReactElement {
+  const parts: (string | React.ReactElement)[] = [];
   let lastIndex = 0;
   let keyCounter = 0;
 
