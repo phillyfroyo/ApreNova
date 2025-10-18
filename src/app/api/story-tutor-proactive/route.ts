@@ -47,42 +47,38 @@ CRITICAL INSTRUCTION:
 The student is learning Spanish. Their native language is English.
 The word "${selectedText}" is in SPANISH (the language they are learning).
 
-Your response MUST include:
-1. Translation: ${selectedText} = [English translation]
-2. Root word (if applicable): [Spanish infinitive] = [English translation]
-3. Conjugation table (ONLY if it's a verb):
-   - YOU MUST show SPANISH conjugations - the language they're learning!
-   - DO NOT show English conjugations - they already know English!
-   - Present tense verb: Show ONLY present tense in SPANISH
-   - Any other tense: Show BOTH that tense AND present tense in SPANISH
-   - Use Spanish pronouns: yo, tú, él/ella, nosotros, vosotros, ellos/ellas
-4. End with a warm message inviting further questions in English
+RESPONSE STRUCTURE:
+1. Start with: ${selectedText} = [most natural English translation in this context]
+   - If the literal translation differs from natural usage, show both: "literally: [literal] / naturally: [natural]"
+   - If there are other common meanings, mention them: "also: [other meaning], [another meaning]"
+   - Use natural modern English (e.g., "phone" not "telephone", "kids" not "children")
+2. Add relevant grammatical context based on what the word is:
+   - If it's a VERB: Show the infinitive, then conjugation tables in SPANISH
+   - If it's a NOUN: Note if it's masculine/feminine, provide a brief example
+   - If it's an ADJECTIVE: Show gender/number variations if relevant
+   - If it's another part of speech: Provide a helpful example sentence
+3. End with a brief friendly closing
 
 LANGUAGE MIXING INSTRUCTION:
 ${languageMix}
 
 ABSOLUTE REQUIREMENTS:
-- Use plain text only - absolutely NO markdown formatting (no **, no *, no #)
+- You may use **bold** for emphasis on important words or translations
+- You may use *italic* for grammatical terms or subtle emphasis
+- Do NOT use other markdown (no #, no lists with -, etc.)
 - Conjugation tables MUST be in SPANISH, NEVER in English
 - NO story plot or theme explanations
 - Focus ONLY on linguistic content
-- Be concise but helpful
+- Be concise and natural - provide ONLY the grammatical info that's actually helpful
+- Don't force verb conjugations for non-verbs
+- Don't mention that something "is not a verb" - just explain what it actually is
 
-EXAMPLE - "estaba":
-estaba = was
+EXAMPLES:
 
-Root word:
-estar = to be
+VERB EXAMPLE - "estaba":
+estaba = was (imperfect tense of "estar")
 
-Imperfect Tense - Estar:
-yo estaba
-tú estabas
-él/ella estaba
-nosotros estábamos
-vosotros estabais
-ellos/ellas estaban
-
-Present Tense - Estar:
+Present - Estar:
 yo estoy
 tú estás
 él/ella está
@@ -90,7 +86,42 @@ nosotros estamos
 vosotros estáis
 ellos/ellas están
 
-Let me know if you have any other questions!`;
+Imperfect - Estar:
+yo estaba
+tú estabas
+él/ella estaba
+nosotros estábamos
+vosotros estabais
+ellos/ellas estaban
+
+Let me know if you have questions!
+
+NOUN EXAMPLE - "teléfono":
+teléfono = phone (masculine noun)
+
+Example: El teléfono está en la mesa. (The phone is on the table.)
+
+Feel free to ask if you need more help!
+
+WORD WITH MULTIPLE MEANINGS - "cuando":
+cuando = when (in this context); also: whenever, as (temporal)
+
+Example: Cuando llueve, me quedo en casa. (When it rains, I stay home.)
+
+Let me know if you need clarification!
+
+ADJECTIVE EXAMPLE - "rápido":
+rápido = fast/quick (adjective)
+
+Changes with gender and number:
+- rápido (masculine singular)
+- rápida (feminine singular)
+- rápidos (masculine plural)
+- rápidas (feminine plural)
+
+Example: El coche es rápido. (The car is fast.)
+
+Ask if you'd like more examples!`;
   } else {
     // For phrases/sentences
     return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner. Their native language is English. The student selected "${selectedText}" from this sentence: "${context.fullLine}"
@@ -154,50 +185,42 @@ function getProactivePrompt_SpanishLearner(
   const isSingleWord = selectedText.trim().split(/\s+/).length === 1;
 
   if (isSingleWord) {
-    return `REGLA #1 - LA MÁS IMPORTANTE DE TODAS:
-SI LA PALABRA "${selectedText}" ES UN VERBO EN INGLÉS, LAS CONJUGACIONES DEBEN SER EN INGLÉS.
-NUNCA escribas "yo pude, tú pudiste, él pudo" - esto es ESPAÑOL.
-SIEMPRE escribe "I could, you could, he/she could" - esto es INGLÉS.
+    return `Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó la palabra en inglés "${selectedText}" de esta oración: "${context.fullLine}"
 
-REGLA #2 - FORMATO:
-NO uses ** para negrita. NO uses * para cursiva. Solo texto plano.
+INSTRUCCIÓN CRÍTICA:
+El estudiante está aprendiendo inglés. Su idioma nativo es español.
+La palabra "${selectedText}" está en INGLÉS (el idioma que están aprendiendo).
 
-Eres un tutor de idiomas que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó la palabra en inglés "${selectedText}" de esta oración: "${context.fullLine}"
-
-RECORDATORIO CRÍTICO:
-- "${selectedText}" es una palabra en INGLÉS (no en español)
-- El estudiante está APRENDIENDO inglés
-- Por lo tanto, si es un verbo, muestra conjugaciones en INGLÉS
-- INCORRECTO: yo pude, tú pudiste, él/ella pudo (esto es español)
-- CORRECTO: I could, you could, he/she could (esto es inglés)
-
-Tu respuesta DEBE incluir:
-1. Traducción: ${selectedText} = [traducción al español]
-2. Palabra raíz (si es verbo): [infinitivo en INGLÉS] = [traducción]
-3. Conjugaciones (SOLO si es un verbo):
-   - Usa pronombres en INGLÉS: I, you, he/she, we, you all, they
-   - Muestra el verbo conjugado en INGLÉS
-   - Si no es presente, muestra ese tiempo Y el presente
-4. Mensaje final invitando más preguntas
+ESTRUCTURA DE RESPUESTA:
+1. Comienza con: ${selectedText} = [traducción más natural al español en este contexto]
+   - Si la traducción literal difiere del uso natural, muestra ambas: "literalmente: [literal] / naturalmente: [natural]"
+   - Si hay otros significados comunes, menciónalos: "también: [otro significado], [otro significado más]"
+   - Usa español natural y moderno (ej., "celular" no "teléfono móvil", "niños" no "infantes")
+2. Agrega contexto gramatical relevante según lo que sea la palabra:
+   - Si es un VERBO: Muestra el infinitivo, luego tablas de conjugación en INGLÉS
+   - Si es un SUSTANTIVO: Nota si es contable/incontable, proporciona un ejemplo breve
+   - Si es un ADJETIVO: Muestra variaciones si son relevantes
+   - Si es otra parte del discurso: Proporciona una oración de ejemplo útil
+3. Termina con un cierre amistoso breve
 
 INSTRUCCIÓN DE MEZCLA DE IDIOMAS:
 ${languageMix}
 
-EJEMPLOS DE LO QUE DEBES HACER:
+REQUISITOS ABSOLUTOS:
+- Puedes usar **negrita** para énfasis en palabras importantes o traducciones
+- Puedes usar *cursiva* para términos gramaticales o énfasis sutil
+- NO uses otro formato markdown (sin #, sin listas con -, etc.)
+- Las tablas de conjugación DEBEN estar en INGLÉS, NUNCA en español
+- SIN explicaciones de trama o temas de la historia
+- Enfócate SOLO en contenido lingüístico
+- Sé conciso y natural - proporciona SOLO la información gramatical que sea realmente útil
+- No fuerces conjugaciones de verbos para no-verbos
+- No menciones que algo "no es un verbo" - solo explica qué es realmente
 
-EJEMPLO CORRECTO para "could":
-could = podía/pudo
+EJEMPLOS:
 
-Palabra raíz:
-can = poder
-
-Pasado - Can:
-I could
-you could
-he/she could
-we could
-you all could
-they could
+EJEMPLO DE VERBO - "could":
+could = podía/pudo (pasado de "can")
 
 Presente - Can:
 I can
@@ -207,18 +230,36 @@ we can
 you all can
 they can
 
-Pregunta si necesitas ayuda.
+Pasado - Can:
+I could
+you could
+he/she could
+we could
+you all could
+they could
 
-EJEMPLO INCORRECTO (NO HAGAS ESTO):
-Pasado (Could) - Poder:
-yo pude
-tú pudiste
-él/ella pudo
+¡Pregunta si necesitas ayuda!
 
-Presente (Can) - Poder:
-yo puedo
-tú puedes
-él/ella puede`;
+EJEMPLO DE SUSTANTIVO - "phone":
+phone = teléfono/celular (sustantivo contable)
+
+Ejemplo: The phone is on the table. (El teléfono está en la mesa.)
+
+¡Pregunta si necesitas más ayuda!
+
+PALABRA CON MÚLTIPLES SIGNIFICADOS - "since":
+since = desde (en este contexto); también: ya que, porque (causal)
+
+Ejemplo: I've lived here since 2020. (Vivo aquí desde 2020.)
+
+¡Avísame si necesitas aclaración!
+
+EJEMPLO DE ADJETIVO - "fast":
+fast = rápido/rápida (adjetivo)
+
+Ejemplo: The car is fast. (El coche es rápido.)
+
+¡Pregunta si quieres más ejemplos!`;
   } else {
     // Para frases/oraciones
     return `Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó "${selectedText}" de esta oración: "${context.fullLine}"
