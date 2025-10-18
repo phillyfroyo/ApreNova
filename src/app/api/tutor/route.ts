@@ -41,6 +41,11 @@ function getTutorSystemPrompt(userLevel: string | null | undefined, nativeLangua
 
 IMPORTANT: The student's CEFR level is ${ceferLevel}. If they ask about their level, tell them clearly that they are at ${ceferLevel} level.
 
+**Formatting:**
+- You may use **bold** for emphasis on important words or corrections
+- You may use *italic* for grammatical terms or subtle emphasis
+- Do NOT use other markdown (no #, no lists with -, etc.)
+
 **Language Balance:**
 ${languageMix}
 

@@ -63,10 +63,12 @@ Start by focusing on this sentence unless they ask something else.`;
   return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner who is reading a story. Their native language is English.
 
 CRITICAL FORMATTING RULES:
-1. Use ONLY plain text - absolutely NO markdown formatting like ** for bold or * for italic
-2. Do NOT explain how text relates to the story's plot, themes, or character development
-3. Focus ONLY on linguistic content: translations, grammar, vocabulary
-4. Keep responses concise and educational
+1. You may use **bold** for emphasis on important words or translations
+2. You may use *italic* for grammatical terms or subtle emphasis
+3. Do NOT use other markdown (no #, no lists with -, etc.)
+4. Do NOT explain how text relates to the story's plot, themes, or character development
+5. Focus ONLY on linguistic content: translations, grammar, vocabulary
+6. Keep responses concise and educational
 
 CURRENT PAGE CONTEXT:
 The student is currently reading the following Spanish text:
@@ -85,7 +87,7 @@ GUIDELINES:
 - If they ask about grammar, give clear, simple explanations with examples in Spanish
 - If asking about a Spanish verb, provide conjugation tables in SPANISH, not English
 - Focus on the linguistic content - translations, grammar, vocabulary
-- Use plain text formatting - avoid markdown syntax like ** for bold or * for italic`;
+- You may use **bold** and *italic* for emphasis, but avoid other markdown formatting`;
 }
 
 // Prompt for Spanish speakers learning English
@@ -150,10 +152,12 @@ NO uses ** para negrita. NO uses * para cursiva. Solo texto plano.
 Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel} que está leyendo una historia. Su idioma nativo es español.
 
 REGLAS CRÍTICAS DE FORMATO:
-1. Usa SOLO texto plano - absolutamente SIN formato markdown como ** para negrita o * para cursiva
-2. NO expliques cómo el texto se relaciona con la trama, temas o desarrollo de personajes de la historia
-3. Enfócate SOLO en contenido lingüístico: traducciones, gramática, vocabulario
-4. Mantén las respuestas concisas y educativas
+1. Puedes usar **negrita** para énfasis en palabras importantes o traducciones
+2. Puedes usar *cursiva* para términos gramaticales o énfasis sutil
+3. NO uses otro formato markdown (sin #, sin listas con -, etc.)
+4. NO expliques cómo el texto se relaciona con la trama, temas o desarrollo de personajes de la historia
+5. Enfócate SOLO en contenido lingüístico: traducciones, gramática, vocabulario
+6. Mantén las respuestas concisas y educativas
 
 CONTEXTO DE LA PÁGINA ACTUAL:
 El estudiante está leyendo actualmente el siguiente texto en inglés:
@@ -172,7 +176,7 @@ PAUTAS:
 - Si preguntan sobre gramática, da explicaciones claras y simples con ejemplos en inglés
 - Si preguntan sobre un verbo en inglés, proporciona tablas de conjugación en INGLÉS, no en español
 - Enfócate en el contenido lingüístico - traducciones, gramática, vocabulario
-- Usa formato de texto plano - evita sintaxis markdown como ** para negrita o * para cursiva
+- Puedes usar **negrita** y *cursiva* para énfasis, pero evita otro formato markdown
 
 EJEMPLO CORRECTO para el verbo "could":
 could = podía/pudo

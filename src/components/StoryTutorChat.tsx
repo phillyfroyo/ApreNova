@@ -13,6 +13,42 @@ type Message = {
   content: string;
 };
 
+// Simple markdown renderer for bold and italic
+function renderMarkdown(text: string): JSX.Element {
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let keyCounter = 0;
+
+  // Match **bold** or *italic* (handle bold first to avoid conflicts)
+  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // Add formatted text
+    if (match[2]) {
+      // Bold (**text**)
+      parts.push(<strong key={keyCounter++}>{match[2]}</strong>);
+    } else if (match[3]) {
+      // Italic (*text*)
+      parts.push(<em key={keyCounter++}>{match[3]}</em>);
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return <>{parts}</>;
+}
+
 interface StoryTutorChatProps {
   storySlug: string;
   currentPageText: string[];
@@ -305,11 +341,11 @@ export default function StoryTutorChat({
             >
               {message.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-purple-600/95 backdrop-blur-sm text-white shadow-lg">
-                  <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                  <p className="whitespace-pre-wrap text-sm">{renderMarkdown(message.content)}</p>
                 </div>
               ) : (
                 <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">
-                  <p className="whitespace-pre-wrap text-sm text-gray-800">{message.content}</p>
+                  <p className="whitespace-pre-wrap text-sm text-gray-800">{renderMarkdown(message.content)}</p>
                 </div>
               )}
             </div>
