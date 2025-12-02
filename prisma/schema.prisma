@@ -32,6 +32,7 @@ model User {
   tutorMessages       TutorMessage[]
   storyTutorMessages  StoryTutorMessage[]
   storyBookmarks      StoryBookmark[]
+  translationTeacherMessages TranslationTeacherMessage[]
 }
 
 model Account {
@@ -131,4 +132,18 @@ model StoryBookmark {
 
   @@unique([userId, storySlug])
   @@index([userId])
+}
+
+model TranslationTeacherMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" or "assistant"
+  content   String   @db.Text
+  spoken    String?  @db.Text  // What the AI spoke (for assistant messages)
+  written   String?  @db.Text  // What was displayed in chat (for assistant messages)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
