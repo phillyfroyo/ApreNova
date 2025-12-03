@@ -14,7 +14,7 @@ export default function HomePage() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <H1 className="mb-4">Welcome to ApreNova</H1>
+      <H1 className="mb-4">Welcome to Cuentana</H1>
       <Body>
         Learn smarter, not harder. Explore immersive language stories designed for actual fluency.
       </Body>

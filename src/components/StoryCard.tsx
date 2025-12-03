@@ -46,6 +46,7 @@ export default function StoryCard({
     src={image}
     alt={title}
     fill
+    sizes="160px"
     style={{ objectFit: "cover", borderRadius: "12px" }}
   />
 </div>
