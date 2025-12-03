@@ -76,7 +76,7 @@ export default function LanguageSelectPage() {
           </Link>
         </p>
         <p className="mt-2">
-          <span className="text-black">¿Nuevo en ApreNova? </span>
+          <span className="text-black">¿Nuevo en Cuentana? </span>
           <Link href="/es/auth/signup" className="text-[#1000c8] hover:underline">
             Crea una cuenta gratis
           </Link>

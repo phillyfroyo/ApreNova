@@ -7,7 +7,7 @@ import SessionTracker from '@/components/SessionTracker';
 import { Alice, Open_Sans, Inter } from 'next/font/google';
 
 export const metadata = {
-  title: 'ApreNova',
+  title: 'Cuentana',
   description: 'Learn smarter, not harder. Learn with stories.',
 };
 

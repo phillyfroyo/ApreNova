@@ -490,38 +490,41 @@ export default function StoryLayoutWithAzureTTS({
       }
 
       // Priority 2: Find which line was clicked and toggle emoji visibility for that line
-      // Check if we clicked within a sentence container
-      const clickedLine = target.closest('[data-sentence-index]');
-      if (clickedLine) {
-        const lineIndex = parseInt(clickedLine.getAttribute('data-sentence-index') || '-1');
-        if (lineIndex >= 0) {
-          setShowEmojiButtons(prev => ({
-            ...prev,
-            [lineIndex]: !prev[lineIndex]
-          }));
-          return;
-        }
-      }
-
-      // If not within a sentence container, find which line's vertical space we're in
-      const allLines = document.querySelectorAll('[data-sentence-index]');
+      // Tapping between lines should activate the line ABOVE the tapped area
+      const allTextContents = document.querySelectorAll('[data-text-content]');
       const clickY = e.clientY;
 
-      for (let i = 0; i < allLines.length; i++) {
-        const lineElement = allLines[i] as HTMLElement;
-        const rect = lineElement.getBoundingClientRect();
-        const nextLine = allLines[i + 1] as HTMLElement | undefined;
-        const nextRect = nextLine?.getBoundingClientRect();
+      // Build array of line boundaries using the TEXT CONTENT position (not the container)
+      // This is more accurate because the container includes the emoji row above the text
+      const lineBounds = Array.from(allTextContents).map((el) => {
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        const index = parseInt(el.getAttribute('data-text-content') || '-1');
+        return {
+          element: el as HTMLElement,
+          top: rect.top,      // Top of the actual text
+          bottom: rect.bottom, // Bottom of the actual text
+          index
+        };
+      });
 
-        // Check if click is within this line's vertical range (from line top to next line top, or to bottom if last line)
-        const lineBottom = nextRect ? nextRect.top : rect.bottom + 1000; // Large number for last line
+      // Line N owns: from its text TOP down to the next line's text TOP
+      // This ensures that clicking anywhere ABOVE a line's text activates the line ABOVE
+      // The dividing point is where each line's text begins
+      for (let i = 0; i < lineBounds.length; i++) {
+        const line = lineBounds[i];
+        const nextLine = lineBounds[i + 1];
 
-        if (clickY >= rect.top && clickY < lineBottom) {
-          const lineIndex = parseInt(lineElement.getAttribute('data-sentence-index') || '-1');
-          if (lineIndex >= 0) {
+        // Top boundary: start from where this line's text begins
+        // This ensures tapping ABOVE the first line does NOT activate it
+        const effectiveTop = line.top;
+        // Bottom boundary: extends to where the next line's text begins
+        const effectiveBottom = nextLine ? nextLine.top : Infinity;
+
+        if (clickY >= effectiveTop && clickY < effectiveBottom) {
+          if (line.index >= 0) {
             setShowEmojiButtons(prev => ({
               ...prev,
-              [lineIndex]: !prev[lineIndex]
+              [line.index]: !prev[line.index]
             }));
           }
           return;
@@ -871,7 +874,7 @@ export default function StoryLayoutWithAzureTTS({
                 </div>
 
                 {/* Text content - ensure consistent left alignment */}
-                <div className="w-full px-2 relative">
+                <div className="w-full px-2 relative" data-text-content={i}>
                   <UnifiedTranslator
                     sentence={s[oppositeLang]}
                     enabled={!isAnyDropdownOpen && !menuOpen}
