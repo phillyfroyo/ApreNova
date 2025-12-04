@@ -12,7 +12,10 @@ export type StoryType =
   | "novella"       // Longer multi-chapter fiction
   | "article"       // Non-fiction/informational
   | "dialogue"      // Conversation-based content
-  | "song-lyrics";  // Music lyrics
+  | "song-lyrics"   // Music lyrics
+  | "epic"          // Epic poetry (Beowulf, Odyssey, etc.)
+  | "myth"          // Mythology
+  | "legend";       // Legendary tales
 
 // Genre/theme tags (curated list for consistency)
 export type StoryTag =
@@ -24,18 +27,128 @@ export type StoryTag =
   // Settings
   | "urban" | "rural" | "historical" | "fantasy" | "contemporary"
   // Cultural
-  | "latin-america" | "spain" | "usa" | "multicultural";
+  | "latin-america" | "spain" | "usa" | "multicultural"
+  // Literary genres
+  | "epic" | "mythology" | "heroic" | "tragedy" | "comedy"
+  // Content themes
+  | "monsters" | "heros-journey" | "war" | "love" | "death" | "revenge";
 
-// Attribution for non-original works
+// ============================================
+// TITLE INFORMATION
+// ============================================
+export type TitleInfo = {
+  full: string;                        // Full canonical title
+  display?: string;                    // Optional short display title
+  original?: string;                   // Original language title if different
+};
+
+// ============================================
+// AUTHOR INFORMATION
+// ============================================
+export type AuthorInfo = {
+  name: string;                        // Full name or "Unknown" / "Traditional"
+  lifespan?: string;                   // "1927-2014" or "c. 8th century"
+  isUnknown?: boolean;                 // True if author unknown
+  isCollective?: boolean;              // True if collective/traditional authorship
+  note?: string;                       // Additional context about authorship
+};
+
+// ============================================
+// SOURCE EDITION (the edition being ingested)
+// ============================================
+export type SourceEdition = {
+  title?: string;                      // Edition title
+  publisher?: string;                  // Publisher name
+  publicationYear?: number;            // Year of this edition
+  editor?: string;                     // Editor of this edition
+  isPublicDomain: boolean;             // Is this edition public domain?
+  publicDomainNote?: string;           // e.g., "Published before 1929"
+  url?: string;                        // URL if from online source (Gutenberg, Wikisource)
+  notes?: string;                      // e.g., "facsimile of 19th-century edition"
+};
+
+// ============================================
+// TRANSLATOR INFORMATION
+// ============================================
+export type TranslatorInfo = {
+  name: string;                        // Translator's full name
+  lifespan?: string;                   // "1850-1920"
+  translationYear?: number;            // Year translation was made
+  isPublicDomain: boolean;             // Is the translation public domain?
+  publicDomainNote?: string;           // e.g., "Published before 1929"
+};
+
+// ============================================
+// CUENTANA PROCESSING METADATA (internal)
+// ============================================
+export type ProcessingMetadata = {
+  ingestionDate: string;               // ISO date string
+  ingestionVersion?: string;           // Version number of ingestion pipeline
+  estimatedTokenCount?: number;        // For upload + translation + audio
+  sentenceCount?: number;              // Total sentences in story
+  languages: ("en" | "es")[];          // Languages available
+
+  // Per-level availability
+  cefrLevels: {
+    level: LevelKey;
+    available: boolean;
+    hasAudio?: boolean;
+    hasGrammarNotes?: boolean;
+    hasVocabNotes?: boolean;
+    hasChapterSummaries?: boolean;
+  }[];
+
+  // Reading time estimates per level (in minutes)
+  readingTimeByLevel?: Record<LevelKey, number>;
+};
+
+// ============================================
+// AUDIO METADATA
+// ============================================
+export type AudioMetadata = {
+  narrator?: string;                   // Narrator name or "Azure TTS"
+  speedWpm?: number;                   // Words per minute
+  chaptersIncluded?: number[];         // Which chapters have audio
+  totalDurationMinutes?: number;       // Total audio duration
+};
+
+// ============================================
+// RIGHTS & PROVENANCE
+// ============================================
+export type RightsStatement = {
+  originalWorkStatus: "public-domain" | "licensed" | "original";
+  displayStatement: string;            // Shown to user
+  provenanceNote?: string;             // Where the text came from
+  provenanceUrl?: string;              // Source URL
+  copyrightNote?: string;              // e.g., "No modern copyrighted annotations included"
+};
+
+// ============================================
+// FULL ATTRIBUTION (for non-original works)
+// ============================================
 export type StoryAttribution = {
-  author: string;                    // "Gabriel García Márquez"
-  authorLifespan?: string;           // "1927-2014"
-  originalTitle?: string;            // Title in source language if different
-  yearPublished?: number;            // 1967
-  source?: string;                   // Book/collection name or URL
-  translator?: string;               // If using someone else's translation
-  publicDomain: boolean;             // Is this work public domain?
-  publicDomainNote?: string;         // e.g., "Published before 1928"
+  // Author info
+  author: AuthorInfo;
+
+  // Dating
+  yearWritten?: string;                // "c. 700-1000 CE" or "1605"
+  yearFirstPublished?: number;         // First known publication
+
+  // Source edition being used
+  sourceEdition?: SourceEdition;
+
+  // Translator (if applicable)
+  translator?: TranslatorInfo;
+
+  // Rights
+  rights: RightsStatement;
+
+  // Region/Culture
+  region?: string;                     // "Anglo-Saxon England", "Medieval Spain"
+  culturalInfluences?: string[];       // ["Norse", "Celtic"]
+
+  // Genre classification
+  genres?: string[];                   // ["Epic poetry", "Mythology", "Heroic literature"]
 };
 
 // Story origin - discriminated union
@@ -43,17 +156,87 @@ export type StoryOrigin =
   | { isOriginal: true }
   | { isOriginal: false; attribution: StoryAttribution };
 
-// Full metadata type
+// ============================================
+// DESCRIPTIONS
+// ============================================
+export type StoryDescriptions = {
+  hook: string;                        // One-line hook for catalog
+  summary?: string;                    // 2-3 paragraph description
+};
+
+// ============================================
+// FULL STORY METADATA
+// ============================================
 export type StoryMetadata = {
   slug: string;
   image: string;
   levels: LevelKey[];
   isPremiumOnly?: boolean;
 
+  // Title info
+  title?: TitleInfo;                   // Extended title info (optional, falls back to translations)
+
   // Tagging fields
   type: StoryType;
   origin: StoryOrigin;
   tags?: StoryTag[];
-  estimatedReadTime?: number;        // Minutes (calculated or manual)
   targetAudience?: "children" | "teen" | "adult" | "all";
+
+  // Descriptions (optional, falls back to translations)
+  descriptions?: StoryDescriptions;
+
+  // Processing metadata (internal)
+  processing?: ProcessingMetadata;
+
+  // Audio metadata
+  audio?: AudioMetadata;
+
+  // Reading time (simple version - or use processing.readingTimeByLevel)
+  estimatedReadTime?: number;          // Minutes at native level
 };
+
+// ============================================
+// LEGACY COMPATIBILITY
+// Keep the old simple StoryAttribution structure working
+// ============================================
+export type LegacyStoryAttribution = {
+  author: string;
+  authorLifespan?: string;
+  originalTitle?: string;
+  yearPublished?: number;
+  source?: string;
+  translator?: string;
+  publicDomain: boolean;
+  publicDomainNote?: string;
+};
+
+// Helper to check if attribution is legacy format
+export function isLegacyAttribution(attr: any): attr is LegacyStoryAttribution {
+  return typeof attr.author === 'string';
+}
+
+// Helper to convert legacy to new format
+export function convertLegacyAttribution(legacy: LegacyStoryAttribution): StoryAttribution {
+  return {
+    author: {
+      name: legacy.author,
+      lifespan: legacy.authorLifespan,
+    },
+    yearFirstPublished: legacy.yearPublished,
+    sourceEdition: legacy.source ? {
+      title: legacy.source,
+      isPublicDomain: legacy.publicDomain,
+      publicDomainNote: legacy.publicDomainNote,
+    } : undefined,
+    translator: legacy.translator ? {
+      name: legacy.translator,
+      isPublicDomain: legacy.publicDomain,
+    } : undefined,
+    rights: {
+      originalWorkStatus: legacy.publicDomain ? "public-domain" : "licensed",
+      displayStatement: legacy.publicDomain
+        ? `This work is in the public domain. ${legacy.publicDomainNote || ''}`
+        : "This work is used under license.",
+    },
+  };
+}

@@ -7,11 +7,11 @@ import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from '@/components/Logo';
 import { Card } from '@/components/ui';
-import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TYPE_LABELS_PLURAL, STORY_TAG_LABELS, ALL_STORY_TAGS, ALL_STORY_TYPES } from "@/lib/stories";
+import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TYPE_LABELS_PLURAL, STORY_TAG_LABELS, ALL_STORY_TAGS, ALL_STORY_TYPES, getAuthorName } from "@/lib/stories";
 import { getStoryUrl } from "@/lib/stories";
 import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
-import StoryModal from "@/components/StoryModal";
+import StoryDetailModal from "@/components/StoryDetailModal";
 import StoryCard from "@/components/StoryCard";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
@@ -42,7 +42,7 @@ function getUniqueAuthors(): Array<{ id: string; name: string }> {
 
   STORY_METADATA.forEach(story => {
     if (!story.origin.isOriginal && 'attribution' in story.origin) {
-      const authorName = story.origin.attribution.author;
+      const authorName = getAuthorName(story.origin.attribution);
       if (authorName && !seenAuthors.has(authorName)) {
         seenAuthors.add(authorName);
         authors.push({ id: authorName.toLowerCase().replace(/\s+/g, '-'), name: authorName });
@@ -196,13 +196,34 @@ function isLevel(value: unknown): value is Level {
 function StoriesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, email, image, name, nativeLanguage } = useUserSession();
+  const { user, nativeLanguage } = useUserSession();
   const [selectedLevel, setSelectedLevel] = useState<Level>('l1');
-  const [cardPosition, setCardPosition] = useState<DOMRect | null>(null);
-  const [activeStory, setActiveStory] = useState<number | null>(null);
   const { lng } = useParams();
   const typedLang = lng as Language;
   const [showLangPrompt, setShowLangPrompt] = useState(false);
+
+  // URL-based story detail modal
+  const storyParam = searchParams.get("story");
+  const [detailStorySlug, setDetailStorySlug] = useState<string | null>(storyParam);
+
+  // Sync URL param with state
+  useEffect(() => {
+    setDetailStorySlug(storyParam);
+  }, [storyParam]);
+
+  // Open detail modal and update URL
+  const openDetailModal = (slug: string) => {
+    setDetailStorySlug(slug);
+    // Update URL without full navigation (shallow routing)
+    window.history.pushState({}, "", `/${typedLang}/stories?story=${slug}`);
+  };
+
+  // Close detail modal and update URL
+  const closeDetailModal = () => {
+    setDetailStorySlug(null);
+    // Remove query param from URL
+    window.history.pushState({}, "", `/${typedLang}/stories`);
+  };
 
   // Filter state
   const [selectedTags, setSelectedTags] = useState<StoryTag[]>([]);
@@ -233,7 +254,8 @@ function StoriesPageContent() {
         matchesAuthor = true;
       }
       if (!story.origin.isOriginal && 'attribution' in story.origin) {
-        const authorId = story.origin.attribution.author.toLowerCase().replace(/\s+/g, '-');
+        const authorName = getAuthorName(story.origin.attribution);
+        const authorId = authorName.toLowerCase().replace(/\s+/g, '-');
         if (selectedAuthors.includes(authorId)) {
           matchesAuthor = true;
         }
@@ -269,14 +291,6 @@ function StoriesPageContent() {
   };
 
   const activeFilterCount = selectedTags.length + selectedTypes.length + selectedAuthors.length;
-
-
-  function handleLevelClick(lvl: string) {
-  const locale = typedLang;
-  const storySlug = "aventura"; // We'll make this dynamic in the future
-  const url = getStoryUrl({ locale, storySlug, level: lvl, chapter: 1, page: 1 });
-  router.push(url);
-}
  const fallbackLevel = useUserLevel();
 
 useEffect(() => {
@@ -292,16 +306,7 @@ useEffect(() => {
   }
 }, [fallbackLevel]);
 
-  useEffect(() => {
-    if (activeStory !== null) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [activeStory]);
+  // Body scroll is now handled by StoryDetailModal component
 
   useEffect(() => {
   if (user && !nativeLanguage) {
@@ -385,7 +390,7 @@ useEffect(() => {
                   : STORY_METADATA.some(s =>
                       !s.origin.isOriginal &&
                       'attribution' in s.origin &&
-                      s.origin.attribution.author.toLowerCase().replace(/\s+/g, '-') === author.id
+                      getAuthorName(s.origin.attribution).toLowerCase().replace(/\s+/g, '-') === author.id
                     );
                 if (!hasStories) return null;
 
@@ -504,9 +509,8 @@ useEffect(() => {
                  index={originalIndex}
                  title={getStoryTitle(typedLang, story.slug)}
                  image={story.image}
-                 onClick={(rect) => {
-                   setCardPosition(rect);
-                   setActiveStory(originalIndex);
+                 onClick={() => {
+                   openDetailModal(story.slug);
                  }}
                />
              );
@@ -515,17 +519,12 @@ useEffect(() => {
       </div>
     </div> {/* Close scroll wrapper */}
 
-      <StoryModal
-  activeStory={activeStory}
-  cardPosition={cardPosition}
-  storySlug={activeStory !== null ? STORY_METADATA[activeStory].slug : ""}
-  onClose={() => {
-    setActiveStory(null);
-    setCardPosition(null);
-  }}
-  handleLevelClick={handleLevelClick}
-  user={user} // ✅ Add this line
-/>
+      {/* New large story detail modal with URL state */}
+      <StoryDetailModal
+        storySlug={detailStorySlug}
+        onClose={closeDetailModal}
+        user={user}
+      />
 {showLangPrompt && (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <div className="bg-white p-6 rounded-xl shadow-lg text-center space-y-4 max-w-sm">

@@ -1,6 +1,80 @@
 // src/lib/admin/story-generator.ts
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
 
+/**
+ * Helper to escape strings for JavaScript code output
+ */
+function escapeJsString(str: string): string {
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}
+
+/**
+ * Serialize the new StoryAttribution format to JavaScript code
+ */
+function serializeAttribution(attr: StoryAttribution): string {
+  const parts: string[] = [];
+
+  // Author (required)
+  const authorParts: string[] = [];
+  authorParts.push(`name: "${escapeJsString(attr.author.name)}"`);
+  if (attr.author.lifespan) authorParts.push(`lifespan: "${escapeJsString(attr.author.lifespan)}"`);
+  if (attr.author.isUnknown) authorParts.push(`isUnknown: true`);
+  if (attr.author.isCollective) authorParts.push(`isCollective: true`);
+  if (attr.author.note) authorParts.push(`note: "${escapeJsString(attr.author.note)}"`);
+  parts.push(`author: { ${authorParts.join(", ")} }`);
+
+  // Dating
+  if (attr.yearWritten) parts.push(`yearWritten: "${escapeJsString(attr.yearWritten)}"`);
+  if (attr.yearFirstPublished) parts.push(`yearFirstPublished: ${attr.yearFirstPublished}`);
+
+  // Source Edition
+  if (attr.sourceEdition) {
+    const seParts: string[] = [];
+    if (attr.sourceEdition.title) seParts.push(`title: "${escapeJsString(attr.sourceEdition.title)}"`);
+    if (attr.sourceEdition.publisher) seParts.push(`publisher: "${escapeJsString(attr.sourceEdition.publisher)}"`);
+    if (attr.sourceEdition.publicationYear) seParts.push(`publicationYear: ${attr.sourceEdition.publicationYear}`);
+    if (attr.sourceEdition.editor) seParts.push(`editor: "${escapeJsString(attr.sourceEdition.editor)}"`);
+    seParts.push(`isPublicDomain: ${attr.sourceEdition.isPublicDomain}`);
+    if (attr.sourceEdition.publicDomainNote) seParts.push(`publicDomainNote: "${escapeJsString(attr.sourceEdition.publicDomainNote)}"`);
+    if (attr.sourceEdition.url) seParts.push(`url: "${escapeJsString(attr.sourceEdition.url)}"`);
+    if (attr.sourceEdition.notes) seParts.push(`notes: "${escapeJsString(attr.sourceEdition.notes)}"`);
+    parts.push(`sourceEdition: { ${seParts.join(", ")} }`);
+  }
+
+  // Translator
+  if (attr.translator) {
+    const trParts: string[] = [];
+    trParts.push(`name: "${escapeJsString(attr.translator.name)}"`);
+    if (attr.translator.lifespan) trParts.push(`lifespan: "${escapeJsString(attr.translator.lifespan)}"`);
+    if (attr.translator.translationYear) trParts.push(`translationYear: ${attr.translator.translationYear}`);
+    trParts.push(`isPublicDomain: ${attr.translator.isPublicDomain}`);
+    if (attr.translator.publicDomainNote) trParts.push(`publicDomainNote: "${escapeJsString(attr.translator.publicDomainNote)}"`);
+    parts.push(`translator: { ${trParts.join(", ")} }`);
+  }
+
+  // Rights (required)
+  const rightsParts: string[] = [];
+  rightsParts.push(`originalWorkStatus: "${attr.rights.originalWorkStatus}"`);
+  rightsParts.push(`displayStatement: "${escapeJsString(attr.rights.displayStatement)}"`);
+  if (attr.rights.provenanceNote) rightsParts.push(`provenanceNote: "${escapeJsString(attr.rights.provenanceNote)}"`);
+  if (attr.rights.provenanceUrl) rightsParts.push(`provenanceUrl: "${escapeJsString(attr.rights.provenanceUrl)}"`);
+  if (attr.rights.copyrightNote) rightsParts.push(`copyrightNote: "${escapeJsString(attr.rights.copyrightNote)}"`);
+  parts.push(`rights: { ${rightsParts.join(", ")} }`);
+
+  // Region/Culture
+  if (attr.region) parts.push(`region: "${escapeJsString(attr.region)}"`);
+  if (attr.culturalInfluences && attr.culturalInfluences.length > 0) {
+    parts.push(`culturalInfluences: [${attr.culturalInfluences.map(c => `"${escapeJsString(c)}"`).join(", ")}]`);
+  }
+
+  // Genres
+  if (attr.genres && attr.genres.length > 0) {
+    parts.push(`genres: [${attr.genres.map(g => `"${escapeJsString(g)}"`).join(", ")}]`);
+  }
+
+  return `{ ${parts.join(", ")} }`;
+}
+
 export interface StoryLine {
   en: string;
   es: string;
@@ -168,22 +242,13 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
     ? metadata.tags.map((t) => `"${t}"`).join(", ")
     : null;
 
-  // Build origin string
+  // Build origin string using the new format
   let originStr: string;
   if (metadata.origin.isOriginal) {
     originStr = `{ isOriginal: true }`;
   } else {
-    const attr = metadata.origin.attribution;
-    const attrParts: string[] = [];
-    attrParts.push(`author: "${attr.author}"`);
-    if (attr.authorLifespan) attrParts.push(`authorLifespan: "${attr.authorLifespan}"`);
-    if (attr.originalTitle) attrParts.push(`originalTitle: "${attr.originalTitle}"`);
-    if (attr.yearPublished) attrParts.push(`yearPublished: ${attr.yearPublished}`);
-    if (attr.source) attrParts.push(`source: "${attr.source}"`);
-    if (attr.translator) attrParts.push(`translator: "${attr.translator}"`);
-    attrParts.push(`publicDomain: ${attr.publicDomain}`);
-    if (attr.publicDomainNote) attrParts.push(`publicDomainNote: "${attr.publicDomainNote}"`);
-    originStr = `{ isOriginal: false, attribution: { ${attrParts.join(", ")} } }`;
+    const attrString = serializeAttribution(metadata.origin.attribution);
+    originStr = `{ isOriginal: false, attribution: ${attrString} }`;
   }
 
   let entry = `  {
