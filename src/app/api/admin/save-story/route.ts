@@ -1,0 +1,353 @@
+// src/app/api/admin/save-story/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import fs from "fs/promises";
+import path from "path";
+
+/**
+ * Generate a random 4-digit number for unique filenames
+ */
+function generateRandomSuffix(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+import {
+  generateContentFileTS,
+  generateMetadataEntry,
+  generateUITranslationEntry,
+  buildContentStructure,
+  parseChapters,
+  paginateLines,
+  type StoryMetadataInput,
+} from "@/lib/admin/story-generator";
+import { writeAllStoryFiles } from "@/lib/admin/file-writer";
+import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
+
+/**
+ * Clean text by removing AI artifacts, markdown formatting, and normalizing
+ */
+function cleanText(text: string): string {
+  let cleaned = text
+    // Remove code fences
+    .replace(/^```[\w]*\n?/gm, "")
+    .replace(/\n?```$/gm, "")
+    .replace(/```/g, "")
+    // Remove triple quotes that AI sometimes adds
+    .replace(/^"""\n?/gm, "")
+    .replace(/\n?"""$/gm, "")
+    .replace(/"""/g, "")
+    .replace(/^'''\n?/gm, "")
+    .replace(/\n?'''$/gm, "")
+    .replace(/'''/g, "")
+    // Remove markdown bold/italic
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    // Remove markdown headers
+    .replace(/^#{1,6}\s+/gm, "")
+    // Normalize whitespace
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n");
+
+  // Process line by line to remove quote wrapping and empty quote lines
+  cleaned = cleaned
+    .split("\n")
+    .map(line => {
+      let l = line.trim();
+      // Remove surrounding quotes
+      if ((l.startsWith('"') && l.endsWith('"')) ||
+          (l.startsWith('"') && l.endsWith('"')) ||
+          (l.startsWith("'") && l.endsWith("'")) ||
+          (l.startsWith("'") && l.endsWith("'"))) {
+        l = l.slice(1, -1);
+      }
+      return l;
+    })
+    // Filter out lines that are only quotes or empty
+    .filter(line => {
+      const trimmed = line.trim();
+      // Remove lines that are just quotes
+      if (/^["'"'""'']+$/.test(trimmed)) return false;
+      // Keep non-empty lines
+      return trimmed.length > 0;
+    })
+    .join("\n");
+
+  return cleaned.trim();
+}
+
+interface LevelContent {
+  level: number;
+  en: string; // Full text, newline separated
+  es: string; // Full text, newline separated
+}
+
+interface SaveStoryRequest {
+  slug: string;
+  title: { en: string; es: string };
+  description: { en: string; es: string };
+  levels: LevelContent[];
+  linesPerPage?: number;
+  thumbnailBase64?: string; // Base64 encoded image data
+  backgroundBase64?: string; // Base64 encoded background image
+  // Tagging fields
+  storyType: StoryType;
+  origin: StoryOrigin;
+  tags?: StoryTag[];
+  targetAudience?: "children" | "teen" | "adult" | "all";
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body: SaveStoryRequest = await req.json();
+    const {
+      slug,
+      title,
+      description,
+      levels,
+      linesPerPage = 10,
+      thumbnailBase64,
+      backgroundBase64,
+      storyType,
+      origin,
+      tags,
+      targetAudience,
+    } = body;
+
+    if (!slug || !title || !description || !levels || levels.length === 0) {
+      return NextResponse.json(
+        { error: "Missing required fields: slug, title, description, levels" },
+        { status: 400 }
+      );
+    }
+
+    // Generate content files for each level
+    const levelFiles: Array<{ level: number; content: string }> = [];
+    const warnings: string[] = [];
+    const imageErrors: string[] = [];
+
+    for (const levelData of levels) {
+      // Clean the text before parsing
+      const cleanedEn = cleanText(levelData.en);
+      const cleanedEs = cleanText(levelData.es);
+
+      // Parse chapters from the cleaned text
+      const enChapters = parseChapters(cleanedEn);
+      const esChapters = parseChapters(cleanedEs);
+
+      // Validate line counts match
+      const enLineCount = cleanedEn.split("\n").filter(l => l.trim()).length;
+      const esLineCount = cleanedEs.split("\n").filter(l => l.trim()).length;
+      if (enLineCount !== esLineCount) {
+        warnings.push(`Level ${levelData.level}: EN has ${enLineCount} lines, ES has ${esLineCount} lines. Lines may be misaligned.`);
+      }
+
+      // Build the content structure
+      const contentStructure = buildContentStructure(
+        slug,
+        levelData.level,
+        {
+          en: enChapters.map(ch => {
+            // Custom pagination with provided linesPerPage
+            const pages = paginateLines(ch, linesPerPage);
+            return pages.flat();
+          }),
+          es: esChapters.map(ch => {
+            const pages = paginateLines(ch, linesPerPage);
+            return pages.flat();
+          }),
+        }
+      );
+
+      // Actually, let's rebuild this properly - we want to paginate within the structure
+      const hasChapters = enChapters.length > 1;
+      const chapters: Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }> = {};
+
+      for (let chIdx = 0; chIdx < enChapters.length; chIdx++) {
+        const enPages = paginateLines(enChapters[chIdx], linesPerPage);
+        const esPages = paginateLines(esChapters[chIdx], linesPerPage);
+        const pages: Record<number, { lines: Array<{ en: string; es: string }> }> = {};
+
+        const maxPages = Math.max(enPages.length, esPages.length);
+
+        for (let pIdx = 0; pIdx < maxPages; pIdx++) {
+          const enLines = enPages[pIdx] || [];
+          const esLines = esPages[pIdx] || [];
+          const maxLines = Math.max(enLines.length, esLines.length);
+
+          const lines: Array<{ en: string; es: string }> = [];
+          for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+            lines.push({
+              en: enLines[lIdx] || "",
+              es: esLines[lIdx] || "",
+            });
+          }
+
+          pages[pIdx + 1] = { lines };
+        }
+
+        chapters[chIdx + 1] = { pages };
+      }
+
+      const finalContent = {
+        storySlug: slug,
+        level: levelData.level,
+        hasChapters,
+        chapters,
+      };
+
+      // Generate TypeScript file content
+      const tsContent = generateContentFileTS(finalContent);
+      levelFiles.push({ level: levelData.level, content: tsContent });
+    }
+
+    // Save thumbnail FIRST to get the correct image path for metadata
+    let thumbnailSaved = false;
+    let thumbnailImagePath: string | null = null;
+    if (thumbnailBase64) {
+      try {
+        const base64Data = thumbnailBase64.replace(/^data:image\/\w+;base64,/, "");
+        const imageBuffer = Buffer.from(base64Data, "base64");
+        const mimeMatch = thumbnailBase64.match(/^data:image\/(\w+);base64,/);
+        const extension = mimeMatch?.[1] || "png";
+
+        // Add random suffix to avoid cache issues with same-named files
+        const randomSuffix = generateRandomSuffix();
+        const filename = `${slug}-thumbnail-${randomSuffix}.${extension}`;
+        thumbnailImagePath = `/images/${filename}`;
+
+        const thumbnailPath = path.join(process.cwd(), `public/images/${filename}`);
+        await fs.writeFile(thumbnailPath, imageBuffer);
+        thumbnailSaved = true;
+      } catch (thumbError) {
+        console.error("Failed to save thumbnail:", thumbError);
+        imageErrors.push("Failed to save thumbnail image");
+      }
+    }
+
+    // Save background image
+    let backgroundSaved = false;
+    let backgroundImagePath: string | null = null;
+    if (backgroundBase64) {
+      try {
+        const base64Data = backgroundBase64.replace(/^data:image\/\w+;base64,/, "");
+        const imageBuffer = Buffer.from(base64Data, "base64");
+        const mimeMatch = backgroundBase64.match(/^data:image\/(\w+);base64,/);
+        const extension = mimeMatch?.[1] || "png";
+
+        // Add random suffix to avoid cache issues
+        const randomSuffix = generateRandomSuffix();
+        const filename = `${slug}-background-${randomSuffix}.${extension}`;
+        backgroundImagePath = `/images/${filename}`;
+
+        const backgroundPath = path.join(process.cwd(), `public${backgroundImagePath}`);
+        await fs.writeFile(backgroundPath, imageBuffer);
+        backgroundSaved = true;
+      } catch (bgError) {
+        console.error("Failed to save background:", bgError);
+        imageErrors.push("Failed to save background image");
+      }
+    }
+
+    // Generate metadata entries with the correct image path
+    const metadata: StoryMetadataInput = {
+      slug,
+      title,
+      description,
+      image: thumbnailImagePath || undefined, // Use the saved thumbnail path
+      levels: levels.map((l) => l.level),
+      isPremiumOnly: false,
+      storyType: storyType || "short-story",
+      origin: origin || { isOriginal: true },
+      tags: tags || [],
+      targetAudience: targetAudience || "all",
+    };
+
+    const metadataEntry = generateMetadataEntry(metadata);
+    const uiEnEntry = generateUITranslationEntry("en", metadata);
+    const uiEsEntry = generateUITranslationEntry("es", metadata);
+
+    // Write all content files
+    const result = await writeAllStoryFiles({
+      storySlug: slug,
+      levels: levelFiles,
+      metadataEntry,
+      uiEnEntry,
+      uiEsEntry,
+    });
+
+    // Merge image errors
+    result.errors.push(...imageErrors);
+
+    // Add or update theme entry in storyThemes.ts
+    try {
+      const themesPath = path.join(process.cwd(), "src/components/storyThemes.ts");
+      const themesContent = await fs.readFile(themesPath, "utf-8");
+
+      // Check if theme entry already exists
+      const themeEntryRegex = new RegExp(`"${slug}":\\s*\\{[^}]*\\},?`, "s");
+      const hasExistingTheme = themeEntryRegex.test(themesContent);
+
+      // Build theme entry
+      const themeEntry = backgroundImagePath
+        ? `"${slug}": {
+    backgroundImage: "${backgroundImagePath}",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },`
+        : `"${slug}": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },`;
+
+      let updatedThemesContent: string;
+
+      if (hasExistingTheme) {
+        // Update existing entry
+        updatedThemesContent = themesContent.replace(themeEntryRegex, themeEntry);
+      } else {
+        // Add new entry before the closing brace
+        updatedThemesContent = themesContent.replace(
+          /(\n};)\s*$/,
+          `  ${themeEntry}\n};`
+        );
+      }
+
+      await fs.writeFile(themesPath, updatedThemesContent);
+    } catch (themeError) {
+      console.error("Failed to update storyThemes.ts:", themeError);
+      result.errors.push("Failed to update story theme");
+    }
+
+    if (result.errors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          errors: result.errors,
+          filesWritten: result.contentFiles.filter((f) => f.success).map((f) => f.path),
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      filesWritten: result.contentFiles.map((f) => f.path),
+      metadataUpdated: result.metadataUpdated,
+      uiUpdated: { en: result.uiEnUpdated, es: result.uiEsUpdated },
+      thumbnailSaved,
+      backgroundSaved,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    });
+  } catch (error) {
+    console.error("Save story error:", error);
+    return NextResponse.json(
+      { error: "Failed to save story", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}

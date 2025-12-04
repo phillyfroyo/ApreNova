@@ -3,7 +3,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, Badge, Button } from "@/components/ui";
-import { STORY_METADATA } from "@/lib/stories";
+import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution } from "@/lib/stories";
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
@@ -186,12 +186,46 @@ export default function StoryModal({
               </Button>
 
               <div className="text-center">
+                {/* Story Type Badge */}
+                <div className="flex justify-center gap-2 mb-2">
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                    {STORY_TYPE_LABELS[story.type]?.[typedLang] || story.type}
+                  </span>
+                  {story.origin.isOriginal && (
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                      {typedLang === "es" ? "Original de Cuentana" : "Cuentana Original"}
+                    </span>
+                  )}
+                </div>
+
                 <h3 style={{ fontWeight: "bold" }}>
                 {getStoryTitle(typedLang, storySlug)}
                 </h3>
+
+                {/* Attribution for non-original stories */}
+                {!story.origin.isOriginal && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {typedLang === "es" ? "por" : "by"} {formatAttribution(story.origin, typedLang)}
+                  </p>
+                )}
+
                 <p className="my-4 text-sm text-black">
                 {getStoryDescription(typedLang, storySlug)}
                 </p>
+
+                {/* Tags */}
+                {story.tags && story.tags.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                    {story.tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs"
+                      >
+                        {STORY_TAG_LABELS[tag]?.[typedLang] || tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <p className="text-xs font-semibold text-gray-600 mb-2">
                   {t(typedLang, "stories", "availableLevels")}

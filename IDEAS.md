@@ -254,6 +254,52 @@ After admin tool is stable, extend to allow users to upload stories that only th
 
 ---
 
+### Refinements & Improvements (Post-MVP)
+
+**Pagination Controls:**
+- ~~Allow manual override of lines per page (currently defaults to ~10)~~ DONE
+- ~~Allow admin to set total pages manually for short content (poems, etc.)~~ DONE
+- Add preview of pagination before finalizing
+- ~~Add PAGE marker support for manual page breaks~~ DONE
+
+**Story Metadata Enhancements:**
+- Add "Story Type" field (poem, short story, novella, article, etc.) for UI categorization
+- Add "Cuentana Original" flag (yes/no) to distinguish original vs. licensed content
+- These fields will be used to organize/filter stories on the stories page
+
+**Stories Page UI Updates (Future):**
+- Add filtering by story type (poems, short stories, etc.)
+- Add section for "Cuentana Originals"
+- Sort/group stories by category
+
+**CEFR Level Definitions:**
+- Dial in and refine the CEFR level characteristics in `cefr-prompts.ts`
+- Create more detailed guidance for AI rewriting at each level
+- Consider adding example sentences for each level as few-shot prompts
+- Test and iterate on prompt quality for accurate level transposition
+
+**Story Editor (for Existing Stories):**
+- Create admin page to browse, edit, and delete existing stories
+- View all uploaded stories in a list with metadata
+- Edit story content (both EN and ES versions)
+- Edit metadata (title, description, levels)
+- Delete stories (with confirmation)
+- Re-generate specific levels or translations
+
+**AI-Assisted Metadata Generation:**
+- AI-generate title options (provide 3 choices to pick from)
+- AI-generate description options
+- AI-generate thumbnail images using DALL-E (requires image generation API)
+- All fields remain editable by admin after generation
+
+**Upload UX Improvements:**
+- Add drag-and-drop for thumbnail upload
+- Add story page background image upload option
+- Better visual preview of pagination before saving
+- Side-by-side EN/ES preview in Step 8
+
+---
+
 ## Core Product Ideas
 
 ### 1. Make the App Commercial-Grade, Sturdy, and Secure

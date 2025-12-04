@@ -7,7 +7,7 @@ import { signOut, useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from '@/components/Logo';
 import { Card } from '@/components/ui';
-import { STORY_METADATA } from "@/lib/stories";
+import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TYPE_LABELS_PLURAL, STORY_TAG_LABELS, ALL_STORY_TAGS, ALL_STORY_TYPES } from "@/lib/stories";
 import { getStoryUrl } from "@/lib/stories";
 import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
@@ -16,12 +16,42 @@ import StoryCard from "@/components/StoryCard";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
+import type { StoryTag, StoryType } from "@/types/story";
 import Image from "next/image";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
 
 type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
+
+// All theme tags combined into one list
+const ALL_THEME_TAGS: StoryTag[] = [
+  "family", "friendship", "adventure", "mystery", "romance",
+  "coming-of-age", "nature", "technology", "travel", "food",
+  "humorous", "heartwarming", "suspenseful", "reflective", "inspiring",
+  "urban", "rural", "historical", "fantasy", "contemporary",
+  "latin-america", "spain", "usa", "multicultural"
+];
+
+// Get unique authors from story metadata
+function getUniqueAuthors(): Array<{ id: string; name: string }> {
+  const authors: Array<{ id: string; name: string }> = [
+    { id: "cuentana", name: "Cuentana Originals" }
+  ];
+  const seenAuthors = new Set<string>();
+
+  STORY_METADATA.forEach(story => {
+    if (!story.origin.isOriginal && 'attribution' in story.origin) {
+      const authorName = story.origin.attribution.author;
+      if (authorName && !seenAuthors.has(authorName)) {
+        seenAuthors.add(authorName);
+        authors.push({ id: authorName.toLowerCase().replace(/\s+/g, '-'), name: authorName });
+      }
+    }
+  });
+
+  return authors;
+}
 
 function AccountDropdown() {
   const router = useRouter();
@@ -172,7 +202,73 @@ function StoriesPageContent() {
   const [activeStory, setActiveStory] = useState<number | null>(null);
   const { lng } = useParams();
   const typedLang = lng as Language;
-  const [showLangPrompt, setShowLangPrompt] = useState(false)
+  const [showLangPrompt, setShowLangPrompt] = useState(false);
+
+  // Filter state
+  const [selectedTags, setSelectedTags] = useState<StoryTag[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<StoryType[]>([]);
+  const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Get authors list
+  const authors = getUniqueAuthors();
+
+  // Filter stories by all criteria
+  const filteredStories = STORY_METADATA.filter(story => {
+    // If no filters, show all
+    if (selectedTags.length === 0 && selectedTypes.length === 0 && selectedAuthors.length === 0) {
+      return true;
+    }
+
+    // Check tags (OR logic within tags)
+    const matchesTags = selectedTags.length === 0 || selectedTags.some(tag => story.tags?.includes(tag));
+
+    // Check story type (OR logic within types)
+    const matchesType = selectedTypes.length === 0 || selectedTypes.includes(story.type);
+
+    // Check author (OR logic within authors)
+    let matchesAuthor = selectedAuthors.length === 0;
+    if (!matchesAuthor) {
+      if (selectedAuthors.includes("cuentana") && story.origin.isOriginal) {
+        matchesAuthor = true;
+      }
+      if (!story.origin.isOriginal && 'attribution' in story.origin) {
+        const authorId = story.origin.attribution.author.toLowerCase().replace(/\s+/g, '-');
+        if (selectedAuthors.includes(authorId)) {
+          matchesAuthor = true;
+        }
+      }
+    }
+
+    // AND logic between filter categories
+    return matchesTags && matchesType && matchesAuthor;
+  });
+
+  const toggleTag = (tag: StoryTag) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const toggleType = (type: StoryType) => {
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const toggleAuthor = (authorId: string) => {
+    setSelectedAuthors(prev =>
+      prev.includes(authorId) ? prev.filter(a => a !== authorId) : [...prev, authorId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setSelectedTypes([]);
+    setSelectedAuthors([]);
+  };
+
+  const activeFilterCount = selectedTags.length + selectedTypes.length + selectedAuthors.length;
 
 
   function handleLevelClick(lvl: string) {
@@ -229,41 +325,193 @@ useEffect(() => {
 </div>
 
 <div className="mt-16 mb-4 px-4">
-  <h2 className="text-xl font-semibold text-left">
-    {t(typedLang, "stories", "storiesAll")}
-  </h2>
+  <div className="flex items-center justify-between">
+    <h2 className="text-xl font-semibold text-left">
+      {t(typedLang, "stories", "storiesAll")}
+    </h2>
+    <button
+      onClick={() => setShowFilters(!showFilters)}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+        activeFilterCount > 0
+          ? "bg-purple-600 text-white"
+          : "bg-white/80 text-gray-700 hover:bg-white"
+      }`}
+    >
+      <span>🏷️</span>
+      {activeFilterCount > 0 ? (
+        <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
+      ) : (
+        <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
+      )}
+    </button>
+  </div>
+
+  {/* Filter Panel */}
+  <AnimatePresence>
+    {showFilters && (
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: "auto", opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="overflow-hidden"
+      >
+        <div className="mt-4 p-4 bg-white/90 backdrop-blur-sm rounded-xl">
+          {activeFilterCount > 0 && (
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-600">
+                {filteredStories.length} {typedLang === "es" ? "historias" : "stories"}
+              </span>
+              <button
+                onClick={clearFilters}
+                className="text-sm text-purple-600 hover:text-purple-800"
+              >
+                {typedLang === "es" ? "Limpiar filtros" : "Clear filters"}
+              </button>
+            </div>
+          )}
+
+          {/* Authors Section */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-gray-500 mb-1.5">
+              {typedLang === "es" ? "Autores" : "Authors"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {authors.map(author => {
+                const isSelected = selectedAuthors.includes(author.id);
+                // Check if this author has any stories
+                const hasStories = author.id === "cuentana"
+                  ? STORY_METADATA.some(s => s.origin.isOriginal)
+                  : STORY_METADATA.some(s =>
+                      !s.origin.isOriginal &&
+                      'attribution' in s.origin &&
+                      s.origin.attribution.author.toLowerCase().replace(/\s+/g, '-') === author.id
+                    );
+                if (!hasStories) return null;
+
+                return (
+                  <button
+                    key={author.id}
+                    onClick={() => toggleAuthor(author.id)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      isSelected
+                        ? "bg-amber-600 text-white"
+                        : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    }`}
+                  >
+                    {author.id === "cuentana"
+                      ? (typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals")
+                      : author.name
+                    }
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Story Type Section */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-gray-500 mb-1.5">
+              {typedLang === "es" ? "Tipo de Historia" : "Story Type"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_STORY_TYPES.map(type => {
+                const isSelected = selectedTypes.includes(type);
+                // Only show types that have stories
+                const hasStories = STORY_METADATA.some(s => s.type === type);
+                if (!hasStories) return null;
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => toggleType(type)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      isSelected
+                        ? "bg-blue-600 text-white"
+                        : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    }`}
+                  >
+                    {STORY_TYPE_LABELS_PLURAL[type][typedLang]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Themes Section (all tags combined) */}
+          <div className="mb-0">
+            <p className="text-xs font-semibold text-gray-500 mb-1.5">
+              {typedLang === "es" ? "Temas" : "Themes"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_THEME_TAGS.map(tag => {
+                const isSelected = selectedTags.includes(tag);
+                // Only show tags that have stories
+                const hasStories = STORY_METADATA.some(s => s.tags?.includes(tag));
+                if (!hasStories) return null;
+
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      isSelected
+                        ? "bg-purple-600 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {STORY_TAG_LABELS[tag][typedLang]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
 </div>
 
 
     <div style={{ position: "relative" }}>
       <div
         style={{
-          position: "relative",               // 👈 add this
+          position: "relative",
           display: "flex",
           gap: "1.5rem",
           overflowX: "auto",
           paddingLeft: "1rem",
           paddingRight: "1rem",
-          paddingTop: "0.75rem",              // 👈 Add top padding for hover expansion
-          paddingBottom: "0.75rem",           // 👈 Add bottom padding for hover expansion
+          paddingTop: "0.75rem",
+          paddingBottom: "0.75rem",
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
         }}
         >
-         {STORY_METADATA.map((story, i) => (
-  <StoryCard
-    key={i}
-    index={i}
-    title={getStoryTitle(typedLang, story.slug)} // ✅ dynamic
-    image={story.image}
-    onClick={(rect) => {
-      setCardPosition(rect);
-      setActiveStory(i);
-    }}
-  />
-))}
+         {filteredStories.length === 0 ? (
+           <div className="w-full text-center py-8 text-gray-500">
+             {typedLang === "es" ? "No hay historias con estos filtros" : "No stories match these filters"}
+           </div>
+         ) : (
+           filteredStories.map((story, i) => {
+             // Find the original index in STORY_METADATA for the modal
+             const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+             return (
+               <StoryCard
+                 key={story.slug}
+                 index={originalIndex}
+                 title={getStoryTitle(typedLang, story.slug)}
+                 image={story.image}
+                 onClick={(rect) => {
+                   setCardPosition(rect);
+                   setActiveStory(originalIndex);
+                 }}
+               />
+             );
+           })
+         )}
       </div>
     </div> {/* Close scroll wrapper */}
 

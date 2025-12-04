@@ -198,7 +198,12 @@ export default function StoryLayoutWithAzureTTS({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
+  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+
+  // Build background style - prefer image over color
+  const backgroundStyle = theme.backgroundImage
+    ? { backgroundImage: `url('${theme.backgroundImage}')` }
+    : { backgroundColor: theme.backgroundColor || "#f5f0e6" };
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
@@ -572,7 +577,7 @@ export default function StoryLayoutWithAzureTTS({
   return (
     <div
       className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
-      style={{ backgroundImage: `url('${theme.backgroundImage}')` }}
+      style={backgroundStyle}
     >
       {/* TTS Error Display */}
       {ttsError && (
