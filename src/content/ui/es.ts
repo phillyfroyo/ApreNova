@@ -190,19 +190,19 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "La Última Palabra",
-    description: "Misterios y criaturas ocultas en un bosque encantado.",
+    description: "Maya debe enfrentar sus miedos mientras se prepara para hablar frente a la clase, pero cuando llegue el momento, ¿encontrará su voz?",
   },
   "diego-unplugged": {
     title: "Diego Desconectado",
     description: "El viaje de autodescubrimiento de un joven cuando se desconecta del mundo digital.",
   },
-  "el-viaje-magico": {
-    title: "El Viaje Mágico",
-    description: "Un tren, un mapa antiguo, y una puerta a otro mundo.",
+  "my-day": {
+    title: "Un Día Sencillo",
+    description: "Sumérgete en un día lleno de placeres simples y rutinas que dan forma a nuestras vidas.",
   },
-  "secretos-del-desierto": {
-    title: "Secretos del Desierto",
-    description: "El pasado cobra vida entre las dunas del desierto.",
+  "my-family": {
+    title: "Nuestro Hogar Alegre",
+    description: "Únete a una encantadora exploración de la vida familiar, donde cada miembro tiene su papel especial, ¡incluido un amigo peludo y regordete!",
   },
 }
 

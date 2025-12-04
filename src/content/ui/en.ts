@@ -189,19 +189,19 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "The Last Word",
-    description: "Mysteries and hidden creatures in an enchanted forest.",
+    description: "Maya must face her fears as she prepares to speak in front of the class, but when the moment comes, will she find her voice?",
   },
   "diego-unplugged": {
     title: "Diego Unplugged",
     description: "A young man's journey of self-discovery when he disconnects from the digital world.",
   },
-  "el-viaje-magico": {
-    title: "The Magic Journey",
-    description: "A train, an ancient map, and a door to another world.",
+  "my-day": {
+    title: "A Simple Day",
+    description: "Dive into a day filled with simple pleasures and routines that shape our lives.",
   },
-  "secretos-del-desierto": {
-    title: "Secrets of the Desert",
-    description: "The past comes alive among the desert dunes.",
+  "my-family": {
+    title: "Our Joyful Home",
+    description: "Join a delightful exploration of family life, where each member has their special role, including a chubby, furry friend!",
   },
 }
 

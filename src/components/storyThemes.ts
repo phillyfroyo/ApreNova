@@ -1,13 +1,22 @@
 // storyThemes.ts
-export const STORY_THEMES = {
+export interface StoryTheme {
+  backgroundImage?: string;
+  backgroundColor?: string;
+  textColor: string;
+  accentColor: string;
+  hoverAccentColor: string;
+  fontFamily: string;
+}
+
+export const STORY_THEMES: Record<string, StoryTheme> = {
   default: {
-    backgroundImage: "/images/background4.png",
+    backgroundColor: "#f5f0e6",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },
-    aventura: {
+  aventura: {
     backgroundImage: "/images/background4.png",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
@@ -27,6 +36,17 @@ export const STORY_THEMES = {
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
+  },  "my-day": {
+    backgroundImage: "/images/my-day-background.png",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },  "my-family": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
   },
-  // add more per storySlug
 };

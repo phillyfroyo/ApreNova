@@ -31,14 +31,30 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
 
 export async function requireAdminAuth(): Promise<AuthenticatedUser> {
   const user = await requireAuth();
-  
+
   // TODO: Add admin role check once admin roles are implemented
   // For now, we'll require a specific admin user ID or implement role-based access
   // if (!user.isAdmin) {
   //   throw new AuthError("Admin access required", 403);
   // }
-  
+
   return user;
+}
+
+/**
+ * Validates the admin secret for admin-only operations.
+ * Used for sensitive operations like story uploads.
+ * The secret is stored in session after initial validation.
+ */
+export function validateAdminSecret(providedSecret: string): boolean {
+  const adminSecret = process.env.ADMIN_SECRET;
+
+  if (!adminSecret) {
+    console.error("ADMIN_SECRET environment variable is not set");
+    return false;
+  }
+
+  return providedSecret === adminSecret;
 }
 
 export async function getUserFromSession(): Promise<AuthenticatedUser | null> {
