@@ -7,6 +7,7 @@ import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS } 
 interface Story {
   slug: string;
   image: string;
+  backgroundImage?: string; // From storyThemes.ts
   levels: string[];
   isPremiumOnly: boolean;
   title: { en: string; es: string };
@@ -26,6 +27,9 @@ interface EditingStory {
   thumbnailFile: File | null;
   backgroundPreview: string | null;
   backgroundFile: File | null;
+  // Flags to mark images for deletion
+  deleteCurrentThumbnail: boolean;
+  deleteCurrentBackground: boolean;
   // Tagging fields
   storyType: StoryType;
   isOriginal: boolean;
@@ -127,6 +131,8 @@ export default function StoryManager() {
       thumbnailFile: null,
       backgroundPreview: null,
       backgroundFile: null,
+      deleteCurrentThumbnail: false,
+      deleteCurrentBackground: false,
       // Tagging fields
       storyType: story.type || "short-story",
       isOriginal,
@@ -378,6 +384,9 @@ export default function StoryManager() {
           description: editingStory.description,
           thumbnailBase64: editingStory.thumbnailPreview || undefined,
           backgroundBase64: editingStory.backgroundPreview || undefined,
+          // Delete flags
+          deleteCurrentThumbnail: editingStory.deleteCurrentThumbnail,
+          deleteCurrentBackground: editingStory.deleteCurrentBackground,
           // Tagging data
           storyType: editingStory.storyType,
           origin,
@@ -780,109 +789,210 @@ export default function StoryManager() {
                     </div>
                   </div>
 
-                  {/* Images Row */}
-                  <div className="grid grid-cols-2 gap-6">
-                    {/* Thumbnail */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-gray-700">Thumbnail</label>
-                        {storyText && !editingStory.thumbnailPreview && (
-                          <button
-                            onClick={() => generateMetadata("image")}
-                            disabled={isGenerating("image")}
-                            className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 disabled:opacity-50"
-                          >
-                            {isGenerating("image") ? "Generating..." : "✨ Generate"}
-                          </button>
-                        )}
-                      </div>
+                  {/* Thumbnail Section */}
+                  <div className="space-y-3 border-t pt-5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">Thumbnail Image</label>
                       {storyText && !editingStory.thumbnailPreview && (
-                        <input
-                          type="text"
-                          value={imagePrompt}
-                          onChange={(e) => setImagePrompt(e.target.value)}
-                          placeholder="Guide AI style..."
-                          className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-purple-500 outline-none"
-                        />
+                        <button
+                          onClick={() => generateMetadata("image")}
+                          disabled={isGenerating("image")}
+                          className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 disabled:opacity-50"
+                        >
+                          {isGenerating("image") ? "Generating..." : "✨ Generate with AI"}
+                        </button>
                       )}
-                      {imageOptions.length > 0 && !editingStory.thumbnailPreview && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                          <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            {imageOptions.map((option, idx) => (
-                              <button key={idx} onClick={() => selectImage(option.url)} className="relative group">
-                                <img src={option.url} alt={`Option ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border-2 border-transparent group-hover:border-purple-500" />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-start gap-3">
-                        {editingStory.thumbnailPreview ? (
-                          <div className="relative">
-                            <img src={editingStory.thumbnailPreview} alt="New thumbnail" className="w-20 h-28 rounded-lg object-cover border border-gray-300" />
-                            <button onClick={() => setEditingStory({ ...editingStory, thumbnailPreview: null, thumbnailFile: null })} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600">×</button>
-                          </div>
-                        ) : (
-                          <div className="w-20 h-28 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs text-center p-2">No change</div>
-                        )}
-                        <div className="flex-1">
-                          <input type="file" accept="image/*" onChange={handleThumbnailChange} className="text-xs w-full" />
-                          <p className="text-xs text-gray-400 mt-1">Leave empty to keep current</p>
-                        </div>
-                      </div>
                     </div>
 
-                    {/* Background */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-gray-700">Background</label>
-                        {storyText && !editingStory.backgroundPreview && (
-                          <button
-                            onClick={() => generateMetadata("background")}
-                            disabled={isGenerating("background")}
-                            className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 disabled:opacity-50"
-                          >
-                            {isGenerating("background") ? "Generating..." : "✨ Generate"}
-                          </button>
-                        )}
+                    {/* Current Thumbnail */}
+                    {currentStoryData?.image && !editingStory.thumbnailPreview && !editingStory.deleteCurrentThumbnail && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-xs text-gray-500 mb-2">Current thumbnail:</p>
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={currentStoryData.image}
+                            alt="Current thumbnail"
+                            className="w-24 h-32 rounded-lg object-cover border border-gray-300"
+                          />
+                          <div className="flex-1 space-y-2">
+                            <p className="text-xs text-gray-600 font-mono">{currentStoryData.image}</p>
+                            <button
+                              onClick={() => setEditingStory({ ...editingStory, deleteCurrentThumbnail: true })}
+                              className="px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                            >
+                              Remove Thumbnail
+                            </button>
+                          </div>
+                        </div>
                       </div>
+                    )}
+
+                    {/* Thumbnail marked for deletion */}
+                    {editingStory.deleteCurrentThumbnail && !editingStory.thumbnailPreview && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-xs text-red-600 font-medium mb-2">Thumbnail will be removed on save</p>
+                        <button
+                          onClick={() => setEditingStory({ ...editingStory, deleteCurrentThumbnail: false })}
+                          className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                          Undo Remove
+                        </button>
+                      </div>
+                    )}
+
+                    {/* AI Generation prompt */}
+                    {storyText && !editingStory.thumbnailPreview && (
+                      <input
+                        type="text"
+                        value={imagePrompt}
+                        onChange={(e) => setImagePrompt(e.target.value)}
+                        placeholder="Optional: Describe the image you want (e.g., 'a cozy family scene with a cat')"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-purple-500 outline-none"
+                      />
+                    )}
+
+                    {/* AI Generated Options */}
+                    {imageOptions.length > 0 && !editingStory.thumbnailPreview && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <p className="text-xs text-purple-600 font-medium mb-3">Click an image to select it:</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {imageOptions.map((option, idx) => (
+                            <button key={idx} onClick={() => selectImage(option.url)} className="relative group">
+                              <img src={option.url} alt={`Option ${idx + 1}`} className="w-full h-40 object-cover rounded-lg border-2 border-transparent group-hover:border-purple-500 transition-all" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New Thumbnail Preview */}
+                    {editingStory.thumbnailPreview && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-xs text-green-600 font-medium mb-2">New thumbnail (will replace current):</p>
+                        <div className="flex items-start gap-4">
+                          <img src={editingStory.thumbnailPreview} alt="New thumbnail" className="w-24 h-32 rounded-lg object-cover border border-green-300" />
+                          <div className="flex-1 space-y-2">
+                            <button
+                              onClick={() => setEditingStory({ ...editingStory, thumbnailPreview: null, thumbnailFile: null })}
+                              className="px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                            >
+                              Cancel Change
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload Option */}
+                    {!editingStory.thumbnailPreview && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">Or upload:</span>
+                        <input type="file" accept="image/*" onChange={handleThumbnailChange} className="text-xs" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Background Section */}
+                  <div className="space-y-3 border-t pt-5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-gray-700">Background Image</label>
                       {storyText && !editingStory.backgroundPreview && (
-                        <input
-                          type="text"
-                          value={backgroundPrompt}
-                          onChange={(e) => setBackgroundPrompt(e.target.value)}
-                          placeholder="Guide AI style..."
-                          className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-purple-500 outline-none"
-                        />
+                        <button
+                          onClick={() => generateMetadata("background")}
+                          disabled={isGenerating("background")}
+                          className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 disabled:opacity-50"
+                        >
+                          {isGenerating("background") ? "Generating..." : "✨ Generate with AI"}
+                        </button>
                       )}
-                      {backgroundOptions.length > 0 && !editingStory.backgroundPreview && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                          <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            {backgroundOptions.map((option, idx) => (
-                              <button key={idx} onClick={() => selectBackground(option.url)} className="relative group">
-                                <img src={option.url} alt={`Option ${idx + 1}`} className="w-full h-16 object-cover rounded-lg border-2 border-transparent group-hover:border-purple-500" />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-start gap-3">
-                        {editingStory.backgroundPreview ? (
-                          <div className="relative">
-                            <img src={editingStory.backgroundPreview} alt="New background" className="w-32 h-20 rounded-lg object-cover border border-gray-300" />
-                            <button onClick={() => setEditingStory({ ...editingStory, backgroundPreview: null, backgroundFile: null })} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600">×</button>
-                          </div>
+                    </div>
+
+                    {/* Current Background Info */}
+                    {!editingStory.backgroundPreview && !editingStory.deleteCurrentBackground && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-xs text-gray-500 mb-2">Current background:</p>
+                        {currentStoryData?.backgroundImage ? (
+                          <>
+                            <p className="text-xs text-gray-600 font-mono mb-2">{currentStoryData.backgroundImage}</p>
+                            <img
+                              src={currentStoryData.backgroundImage}
+                              alt="Current background"
+                              className="w-full max-w-md h-32 rounded-lg object-cover border border-gray-300"
+                            />
+                            <button
+                              onClick={() => setEditingStory({ ...editingStory, deleteCurrentBackground: true })}
+                              className="mt-3 px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                            >
+                              Remove Background (use default gradient)
+                            </button>
+                          </>
                         ) : (
-                          <div className="w-32 h-20 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-xs text-center p-2">No change</div>
+                          <p className="text-xs text-gray-600 italic">Using default gradient (no image)</p>
                         )}
-                        <div className="flex-1">
-                          <input type="file" accept="image/*" onChange={handleBackgroundChange} className="text-xs w-full" />
-                          <p className="text-xs text-gray-400 mt-1">Leave empty to keep current</p>
+                      </div>
+                    )}
+
+                    {/* Background marked for deletion */}
+                    {editingStory.deleteCurrentBackground && !editingStory.backgroundPreview && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-xs text-red-600 font-medium mb-2">Background image will be removed on save (will use default gradient)</p>
+                        <button
+                          onClick={() => setEditingStory({ ...editingStory, deleteCurrentBackground: false })}
+                          className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                          Undo Remove
+                        </button>
+                      </div>
+                    )}
+
+                    {/* AI Generation prompt */}
+                    {storyText && !editingStory.backgroundPreview && (
+                      <input
+                        type="text"
+                        value={backgroundPrompt}
+                        onChange={(e) => setBackgroundPrompt(e.target.value)}
+                        placeholder="Optional: Describe the background (e.g., 'soft watercolor meadow')"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-purple-500 outline-none"
+                      />
+                    )}
+
+                    {/* AI Generated Options */}
+                    {backgroundOptions.length > 0 && !editingStory.backgroundPreview && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <p className="text-xs text-purple-600 font-medium mb-3">Click an image to select it:</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {backgroundOptions.map((option, idx) => (
+                            <button key={idx} onClick={() => selectBackground(option.url)} className="relative group">
+                              <img src={option.url} alt={`Option ${idx + 1}`} className="w-full h-28 object-cover rounded-lg border-2 border-transparent group-hover:border-purple-500 transition-all" />
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* New Background Preview */}
+                    {editingStory.backgroundPreview && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-xs text-green-600 font-medium mb-2">New background (will replace current):</p>
+                        <div className="space-y-2">
+                          <img src={editingStory.backgroundPreview} alt="New background" className="w-full max-w-md h-32 rounded-lg object-cover border border-green-300" />
+                          <button
+                            onClick={() => setEditingStory({ ...editingStory, backgroundPreview: null, backgroundFile: null })}
+                            className="px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+                          >
+                            Cancel Change
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload Option */}
+                    {!editingStory.backgroundPreview && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">Or upload:</span>
+                        <input type="file" accept="image/*" onChange={handleBackgroundChange} className="text-xs" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Story Classification Section */}

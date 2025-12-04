@@ -162,7 +162,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   },
   {
     slug: "my-family",
-    image: "/images/my-family-thumbnail.png",
+    image: "/images/my-family-thumbnail-6994.png",
     levels: ["l1", "l2", "l3", "l4", "l5"],
     type: "poem",
     origin: { isOriginal: true },

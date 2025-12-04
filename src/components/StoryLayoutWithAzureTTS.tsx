@@ -200,9 +200,11 @@ export default function StoryLayoutWithAzureTTS({
 
   const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
 
-  // Build background style - prefer image over color
+  // Build background style - prefer image over gradient over color
   const backgroundStyle = theme.backgroundImage
     ? { backgroundImage: `url('${theme.backgroundImage}')` }
+    : theme.backgroundGradient
+    ? { background: theme.backgroundGradient }
     : { backgroundColor: theme.backgroundColor || "#f5f0e6" };
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);

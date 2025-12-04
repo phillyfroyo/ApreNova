@@ -16,6 +16,9 @@ interface UpdateStoryRequest {
   description?: { en: string; es: string };
   thumbnailBase64?: string;
   backgroundBase64?: string;
+  // Delete flags
+  deleteCurrentThumbnail?: boolean;
+  deleteCurrentBackground?: boolean;
   // Tagging fields
   storyType?: StoryType;
   origin?: StoryOrigin;
@@ -31,10 +34,83 @@ export async function PATCH(
   try {
     const { slug } = await params;
     const body: UpdateStoryRequest = await req.json();
-    const { title, description, thumbnailBase64, backgroundBase64 } = body;
+    const { title, description, thumbnailBase64, backgroundBase64, deleteCurrentThumbnail, deleteCurrentBackground } = body;
 
     const results: string[] = [];
     const errors: string[] = [];
+
+    // Handle thumbnail deletion
+    if (deleteCurrentThumbnail) {
+      try {
+        // Find and delete the current thumbnail file
+        const storiesPath = path.join(process.cwd(), "src/lib/stories.ts");
+        const storiesContent = await fs.readFile(storiesPath, "utf-8");
+
+        // Extract current image path
+        const imageMatch = storiesContent.match(new RegExp(`slug:\\s*"${slug}"[^}]*image:\\s*"([^"]+)"`));
+        if (imageMatch && imageMatch[1]) {
+          const currentImagePath = imageMatch[1];
+          const fullPath = path.join(process.cwd(), "public", currentImagePath);
+          try {
+            await fs.unlink(fullPath);
+            results.push(`Deleted thumbnail: ${currentImagePath}`);
+          } catch {
+            // File may not exist
+          }
+
+          // Update stories.ts to remove the image path (set to placeholder)
+          const updatedContent = storiesContent.replace(
+            new RegExp(`(slug:\\s*"${slug}"[^}]*image:\\s*)"[^"]+"`),
+            `$1"/images/placeholder1.png"`
+          );
+          await fs.writeFile(storiesPath, updatedContent);
+          results.push("Updated image path in stories.ts to placeholder");
+        }
+      } catch (err) {
+        errors.push("Failed to delete thumbnail");
+      }
+    }
+
+    // Handle background deletion
+    if (deleteCurrentBackground) {
+      try {
+        const themesPath = path.join(process.cwd(), "src/components/storyThemes.ts");
+        const themesContent = await fs.readFile(themesPath, "utf-8");
+
+        // Check if theme entry exists with backgroundImage
+        const themeMatch = themesContent.match(new RegExp(`"${slug}":\\s*\\{[^}]*backgroundImage:\\s*"([^"]+)"[^}]*\\}`));
+        if (themeMatch && themeMatch[1]) {
+          const currentBgPath = themeMatch[1];
+          const fullPath = path.join(process.cwd(), "public", currentBgPath);
+          try {
+            await fs.unlink(fullPath);
+            results.push(`Deleted background: ${currentBgPath}`);
+          } catch {
+            // File may not exist
+          }
+        }
+
+        // Replace theme entry to use default gradient instead of backgroundImage
+        const themeEntryRegex = new RegExp(`"${slug}":\\s*\\{[^}]*\\},?`, "s");
+        const hasExistingTheme = themeEntryRegex.test(themesContent);
+
+        if (hasExistingTheme) {
+          // Replace with gradient-based theme
+          const newThemeEntry = `"${slug}": {
+    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },`;
+          const updatedThemesContent = themesContent.replace(themeEntryRegex, newThemeEntry);
+          await fs.writeFile(themesPath, updatedThemesContent);
+          results.push("Updated theme to use default gradient");
+        }
+      } catch (err) {
+        errors.push("Failed to delete background");
+      }
+    }
 
     // Update UI translation files if title or description provided
     if (title || description) {
