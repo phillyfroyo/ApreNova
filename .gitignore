@@ -45,3 +45,7 @@ src/dev/ProjectStructurePage.txt
 src/dev/InfraPage.txt
 
 /src/generated/prisma
+
+# TTS cache files
+/cache/
+/public/cache/
