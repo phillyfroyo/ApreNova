@@ -1,5 +1,5 @@
 // src/lib/stories.ts
-import type { StoryMetadata, StoryType, StoryOrigin, StoryTag } from "@/types/story";
+import type { StoryMetadata, StoryType, StoryOrigin, StoryTag, StoryAttribution, AuthorInfo } from "@/types/story";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
 import type { Language } from "@/types/i18n";
@@ -16,6 +16,9 @@ export const STORY_TYPE_LABELS: Record<StoryType, { en: string; es: string }> = 
   "article": { en: "Article", es: "Artículo" },
   "dialogue": { en: "Dialogue", es: "Diálogo" },
   "song-lyrics": { en: "Song Lyrics", es: "Letra de canción" },
+  "epic": { en: "Epic", es: "Épica" },
+  "myth": { en: "Myth", es: "Mito" },
+  "legend": { en: "Legend", es: "Leyenda" },
 };
 
 // Plural labels for story types (used in filters)
@@ -28,6 +31,9 @@ export const STORY_TYPE_LABELS_PLURAL: Record<StoryType, { en: string; es: strin
   "article": { en: "Articles", es: "Artículos" },
   "dialogue": { en: "Dialogues", es: "Diálogos" },
   "song-lyrics": { en: "Song Lyrics", es: "Letras de canciones" },
+  "epic": { en: "Epics", es: "Épicas" },
+  "myth": { en: "Myths", es: "Mitos" },
+  "legend": { en: "Legends", es: "Leyendas" },
 };
 
 // Display labels for story tags
@@ -60,11 +66,25 @@ export const STORY_TAG_LABELS: Record<StoryTag, { en: string; es: string }> = {
   "spain": { en: "Spain", es: "España" },
   "usa": { en: "USA", es: "EE.UU." },
   "multicultural": { en: "Multicultural", es: "Multicultural" },
+  // Literary genres
+  "epic": { en: "Epic", es: "Épico" },
+  "mythology": { en: "Mythology", es: "Mitología" },
+  "heroic": { en: "Heroic", es: "Heroico" },
+  "tragedy": { en: "Tragedy", es: "Tragedia" },
+  "comedy": { en: "Comedy", es: "Comedia" },
+  // Content themes
+  "monsters": { en: "Monsters", es: "Monstruos" },
+  "heros-journey": { en: "Hero's Journey", es: "Viaje del héroe" },
+  "war": { en: "War", es: "Guerra" },
+  "love": { en: "Love", es: "Amor" },
+  "death": { en: "Death", es: "Muerte" },
+  "revenge": { en: "Revenge", es: "Venganza" },
 };
 
 // All available story types for UI dropdowns
 export const ALL_STORY_TYPES: StoryType[] = [
-  "short-story", "poem", "fable", "folktale", "novella", "article", "dialogue", "song-lyrics"
+  "short-story", "poem", "fable", "folktale", "novella", "article", "dialogue", "song-lyrics",
+  "epic", "myth", "legend"
 ];
 
 // All available story tags for UI multi-select
@@ -73,8 +93,69 @@ export const ALL_STORY_TAGS: StoryTag[] = [
   "coming-of-age", "nature", "technology", "travel", "food",
   "humorous", "heartwarming", "suspenseful", "reflective", "inspiring",
   "urban", "rural", "historical", "fantasy", "contemporary",
-  "latin-america", "spain", "usa", "multicultural"
+  "latin-america", "spain", "usa", "multicultural",
+  "epic", "mythology", "heroic", "tragedy", "comedy",
+  "monsters", "heros-journey", "war", "love", "death", "revenge"
 ];
+
+// ============================================
+// HELPER FUNCTIONS FOR ATTRIBUTION
+// ============================================
+
+/**
+ * Get author name from attribution (handles both new and legacy formats)
+ */
+export function getAuthorName(attribution: StoryAttribution): string {
+  if (typeof attribution.author === 'string') {
+    // Legacy format
+    return attribution.author;
+  }
+  return attribution.author.name;
+}
+
+/**
+ * Get author lifespan from attribution
+ */
+export function getAuthorLifespan(attribution: StoryAttribution): string | undefined {
+  if (typeof attribution.author === 'string') {
+    return undefined;
+  }
+  return attribution.author.lifespan;
+}
+
+/**
+ * Get year published from attribution (handles both formats)
+ */
+export function getYearPublished(attribution: StoryAttribution): number | undefined {
+  // New format uses yearFirstPublished
+  if ('yearFirstPublished' in attribution) {
+    return attribution.yearFirstPublished;
+  }
+  return undefined;
+}
+
+/**
+ * Check if work is public domain
+ */
+export function isPublicDomain(attribution: StoryAttribution): boolean {
+  if ('rights' in attribution && attribution.rights) {
+    return attribution.rights.originalWorkStatus === 'public-domain';
+  }
+  return false;
+}
+
+/**
+ * Get public domain note
+ */
+export function getPublicDomainNote(attribution: StoryAttribution): string | undefined {
+  if ('rights' in attribution && attribution.rights) {
+    return attribution.rights.displayStatement;
+  }
+  if ('sourceEdition' in attribution && attribution.sourceEdition) {
+    return attribution.sourceEdition.publicDomainNote;
+  }
+  return undefined;
+}
 
 // Helper to format attribution for display
 export function formatAttribution(
@@ -83,9 +164,10 @@ export function formatAttribution(
 ): string | null {
   if (origin.isOriginal) return null;
 
-  const { author, yearPublished } = origin.attribution;
+  const authorName = getAuthorName(origin.attribution);
+  const yearPublished = getYearPublished(origin.attribution);
   const year = yearPublished ? ` (${yearPublished})` : "";
-  return `${author}${year}`;
+  return `${authorName}${year}`;
 }
 
 // Helper to get story type label

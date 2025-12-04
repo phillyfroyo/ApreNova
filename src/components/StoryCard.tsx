@@ -9,7 +9,7 @@ type StoryCardProps = {
   index: number;
   title: string;
   image: string;
-  onClick: (cardEl: DOMRect) => void;
+  onClick: () => void;
 };
 
 export default function StoryCard({
@@ -21,10 +21,7 @@ export default function StoryCard({
   return (
     <motion.div
   layoutId={`story-${index}`}
-  onClick={(e) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    onClick(rect);
-  }}
+  onClick={onClick}
   whileHover={
   typeof window !== "undefined" &&
   window.matchMedia("(hover: hover)").matches

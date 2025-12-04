@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { StoryType, StoryTag, StoryAttribution, StoryOrigin } from "@/types/story";
+import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
 import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
+import { FormAttribution, createEmptyFormAttribution, formToAttribution, attributionToForm } from "@/lib/admin/attribution-helpers";
 
 interface Story {
   slug: string;
@@ -33,7 +34,7 @@ interface EditingStory {
   // Tagging fields
   storyType: StoryType;
   isOriginal: boolean;
-  attribution: StoryAttribution | null;
+  attribution: FormAttribution | null;
   tags: StoryTag[];
   targetAudience: "children" | "teen" | "adult" | "all";
 }
@@ -84,6 +85,11 @@ export default function StoryManager() {
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
 
+  // AI Attribution Parser state
+  const [frontMatterText, setFrontMatterText] = useState("");
+  const [isParsingAttribution, setIsParsingAttribution] = useState(false);
+  const [parseAttributionError, setParseAttributionError] = useState("");
+
   const isGenerating = (type: "title" | "description" | "image" | "background") => generatingTypes.has(type);
   const isAnyGenerating = generatingTypes.size > 0;
 
@@ -119,8 +125,9 @@ export default function StoryManager() {
   const openEditModal = async (story: Story) => {
     // Parse origin to get isOriginal and attribution
     const isOriginal = story.origin?.isOriginal ?? true;
+    // Convert story attribution to form format for editing
     const attribution = !isOriginal && story.origin && 'attribution' in story.origin
-      ? story.origin.attribution
+      ? attributionToForm(story.origin.attribution)
       : null;
 
     setEditingStory({
@@ -181,6 +188,8 @@ export default function StoryManager() {
     setBackgroundOptions([]);
     setLevelContents([]);
     setSelectedLevel(null);
+    setFrontMatterText("");
+    setParseAttributionError("");
   };
 
   // Load story content for Step 2
@@ -364,16 +373,61 @@ export default function StoryManager() {
     }
   };
 
+  // Parse front matter with AI to extract attribution
+  const parseAttributionWithAI = async () => {
+    if (!frontMatterText.trim() || !editingStory) {
+      setParseAttributionError("Please paste the front matter text first");
+      return;
+    }
+
+    setIsParsingAttribution(true);
+    setParseAttributionError("");
+
+    try {
+      const response = await fetch("/api/admin/parse-attribution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frontMatterText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to parse attribution");
+      }
+
+      // Merge the parsed attribution with defaults
+      const parsedAttribution: FormAttribution = {
+        ...createEmptyFormAttribution(),
+        ...data.attribution,
+      };
+
+      // Update editing story - set isOriginal to false since we're adding attribution
+      setEditingStory({
+        ...editingStory,
+        isOriginal: false,
+        attribution: parsedAttribution,
+      });
+
+      // Clear the front matter text on success
+      setFrontMatterText("");
+    } catch (err) {
+      setParseAttributionError(err instanceof Error ? err.message : "Failed to parse attribution");
+    } finally {
+      setIsParsingAttribution(false);
+    }
+  };
+
   const saveStoryChanges = async () => {
     if (!editingStory) return;
 
     setIsSaving(true);
     setSaveMessage(null);
 
-    // Build origin object
+    // Build origin object - convert form attribution to storage format when saving
     const origin = editingStory.isOriginal
       ? { isOriginal: true as const }
-      : { isOriginal: false as const, attribution: editingStory.attribution! };
+      : { isOriginal: false as const, attribution: formToAttribution(editingStory.attribution!) };
 
     try {
       const response = await fetch(`/api/admin/stories/${editingStory.slug}`, {
@@ -999,6 +1053,52 @@ export default function StoryManager() {
                   <div className="space-y-4 border-t pt-5">
                     <h3 className="font-medium text-gray-900">Story Classification</h3>
 
+                    {/* AI Attribution Parser */}
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
+                          <p className="text-xs text-purple-600">Paste front matter text and let AI extract the metadata</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={parseAttributionWithAI}
+                          disabled={isParsingAttribution || !frontMatterText.trim()}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isParsingAttribution ? (
+                            <>
+                              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Parsing...
+                            </>
+                          ) : (
+                            <>
+                              <span>✨</span>
+                              Parse with AI
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <textarea
+                        value={frontMatterText}
+                        onChange={(e) => {
+                          setFrontMatterText(e.target.value);
+                          setParseAttributionError("");
+                        }}
+                        placeholder="Paste front matter here (title page, copyright, translator info)..."
+                        rows={frontMatterText ? Math.min(8, frontMatterText.split("\n").length + 2) : 3}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
+                      />
+                      {parseAttributionError && (
+                        <div className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded">
+                          {parseAttributionError}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Story Type Dropdown */}
                     <div>
                       <label className="block text-sm text-gray-600 mb-1">Story Type</label>
@@ -1022,7 +1122,7 @@ export default function StoryManager() {
                           setEditingStory({
                             ...editingStory,
                             isOriginal: newIsOriginal,
-                            attribution: newIsOriginal ? null : { author: "", publicDomain: true },
+                            attribution: newIsOriginal ? null : createEmptyFormAttribution(),
                           });
                         }}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -1036,41 +1136,337 @@ export default function StoryManager() {
                       </span>
                     </div>
 
-                    {/* Attribution Fields */}
-                    {!editingStory.isOriginal && (
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <h4 className="text-sm font-medium text-gray-700">Attribution Details</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Author *</label>
-                            <input
-                              type="text"
-                              value={editingStory.attribution?.author ?? ""}
-                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, author: e.target.value } })}
-                              placeholder="e.g., Edgar Allan Poe"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
+                    {/* Attribution Fields - Full Form */}
+                    {!editingStory.isOriginal && editingStory.attribution && (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                        {/* Author Information */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Author Information</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Author Name *</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.authorName}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, authorName: e.target.value } })}
+                                placeholder="e.g., Unknown Anglo-Saxon Poet"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Lifespan</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.authorLifespan ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, authorLifespan: e.target.value || undefined } })}
+                                placeholder="e.g., c. 700-1000 CE"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={editingStory.attribution.authorIsUnknown ?? false}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, authorIsUnknown: e.target.checked || undefined } })}
+                                className="rounded border-gray-300"
+                              />
+                              Unknown Author
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={editingStory.attribution.authorIsCollective ?? false}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, authorIsCollective: e.target.checked || undefined } })}
+                                className="rounded border-gray-300"
+                              />
+                              Collective/Oral Tradition
+                            </label>
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Year Published</label>
+                            <label className="block text-xs text-gray-500 mb-1">Author Note</label>
                             <input
-                              type="number"
-                              value={editingStory.attribution?.yearPublished ?? ""}
-                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, yearPublished: e.target.value ? parseInt(e.target.value) : undefined } })}
-                              placeholder="e.g., 1845"
+                              type="text"
+                              value={editingStory.attribution.authorNote ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, authorNote: e.target.value || undefined } })}
+                              placeholder="e.g., Composed during the Anglo-Saxon period"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Public Domain Note</label>
-                          <input
-                            type="text"
-                            value={editingStory.attribution?.publicDomainNote ?? ""}
-                            onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, publicDomainNote: e.target.value || undefined } })}
-                            placeholder="e.g., Published before 1928"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
+
+                        {/* Dating */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Dating</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Year Written</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.yearWritten ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, yearWritten: e.target.value || undefined } })}
+                                placeholder="e.g., c. 700-1000 CE"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Year First Published</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.yearFirstPublished ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, yearFirstPublished: e.target.value || undefined } })}
+                                placeholder="e.g., 1815"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Source Edition */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Source Edition</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Source Title</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.sourceTitle ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourceTitle: e.target.value || undefined } })}
+                                placeholder="e.g., Beowulf: A Translation"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Publisher</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.sourcePublisher ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourcePublisher: e.target.value || undefined } })}
+                                placeholder="e.g., Hackett Publishing"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Publication Year</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.sourcePublicationYear ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourcePublicationYear: e.target.value || undefined } })}
+                                placeholder="e.g., 1910"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Editor</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.sourceEditor ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourceEditor: e.target.value || undefined } })}
+                                placeholder="e.g., John Smith"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Source URL</label>
+                            <input
+                              type="url"
+                              value={editingStory.attribution.sourceUrl ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourceUrl: e.target.value || undefined } })}
+                              placeholder="e.g., https://www.gutenberg.org/..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Source Notes</label>
+                            <textarea
+                              value={editingStory.attribution.sourceNotes ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourceNotes: e.target.value || undefined } })}
+                              placeholder="Any additional notes about the source..."
+                              rows={2}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-sm text-gray-600">
+                            <input
+                              type="checkbox"
+                              checked={editingStory.attribution.sourceIsPublicDomain}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourceIsPublicDomain: e.target.checked } })}
+                              className="rounded border-gray-300"
+                            />
+                            Source edition is in public domain
+                          </label>
+                          {editingStory.attribution.sourceIsPublicDomain && (
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Public Domain Note</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.sourcePublicDomainNote ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, sourcePublicDomainNote: e.target.value || undefined } })}
+                                placeholder="e.g., Published before 1928"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Translator */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Translator (if applicable)</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Translator Name</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.translatorName ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, translatorName: e.target.value || undefined } })}
+                                placeholder="e.g., Francis B. Gummere"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Translator Lifespan</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.translatorLifespan ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, translatorLifespan: e.target.value || undefined } })}
+                                placeholder="e.g., 1855-1919"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Translation Year</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.translatorYear ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, translatorYear: e.target.value || undefined } })}
+                                placeholder="e.g., 1910"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <label className="flex items-center gap-2 text-sm text-gray-600 pb-2">
+                                <input
+                                  type="checkbox"
+                                  checked={editingStory.attribution.translatorIsPublicDomain ?? true}
+                                  onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, translatorIsPublicDomain: e.target.checked } })}
+                                  className="rounded border-gray-300"
+                                />
+                                Translation is public domain
+                              </label>
+                            </div>
+                          </div>
+                          {editingStory.attribution.translatorName && !(editingStory.attribution.translatorIsPublicDomain ?? true) && (
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Translation Public Domain Note</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.translatorPublicDomainNote ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, translatorPublicDomainNote: e.target.value || undefined } })}
+                                placeholder="License or permission details..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Region & Culture */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Region & Culture</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Region</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.region ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, region: e.target.value || undefined } })}
+                                placeholder="e.g., Scandinavia, England"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Cultural Influences (comma-separated)</label>
+                              <input
+                                type="text"
+                                value={editingStory.attribution.culturalInfluences ?? ""}
+                                onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, culturalInfluences: e.target.value || undefined } })}
+                                placeholder="e.g., Anglo-Saxon, Norse, Germanic"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Genres (comma-separated)</label>
+                            <input
+                              type="text"
+                              value={editingStory.attribution.genres ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, genres: e.target.value || undefined } })}
+                              placeholder="e.g., epic poetry, heroic legend"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Rights & Provenance */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 border-b pb-1">Rights & Provenance</h4>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Original Work Status</label>
+                            <select
+                              value={editingStory.attribution.originalWorkStatus}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, originalWorkStatus: e.target.value as "public-domain" | "licensed" | "original" } })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="public-domain">Public Domain</option>
+                              <option value="licensed">Licensed</option>
+                              <option value="original">Original</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Rights Display Statement</label>
+                            <textarea
+                              value={editingStory.attribution.rightsDisplayStatement ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, rightsDisplayStatement: e.target.value || undefined } })}
+                              placeholder="Leave blank to auto-generate based on status..."
+                              rows={2}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Provenance Note</label>
+                            <input
+                              type="text"
+                              value={editingStory.attribution.provenanceNote ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, provenanceNote: e.target.value || undefined } })}
+                              placeholder="e.g., Text from Project Gutenberg"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Provenance URL</label>
+                            <input
+                              type="url"
+                              value={editingStory.attribution.provenanceUrl ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, provenanceUrl: e.target.value || undefined } })}
+                              placeholder="https://..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Copyright Note</label>
+                            <input
+                              type="text"
+                              value={editingStory.attribution.copyrightNote ?? ""}
+                              onChange={(e) => setEditingStory({ ...editingStory, attribution: { ...editingStory.attribution!, copyrightNote: e.target.value || undefined } })}
+                              placeholder="Any additional copyright information..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}

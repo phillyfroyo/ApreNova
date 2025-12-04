@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import type { StoryType, StoryTag, StoryAttribution } from "@/types/story";
+import React, { useState, useRef } from "react";
+import type { StoryType, StoryTag } from "@/types/story";
 import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
+import { FormAttribution, formToAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 
 /**
  * Clean text by removing AI artifacts, markdown formatting, and normalizing
@@ -73,6 +74,29 @@ interface LevelContent {
   mode: "generate" | "use-original"; // Whether to AI generate or use source text
 }
 
+// Preprocessed text result structure (matches algorithmic preprocessor output)
+interface DetectedChapter {
+  number: number;
+  title: string;
+  subtitle?: string;
+  rawText: string;
+  startLine: number;
+  endLine: number;
+}
+
+interface PreprocessedResult {
+  frontMatter: string;
+  chapters: DetectedChapter[];
+  stats: {
+    originalLength: number;
+    cleanedLength: number;
+    lineNumbersRemoved: number;
+    pageMarkersRemoved: number;
+    chaptersDetected: number;
+  };
+  cleanedFullText: string;
+}
+
 interface StoryData {
   rawText: string;
   sourceLanguage: SourceLanguage;
@@ -90,9 +114,12 @@ interface StoryData {
   // Tagging fields
   storyType: StoryType;
   isOriginal: boolean;
-  attribution: StoryAttribution | null;
+  attribution: FormAttribution | null;
   tags: StoryTag[];
   targetAudience: "children" | "teen" | "adult" | "all";
+  // Parsed text data
+  parsedResult: PreprocessedResult | null;
+  uploadedFileName: string | null;
 }
 
 const STEPS = [
@@ -126,6 +153,9 @@ const initialStoryData: StoryData = {
   attribution: null,
   tags: [],
   targetAudience: "all",
+  // Parsed text data
+  parsedResult: null,
+  uploadedFileName: null,
 };
 
 export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFormProps) {
@@ -318,6 +348,80 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
   );
 }
 
+// Helper to extract text from HTML
+function extractTextFromHTML(html: string): string {
+  // Create a temporary DOM parser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  // Remove script and style elements
+  doc.querySelectorAll("script, style, noscript").forEach(el => el.remove());
+
+  // Get text content, preserving some structure
+  let text = "";
+
+  // Process block elements to preserve paragraph structure
+  const processNode = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || "";
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as Element;
+      const tagName = el.tagName.toLowerCase();
+
+      // Block elements that should have line breaks
+      const blockElements = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr", "blockquote", "pre"];
+      const isBlock = blockElements.includes(tagName);
+
+      let content = "";
+      el.childNodes.forEach(child => {
+        content += processNode(child);
+      });
+
+      if (tagName === "br") {
+        return "\n";
+      }
+
+      if (isBlock && content.trim()) {
+        return "\n" + content.trim() + "\n";
+      }
+
+      return content;
+    }
+
+    return "";
+  };
+
+  text = processNode(doc.body);
+
+  // Clean up excessive whitespace while preserving paragraph breaks
+  text = text
+    .replace(/\n{3,}/g, "\n\n")  // Max 2 consecutive newlines
+    .replace(/[ \t]+/g, " ")     // Collapse spaces/tabs
+    .replace(/\n /g, "\n")       // Remove leading spaces on lines
+    .replace(/ \n/g, "\n")       // Remove trailing spaces on lines
+    .trim();
+
+  return text;
+}
+
+// Supported file types
+const SUPPORTED_FILE_TYPES = [
+  { ext: ".txt", mime: "text/plain", label: "Plain Text" },
+  { ext: ".html", mime: "text/html", label: "HTML" },
+  { ext: ".htm", mime: "text/html", label: "HTML" },
+  { ext: ".md", mime: "text/markdown", label: "Markdown" },
+  { ext: ".rtf", mime: "application/rtf", label: "Rich Text" },
+];
+
+function isAcceptedFile(file: File): boolean {
+  const fileName = file.name.toLowerCase();
+  return SUPPORTED_FILE_TYPES.some(
+    type => fileName.endsWith(type.ext) || file.type === type.mime
+  );
+}
+
 // Step 1: Upload Text
 function Step1Upload({
   storyData,
@@ -326,16 +430,173 @@ function Step1Upload({
   storyData: StoryData;
   updateStoryData: (updates: Partial<StoryData>) => void;
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
+  const [showRawText, setShowRawText] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileRead = async (file: File) => {
+    let text = await file.text();
+    const fileName = file.name.toLowerCase();
+
+    // Convert HTML to plain text
+    if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
+      text = extractTextFromHTML(text);
+    }
+
+    // RTF basic handling - strip RTF codes (basic implementation)
+    if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
+      // Remove RTF control codes - this is a simplified version
+      text = text
+        .replace(/\{\\[^{}]+\}/g, "")  // Remove control groups
+        .replace(/\\[a-z]+\d*\s?/gi, "") // Remove control words
+        .replace(/[{}]/g, "")           // Remove remaining braces
+        .replace(/\\'[0-9a-f]{2}/gi, "") // Remove hex characters
+        .trim();
+    }
+
+    updateStoryData({
+      rawText: text,
+      uploadedFileName: file.name,
+      parsedResult: null, // Reset parsed result when new file is uploaded
+    });
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && isAcceptedFile(file)) {
+      handleFileRead(file);
+    } else if (file) {
+      setParseError(`Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map(t => t.ext).join(", ")}`);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (isAcceptedFile(file)) {
+        handleFileRead(file);
+        setParseError("");
+      } else {
+        setParseError(`Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map(t => t.ext).join(", ")}`);
+      }
+    }
+  };
+
+  const [isExtractingMetadata, setIsExtractingMetadata] = useState(false);
+
+  const processText = async () => {
+    if (!storyData.rawText.trim()) {
+      setParseError("Please upload or paste text first");
+      return;
+    }
+
+    setIsParsing(true);
+    setParseError("");
+
+    try {
+      const response = await fetch("/api/admin/parse-full-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText: storyData.rawText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process text");
+      }
+
+      const result = data.result as PreprocessedResult;
+
+      // Update story data with preprocessed results
+      const updates: Partial<StoryData> = {
+        parsedResult: result,
+        rawText: result.cleanedFullText, // Replace raw text with clean text
+      };
+
+      // Auto-generate slug from first chapter title if not set
+      if (!storyData.slug && result.chapters.length > 0 && result.chapters[0].title) {
+        updates.slug = result.chapters[0].title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .substring(0, 50);
+      }
+
+      updateStoryData(updates);
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Failed to process text");
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const extractMetadataFromFrontMatter = async () => {
+    if (!storyData.parsedResult?.frontMatter) {
+      setParseError("No front matter detected to extract metadata from");
+      return;
+    }
+
+    setIsExtractingMetadata(true);
+    setParseError("");
+
+    try {
+      const response = await fetch("/api/admin/parse-attribution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          frontMatterText: storyData.parsedResult.frontMatter,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract metadata");
+      }
+
+      if (data.attribution) {
+        updateStoryData({
+          isOriginal: false,
+          attribution: {
+            ...createEmptyFormAttribution(),
+            ...data.attribution,
+          },
+        });
+      }
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Failed to extract metadata");
+    } finally {
+      setIsExtractingMetadata(false);
+    }
+  };
+
+  const acceptCleanText = () => {
+    if (storyData.parsedResult) {
+      updateStoryData({ rawText: storyData.parsedResult.cleanedFullText });
+    }
+  };
+
+  const revertToOriginal = () => {
+    updateStoryData({ parsedResult: null });
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Upload Story Text</h2>
         <p className="text-gray-500 text-sm">
-          Paste your raw story text below. Use <code className="bg-gray-100 px-1 rounded">---</code> or{" "}
-          <code className="bg-gray-100 px-1 rounded">CHAPTER</code> to mark chapter breaks.
+          Upload a file or paste text. The processor will clean up the text, detect chapters, and extract front matter.
         </p>
       </div>
 
+      {/* Basic Info */}
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Source Language</label>
@@ -364,18 +625,241 @@ function Step1Upload({
         </div>
       </div>
 
+      {/* File Upload / Paste Area */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Story Text</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">Story Text</label>
+          {storyData.uploadedFileName && (
+            <span className="text-xs text-gray-500">File: {storyData.uploadedFileName}</span>
+          )}
+        </div>
+
+        {/* Drop Zone */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleFileDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`mb-3 border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+            isDragging
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,.html,.htm,.md,.rtf,text/plain,text/html,text/markdown,application/rtf"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <div className="text-gray-500">
+            <svg className="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="text-sm font-medium">Drop a file here or click to browse</p>
+            <p className="text-xs text-gray-400 mt-1">Supports: .txt, .html, .htm, .md, .rtf</p>
+          </div>
+        </div>
+
+        {/* Text Area */}
         <textarea
           value={storyData.rawText}
-          onChange={(e) => updateStoryData({ rawText: e.target.value })}
-          placeholder="Paste your story here..."
-          className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm resize-none"
+          onChange={(e) => updateStoryData({ rawText: e.target.value, parsedResult: null })}
+          placeholder="Paste your story here (including front matter, footnotes, etc.)..."
+          className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm resize-none"
         />
-        <p className="text-xs text-gray-400 mt-2">
-          {storyData.rawText.split("\n").filter((l) => l.trim()).length} lines
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-400">
+            {storyData.rawText.length.toLocaleString()} characters, {storyData.rawText.split("\n").filter((l) => l.trim()).length} lines
+          </p>
+        </div>
       </div>
+
+      {/* Process Text Button */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-gray-900">Text Processor</h3>
+            <p className="text-xs text-gray-500">
+              Clean up text, detect chapters, and extract front matter (fast, no AI cost)
+            </p>
+          </div>
+          <button
+            onClick={processText}
+            disabled={isParsing || !storyData.rawText.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all"
+          >
+            {isParsing ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>
+                Process Text
+              </>
+            )}
+          </button>
+        </div>
+        {parseError && (
+          <div className="mt-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+            {parseError}
+          </div>
+        )}
+      </div>
+
+      {/* Processing Results */}
+      {storyData.parsedResult && (
+        <div className="space-y-4 border-t pt-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-900">Processing Results</h3>
+            <button
+              onClick={revertToOriginal}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="bg-blue-50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Cleanup Stats</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
+                  {Math.round((1 - storyData.parsedResult.stats.cleanedLength / storyData.parsedResult.stats.originalLength) * 100)}%
+                </div>
+                <div className="text-xs text-blue-600">Size Reduced</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
+                  {storyData.parsedResult.stats.lineNumbersRemoved}
+                </div>
+                <div className="text-xs text-blue-600">Line Numbers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
+                  {storyData.parsedResult.stats.pageMarkersRemoved}
+                </div>
+                <div className="text-xs text-blue-600">Page Markers</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
+                  {storyData.parsedResult.stats.chaptersDetected}
+                </div>
+                <div className="text-xs text-blue-600">Chapters</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chapters */}
+          {storyData.parsedResult.chapters.length > 0 && (
+            <div className="bg-green-50 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-green-900 mb-2">
+                Detected Chapters ({storyData.parsedResult.chapters.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {storyData.parsedResult.chapters.slice(0, 12).map((ch, i) => (
+                  <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                    {ch.number}. {ch.title.length > 30 ? ch.title.substring(0, 30) + "..." : ch.title}
+                  </span>
+                ))}
+                {storyData.parsedResult.chapters.length > 12 && (
+                  <span className="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-medium">
+                    +{storyData.parsedResult.chapters.length - 12} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Front Matter & Metadata Extraction */}
+          {storyData.parsedResult.frontMatter && (
+            <div className="bg-purple-50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-purple-900">Front Matter Detected</h4>
+                <button
+                  onClick={extractMetadataFromFrontMatter}
+                  disabled={isExtractingMetadata}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium transition-all"
+                >
+                  {isExtractingMetadata ? (
+                    <>
+                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Extracting...
+                    </>
+                  ) : (
+                    <>Extract Metadata (AI)</>
+                  )}
+                </button>
+              </div>
+              <div className="max-h-32 overflow-y-auto bg-white/50 rounded p-2">
+                <pre className="whitespace-pre-wrap text-xs text-purple-800 font-mono">
+                  {storyData.parsedResult.frontMatter.substring(0, 1000)}
+                  {storyData.parsedResult.frontMatter.length > 1000 && "..."}
+                </pre>
+              </div>
+              <p className="text-xs text-purple-600 mt-2">
+                {storyData.parsedResult.frontMatter.length.toLocaleString()} characters of front matter
+              </p>
+            </div>
+          )}
+
+          {/* Attribution Preview (if extracted) */}
+          {storyData.attribution && (
+            <div className="bg-amber-50 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-amber-900 mb-2">Extracted Metadata</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {storyData.attribution.authorName && (
+                  <div><span className="text-amber-600">Author:</span> {storyData.attribution.authorName}</div>
+                )}
+                {storyData.attribution.translatorName && (
+                  <div><span className="text-amber-600">Translator:</span> {storyData.attribution.translatorName}</div>
+                )}
+                {storyData.attribution.yearWritten && (
+                  <div><span className="text-amber-600">Written:</span> {storyData.attribution.yearWritten}</div>
+                )}
+                {storyData.attribution.sourceTitle && (
+                  <div><span className="text-amber-600">Source:</span> {storyData.attribution.sourceTitle}</div>
+                )}
+                {storyData.attribution.region && (
+                  <div><span className="text-amber-600">Region:</span> {storyData.attribution.region}</div>
+                )}
+                {storyData.attribution.genres && (
+                  <div><span className="text-amber-600">Genres:</span> {storyData.attribution.genres}</div>
+                )}
+              </div>
+              <p className="text-xs text-amber-600 mt-2">* This will auto-fill Step 3 metadata</p>
+            </div>
+          )}
+
+          {/* Clean Text Preview */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium text-gray-900">Clean Text Preview</h4>
+              <button
+                onClick={() => setShowRawText(!showRawText)}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                {showRawText ? "Hide full text" : "Show full text"}
+              </button>
+            </div>
+            <div className={`bg-white border rounded-lg p-3 font-mono text-xs overflow-auto ${showRawText ? "max-h-96" : "max-h-32"}`}>
+              <pre className="whitespace-pre-wrap">{storyData.parsedResult.cleanedFullText}</pre>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {storyData.parsedResult.cleanedFullText.length.toLocaleString()} characters (cleaned)
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -430,7 +914,7 @@ function Step2Detect({
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Parse & Detect Level</h2>
-        <p className="text-gray-500 text-sm">We'll analyze your text to detect its CEFR level.</p>
+        <p className="text-gray-500 text-sm">We&apos;ll analyze your text to detect its CEFR level.</p>
       </div>
 
       <div className="bg-gray-50 rounded-lg p-6">
@@ -520,6 +1004,11 @@ function Step3Metadata({
   const [descriptionPrompt, setDescriptionPrompt] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [backgroundPrompt, setBackgroundPrompt] = useState("");
+
+  // AI Attribution Parser state
+  const [frontMatterText, setFrontMatterText] = useState("");
+  const [isParsingAttribution, setIsParsingAttribution] = useState(false);
+  const [parseError, setParseError] = useState("");
 
   // Generated options
   const [titleOptions, setTitleOptions] = useState<Array<{ en: string; es: string }>>([]);
@@ -719,6 +1208,50 @@ function Step3Metadata({
       setBackgroundOptions([]);
     } catch (err) {
       setError("Failed to select background");
+    }
+  };
+
+  // Parse front matter with AI to extract attribution
+  const parseAttributionWithAI = async () => {
+    if (!frontMatterText.trim()) {
+      setParseError("Please paste the front matter text first");
+      return;
+    }
+
+    setIsParsingAttribution(true);
+    setParseError("");
+
+    try {
+      const response = await fetch("/api/admin/parse-attribution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frontMatterText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to parse attribution");
+      }
+
+      // Merge the parsed attribution with defaults
+      const parsedAttribution: FormAttribution = {
+        ...createEmptyFormAttribution(),
+        ...data.attribution,
+      };
+
+      // Update story data - set isOriginal to false since we're adding attribution
+      updateStoryData({
+        isOriginal: false,
+        attribution: parsedAttribution,
+      });
+
+      // Clear the front matter text on success
+      setFrontMatterText("");
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Failed to parse attribution");
+    } finally {
+      setIsParsingAttribution(false);
     }
   };
 
@@ -1110,6 +1643,59 @@ function Step3Metadata({
       <div className="space-y-4 border-t pt-6">
         <h3 className="font-medium text-gray-900">Story Classification</h3>
 
+        {/* AI Attribution Parser */}
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
+              <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info) and let AI extract the metadata</p>
+            </div>
+            <button
+              type="button"
+              onClick={parseAttributionWithAI}
+              disabled={isParsingAttribution || !frontMatterText.trim()}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isParsingAttribution ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Parsing...
+                </>
+              ) : (
+                <>
+                  <span>✨</span>
+                  Parse with AI
+                </>
+              )}
+            </button>
+          </div>
+          <textarea
+            value={frontMatterText}
+            onChange={(e) => {
+              setFrontMatterText(e.target.value);
+              setParseError("");
+            }}
+            placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)...
+
+Example:
+BEOWULF
+Translated by Francis B. Gummere (1855-1919)
+The Harvard Classics, Vol. 49
+P.F. Collier & Son, New York, 1910
+This work is in the public domain..."
+            rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
+            className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
+          />
+          {parseError && (
+            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+              {parseError}
+            </div>
+          )}
+        </div>
+
         {/* Story Type Dropdown */}
         <div>
           <label className="block text-sm text-gray-600 mb-1">Story Type</label>
@@ -1134,10 +1720,7 @@ function Step3Metadata({
               const newIsOriginal = !storyData.isOriginal;
               updateStoryData({
                 isOriginal: newIsOriginal,
-                attribution: newIsOriginal ? null : {
-                  author: "",
-                  publicDomain: true,
-                },
+                attribution: newIsOriginal ? null : createEmptyFormAttribution(),
               });
             }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -1155,119 +1738,454 @@ function Step3Metadata({
           </span>
         </div>
 
-        {/* Attribution Fields (only if not original) */}
-        {!storyData.isOriginal && (
-          <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-            <h4 className="text-sm font-medium text-gray-700">Attribution Details</h4>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Author *</label>
-                <input
-                  type="text"
-                  value={storyData.attribution?.author ?? ""}
-                  onChange={(e) =>
-                    updateStoryData({
-                      attribution: {
-                        ...storyData.attribution!,
-                        author: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="e.g., Edgar Allan Poe"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+        {/* Full Attribution Fields (only if not original) */}
+        {!storyData.isOriginal && storyData.attribution && (
+          <div className="space-y-4">
+            {/* Author Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Author Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Author Name *</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.authorName}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, authorName: e.target.value },
+                      })
+                    }
+                    placeholder="e.g., Unknown, or Traditional"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Lifespan</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.authorLifespan ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, authorLifespan: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., c. 8th century"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={storyData.attribution.authorIsUnknown ?? false}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, authorIsUnknown: e.target.checked || undefined },
+                      })
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  Author Unknown
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={storyData.attribution.authorIsCollective ?? false}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, authorIsCollective: e.target.checked || undefined },
+                      })
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  Collective/Traditional Authorship
+                </label>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Author Lifespan</label>
+                <label className="block text-xs text-gray-500 mb-1">Author Note</label>
                 <input
                   type="text"
-                  value={storyData.attribution?.authorLifespan ?? ""}
+                  value={storyData.attribution.authorNote ?? ""}
                   onChange={(e) =>
                     updateStoryData({
-                      attribution: {
-                        ...storyData.attribution!,
-                        authorLifespan: e.target.value || undefined,
-                      },
+                      attribution: { ...storyData.attribution!, authorNote: e.target.value || undefined },
                     })
                   }
-                  placeholder="e.g., 1809-1849"
+                  placeholder="Additional context about authorship"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Year Published</label>
-                <input
-                  type="number"
-                  value={storyData.attribution?.yearPublished ?? ""}
-                  onChange={(e) =>
-                    updateStoryData({
-                      attribution: {
-                        ...storyData.attribution!,
-                        yearPublished: e.target.value ? parseInt(e.target.value) : undefined,
-                      },
-                    })
-                  }
-                  placeholder="e.g., 1845"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+            {/* Dating Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Dating</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Year Written</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.yearWritten ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, yearWritten: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., c. 700-1000 CE"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Year First Published</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.yearFirstPublished ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, yearFirstPublished: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., 1815"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Source Edition Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Source Edition (the edition you are ingesting)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Edition Title</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourceTitle ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourceTitle: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Beowulf: A Verse Translation"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Publisher</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourcePublisher ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourcePublisher: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Oxford University Press"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Publication Year</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourcePublicationYear ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourcePublicationYear: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., 1910"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Editor</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourceEditor ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourceEditor: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., John Smith"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Original Title (if different)</label>
+                <label className="block text-xs text-gray-500 mb-1">Source URL (Gutenberg, Wikisource, etc.)</label>
                 <input
                   type="text"
-                  value={storyData.attribution?.originalTitle ?? ""}
+                  value={storyData.attribution.sourceUrl ?? ""}
                   onChange={(e) =>
                     updateStoryData({
-                      attribution: {
-                        ...storyData.attribution!,
-                        originalTitle: e.target.value || undefined,
-                      },
+                      attribution: { ...storyData.attribution!, sourceUrl: e.target.value || undefined },
                     })
                   }
-                  placeholder="Title in original language"
+                  placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Edition Notes</label>
+                <input
+                  type="text"
+                  value={storyData.attribution.sourceNotes ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, sourceNotes: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., Facsimile of 19th-century edition"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={storyData.attribution.sourceIsPublicDomain}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourceIsPublicDomain: e.target.checked },
+                      })
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  Source Edition is Public Domain
+                </label>
+              </div>
+              {storyData.attribution.sourceIsPublicDomain && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Public Domain Note</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourcePublicDomainNote ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourcePublicDomainNote: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Published before 1929"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Translator Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Translator (if using a translation)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Translator Name</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.translatorName ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, translatorName: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Francis Gummere"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Translator Lifespan</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.translatorLifespan ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, translatorLifespan: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., 1855-1919"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Translation Year</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.translatorYear ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, translatorYear: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., 1909"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={storyData.attribution.translatorIsPublicDomain ?? true}
+                      onChange={(e) =>
+                        updateStoryData({
+                          attribution: { ...storyData.attribution!, translatorIsPublicDomain: e.target.checked },
+                        })
+                      }
+                      className="rounded border-gray-300"
+                    />
+                    Translation is Public Domain
+                  </label>
+                </div>
+              </div>
+              {storyData.attribution.translatorName && storyData.attribution.translatorIsPublicDomain && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Translation Public Domain Note</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.translatorPublicDomainNote ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, translatorPublicDomainNote: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Published before 1929"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Region & Culture Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Region & Culture</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Region / Origin</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.region ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, region: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Anglo-Saxon England"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Cultural Influences (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.culturalInfluences ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, culturalInfluences: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., Norse, Celtic, Germanic"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Genres (comma-separated)</label>
+                <input
+                  type="text"
+                  value={storyData.attribution.genres ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, genres: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., Epic poetry, Mythology, Heroic literature"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Source (book, collection, or URL)</label>
-              <input
-                type="text"
-                value={storyData.attribution?.source ?? ""}
-                onChange={(e) =>
-                  updateStoryData({
-                    attribution: {
-                      ...storyData.attribution!,
-                      source: e.target.value || undefined,
-                    },
-                  })
-                }
-                placeholder="e.g., Tales of the Grotesque and Arabesque"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Public Domain Note</label>
-              <input
-                type="text"
-                value={storyData.attribution?.publicDomainNote ?? ""}
-                onChange={(e) =>
-                  updateStoryData({
-                    attribution: {
-                      ...storyData.attribution!,
-                      publicDomainNote: e.target.value || undefined,
-                    },
-                  })
-                }
-                placeholder="e.g., Published before 1928"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
+            {/* Rights & Provenance Section */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Rights & Provenance</h4>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Original Work Status *</label>
+                <select
+                  value={storyData.attribution.originalWorkStatus}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: {
+                        ...storyData.attribution!,
+                        originalWorkStatus: e.target.value as "public-domain" | "licensed" | "original",
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="public-domain">Public Domain</option>
+                  <option value="licensed">Licensed</option>
+                  <option value="original">Original (Cuentana)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Rights Display Statement</label>
+                <textarea
+                  value={storyData.attribution.rightsDisplayStatement ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, rightsDisplayStatement: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="Leave blank to auto-generate. e.g., The original text is in the public domain. This educational adaptation © Cuentana."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Provenance Note (where the text came from)</label>
+                <input
+                  type="text"
+                  value={storyData.attribution.provenanceNote ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, provenanceNote: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., Text sourced from Project Gutenberg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Provenance URL</label>
+                <input
+                  type="text"
+                  value={storyData.attribution.provenanceUrl ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, provenanceUrl: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Copyright Note</label>
+                <input
+                  type="text"
+                  value={storyData.attribution.copyrightNote ?? ""}
+                  onChange={(e) =>
+                    updateStoryData({
+                      attribution: { ...storyData.attribution!, copyrightNote: e.target.value || undefined },
+                    })
+                  }
+                  placeholder="e.g., No modern copyrighted annotations were included"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1883,7 +2801,7 @@ function Step7Paginate({
           <h3 className="font-medium text-green-900 mb-1">Manual Page Markers Detected</h3>
           <p className="text-sm text-green-700">
             Found {pageMarkerCount} PAGE marker{pageMarkerCount > 1 ? "s" : ""} in your text.
-            The story will be paginated at these markers, ignoring the "lines per page" setting.
+            The story will be paginated at these markers, ignoring the &quot;lines per page&quot; setting.
           </p>
         </div>
       )}
@@ -2017,9 +2935,10 @@ function Step8Preview({
       });
 
       // Build origin object based on isOriginal flag
+      // Convert form attribution to the full format when saving
       const origin = storyData.isOriginal
         ? { isOriginal: true as const }
-        : { isOriginal: false as const, attribution: storyData.attribution! };
+        : { isOriginal: false as const, attribution: formToAttribution(storyData.attribution!) };
 
       const response = await fetch("/api/admin/save-story", {
         method: "POST",
@@ -2090,7 +3009,7 @@ function Step8Preview({
           <div>
             <span className="text-gray-500">Origin:</span>{" "}
             <span className="font-medium">
-              {storyData.isOriginal ? "Cuentana Original" : `By ${storyData.attribution?.author || "Unknown"}`}
+              {storyData.isOriginal ? "Cuentana Original" : `By ${storyData.attribution?.authorName || "Unknown"}`}
             </span>
           </div>
           <div>
