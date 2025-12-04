@@ -1,6 +1,7 @@
 // src/app/api/admin/stories/route.ts
 import { NextResponse } from "next/server";
 import { STORY_METADATA } from "@/lib/stories";
+import { STORY_THEMES } from "@/components/storyThemes";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
 
@@ -10,10 +11,12 @@ export async function GET() {
     const stories = STORY_METADATA.map((story) => {
       const enMeta = (en as any).storiesMetadata?.[story.slug];
       const esMeta = (es as any).storiesMetadata?.[story.slug];
+      const theme = STORY_THEMES[story.slug];
 
       return {
         slug: story.slug,
         image: story.image,
+        backgroundImage: theme?.backgroundImage, // Get from storyThemes.ts
         levels: story.levels,
         isPremiumOnly: story.isPremiumOnly || false,
         title: {

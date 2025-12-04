@@ -2,6 +2,7 @@
 export interface StoryTheme {
   backgroundImage?: string;
   backgroundColor?: string;
+  backgroundGradient?: string; // CSS gradient string, e.g. "linear-gradient(135deg, #f5f0e6, #d4c4a8)"
   textColor: string;
   accentColor: string;
   hoverAccentColor: string;
@@ -10,7 +11,7 @@ export interface StoryTheme {
 
 export const STORY_THEMES: Record<string, StoryTheme> = {
   default: {
-    backgroundColor: "#f5f0e6",
+    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
@@ -37,13 +38,13 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },  "my-day": {
-    backgroundImage: "/images/my-day-background.png",
+    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },  "my-family": {
-    backgroundColor: "#f5f0e6",
+    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
