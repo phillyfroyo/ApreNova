@@ -9,7 +9,7 @@ const openai = new OpenAI({
 interface GenerateMetadataRequest {
   storyText: string;
   sourceLanguage: "en" | "es";
-  type: "title" | "description" | "image" | "background";
+  type: "title" | "description" | "image" | "background" | "translate-to-spanish";
   customPrompt?: string;
 }
 
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Story text is required" }, { status: 400 });
     }
 
-    if (!type || !["title", "description", "image", "background"].includes(type)) {
-      return NextResponse.json({ error: "Valid type (title/description/image/background) is required" }, { status: 400 });
+    if (!type || !["title", "description", "image", "background", "translate-to-spanish"].includes(type)) {
+      return NextResponse.json({ error: "Valid type (title/description/image/background/translate-to-spanish) is required" }, { status: 400 });
     }
 
     // For image generation, use DALL-E
@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
     // For background image generation, use DALL-E with landscape format
     if (type === "background") {
       return generateImage(storyText, sourceLanguage, customPrompt, "background");
+    }
+
+    // For translation to Spanish
+    if (type === "translate-to-spanish") {
+      return translateToSpanish(storyText);
     }
 
     // For title and description, use GPT-4o
@@ -260,6 +265,57 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
         details: imageError instanceof Error ? imageError.message : "Unknown error",
         prompt: imagePrompt
       },
+      { status: 500 }
+    );
+  }
+}
+
+async function translateToSpanish(text: string) {
+  // Text may contain multiple items separated by ---SEPARATOR---
+  const items = text.split("\n\n---SEPARATOR---\n\n");
+
+  const systemPrompt = `You are an expert English to Spanish translator. Translate the following text(s) to Spanish.
+- Maintain the original meaning and tone
+- For titles, keep proper nouns (like "Beowulf") unchanged
+- Return accurate, natural-sounding Spanish
+
+Return the translations as a JSON array of strings, one for each input item.`;
+
+  const userPrompt = items.length === 1
+    ? `Translate to Spanish:\n"${items[0]}"\n\nReturn as JSON: { "translations": ["Spanish translation here"] }`
+    : `Translate each of these ${items.length} texts to Spanish:\n\n${items.map((item, i) => `${i + 1}. "${item}"`).join("\n\n")}\n\nReturn as JSON: { "translations": ["translation1", "translation2", ...] }`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.3,
+    max_tokens: 4000,
+  });
+
+  const content = response.choices[0]?.message?.content?.trim();
+
+  if (!content) {
+    return NextResponse.json({ error: "No response from AI" }, { status: 500 });
+  }
+
+  try {
+    const cleanedContent = content
+      .replace(/^```json\n?/g, "")
+      .replace(/\n?```$/g, "")
+      .trim();
+
+    const parsed = JSON.parse(cleanedContent);
+
+    return NextResponse.json({
+      translatedTexts: parsed.translations,
+    });
+  } catch (parseError) {
+    console.error("Failed to parse translation response:", content);
+    return NextResponse.json(
+      { error: "Failed to parse translation response", raw: content },
       { status: 500 }
     );
   }

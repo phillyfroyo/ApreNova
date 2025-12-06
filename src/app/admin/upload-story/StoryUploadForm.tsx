@@ -65,13 +65,13 @@ interface StoryUploadFormProps {
 }
 
 type SourceLanguage = "en" | "es";
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 interface LevelContent {
   sourceText: string;
   translatedText: string;
-  status: "pending" | "generating" | "done" | "error";
-  mode: "generate" | "use-original"; // Whether to AI generate or use source text
+  status: "pending" | "generating" | "done" | "error" | "omitted";
+  mode: "generate" | "use-original" | "omit"; // Whether to AI generate, use source text, or skip
 }
 
 // Preprocessed text result structure (matches algorithmic preprocessor output)
@@ -92,7 +92,10 @@ interface PreprocessedResult {
     cleanedLength: number;
     lineNumbersRemoved: number;
     pageMarkersRemoved: number;
+    footnoteIndicatorsRemoved: number;
+    asteriskDividersRemoved: number;
     chaptersDetected: number;
+    backMatterRemoved: boolean;
   };
   cleanedFullText: string;
 }
@@ -103,7 +106,9 @@ interface StoryData {
   slug: string;
   detectedLevel: number | null;
   title: { en: string; es: string };
+  displayTitle: { en: string; es: string } | null; // Optional short version for cards
   description: { en: string; es: string };
+  hook: { en: string; es: string } | null; // Optional short teaser for cards
   selectedLevels: number[];
   levelContent: Record<number, LevelContent>;
   linesPerPage: number;
@@ -120,17 +125,18 @@ interface StoryData {
   // Parsed text data
   parsedResult: PreprocessedResult | null;
   uploadedFileName: string | null;
+  // Extracted annotations (sidenotes, footnotes, etc.)
+  extractedAnnotations: ExtractedAnnotation[];
 }
 
 const STEPS = [
   { number: 1, label: "Upload Text" },
   { number: 2, label: "Parse & Detect" },
   { number: 3, label: "Metadata" },
-  { number: 4, label: "Select Levels" },
-  { number: 5, label: "Generate Levels" },
-  { number: 6, label: "Translate" },
-  { number: 7, label: "Paginate" },
-  { number: 8, label: "Preview & Save" },
+  { number: 4, label: "Generate Levels" },
+  { number: 5, label: "Translate" },
+  { number: 6, label: "Paginate" },
+  { number: 7, label: "Preview & Save" },
 ];
 
 const initialStoryData: StoryData = {
@@ -139,7 +145,9 @@ const initialStoryData: StoryData = {
   slug: "",
   detectedLevel: null,
   title: { en: "", es: "" },
+  displayTitle: null,
   description: { en: "", es: "" },
+  hook: null,
   selectedLevels: [1, 2, 3, 4, 5],
   levelContent: {},
   linesPerPage: 10,
@@ -156,6 +164,8 @@ const initialStoryData: StoryData = {
   // Parsed text data
   parsedResult: null,
   uploadedFileName: null,
+  // Extracted annotations
+  extractedAnnotations: [],
 };
 
 export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFormProps) {
@@ -176,33 +186,33 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
     setCurrentStep(step);
   };
 
-  // Get levels that have been generated (have content)
+  // Get levels that have been generated (have content, not omitted)
   const getGeneratedLevels = () => {
-    return storyData.selectedLevels.filter(
-      (l) => storyData.levelContent[l]?.status === "done" && storyData.levelContent[l]?.sourceText?.length > 0
+    return [1, 2, 3, 4, 5].filter(
+      (l) => storyData.levelContent[l]?.status === "done" &&
+             storyData.levelContent[l]?.mode !== "omit" &&
+             storyData.levelContent[l]?.sourceText?.length > 0
     );
   };
 
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 1:
-        return storyData.rawText.trim().length > 0 && storyData.slug.trim().length > 0;
+        return storyData.rawText.trim().length > 0;
       case 2:
         return storyData.detectedLevel !== null;
       case 3:
-        return storyData.title.en.length > 0 || storyData.title.es.length > 0;
+        return (storyData.title.en.length > 0 || storyData.title.es.length > 0) && storyData.slug.length > 0;
       case 4:
-        return storyData.selectedLevels.length > 0;
-      case 5:
-        // Allow proceeding if at least one level is generated
+        // Allow proceeding if at least one level is generated (not omitted)
         return getGeneratedLevels().length > 0;
-      case 6:
+      case 5:
         // All generated levels must be translated
         const generatedLevels = getGeneratedLevels();
         return generatedLevels.length > 0 && generatedLevels.every(
           (l) => storyData.levelContent[l]?.translatedText?.length > 0
         );
-      case 7:
+      case 6:
         return true;
       default:
         return true;
@@ -292,10 +302,15 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
             <Step3Metadata storyData={storyData} updateStoryData={updateStoryData} />
           )}
           {currentStep === 4 && (
-            <Step4Levels storyData={storyData} updateStoryData={updateStoryData} />
+            <Step4Generate
+              storyData={storyData}
+              updateStoryData={updateStoryData}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
           )}
           {currentStep === 5 && (
-            <Step5Generate
+            <Step5Translate
               storyData={storyData}
               updateStoryData={updateStoryData}
               isProcessing={isProcessing}
@@ -303,18 +318,10 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
             />
           )}
           {currentStep === 6 && (
-            <Step6Translate
-              storyData={storyData}
-              updateStoryData={updateStoryData}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-            />
+            <Step6Paginate storyData={storyData} updateStoryData={updateStoryData} />
           )}
           {currentStep === 7 && (
-            <Step7Paginate storyData={storyData} updateStoryData={updateStoryData} />
-          )}
-          {currentStep === 8 && (
-            <Step8Preview
+            <Step7Preview
               storyData={storyData}
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}
@@ -332,7 +339,7 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
             >
               ← Back
             </button>
-            {currentStep < 8 ? (
+            {currentStep < 7 ? (
               <button
                 onClick={() => goToStep((currentStep + 1) as Step)}
                 disabled={!canProceed() || isProcessing}
@@ -348,14 +355,112 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
   );
 }
 
-// Helper to extract text from HTML
-function extractTextFromHTML(html: string): string {
+// Extracted annotation from HTML (sidenote, footnote, etc.)
+interface ExtractedAnnotation {
+  id: string;
+  type: "sidenote" | "footnote" | "marginal";
+  text: string;
+  nearbyText: string; // Context for matching later
+}
+
+interface HTMLExtractionResult {
+  text: string;
+  annotations: ExtractedAnnotation[];
+}
+
+// Helper to extract text from HTML, also extracting sidenotes and footnotes
+function extractTextFromHTML(html: string): HTMLExtractionResult {
   // Create a temporary DOM parser
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
   // Remove script and style elements
   doc.querySelectorAll("script, style, noscript").forEach(el => el.remove());
+
+  const annotations: ExtractedAnnotation[] = [];
+  let annotationIndex = 0;
+
+  // Extract sidenotes (common patterns)
+  // Pattern 1: <span class="sidenote">...</span> (Project Gutenberg style)
+  doc.querySelectorAll("span.sidenote, .sidenote").forEach(el => {
+    const text = el.textContent?.trim() || "";
+    if (text) {
+      // Get nearby text for context (previous sibling or parent's text)
+      const parent = el.parentElement;
+      const nearbyText = parent?.textContent?.slice(0, 100)?.trim() || "";
+
+      annotations.push({
+        id: `sidenote-${annotationIndex++}`,
+        type: "sidenote",
+        text,
+        nearbyText,
+      });
+    }
+    el.remove(); // Remove from DOM so it doesn't appear in story text
+  });
+
+  // Pattern 2: <aside>...</aside>
+  doc.querySelectorAll("aside").forEach(el => {
+    const text = el.textContent?.trim() || "";
+    if (text) {
+      const parent = el.parentElement;
+      const nearbyText = parent?.textContent?.slice(0, 100)?.trim() || "";
+
+      annotations.push({
+        id: `aside-${annotationIndex++}`,
+        type: "sidenote",
+        text,
+        nearbyText,
+      });
+    }
+    el.remove();
+  });
+
+  // Pattern 3: <span class="note">...</span> or <span class="margin-note">...</span>
+  doc.querySelectorAll("span.note, span.margin-note, span.marginal, .marginnote").forEach(el => {
+    const text = el.textContent?.trim() || "";
+    if (text) {
+      const parent = el.parentElement;
+      const nearbyText = parent?.textContent?.slice(0, 100)?.trim() || "";
+
+      annotations.push({
+        id: `marginal-${annotationIndex++}`,
+        type: "marginal",
+        text,
+        nearbyText,
+      });
+    }
+    el.remove();
+  });
+
+  // Extract footnotes
+  // Pattern 1: <div class="footnote">...</div> inside <div class="footnotes">
+  doc.querySelectorAll(".footnotes .footnote, div.footnote").forEach(el => {
+    const text = el.textContent?.trim() || "";
+    if (text) {
+      annotations.push({
+        id: `footnote-${annotationIndex++}`,
+        type: "footnote",
+        text,
+        nearbyText: "", // Footnotes are typically at the end
+      });
+    }
+    el.remove();
+  });
+
+  // Pattern 2: <aside class="footnote">...</aside>
+  doc.querySelectorAll("aside.footnote").forEach(el => {
+    const text = el.textContent?.trim() || "";
+    if (text) {
+      annotations.push({
+        id: `footnote-${annotationIndex++}`,
+        type: "footnote",
+        text,
+        nearbyText: "",
+      });
+    }
+    el.remove();
+  });
 
   // Get text content, preserving some structure
   let text = "";
@@ -403,7 +508,7 @@ function extractTextFromHTML(html: string): string {
     .replace(/ \n/g, "\n")       // Remove trailing spaces on lines
     .trim();
 
-  return text;
+  return { text, annotations };
 }
 
 // Supported file types
@@ -439,10 +544,13 @@ function Step1Upload({
   const handleFileRead = async (file: File) => {
     let text = await file.text();
     const fileName = file.name.toLowerCase();
+    let extractedAnnotations: ExtractedAnnotation[] = [];
 
-    // Convert HTML to plain text
+    // Convert HTML to plain text, extracting sidenotes/footnotes
     if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
-      text = extractTextFromHTML(text);
+      const result = extractTextFromHTML(text);
+      text = result.text;
+      extractedAnnotations = result.annotations;
     }
 
     // RTF basic handling - strip RTF codes (basic implementation)
@@ -460,6 +568,7 @@ function Step1Upload({
       rawText: text,
       uploadedFileName: file.name,
       parsedResult: null, // Reset parsed result when new file is uploaded
+      extractedAnnotations,
     });
   };
 
@@ -520,14 +629,7 @@ function Step1Upload({
         rawText: result.cleanedFullText, // Replace raw text with clean text
       };
 
-      // Auto-generate slug from first chapter title if not set
-      if (!storyData.slug && result.chapters.length > 0 && result.chapters[0].title) {
-        updates.slug = result.chapters[0].title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")
-          .substring(0, 50);
-      }
+      // Note: Slug is now generated in Step 3 from the title (more accurate than chapter title)
 
       updateStoryData(updates);
     } catch (err) {
@@ -562,13 +664,108 @@ function Step1Upload({
       }
 
       if (data.attribution) {
-        updateStoryData({
+        const parsedAttribution = {
+          ...createEmptyFormAttribution(),
+          ...data.attribution,
+        };
+        const metadata = data.metadata || {};
+
+        // Build update object with attribution
+        const updates: Partial<StoryData> = {
           isOriginal: false,
-          attribution: {
-            ...createEmptyFormAttribution(),
-            ...data.attribution,
-          },
-        });
+          attribution: parsedAttribution,
+        };
+
+        // Auto-fill title from sourceTitle if available and title is empty
+        if (parsedAttribution.sourceTitle && !storyData.title.en) {
+          updates.title = {
+            en: parsedAttribution.sourceTitle,
+            es: metadata.sourceTitleEs || storyData.title.es || "",
+          };
+
+          // Auto-generate slug from display title (short) or source title
+          const slugSource = metadata.displayTitle || parsedAttribution.sourceTitle;
+          if (slugSource && !storyData.slug) {
+            updates.slug = slugSource
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "")
+              .substring(0, 50);
+          }
+        }
+
+        // Auto-fill display title if provided
+        if (metadata.displayTitle) {
+          updates.displayTitle = {
+            en: metadata.displayTitle,
+            es: metadata.displayTitleEs || metadata.displayTitle,
+          };
+        }
+
+        // Auto-fill summary if provided (goes to description field which is now the summary)
+        if (metadata.summary && !storyData.description.en) {
+          updates.description = {
+            en: metadata.summary,
+            es: "", // Will need translation later
+          };
+        }
+
+        // Auto-generate Rights Display Statement for public domain works
+        if (parsedAttribution.sourceIsPublicDomain && !parsedAttribution.rightsDisplayStatement) {
+          parsedAttribution.rightsDisplayStatement =
+            "The original text is in the public domain. This educational adaptation © Cuentana.";
+        }
+
+        // Auto-fill story type from genres if detected
+        if (parsedAttribution.genres) {
+          const genresLower = parsedAttribution.genres.toLowerCase();
+          // Map common genre keywords to story types
+          if (genresLower.includes("epic")) {
+            updates.storyType = "epic";
+          } else if (genresLower.includes("myth")) {
+            updates.storyType = "myth";
+          } else if (genresLower.includes("legend")) {
+            updates.storyType = "legend";
+          } else if (genresLower.includes("fable")) {
+            updates.storyType = "fable";
+          } else if (genresLower.includes("folktale") || genresLower.includes("folk tale")) {
+            updates.storyType = "folktale";
+          } else if (genresLower.includes("poem") || genresLower.includes("poetry")) {
+            updates.storyType = "poem";
+          } else if (genresLower.includes("novella") || genresLower.includes("novel")) {
+            updates.storyType = "novella";
+          } else if (genresLower.includes("song") || genresLower.includes("lyric")) {
+            updates.storyType = "song-lyrics";
+          }
+
+          // Auto-select tags from genres
+          const detectedTags: StoryTag[] = [];
+          // Literary genres
+          if (genresLower.includes("epic")) detectedTags.push("epic");
+          if (genresLower.includes("myth")) detectedTags.push("mythology");
+          if (genresLower.includes("hero")) detectedTags.push("heroic", "heros-journey");
+          if (genresLower.includes("traged")) detectedTags.push("tragedy");
+          if (genresLower.includes("comed")) detectedTags.push("comedy");
+          // Themes
+          if (genresLower.includes("adventure")) detectedTags.push("adventure");
+          if (genresLower.includes("romance") || genresLower.includes("love")) detectedTags.push("romance", "love");
+          if (genresLower.includes("mystery")) detectedTags.push("mystery");
+          if (genresLower.includes("fantasy")) detectedTags.push("fantasy");
+          if (genresLower.includes("histor")) detectedTags.push("historical");
+          // Content themes
+          if (genresLower.includes("monster")) detectedTags.push("monsters");
+          if (genresLower.includes("war") || genresLower.includes("battle")) detectedTags.push("war");
+          if (genresLower.includes("death") || genresLower.includes("mortality")) detectedTags.push("death");
+          if (genresLower.includes("revenge") || genresLower.includes("vengeance")) detectedTags.push("revenge");
+
+          if (detectedTags.length > 0) {
+            // Deduplicate and merge with existing tags
+            const uniqueTags = [...new Set([...storyData.tags, ...detectedTags])];
+            updates.tags = uniqueTags as StoryTag[];
+          }
+        }
+
+        updateStoryData(updates);
       }
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "Failed to extract metadata");
@@ -608,20 +805,6 @@ function Step1Upload({
             <option value="en">English (EN)</option>
             <option value="es">Spanish (ES)</option>
           </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Story Slug</label>
-          <input
-            type="text"
-            value={storyData.slug}
-            onChange={(e) =>
-              updateStoryData({
-                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"),
-              })
-            }
-            placeholder="my-story-slug"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
         </div>
       </div>
 
@@ -676,6 +859,45 @@ function Step1Upload({
         </div>
       </div>
 
+      {/* Extracted Annotations Summary */}
+      {storyData.extractedAnnotations.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <h4 className="font-medium text-amber-800">Annotations Extracted</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                Found {storyData.extractedAnnotations.length} annotation{storyData.extractedAnnotations.length !== 1 ? "s" : ""} (
+                {storyData.extractedAnnotations.filter(a => a.type === "sidenote").length} sidenotes,{" "}
+                {storyData.extractedAnnotations.filter(a => a.type === "footnote").length} footnotes,{" "}
+                {storyData.extractedAnnotations.filter(a => a.type === "marginal").length} marginal notes
+                ) - these have been removed from the story text and stored separately for tooltips.
+              </p>
+              <details className="mt-2">
+                <summary className="text-xs text-amber-600 cursor-pointer hover:text-amber-800">
+                  View extracted annotations ({storyData.extractedAnnotations.length})
+                </summary>
+                <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
+                  {storyData.extractedAnnotations.slice(0, 50).map((annotation, idx) => (
+                    <div key={annotation.id} className="text-xs bg-white rounded p-2 border border-amber-100">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium mr-2 bg-amber-100 text-amber-700">
+                        {annotation.type}
+                      </span>
+                      <span className="text-gray-700">{annotation.text.slice(0, 150)}{annotation.text.length > 150 ? "..." : ""}</span>
+                    </div>
+                  ))}
+                  {storyData.extractedAnnotations.length > 50 && (
+                    <p className="text-xs text-amber-600 italic">...and {storyData.extractedAnnotations.length - 50} more</p>
+                  )}
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Process Text Button */}
       <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
         <div className="flex items-center justify-between">
@@ -728,7 +950,7 @@ function Step1Upload({
           {/* Stats */}
           <div className="bg-blue-50 rounded-lg p-3">
             <h4 className="text-sm font-medium text-blue-900 mb-2">Cleanup Stats</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-sm">
               <div className="text-center">
                 <div className="text-lg font-semibold text-blue-700">
                   {Math.round((1 - storyData.parsedResult.stats.cleanedLength / storyData.parsedResult.stats.originalLength) * 100)}%
@@ -737,9 +959,15 @@ function Step1Upload({
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-blue-700">
+                  {storyData.parsedResult.stats.chaptersDetected}
+                </div>
+                <div className="text-xs text-blue-600">Chapters</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
                   {storyData.parsedResult.stats.lineNumbersRemoved}
                 </div>
-                <div className="text-xs text-blue-600">Line Numbers</div>
+                <div className="text-xs text-blue-600">Line #s</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-blue-700">
@@ -749,11 +977,25 @@ function Step1Upload({
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-blue-700">
-                  {storyData.parsedResult.stats.chaptersDetected}
+                  {storyData.parsedResult.stats.footnoteIndicatorsRemoved}
                 </div>
-                <div className="text-xs text-blue-600">Chapters</div>
+                <div className="text-xs text-blue-600">Footnotes</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-700">
+                  {storyData.parsedResult.stats.asteriskDividersRemoved}
+                </div>
+                <div className="text-xs text-blue-600">Dividers</div>
               </div>
             </div>
+            {storyData.parsedResult.stats.backMatterRemoved && (
+              <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Back matter (license/boilerplate) removed
+              </div>
+            )}
           </div>
 
           {/* Chapters */}
@@ -907,7 +1149,8 @@ function Step2Detect({
     2: "A2 - Elementary",
     3: "B1 - Intermediate",
     4: "B2 - Upper Intermediate",
-    5: "C1/C2 - Advanced",
+    5: "C1 - Advanced",
+    6: "C2+ - Literary/Archaic",
   };
 
   return (
@@ -967,17 +1210,20 @@ function Step2Detect({
       <div className="border-t pt-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">Manual Override</label>
         <div className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((level) => (
+          {[1, 2, 3, 4, 5, 6].map((level) => (
             <button
               key={level}
               onClick={() => updateStoryData({ detectedLevel: level })}
               className={`px-4 py-2 rounded-lg border-2 transition-all ${
                 storyData.detectedLevel === level
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  ? level === 6
+                    ? "border-purple-500 bg-purple-50 text-purple-700"
+                    : "border-blue-500 bg-blue-50 text-blue-700"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
               L{level}
+              {level === 6 && <span className="text-xs ml-1">(C2+)</span>}
             </button>
           ))}
         </div>
@@ -1009,6 +1255,9 @@ function Step3Metadata({
   const [frontMatterText, setFrontMatterText] = useState("");
   const [isParsingAttribution, setIsParsingAttribution] = useState(false);
   const [parseError, setParseError] = useState("");
+
+  // Translation state
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // Generated options
   const [titleOptions, setTitleOptions] = useState<Array<{ en: string; es: string }>>([]);
@@ -1147,7 +1396,8 @@ function Step3Metadata({
   };
 
   const selectDescription = (option: { en: string; es: string }) => {
-    updateStoryData({ description: option });
+    // AI-generated descriptions are short hooks, so fill the hook field
+    updateStoryData({ hook: option });
     setDescriptionOptions([]);
   };
 
@@ -1255,6 +1505,60 @@ function Step3Metadata({
     }
   };
 
+  // Translate English title and summary to Spanish
+  const translateToSpanish = async () => {
+    const needsTitleTranslation = storyData.title.en && !storyData.title.es;
+    const needsSummaryTranslation = storyData.description.en && !storyData.description.es;
+
+    if (!needsTitleTranslation && !needsSummaryTranslation) {
+      return;
+    }
+
+    setIsTranslating(true);
+    setError("");
+
+    try {
+      const textsToTranslate: string[] = [];
+      if (needsTitleTranslation) textsToTranslate.push(storyData.title.en);
+      if (needsSummaryTranslation) textsToTranslate.push(storyData.description.en);
+
+      const response = await fetch("/api/admin/generate-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storyText: textsToTranslate.join("\n\n---SEPARATOR---\n\n"),
+          sourceLanguage: "en",
+          type: "translate-to-spanish",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to translate");
+      }
+
+      // Parse the translated texts
+      const translations = data.translatedTexts || [];
+      const updates: Partial<StoryData> = {};
+
+      let idx = 0;
+      if (needsTitleTranslation && translations[idx]) {
+        updates.title = { ...storyData.title, es: translations[idx] };
+        idx++;
+      }
+      if (needsSummaryTranslation && translations[idx]) {
+        updates.description = { ...storyData.description, es: translations[idx] };
+      }
+
+      updateStoryData(updates);
+    } catch (err) {
+      setError(`Failed to translate: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -1279,142 +1583,6 @@ function Step3Metadata({
         >
           {isAnyGenerating ? "Generating..." : "Generate All with AI"}
         </button>
-      </div>
-
-      {/* Title Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Title</h3>
-          <button
-            onClick={() => generateMetadata("title")}
-            disabled={isGenerating("title") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating("title") ? "Generating..." : "Generate with AI"}
-          </button>
-        </div>
-
-        {/* Title AI Prompt Input */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
-          <input
-            type="text"
-            value={titlePrompt}
-            onChange={(e) => setTitlePrompt(e.target.value)}
-            placeholder="e.g., Make it playful, use alliteration, keep it short..."
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-          />
-        </div>
-
-        {/* Title Options */}
-        {titleOptions.length > 0 && (
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
-            {titleOptions.map((option, idx) => (
-              <button
-                key={idx}
-                onClick={() => selectTitle(option)}
-                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
-              >
-                <div className="font-medium text-gray-900">{option.en}</div>
-                <div className="text-sm text-gray-500">{option.es}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Manual Title Inputs */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">English</label>
-            <input
-              type="text"
-              value={storyData.title.en}
-              onChange={(e) => updateStoryData({ title: { ...storyData.title, en: e.target.value } })}
-              placeholder="The Story Title"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Spanish</label>
-            <input
-              type="text"
-              value={storyData.title.es}
-              onChange={(e) => updateStoryData({ title: { ...storyData.title, es: e.target.value } })}
-              placeholder="El Título"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Description Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Description</h3>
-          <button
-            onClick={() => generateMetadata("description")}
-            disabled={isGenerating("description") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating("description") ? "Generating..." : "Generate with AI"}
-          </button>
-        </div>
-
-        {/* Description AI Prompt Input */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
-          <input
-            type="text"
-            value={descriptionPrompt}
-            onChange={(e) => setDescriptionPrompt(e.target.value)}
-            placeholder="e.g., Focus on the emotional journey, keep it mysterious, mention the setting..."
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-          />
-        </div>
-
-        {/* Description Options */}
-        {descriptionOptions.length > 0 && (
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
-            {descriptionOptions.map((option, idx) => (
-              <button
-                key={idx}
-                onClick={() => selectDescription(option)}
-                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
-              >
-                <div className="text-gray-900 text-sm">{option.en}</div>
-                <div className="text-gray-500 text-sm mt-1">{option.es}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Manual Description Inputs */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">English</label>
-            <textarea
-              value={storyData.description.en}
-              onChange={(e) =>
-                updateStoryData({ description: { ...storyData.description, en: e.target.value } })
-              }
-              placeholder="A brief description..."
-              className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Spanish</label>
-            <textarea
-              value={storyData.description.es}
-              onChange={(e) =>
-                updateStoryData({ description: { ...storyData.description, es: e.target.value } })
-              }
-              placeholder="Una breve descripción..."
-              className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-            />
-          </div>
-        </div>
       </div>
 
       {/* Thumbnail Section */}
@@ -1639,62 +1807,9 @@ function Step3Metadata({
         </p>
       </div>
 
-      {/* Story Type & Origin Section */}
+      {/* Story Classification Section */}
       <div className="space-y-4 border-t pt-6">
         <h3 className="font-medium text-gray-900">Story Classification</h3>
-
-        {/* AI Attribution Parser */}
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
-              <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info) and let AI extract the metadata</p>
-            </div>
-            <button
-              type="button"
-              onClick={parseAttributionWithAI}
-              disabled={isParsingAttribution || !frontMatterText.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isParsingAttribution ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Parsing...
-                </>
-              ) : (
-                <>
-                  <span>✨</span>
-                  Parse with AI
-                </>
-              )}
-            </button>
-          </div>
-          <textarea
-            value={frontMatterText}
-            onChange={(e) => {
-              setFrontMatterText(e.target.value);
-              setParseError("");
-            }}
-            placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)...
-
-Example:
-BEOWULF
-Translated by Francis B. Gummere (1855-1919)
-The Harvard Classics, Vol. 49
-P.F. Collier & Son, New York, 1910
-This work is in the public domain..."
-            rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
-            className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
-          />
-          {parseError && (
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
-              {parseError}
-            </div>
-          )}
-        </div>
 
         {/* Story Type Dropdown */}
         <div>
@@ -1712,7 +1827,68 @@ This work is in the public domain..."
           </select>
         </div>
 
-        {/* Is Original Toggle */}
+        {/* Target Audience */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-2">Target Audience</label>
+          <div className="flex gap-2">
+            {(["all", "children", "teen", "adult"] as const).map((audience) => (
+              <button
+                key={audience}
+                type="button"
+                onClick={() => updateStoryData({ targetAudience: audience })}
+                className={`px-4 py-2 rounded-lg border-2 text-sm capitalize transition-all ${
+                  storyData.targetAudience === audience
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-200 hover:border-gray-300 text-gray-600"
+                }`}
+              >
+                {audience === "all" ? "All Ages" : audience}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tags Multi-Select */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-2">
+            Tags <span className="text-gray-400">(select all that apply)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {ALL_STORY_TAGS.map((tag) => {
+              const isSelected = storyData.tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      updateStoryData({ tags: storyData.tags.filter((t) => t !== tag) });
+                    } else {
+                      updateStoryData({ tags: [...storyData.tags, tag] });
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isSelected
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {STORY_TAG_LABELS[tag].en}
+                </button>
+              );
+            })}
+          </div>
+          {storyData.tags.length > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Selected: {storyData.tags.map((t) => STORY_TAG_LABELS[t].en).join(", ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Source Toggle Section */}
+      <div className="space-y-4 border-t pt-6">
+        <h3 className="font-medium text-gray-900">Story Source</h3>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1724,7 +1900,7 @@ This work is in the public domain..."
               });
             }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              storyData.isOriginal ? "bg-green-600" : "bg-gray-300"
+              storyData.isOriginal ? "bg-green-600" : "bg-blue-600"
             }`}
           >
             <span
@@ -1734,9 +1910,331 @@ This work is in the public domain..."
             />
           </button>
           <span className="text-sm text-gray-700">
-            {storyData.isOriginal ? "Cuentana Original" : "External Source"}
+            {storyData.isOriginal ? "Cuentana Original" : "External Source (requires attribution)"}
           </span>
         </div>
+      </div>
+
+      {/* Title Section */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-gray-900">Title</h3>
+          <button
+            onClick={() => generateMetadata("title")}
+            disabled={isGenerating("title") || !storyData.rawText}
+            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGenerating("title") ? "Generating..." : "Generate with AI"}
+          </button>
+        </div>
+
+        {/* Title AI Prompt Input */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
+          <input
+            type="text"
+            value={titlePrompt}
+            onChange={(e) => setTitlePrompt(e.target.value)}
+            placeholder="e.g., Make it playful, use alliteration, keep it short..."
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+          />
+        </div>
+
+        {/* Title Options */}
+        {titleOptions.length > 0 && (
+          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
+            <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
+            {titleOptions.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => selectTitle(option)}
+                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
+              >
+                <div className="font-medium text-gray-900">{option.en}</div>
+                <div className="text-sm text-gray-500">{option.es}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Full Title (required) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Full Title (English) *</label>
+            <input
+              type="text"
+              value={storyData.title.en}
+              onChange={(e) => updateStoryData({ title: { ...storyData.title, en: e.target.value } })}
+              placeholder="e.g., Beowulf: An Anglo-Saxon Epic Poem"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Full Title (Spanish) *</label>
+            <input
+              type="text"
+              value={storyData.title.es}
+              onChange={(e) => updateStoryData({ title: { ...storyData.title, es: e.target.value } })}
+              placeholder="e.g., Beowulf: Un Poema Épico Anglosajón"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Translate to Spanish Button */}
+        {(storyData.title.en && !storyData.title.es) || (storyData.description.en && !storyData.description.es) ? (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex-1">
+              <p className="text-sm text-blue-800">
+                Missing Spanish translations for{" "}
+                {[
+                  storyData.title.en && !storyData.title.es && "title",
+                  storyData.description.en && !storyData.description.es && "summary",
+                ].filter(Boolean).join(" and ")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={translateToSpanish}
+              disabled={isTranslating}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isTranslating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Translating...
+                </>
+              ) : (
+                "Translate to Spanish"
+              )}
+            </button>
+          </div>
+        ) : null}
+
+        {/* Story Slug */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Story Slug *</label>
+          <input
+            type="text"
+            value={storyData.slug}
+            onChange={(e) =>
+              updateStoryData({
+                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"),
+              })
+            }
+            placeholder="beowulf"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">URL-friendly identifier (auto-generated from title, but can be edited)</p>
+        </div>
+
+        {/* Display Title (optional) */}
+        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Display Title (optional)</h4>
+              <p className="text-xs text-gray-500">Short version for cards and navigation. If empty, full title will be used.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Display Title (English)</label>
+              <input
+                type="text"
+                value={storyData.displayTitle?.en ?? ""}
+                onChange={(e) => updateStoryData({
+                  displayTitle: {
+                    en: e.target.value,
+                    es: storyData.displayTitle?.es ?? ""
+                  }
+                })}
+                placeholder="e.g., Beowulf"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Display Title (Spanish)</label>
+              <input
+                type="text"
+                value={storyData.displayTitle?.es ?? ""}
+                onChange={(e) => updateStoryData({
+                  displayTitle: {
+                    en: storyData.displayTitle?.en ?? "",
+                    es: e.target.value
+                  }
+                })}
+                placeholder="e.g., Beowulf"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Description Section */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-gray-900">Description</h3>
+          <button
+            onClick={() => generateMetadata("description")}
+            disabled={isGenerating("description") || !storyData.rawText}
+            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGenerating("description") ? "Generating..." : "Generate Hook with AI"}
+          </button>
+        </div>
+
+        {/* Description AI Prompt Input */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
+          <input
+            type="text"
+            value={descriptionPrompt}
+            onChange={(e) => setDescriptionPrompt(e.target.value)}
+            placeholder="e.g., Focus on the emotional journey, keep it mysterious, mention the setting..."
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+          />
+        </div>
+
+        {/* AI Hook Options */}
+        {descriptionOptions.length > 0 && (
+          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
+            <p className="text-xs text-purple-600 font-medium mb-2">Click to select a hook:</p>
+            {descriptionOptions.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => selectDescription(option)}
+                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
+              >
+                <div className="text-gray-900 text-sm">{option.en}</div>
+                <div className="text-gray-500 text-sm mt-1">{option.es}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Hook (required) - short teaser for cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Hook (English) *</label>
+            <input
+              type="text"
+              value={storyData.hook?.en ?? ""}
+              onChange={(e) => updateStoryData({
+                hook: {
+                  en: e.target.value,
+                  es: storyData.hook?.es ?? ""
+                }
+              })}
+              placeholder="1-2 sentence teaser for story cards"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Hook (Spanish) *</label>
+            <input
+              type="text"
+              value={storyData.hook?.es ?? ""}
+              onChange={(e) => updateStoryData({
+                hook: {
+                  en: storyData.hook?.en ?? "",
+                  es: e.target.value
+                }
+              })}
+              placeholder="Gancho de 1-2 oraciones para tarjetas"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Summary (optional) - full description */}
+        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Summary (optional)</h4>
+              <p className="text-xs text-gray-500">Full plot summary for the story detail page. Often found in front matter as "THE STORY".</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Summary (English)</label>
+              <textarea
+                value={storyData.description.en}
+                onChange={(e) =>
+                  updateStoryData({ description: { ...storyData.description, en: e.target.value } })
+                }
+                placeholder="Full description of the story..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Summary (Spanish)</label>
+              <textarea
+                value={storyData.description.es}
+                onChange={(e) =>
+                  updateStoryData({ description: { ...storyData.description, es: e.target.value } })
+                }
+                placeholder="Descripción completa de la historia..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Attribution Section (only if External Source) */}
+      {!storyData.isOriginal && (
+        <div className="space-y-4 border-t pt-6">
+          <h3 className="font-medium text-gray-900">Attribution Information</h3>
+
+          {/* AI Attribution Parser */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
+                <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info) and let AI extract the metadata</p>
+              </div>
+              <button
+                type="button"
+                onClick={parseAttributionWithAI}
+                disabled={isParsingAttribution || !frontMatterText.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isParsingAttribution ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Parsing...
+                  </>
+                ) : (
+                  <>
+                    <span>✨</span>
+                    Parse with AI
+                  </>
+                )}
+              </button>
+            </div>
+            <textarea
+              value={frontMatterText}
+              onChange={(e) => {
+                setFrontMatterText(e.target.value);
+                setParseError("");
+              }}
+              placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)..."
+              rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
+              className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
+            />
+            {parseError && (
+              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+                {parseError}
+              </div>
+            )}
+          </div>
 
         {/* Full Attribution Fields (only if not original) */}
         {!storyData.isOriginal && storyData.attribution && (
@@ -2189,154 +2687,14 @@ This work is in the public domain..."
             </div>
           </div>
         )}
-
-        {/* Target Audience */}
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">Target Audience</label>
-          <div className="flex gap-2">
-            {(["all", "children", "teen", "adult"] as const).map((audience) => (
-              <button
-                key={audience}
-                type="button"
-                onClick={() => updateStoryData({ targetAudience: audience })}
-                className={`px-4 py-2 rounded-lg border-2 text-sm capitalize transition-all ${
-                  storyData.targetAudience === audience
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-gray-200 hover:border-gray-300 text-gray-600"
-                }`}
-              >
-                {audience === "all" ? "All Ages" : audience}
-              </button>
-            ))}
-          </div>
         </div>
-
-        {/* Tags Multi-Select */}
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">
-            Tags <span className="text-gray-400">(select all that apply)</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {ALL_STORY_TAGS.map((tag) => {
-              const isSelected = storyData.tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => {
-                    if (isSelected) {
-                      updateStoryData({ tags: storyData.tags.filter((t) => t !== tag) });
-                    } else {
-                      updateStoryData({ tags: [...storyData.tags, tag] });
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    isSelected
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {STORY_TAG_LABELS[tag].en}
-                </button>
-              );
-            })}
-          </div>
-          {storyData.tags.length > 0 && (
-            <p className="text-xs text-gray-500 mt-2">
-              Selected: {storyData.tags.map((t) => STORY_TAG_LABELS[t].en).join(", ")}
-            </p>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// Step 4: Select Levels
-function Step4Levels({
-  storyData,
-  updateStoryData,
-}: {
-  storyData: StoryData;
-  updateStoryData: (updates: Partial<StoryData>) => void;
-}) {
-  const toggleLevel = (level: number) => {
-    const current = storyData.selectedLevels;
-    if (current.includes(level)) {
-      updateStoryData({ selectedLevels: current.filter((l) => l !== level) });
-    } else {
-      updateStoryData({ selectedLevels: [...current, level].sort() });
-    }
-  };
-
-  const levelInfo: Record<number, { cefr: string; desc: string }> = {
-    1: { cefr: "A1", desc: "Simple present, basic vocabulary (~500 words)" },
-    2: { cefr: "A2", desc: "Simple past, common expressions (~1000 words)" },
-    3: { cefr: "B1", desc: "Mixed tenses, idiomatic language (~2000 words)" },
-    4: { cefr: "B2", desc: "Complex grammar, nuanced vocabulary (~4000 words)" },
-    5: { cefr: "C1/C2", desc: "Literary language, native-like expression" },
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Select Levels to Generate</h2>
-        <p className="text-gray-500 text-sm">
-          Choose which CEFR levels to create. The AI will rewrite your story for each level.
-        </p>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={() => updateStoryData({ selectedLevels: [1, 2, 3, 4, 5] })}
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
-          Select All Levels
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {[1, 2, 3, 4, 5].map((level) => (
-          <button
-            key={level}
-            onClick={() => toggleLevel(level)}
-            className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
-              storyData.selectedLevels.includes(level)
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                  storyData.selectedLevels.includes(level)
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                L{level}
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-gray-900">
-                  Level {level} ({levelInfo[level].cefr})
-                </div>
-                <div className="text-sm text-gray-500">{levelInfo[level].desc}</div>
-              </div>
-            </div>
-            {storyData.detectedLevel === level && (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                Source Level
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Step 5: Generate Levels
-function Step5Generate({
+// Step 4: Generate Levels
+function Step4Generate({
   storyData,
   updateStoryData,
   isProcessing,
@@ -2348,10 +2706,142 @@ function Step5Generate({
   setIsProcessing: (v: boolean) => void;
 }) {
   const [currentGenerating, setCurrentGenerating] = useState<number | null>(null);
+  const [chapterProgress, setChapterProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError] = useState("");
+  const [comparisonLevel, setComparisonLevel] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState("");
+  const [splitPosition, setSplitPosition] = useState(50); // Percentage for left panel width
+
+  // Refs for draggable divider - uses CSS variables for smooth, lag-free dragging
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle divider drag - updates CSS variable directly for smooth performance
+  const handleDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleDividerMouseMove);
+    document.addEventListener("mouseup", handleDividerMouseUp);
+  };
+
+  const handleDividerMouseMove = (e: MouseEvent) => {
+    if (!isDragging.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const newPosition = ((e.clientX - rect.left) / rect.width) * 100;
+    // Clamp between 20% and 80%
+    const clampedPosition = Math.min(80, Math.max(20, newPosition));
+    // Update CSS variable directly - no React re-render, buttery smooth
+    containerRef.current.style.setProperty("--split-pos", `${clampedPosition}%`);
+  };
+
+  const handleDividerMouseUp = () => {
+    isDragging.current = false;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    // Sync final position to React state
+    if (containerRef.current) {
+      const finalPos = containerRef.current.style.getPropertyValue("--split-pos");
+      if (finalPos) {
+        setSplitPosition(parseFloat(finalPos));
+      }
+    }
+    document.removeEventListener("mousemove", handleDividerMouseMove);
+    document.removeEventListener("mouseup", handleDividerMouseUp);
+  };
+
+  // Helper to render text with line numbers (single panel mode)
+  const renderNumberedLines = (text: string, className?: string) => {
+    const lines = text.split("\n");
+    return (
+      <div className={`font-mono text-sm leading-relaxed ${className || ""}`}>
+        {lines.map((line, idx) => (
+          <div key={idx} className="flex">
+            <span className="select-none text-gray-400 text-right pr-4 shrink-0" style={{ width: "3.5rem" }}>
+              {idx + 1}
+            </span>
+            <span className="text-gray-700 whitespace-pre-wrap break-words flex-1">{line || "\u00A0"}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Helper to render side-by-side comparison with locked line numbers
+  const renderSideBySideLines = (leftText: string, rightText: string) => {
+    const leftLines = leftText.split("\n");
+    const rightLines = rightText.split("\n");
+    const maxLines = Math.max(leftLines.length, rightLines.length);
+
+    return (
+      <div className="font-mono text-sm leading-relaxed">
+        {Array.from({ length: maxLines }, (_, idx) => (
+          <div key={idx} className="flex border-b border-gray-100 hover:bg-gray-50">
+            {/* Line number */}
+            <div className="select-none text-gray-400 text-right pr-3 shrink-0 py-1 bg-gray-50 border-r border-gray-200" style={{ width: "3.5rem" }}>
+              {idx + 1}
+            </div>
+            {/* Left (original) text */}
+            <div
+              className="py-1 px-3 text-gray-700 whitespace-pre-wrap break-words border-r border-gray-200"
+              style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 1.75rem)` }}
+            >
+              {leftLines[idx] || "\u00A0"}
+            </div>
+            {/* Right (rewritten) text */}
+            <div
+              className="py-1 px-3 text-gray-700 whitespace-pre-wrap break-words flex-1"
+            >
+              {rightLines[idx] || "\u00A0"}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Open comparison panel for a level (-1 = original text review only)
+  const openComparison = (level: number) => {
+    if (level === -1) {
+      // Original text review mode
+      setComparisonLevel(-1);
+      setEditedText(storyData.rawText);
+      setIsEditing(false);
+    } else {
+      const content = storyData.levelContent[level];
+      if (content?.sourceText) {
+        setComparisonLevel(level);
+        setEditedText(content.sourceText);
+        setIsEditing(false);
+      }
+    }
+  };
+
+  // Save edited text
+  const saveEditedText = () => {
+    if (comparisonLevel === -1) {
+      // Saving edited original text
+      updateStoryData({ rawText: editedText });
+      setIsEditing(false);
+    } else if (comparisonLevel !== null) {
+      const current = storyData.levelContent[comparisonLevel];
+      updateStoryData({
+        levelContent: {
+          ...storyData.levelContent,
+          [comparisonLevel]: {
+            ...current,
+            sourceText: editedText,
+          },
+        },
+      });
+      setIsEditing(false);
+    }
+  };
 
   // Initialize mode for levels that don't have one yet
-  const getLevelMode = (level: number): "generate" | "use-original" => {
+  const getLevelMode = (level: number): "generate" | "use-original" | "omit" => {
     if (storyData.levelContent[level]?.mode) {
       return storyData.levelContent[level].mode;
     }
@@ -2359,18 +2849,42 @@ function Step5Generate({
     return level === storyData.detectedLevel ? "use-original" : "generate";
   };
 
-  const setLevelMode = (level: number, mode: "generate" | "use-original") => {
+  const setLevelMode = (level: number, mode: "generate" | "use-original" | "omit") => {
     const current = storyData.levelContent[level] || { sourceText: "", translatedText: "", status: "pending" as const, mode: "generate" as const };
+    const newStatus = mode === "omit" ? "omitted" as const : "pending" as const;
     updateStoryData({
       levelContent: {
         ...storyData.levelContent,
-        [level]: { ...current, mode, status: "pending" }, // Reset status when mode changes
+        [level]: { ...current, mode, status: newStatus },
       },
     });
   };
 
+  // Rewrite a single chunk of text
+  const rewriteChunk = async (text: string, targetLevel: number): Promise<string> => {
+    const response = await fetch("/api/admin/rewrite-level", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        sourceLanguage: storyData.sourceLanguage,
+        targetLevel,
+        sourceLevel: storyData.detectedLevel,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to generate");
+    }
+
+    return data.rewrittenText;
+  };
+
   const processLevel = async (level: number, accumulator: Record<number, LevelContent>) => {
     setCurrentGenerating(level);
+    setChapterProgress(null);
     setError("");
 
     const mode = getLevelMode(level);
@@ -2393,32 +2907,76 @@ function Step5Generate({
         return true;
       }
 
-      // For "generate" mode, call the AI to rewrite
-      const response = await fetch("/api/admin/rewrite-level", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: cleanText(storyData.rawText),
-          sourceLanguage: storyData.sourceLanguage,
-          targetLevel: level,
-          sourceLevel: storyData.detectedLevel,
-        }),
-      });
+      // Check if we have chapters from parsing
+      const chapters = storyData.parsedResult?.chapters;
 
-      const data = await response.json();
+      if (chapters && chapters.length > 1) {
+        // Process chapter by chapter for long texts
+        const rewrittenChapters: string[] = [];
+        setChapterProgress({ current: 0, total: chapters.length });
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate");
+        for (let i = 0; i < chapters.length; i++) {
+          setChapterProgress({ current: i + 1, total: chapters.length });
+
+          const chapter = chapters[i];
+          const chapterText = chapter.rawText;
+
+          // Skip empty chapters
+          if (!chapterText.trim()) {
+            rewrittenChapters.push("");
+            continue;
+          }
+
+          try {
+            const rewritten = await rewriteChunk(chapterText, level);
+            rewrittenChapters.push(rewritten);
+          } catch (chunkError) {
+            // If a chapter fails, add error marker but continue
+            console.error(`Failed to rewrite chapter ${i + 1}:`, chunkError);
+            rewrittenChapters.push(`[ERROR: Failed to rewrite chapter ${chapter.title || i + 1}]\n\n${chapterText}`);
+          }
+
+          // Small delay between chapters to avoid rate limiting
+          if (i < chapters.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        // Concatenate all rewritten chapters with proper chapter labels
+        const fullRewrittenText = rewrittenChapters
+          .map((text, idx) => {
+            const chapterTitle = chapters[idx]?.title || `Chapter ${idx + 1}`;
+            const chapterNumber = chapters[idx]?.number || idx + 1;
+            // Format: "--- Chapter X: Title ---" or just "--- Chapter X ---"
+            const divider = chapters[idx]?.title
+              ? `--- Chapter ${chapterNumber}: ${chapterTitle} ---`
+              : `--- Chapter ${chapterNumber} ---`;
+            return idx === 0 ? text : `${divider}\n\n${text}`;
+          })
+          .join("\n\n");
+
+        accumulator[level] = {
+          sourceText: cleanText(fullRewrittenText),
+          translatedText: "",
+          status: "done",
+          mode,
+        };
+        updateStoryData({ levelContent: { ...accumulator } });
+        setChapterProgress(null);
+        return true;
+      } else {
+        // No chapters or single chapter - process as single text
+        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText), level);
+
+        accumulator[level] = {
+          sourceText: cleanText(rewrittenText),
+          translatedText: "",
+          status: "done",
+          mode,
+        };
+        updateStoryData({ levelContent: { ...accumulator } });
+        return true;
       }
-
-      accumulator[level] = {
-        sourceText: cleanText(data.rewrittenText),
-        translatedText: "",
-        status: "done",
-        mode,
-      };
-      updateStoryData({ levelContent: { ...accumulator } });
-      return true;
     } catch (err) {
       accumulator[level] = { sourceText: "", translatedText: "", status: "error", mode };
       updateStoryData({ levelContent: { ...accumulator } });
@@ -2426,6 +2984,7 @@ function Step5Generate({
       return false;
     } finally {
       setCurrentGenerating(null);
+      setChapterProgress(null);
     }
   };
 
@@ -2438,42 +2997,71 @@ function Step5Generate({
     setIsProcessing(true);
     const accumulator = { ...storyData.levelContent };
 
-    for (const level of storyData.selectedLevels) {
-      if (accumulator[level]?.status !== "done") {
-        await processLevel(level, accumulator);
+    for (const level of [1, 2, 3, 4, 5]) {
+      const mode = getLevelMode(level);
+      // Skip omitted levels and already done levels
+      if (mode === "omit" || accumulator[level]?.status === "done") {
+        continue;
       }
+      await processLevel(level, accumulator);
     }
     setIsProcessing(false);
   };
 
-  const allDone = storyData.selectedLevels.every(
-    (l) => storyData.levelContent[l]?.status === "done"
-  );
+  // Check if all non-omitted levels are done
+  const allDone = [1, 2, 3, 4, 5].every((l) => {
+    const mode = getLevelMode(l);
+    return mode === "omit" || storyData.levelContent[l]?.status === "done";
+  });
+
+  // Check if at least one level is not omitted
+  const hasNonOmittedLevels = [1, 2, 3, 4, 5].some((l) => getLevelMode(l) !== "omit");
+
+  // Get original text for comparison (cleaned rawText)
+  const originalText = storyData.rawText;
+  const comparisonContent = comparisonLevel !== null ? storyData.levelContent[comparisonLevel] : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Generate Level Variations</h2>
-        <p className="text-gray-500 text-sm">
-          Choose whether to use the original text or have AI generate a CEFR-appropriate version for each level.
-        </p>
-      </div>
+    <>
+      {/* Main content - always full width */}
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Generate Level Variations</h2>
+            <p className="text-gray-500 text-sm">
+              Choose whether to use the original text or have AI generate a CEFR-appropriate version for each level.
+            </p>
+          </div>
+          <button
+            onClick={() => openComparison(-1)}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Review Original Text
+          </button>
+        </div>
 
       {error && (
         <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
       )}
 
       <div className="space-y-3">
-        {storyData.selectedLevels.map((level) => {
+        {[1, 2, 3, 4, 5].map((level) => {
           const content = storyData.levelContent[level];
           const isSource = level === storyData.detectedLevel;
           const mode = getLevelMode(level);
+          const isOmitted = mode === "omit";
 
           return (
             <div
               key={level}
-              className={`p-4 rounded-lg border-2 ${
-                content?.status === "done"
+              className={`p-4 rounded-lg border-2 transition-all ${
+                isOmitted
+                  ? "border-gray-200 bg-gray-50 opacity-60"
+                  : content?.status === "done"
                   ? "border-green-500 bg-green-50"
                   : content?.status === "generating"
                   ? "border-blue-500 bg-blue-50"
@@ -2486,22 +3074,31 @@ function Step5Generate({
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                      content?.status === "done"
+                      isOmitted
+                        ? "bg-gray-300 text-gray-500"
+                        : content?.status === "done"
                         ? "bg-green-600 text-white"
                         : content?.status === "generating"
                         ? "bg-blue-600 text-white animate-pulse"
                         : "bg-gray-200 text-gray-600"
                     }`}
                   >
-                    {content?.status === "done" ? "✓" : `L${level}`}
+                    {isOmitted ? "—" : content?.status === "done" ? "✓" : `L${level}`}
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">
+                    <div className={`font-medium ${isOmitted ? "text-gray-400" : "text-gray-900"}`}>
                       Level {level} {isSource && <span className="text-amber-600">(Source)</span>}
+                      {isOmitted && <span className="text-gray-400 ml-2">— Omitted</span>}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {content?.status === "generating"
-                        ? mode === "use-original" ? "Copying original..." : "Generating..."
+                      {isOmitted
+                        ? "This level will not be generated"
+                        : content?.status === "generating"
+                        ? mode === "use-original"
+                          ? "Copying original..."
+                          : chapterProgress
+                            ? `Generating chapter ${chapterProgress.current} of ${chapterProgress.total}...`
+                            : "Generating..."
                         : content?.status === "done"
                         ? `${content.sourceText.split("\n").filter((l) => l.trim()).length} lines • ${content.mode === "use-original" ? "Original text" : "AI generated"}`
                         : content?.status === "error"
@@ -2512,12 +3109,12 @@ function Step5Generate({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* Mode selector - only show for non-source levels that aren't done */}
-                  {!isSource && content?.status !== "done" && content?.status !== "generating" && (
+                  {/* Mode selector - show for levels that aren't done/generating */}
+                  {content?.status !== "done" && content?.status !== "generating" && (
                     <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
                       <button
                         onClick={() => setLevelMode(level, "generate")}
-                        className={`px-3 py-1.5 ${
+                        className={`w-20 py-1.5 text-center ${
                           mode === "generate"
                             ? "bg-blue-600 text-white"
                             : "bg-white text-gray-600 hover:bg-gray-50"
@@ -2527,7 +3124,7 @@ function Step5Generate({
                       </button>
                       <button
                         onClick={() => setLevelMode(level, "use-original")}
-                        className={`px-3 py-1.5 border-l border-gray-300 ${
+                        className={`w-24 py-1.5 text-center border-l border-gray-300 ${
                           mode === "use-original"
                             ? "bg-amber-600 text-white"
                             : "bg-white text-gray-600 hover:bg-gray-50"
@@ -2535,34 +3132,59 @@ function Step5Generate({
                       >
                         Use Original
                       </button>
+                      <button
+                        onClick={() => setLevelMode(level, "omit")}
+                        className={`w-14 py-1.5 text-center border-l border-gray-300 ${
+                          mode === "omit"
+                            ? "bg-gray-500 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        Omit
+                      </button>
                     </div>
                   )}
 
-                  {/* Process button */}
+                  {/* Process button - fixed width container to prevent layout shift */}
                   {content?.status !== "done" && content?.status !== "generating" && (
-                    <button
-                      onClick={() => processSingleLevel(level)}
-                      disabled={isProcessing}
-                      className={`px-4 py-2 text-white rounded-lg text-sm disabled:opacity-50 ${
-                        mode === "use-original"
-                          ? "bg-amber-600 hover:bg-amber-700"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      }`}
-                    >
-                      {mode === "use-original" ? "Copy" : "Generate"}
-                    </button>
+                    <div className="w-24">
+                      {!isOmitted && (
+                        <button
+                          onClick={() => processSingleLevel(level)}
+                          disabled={isProcessing}
+                          className={`w-full py-2 text-white rounded-lg text-sm disabled:opacity-50 ${
+                            mode === "use-original"
+                              ? "bg-amber-600 hover:bg-amber-700"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                        >
+                          {mode === "use-original" ? "Copy" : "Generate"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
 
               {content?.status === "done" && (
-                <details className="mt-3">
-                  <summary className="text-sm text-gray-600 cursor-pointer">Preview text</summary>
-                  <pre className="mt-2 text-xs bg-white p-3 rounded border max-h-40 overflow-auto whitespace-pre-wrap">
-                    {content.sourceText.slice(0, 500)}
-                    {content.sourceText.length > 500 && "..."}
-                  </pre>
-                </details>
+                <div className="mt-3 flex items-start gap-4">
+                  <details className="flex-1">
+                    <summary className="text-sm text-gray-600 cursor-pointer">Preview text</summary>
+                    <pre className="mt-2 text-xs bg-white p-3 rounded border max-h-40 overflow-auto whitespace-pre-wrap">
+                      {content.sourceText.slice(0, 500)}
+                      {content.sourceText.length > 500 && "..."}
+                    </pre>
+                  </details>
+                  <button
+                    onClick={() => openComparison(level)}
+                    className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    View Full Text
+                  </button>
+                </div>
               )}
             </div>
           );
@@ -2576,16 +3198,209 @@ function Step5Generate({
             disabled={isProcessing}
             className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
           >
-            {isProcessing ? "Processing..." : "Process All Levels"}
+            {isProcessing
+              ? chapterProgress
+                ? `Processing chapter ${chapterProgress.current}/${chapterProgress.total}...`
+                : "Processing..."
+              : "Process All Levels"}
           </button>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Full-screen Modal Overlay for Text Comparison/Review */}
+      {comparisonLevel !== null && (comparisonLevel === -1 || comparisonContent) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setComparisonLevel(null)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative w-[95vw] h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className={`${comparisonLevel === -1 ? "bg-gradient-to-r from-amber-600 to-orange-600" : "bg-gradient-to-r from-indigo-600 to-purple-600"} text-white px-6 py-4 flex items-center justify-between shrink-0`}>
+              <div className="flex items-center gap-4">
+                <span className="text-lg font-semibold">
+                  {comparisonLevel === -1 ? "Review Original Text" : `Level ${comparisonLevel} Comparison`}
+                </span>
+                <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
+                  {comparisonLevel === -1
+                    ? `${originalText.split("\n").filter(l => l.trim()).length} lines • ${storyData.parsedResult?.chapters.length || 1} chapters`
+                    : `${originalText.split("\n").filter(l => l.trim()).length} → ${comparisonContent!.sourceText.split("\n").filter(l => l.trim()).length} lines`
+                  }
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={saveEditedText}
+                      className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditedText(comparisonLevel === -1 ? originalText : comparisonContent!.sourceText);
+                        setIsEditing(false);
+                      }}
+                      className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
+                  >
+                    Edit Text
+                  </button>
+                )}
+                <button
+                  onClick={() => setComparisonLevel(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  title="Close (Esc)"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {comparisonLevel === -1 ? (
+              /* Original text review mode - full width with chapter list */
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="bg-amber-50 px-6 py-3 text-sm font-medium text-amber-700 border-b flex items-center justify-between shrink-0">
+                  <span>Original Text (L{storyData.detectedLevel}) - Review before generation</span>
+                  <span className="text-amber-500">{(isEditing ? editedText : originalText).split("\n").filter(l => l.trim()).length} lines</span>
+                </div>
+                <div className="flex-1 overflow-auto p-6">
+                  {isEditing ? (
+                    <textarea
+                      value={editedText}
+                      onChange={(e) => setEditedText(e.target.value)}
+                      className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <div className="grid gap-3">
+                      {storyData.parsedResult?.chapters.map((chapter, idx) => (
+                        <details key={idx} className="border border-amber-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                          <summary className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 cursor-pointer hover:from-amber-100 hover:to-orange-100 transition-colors flex items-center justify-between">
+                            <span className="text-sm font-semibold text-amber-800">
+                              Chapter {chapter.number}: {chapter.title}
+                            </span>
+                            <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">
+                              {chapter.rawText.split("\n").filter(l => l.trim()).length} lines • {chapter.rawText.length.toLocaleString()} chars
+                            </span>
+                          </summary>
+                          <div className="p-4 bg-white border-t border-amber-100 max-h-[50vh] overflow-auto">
+                            <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">
+                              {chapter.rawText}
+                            </pre>
+                          </div>
+                        </details>
+                      )) || (
+                        <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">
+                          {originalText}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {!isEditing && (
+                  <div className="bg-amber-50 px-6 py-3 text-sm text-amber-600 border-t shrink-0 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Review the text above. Look for non-story content like license text, advertisements, or metadata that should be removed before generation.
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Single-scroll side-by-side view with locked line numbers */
+              <div
+                ref={containerRef}
+                className="flex-1 flex flex-col overflow-hidden"
+                style={{ "--split-pos": `${splitPosition}%` } as React.CSSProperties}
+              >
+                {/* Header row */}
+                <div className="flex shrink-0 border-b border-gray-300">
+                  {/* Line number header */}
+                  <div className="bg-gray-100 text-gray-500 text-xs font-medium py-2 text-center border-r border-gray-200" style={{ width: "3.5rem" }}>
+                    #
+                  </div>
+                  {/* Original header */}
+                  <div
+                    className="bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 border-r border-gray-200 flex items-center justify-between"
+                    style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 1.75rem)` }}
+                  >
+                    <span>Original (L{storyData.detectedLevel})</span>
+                    <span className="text-gray-400 text-xs">{originalText.split("\n").length} lines</span>
+                  </div>
+                  {/* Draggable divider in header */}
+                  <div
+                    onMouseDown={handleDividerMouseDown}
+                    className="w-2 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex items-center justify-center shrink-0 transition-colors"
+                  />
+                  {/* Rewritten header */}
+                  <div className="bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 flex-1 flex items-center justify-between">
+                    <span>Rewritten (L{comparisonLevel})</span>
+                    <span className="text-indigo-400 text-xs">{(isEditing ? editedText : comparisonContent!.sourceText).split("\n").length} lines</span>
+                  </div>
+                </div>
+
+                {/* Scrollable content - single scroll container */}
+                {isEditing ? (
+                  <div className="flex-1 flex overflow-hidden">
+                    <div className="flex-1 overflow-auto p-4">
+                      <textarea
+                        value={editedText}
+                        onChange={(e) => setEditedText(e.target.value)}
+                        className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded p-3 focus:ring-2 focus:ring-blue-500 resize-none"
+                        spellCheck={false}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-auto">
+                    {renderSideBySideLines(originalText, comparisonContent!.sourceText)}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer with feature indicators - only show for comparison mode */}
+            {comparisonLevel !== -1 && (
+              <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500 border-t flex items-center justify-center gap-4 shrink-0">
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                  Line-locked comparison
+                </span>
+                <span className="text-gray-300">|</span>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  Drag header divider to resize
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-// Step 6: Translate
-function Step6Translate({
+// Step 5: Translate
+function Step5Translate({
   storyData,
   updateStoryData,
   isProcessing,
@@ -2599,9 +3414,11 @@ function Step6Translate({
   const [currentTranslating, setCurrentTranslating] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  // Only show levels that have been generated in Step 5
-  const generatedLevels = storyData.selectedLevels.filter(
-    (l) => storyData.levelContent[l]?.status === "done" && storyData.levelContent[l]?.sourceText?.length > 0
+  // Only show levels that have been generated in Step 4 (not omitted)
+  const generatedLevels = [1, 2, 3, 4, 5].filter(
+    (l) => storyData.levelContent[l]?.status === "done" &&
+           storyData.levelContent[l]?.mode !== "omit" &&
+           storyData.levelContent[l]?.sourceText?.length > 0
   );
 
   const translateLevel = async (level: number, accumulator: Record<number, LevelContent>) => {
@@ -2765,8 +3582,8 @@ function Step6Translate({
   );
 }
 
-// Step 7: Paginate
-function Step7Paginate({
+// Step 6: Paginate
+function Step6Paginate({
   storyData,
   updateStoryData,
 }: {
@@ -2846,7 +3663,7 @@ function Step7Paginate({
           <li>• Total lines: {totalLines - pageMarkerCount} (excluding markers)</li>
           <li>• {hasPageMarkers ? `PAGE markers: ${pageMarkerCount}` : `Lines per page: ${storyData.linesPerPage}`}</li>
           <li>• {hasPageMarkers ? "Pages" : "Estimated pages"}: {estimatedPages}</li>
-          <li>• Levels to generate: {storyData.selectedLevels.map((l) => `L${l}`).join(", ")}</li>
+          <li>• Generated levels: {[1, 2, 3, 4, 5].filter(l => storyData.levelContent[l]?.status === "done" && storyData.levelContent[l]?.mode !== "omit").map((l) => `L${l}`).join(", ") || "None"}</li>
         </ul>
       </div>
 
@@ -2893,8 +3710,8 @@ function Step7Paginate({
   );
 }
 
-// Step 8: Preview & Save
-function Step8Preview({
+// Step 7: Preview & Save
+function Step7Preview({
   storyData,
   isProcessing,
   setIsProcessing,
@@ -2907,15 +3724,16 @@ function Step8Preview({
   saveResult: { success: boolean; message: string; warnings?: string[] } | null;
   setSaveResult: (r: { success: boolean; message: string; warnings?: string[] } | null) => void;
 }) {
-  // Only include levels that are fully generated and translated
-  const completedLevels = storyData.selectedLevels.filter(
+  // Only include levels that are fully generated and translated (not omitted)
+  const completedLevels = [1, 2, 3, 4, 5].filter(
     (l) =>
       storyData.levelContent[l]?.status === "done" &&
+      storyData.levelContent[l]?.mode !== "omit" &&
       storyData.levelContent[l]?.sourceText?.length > 0 &&
       storyData.levelContent[l]?.translatedText?.length > 0
   );
 
-  const [previewLevel, setPreviewLevel] = useState(completedLevels[0] || storyData.selectedLevels[0]);
+  const [previewLevel, setPreviewLevel] = useState(completedLevels[0] || 1);
 
   const saveStory = async () => {
     setIsProcessing(true);

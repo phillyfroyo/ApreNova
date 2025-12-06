@@ -18,16 +18,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (frontMatterText.length > 20000) {
-      return NextResponse.json(
-        { error: "Text too long. Please paste only the relevant front matter (max 20,000 characters)." },
-        { status: 400 }
-      );
-    }
+    // Truncate to first 15000 characters - enough to capture attribution metadata
+    // plus any summary/synopsis sections that often come after preface material
+    const truncatedText = frontMatterText.slice(0, 15000);
+    const wasTruncated = frontMatterText.length > 15000;
 
     const systemPrompt = `You are an expert at extracting bibliographic and attribution metadata from book front matter, title pages, and copyright notices.
 
-Given text from the front matter of a book (which may include title pages, translator notes, publication info, copyright notices, etc.), extract all available attribution information and return it as a JSON object.
+Given text from the front matter of a book (which may include title pages, translator notes, publication info, copyright notices, story summaries, etc.), extract all available attribution information and return it as a JSON object.
 
 Return ONLY valid JSON matching this exact structure (omit fields that cannot be determined from the text):
 
@@ -41,7 +39,10 @@ Return ONLY valid JSON matching this exact structure (omit fields that cannot be
   "yearWritten": "string - when the work was composed, can be approximate like 'c. 700-1000 CE'",
   "yearFirstPublished": "string - year of first publication as a number string",
 
-  "sourceTitle": "string - title of the source edition/collection",
+  "sourceTitle": "string - full title of the source edition/collection",
+  "sourceTitleEs": "string - Spanish translation of the title",
+  "displayTitle": "string - short display title for cards/navigation (e.g., 'Beowulf' from 'Beowulf: An Anglo-Saxon Epic Poem')",
+  "displayTitleEs": "string - Spanish version of the short display title",
   "sourcePublisher": "string - publisher name",
   "sourcePublicationYear": "string - publication year as number string",
   "sourceEditor": "string - editor name if applicable",
@@ -62,7 +63,9 @@ Return ONLY valid JSON matching this exact structure (omit fields that cannot be
 
   "originalWorkStatus": "string - one of: 'public-domain', 'licensed', 'original'",
   "provenanceNote": "string - where the text came from, e.g., 'Text from Project Gutenberg'",
-  "provenanceUrl": "string - URL of the source"
+  "provenanceUrl": "string - URL of the source",
+
+  "summary": "string - if there is a story synopsis, plot summary, or 'THE STORY' section, include the full text here"
 }
 
 Important guidelines:
@@ -71,16 +74,19 @@ Important guidelines:
 - If the work is clearly in public domain (published before 1928 in the US, or author died 70+ years ago), set sourceIsPublicDomain to true
 - For ancient/medieval works, authorIsUnknown or authorIsCollective are often true
 - The genres field should contain literary genres like "epic poetry", "folk tale", "fable", etc.
+- For displayTitle: if the title has a subtitle (colon, dash), extract just the main title. If it's already short, use the same as sourceTitle
+- For Spanish translations (sourceTitleEs, displayTitleEs): provide accurate Spanish translations
+- For summary: look for sections labeled "THE STORY", "SUMMARY", "SYNOPSIS", "ARGUMENT", or similar. Include the full text if found.
 - Return ONLY the JSON object, no additional text or markdown`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Extract attribution metadata from this front matter text:\n\n${frontMatterText}` },
+        { role: "user", content: `Extract attribution metadata from this front matter text${wasTruncated ? " (truncated)" : ""}:\n\n${truncatedText}` },
       ],
       temperature: 0.1,
-      max_tokens: 2000,
+      max_tokens: 4000, // Increased to handle full summaries
     });
 
     const content = response.choices[0]?.message?.content;
@@ -136,7 +142,15 @@ Important guidelines:
       provenanceUrl: parsed.provenanceUrl,
     };
 
-    return NextResponse.json({ attribution });
+    // Extract additional metadata fields for auto-fill
+    const metadata = {
+      sourceTitleEs: (parsed as Record<string, unknown>).sourceTitleEs as string | undefined,
+      displayTitle: (parsed as Record<string, unknown>).displayTitle as string | undefined,
+      displayTitleEs: (parsed as Record<string, unknown>).displayTitleEs as string | undefined,
+      summary: (parsed as Record<string, unknown>).summary as string | undefined,
+    };
+
+    return NextResponse.json({ attribution, metadata });
   } catch (error) {
     console.error("Error parsing attribution:", error);
     return NextResponse.json(

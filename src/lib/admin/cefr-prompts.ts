@@ -72,11 +72,25 @@ export const CEFR_LEVELS: Record<number, CEFRLevel> = {
   },
   5: {
     level: 5,
-    cefr: "C1/C2",
+    cefr: "C1",
     name: "Advanced",
     sentenceLength: "No limit",
-    vocabulary: "10,000+ words",
-    forbidden: [], // No restrictions
+    vocabulary: "10,000+ common modern words",
+    forbidden: [
+      "NO archaic vocabulary (thane, hither, wherefore, etc.)",
+      "NO obsolete grammar (thee, thou, hast, doth, etc.)",
+      "NO literary/poetic inversions",
+      "NO specialized academic jargon",
+      "Use modern equivalents for dated expressions",
+    ],
+  },
+  6: {
+    level: 6,
+    cefr: "C2+",
+    name: "Literary/Archaic",
+    sentenceLength: "No limit",
+    vocabulary: "Unrestricted (including archaic, literary, specialized)",
+    forbidden: [], // No restrictions - original literary texts
   },
 };
 
@@ -101,15 +115,18 @@ RULES:
 - Sentences: ${level.sentenceLength}
 - Vocabulary: ${level.vocabulary}${forbiddenRules}
 
-Preserve the exact meaning, plot, and character names.
-Keep the same number of lines (±2).
+STRUCTURE RULES:
+- Preserve the exact meaning, plot, and character names
+- KEEP EVERY LINE BREAK - do not merge lines or paragraphs
+- Each input line → one output line (reworded at the target level)
+- Empty lines must remain empty lines
 
-TEXT:
+TEXT (${sourceText.split("\n").length} lines):
 """
 ${sourceText}
 """
 
-Return ONLY the rewritten text.`;
+Return ONLY the rewritten text with the same line structure.`;
 }
 
 /**
@@ -156,11 +173,18 @@ export function generateDetectionPrompt(
   return `Analyze this ${langName} text and determine its CEFR level.
 
 LEVELS:
-- A1: 3-7 word sentences, ~500 words, present tense only
-- A2: 6-10 word sentences, ~1000 words, simple past/present
-- B1: 8-15 word sentences, ~2500 words, present perfect, basic conditionals
-- B2: 10-20 word sentences, ~5000 words, all tenses, second conditional
-- C1/C2: No limits, 10000+ words, full native expression
+- A1 (Level 1): 3-7 word sentences, ~500 words, present tense only
+- A2 (Level 2): 6-10 word sentences, ~1000 words, simple past/present
+- B1 (Level 3): 8-15 word sentences, ~2500 words, present perfect, basic conditionals
+- B2 (Level 4): 10-20 word sentences, ~5000 words, all tenses, second conditional
+- C1 (Level 5): No limits, 10000+ words, full modern native expression
+- C2+ (Level 6): Literary/archaic texts with obsolete vocabulary, archaic grammar (thee/thou/hath), poetic inversions, or specialized historical language that exceeds modern native usage
+
+IMPORTANT: Use Level 6 for:
+- Texts with archaic vocabulary (thane, mead-hall, hither, wherefore)
+- Old/Middle English translations or adaptations
+- Classical literature with preserved period language
+- Poetry with inverted syntax or obsolete forms
 
 TEXT:
 """
@@ -169,8 +193,8 @@ ${text}
 
 Return ONLY JSON:
 {
-  "level": 1-5,
-  "cefr": "A1/A2/B1/B2/C1",
+  "level": 1-6,
+  "cefr": "A1/A2/B1/B2/C1/C2+",
   "confidence": "high/medium/low",
   "reasoning": "brief explanation"
 }`;
