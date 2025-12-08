@@ -465,6 +465,99 @@ export async function PATCH(
   }
 }
 
+/**
+ * Find and remove an object entry from content by matching a key pattern.
+ * Properly handles nested braces unlike simple regex.
+ *
+ * @param content - The file content to search
+ * @param keyPattern - Pattern to find the start of the entry (e.g., 'slug: "test"' or '"test":')
+ * @param braceBeforeKey - If true, looks for brace before key (like in arrays). If false, looks for brace after key (like in objects with string keys).
+ * @returns Updated content with the entry removed, or null if not found
+ */
+function removeObjectEntry(content: string, keyPattern: string, braceBeforeKey: boolean = true): string | null {
+  const keyIndex = content.indexOf(keyPattern);
+  if (keyIndex === -1) return null;
+
+  let startIndex: number;
+  let endIndex: number;
+
+  if (braceBeforeKey) {
+    // For patterns like { slug: "test", ... } where brace is BEFORE the key
+    // Find the opening brace before the key
+    let braceCount = 0;
+    startIndex = keyIndex;
+    for (let i = keyIndex; i >= 0; i--) {
+      if (content[i] === '}') braceCount++;
+      if (content[i] === '{') {
+        if (braceCount === 0) {
+          startIndex = i;
+          break;
+        }
+        braceCount--;
+      }
+    }
+
+    // Find the closing brace after the key (accounting for nested braces)
+    braceCount = 1; // We start after the opening brace
+    endIndex = startIndex + 1;
+    for (let i = startIndex + 1; i < content.length; i++) {
+      if (content[i] === '{') braceCount++;
+      if (content[i] === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          endIndex = i + 1;
+          break;
+        }
+      }
+    }
+  } else {
+    // For patterns like "test": { ... } where brace is AFTER the key
+    // Start from the key itself
+    startIndex = keyIndex;
+
+    // Find the opening brace AFTER the key
+    let braceStart = content.indexOf('{', keyIndex);
+    if (braceStart === -1) return null;
+
+    // Find the closing brace (accounting for nested braces)
+    let braceCount = 1;
+    endIndex = braceStart + 1;
+    for (let i = braceStart + 1; i < content.length; i++) {
+      if (content[i] === '{') braceCount++;
+      if (content[i] === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          endIndex = i + 1;
+          break;
+        }
+      }
+    }
+  }
+
+  // Extend to include trailing comma and whitespace
+  let trailingEnd = endIndex;
+  const trailingMatch = content.slice(endIndex).match(/^,?\s*/);
+  if (trailingMatch) {
+    trailingEnd = endIndex + trailingMatch[0].length;
+  }
+
+  // Extend to include leading whitespace (but preserve at least one newline for formatting)
+  let leadingStart = startIndex;
+  for (let i = startIndex - 1; i >= 0; i--) {
+    if (content[i] === ' ' || content[i] === '\t') {
+      leadingStart = i;
+    } else if (content[i] === '\n') {
+      leadingStart = i;
+      break;
+    } else {
+      break;
+    }
+  }
+
+  // Remove the entry
+  return content.slice(0, leadingStart) + content.slice(trailingEnd);
+}
+
 // DELETE - Delete story and all its files
 export async function DELETE(
   req: NextRequest,
@@ -484,88 +577,98 @@ export async function DELETE(
       errors.push(`Content directory not found: src/content/${slug}`);
     }
 
-    // 2. Remove from STORY_METADATA in stories.ts
+    // 2. Remove from STORY_METADATA in stories.ts (handles nested braces properly)
     const storiesPath = path.join(process.cwd(), "src/lib/stories.ts");
     const storiesContent = await fs.readFile(storiesPath, "utf-8");
 
-    // Match the story entry in STORY_METADATA array
-    // Handle both direct slug and slugify() patterns
-    const directSlugPattern = new RegExp(
-      `\\s*\\{[^}]*slug:\\s*"${slug}"[^}]*\\},?\\n?`,
-      "g"
-    );
-    const slugifyPattern = new RegExp(
-      `\\s*\\{[^}]*slug:\\s*slugify\\([^)]+\\)[^}]*\\},?\\n?`,
-      "g"
-    );
+    const updatedStoriesContent = removeObjectEntry(storiesContent, `slug: "${slug}"`);
 
-    let updatedStoriesContent = storiesContent.replace(directSlugPattern, "\n");
-
-    // Check if anything was removed
-    if (updatedStoriesContent !== storiesContent) {
+    if (updatedStoriesContent && updatedStoriesContent !== storiesContent) {
       await fs.writeFile(storiesPath, updatedStoriesContent);
       results.push("Removed from STORY_METADATA in stories.ts");
     } else {
-      errors.push("Story not found in STORY_METADATA (may use slugify())");
+      errors.push("Story not found in STORY_METADATA");
     }
 
-    // 3. Remove from en.ts storiesMetadata
+    // 3. Remove from en.ts storiesMetadata (handles nested braces properly)
     const enPath = path.join(process.cwd(), "src/content/ui/en.ts");
     const enContent = await fs.readFile(enPath, "utf-8");
-    const enStoryRegex = new RegExp(`\\s*"${slug}":\\s*\\{[^}]*\\},?\\n?`, "g");
-    const updatedEnContent = enContent.replace(enStoryRegex, "\n");
+    const updatedEnContent = removeObjectEntry(enContent, `"${slug}":`, false);
 
-    if (updatedEnContent !== enContent) {
+    if (updatedEnContent && updatedEnContent !== enContent) {
       await fs.writeFile(enPath, updatedEnContent);
       results.push("Removed from en.ts storiesMetadata");
     }
 
-    // 4. Remove from es.ts storiesMetadata
+    // 4. Remove from es.ts storiesMetadata (handles nested braces properly)
     const esPath = path.join(process.cwd(), "src/content/ui/es.ts");
     const esContent = await fs.readFile(esPath, "utf-8");
-    const esStoryRegex = new RegExp(`\\s*"${slug}":\\s*\\{[^}]*\\},?\\n?`, "g");
-    const updatedEsContent = esContent.replace(esStoryRegex, "\n");
+    const updatedEsContent = removeObjectEntry(esContent, `"${slug}":`, false);
 
-    if (updatedEsContent !== esContent) {
+    if (updatedEsContent && updatedEsContent !== esContent) {
       await fs.writeFile(esPath, updatedEsContent);
       results.push("Removed from es.ts storiesMetadata");
     }
 
-    // 5. Try to delete thumbnail (optional, may not exist)
+    // 5. Try to delete thumbnail (check for random suffix pattern)
     const imageExtensions = ["png", "jpg", "jpeg", "webp"];
-    for (const ext of imageExtensions) {
-      const thumbPath = path.join(process.cwd(), `public/images/${slug}-thumbnail.${ext}`);
-      try {
-        await fs.unlink(thumbPath);
-        results.push(`Deleted thumbnail: ${slug}-thumbnail.${ext}`);
-        break;
-      } catch {
-        // File doesn't exist with this extension, try next
+    const publicImagesDir = path.join(process.cwd(), "public/images");
+    try {
+      const files = await fs.readdir(publicImagesDir);
+      // Match both old format (slug-thumbnail.ext) and new format (slug-thumbnail-XXXX.ext)
+      const thumbnailPattern = new RegExp(`^${slug}-thumbnail(-\\d+)?\\.(png|jpg|jpeg|webp)$`);
+      for (const file of files) {
+        if (thumbnailPattern.test(file)) {
+          await fs.unlink(path.join(publicImagesDir, file));
+          results.push(`Deleted thumbnail: ${file}`);
+        }
+      }
+    } catch {
+      // Directory read failed, try direct paths as fallback
+      for (const ext of imageExtensions) {
+        const thumbPath = path.join(process.cwd(), `public/images/${slug}-thumbnail.${ext}`);
+        try {
+          await fs.unlink(thumbPath);
+          results.push(`Deleted thumbnail: ${slug}-thumbnail.${ext}`);
+          break;
+        } catch {
+          // File doesn't exist with this extension, try next
+        }
       }
     }
 
-    // 6. Try to delete background image (optional, may not exist)
-    for (const ext of imageExtensions) {
-      const bgPath = path.join(process.cwd(), `public/images/${slug}-background.${ext}`);
-      try {
-        await fs.unlink(bgPath);
-        results.push(`Deleted background: ${slug}-background.${ext}`);
-        break;
-      } catch {
-        // File doesn't exist with this extension, try next
+    // 6. Try to delete background image (check for random suffix pattern)
+    try {
+      const files = await fs.readdir(publicImagesDir);
+      // Match both old format and new format with random suffix
+      const backgroundPattern = new RegExp(`^${slug}-background(-\\d+)?\\.(png|jpg|jpeg|webp)$`);
+      for (const file of files) {
+        if (backgroundPattern.test(file)) {
+          await fs.unlink(path.join(publicImagesDir, file));
+          results.push(`Deleted background: ${file}`);
+        }
+      }
+    } catch {
+      // Directory read failed, try direct paths as fallback
+      for (const ext of imageExtensions) {
+        const bgPath = path.join(process.cwd(), `public/images/${slug}-background.${ext}`);
+        try {
+          await fs.unlink(bgPath);
+          results.push(`Deleted background: ${slug}-background.${ext}`);
+          break;
+        } catch {
+          // File doesn't exist with this extension, try next
+        }
       }
     }
 
-    // 7. Remove theme entry from storyThemes.ts
+    // 7. Remove theme entry from storyThemes.ts (handles nested braces properly)
     try {
       const themesPath = path.join(process.cwd(), "src/components/storyThemes.ts");
       const themesContent = await fs.readFile(themesPath, "utf-8");
+      const updatedThemesContent = removeObjectEntry(themesContent, `"${slug}":`, false);
 
-      // Match and remove the theme entry for this slug
-      const themeEntryRegex = new RegExp(`\\s*"${slug}":\\s*\\{[^}]*\\},?\\n?`, "g");
-      const updatedThemesContent = themesContent.replace(themeEntryRegex, "\n");
-
-      if (updatedThemesContent !== themesContent) {
+      if (updatedThemesContent && updatedThemesContent !== themesContent) {
         await fs.writeFile(themesPath, updatedThemesContent);
         results.push("Removed theme entry from storyThemes.ts");
       }

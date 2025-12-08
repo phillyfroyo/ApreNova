@@ -183,29 +183,22 @@ aiTutor: {
 },
 
 storiesMetadata: {
-  aventura: {
+  "aventura": {
     title: "Aventura",
-    description: "Mysteries and hidden creatures in an enchanted forest. Mysteries and hidden creatures in an enchanted forest.Mysteries and hidden creatures in an enchanted forest.",
+    description: "A thrilling adventure story of discovery and friendship.",
   },
   "the-last-word": {
     title: "The Last Word",
-    description: "Maya must face her fears as she prepares to speak in front of the class, but when the moment comes, will she find her voice?",
+    description: "A touching story about final moments and lasting impressions.",
   },
   "diego-unplugged": {
     title: "Diego Unplugged",
-    description: "A young man's journey of self-discovery when he disconnects from the digital world.",
+    description: "Diego discovers what happens when technology takes a break.",
   },
   "my-day": {
-    title: "A Simple Day",
-    description: "Dive into a day filled with simple pleasures and routines that shape our lives.",
-  },
-  "my-family": {
-    title: "Our Joyful Home",
-    description: "Join a delightful exploration of family life, where each member has their special role, including a chubby, furry friend!",
-  },
-}
-
-
+    title: "My Day",
+    description: "A simple poem about the joys of everyday life.",
+  },},
 };
 
 export default en;

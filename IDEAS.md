@@ -4,6 +4,25 @@
 
 ---
 
+## ✅ IMPLEMENTED: Story Upload Pipeline Speed Optimization
+
+**Problem:** Translations/rewrites took 30+ minutes per level due to sequential processing.
+
+**Optimizations implemented:**
+1. ✅ **Parallel chapter batches** - Process 4 chapters simultaneously (REWRITE_BATCH_SIZE, TRANSLATION_BATCH_SIZE)
+2. ✅ **Switch to Haiku for translation** - Faster model for translations (GPT-4o kept for rewriting)
+3. ✅ **Parallel level translation** - All levels translate simultaneously via Promise.allSettled
+
+*Note: 300ms delays between sub-chunks preserved to prevent rate limit errors*
+
+**Expected result:** Translation drops from ~15 min to ~1-2 min per story.
+
+**Files modified:**
+- `src/app/admin/upload-story/StoryUploadForm.tsx` (parallel batching for chapters + levels)
+- `src/app/api/admin/translate/route.ts` (switched to claude-haiku-4-20250514)
+
+---
+
 ## Refinements & Improvements (Post-MVP)
 
 **Pagination Controls:**
@@ -20,6 +39,38 @@
 - No branch/commit workflow needed
 - Stories only visible to the uploading user
 - Optional: submit for admin review to make public
+
+### Streaming Progressive Story Loading (User Upload Portal)
+
+**Core Concept:** When a user uploads/rewrites a story, don't make them wait for the full pipeline. Stream content to the reader as it becomes available.
+
+**Pipeline Flow:**
+1. User uploads text → immediately begin CEFR rewrite for their level
+2. As each **chapter** finishes rewriting → send to translation immediately (don't wait for all chapters)
+3. As each chapter's **translation returns** → push to the story reader in real-time
+4. User can **start reading chapter 1** while chapters 2-27 are still processing
+
+**Technical Implementation Ideas:**
+- **Server-Sent Events (SSE)** or **WebSockets** to push completed chunks to client
+- **Optimistic UI:** Show story page with loading placeholders for unfinished chapters
+- **Progressive chapter list:** Chapters appear in the navigation as they become available
+- **Background processing:** Use Vercel Functions or a job queue (BullMQ, Inngest) to continue processing even if user navigates away
+- **Resume capability:** If user closes browser, processing continues; they return to find story ready
+
+**UX Enhancements:**
+- **"Reading while loading" indicator:** Show subtle progress bar or pulsing animation on chapters still processing
+- **Estimated time remaining:** "3 more chapters translating... ~2 min"
+- **Notification when complete:** Browser notification or in-app toast when story is fully ready
+- **Chapter-level retry:** If a chapter fails, user can retry just that chapter without losing others
+- **Preview quality option:** Offer "draft" mode (faster, lower quality) vs "polished" mode (full rewrite)
+
+**Extended Ideas:**
+- **Parallel level generation:** If user wants multiple levels, generate them simultaneously with staggered streaming
+- **Prefetch next level:** While user reads L2, background-generate L3 so it's ready when they level up
+- **Collaborative reading:** Share partially-loaded story with friends who can read as it streams
+- **Audio generation pipeline:** After text streams in, auto-queue TTS generation so audio is ready by the time user reaches that page
+- **Smart caching:** If another user uploads the same source text, skip rewrite/translation and serve cached version instantly
+- **Cost transparency:** Show user estimated cost/tokens as they upload (especially for long novels)
 
 ---
 
@@ -82,6 +133,18 @@
 - **Reading Speed Analytics:** Measure time per page and identify where users slow down
 - **Personalized Recommendations:** Suggest stories based on vocabulary gaps and interests
 
+### 2b. Vocabulary Saving & Flashcard System
+- **Save Words/Phrases:** User can explicitly save any word or phrase while reading for later study
+- **Anki-Style Flashcards:** Integrate spaced repetition system for saved vocabulary
+  - Show word → user recalls meaning → rate difficulty (Again/Hard/Good/Easy)
+  - Algorithm schedules reviews based on performance
+  - Track mastery level per word
+- **Page-Based Quizzes:** After each story page, offer optional quiz if user saved words from that page
+  - Multiple choice, fill-in-blank, or translation exercises
+  - Immediate reinforcement while context is fresh
+  - Track which words were learned in which story/page for context recall
+- **Study Dashboard:** Central place to review all saved words, flashcard stats, upcoming reviews
+
 ### 3. Social & Gamification Features
 - **Reading Streaks:** Daily reading goals and streak tracking
 - **Achievements:** Badges for milestones (stories completed, vocabulary mastered, etc.)
@@ -134,7 +197,12 @@
 - **Stories Page Layout:** Split stories by category by default (Cuentana Originals, Poems, Short Stories, Novels) without requiring filter interaction
 - **Story Completion Flow:** "Mark this story as complete" is janky - needs revamping
 
-### Story Backgrounds
+### Story Themes & Backgrounds
+- **Theme Editor in Admin Portal:** Add theme configuration to story upload:
+  - Gradient picker with presets (gothic, warm, cool, nature, etc.)
+  - Text color selection (dark/light)
+  - Accent color picker
+  - Font family selector (serif, sans-serif, etc.)
 - **More Default Gradients:** Add a selection of gradient presets for story backgrounds
 - **User Customization:** Allow users to customize their story background colors/gradients
 
@@ -163,6 +231,36 @@
 - **Comprehensive Testing:** Revamp quiz into a full knowledge assessment mechanism
 - **Level Progression:** Use quiz results to advance users to next CEFR levels
 - **Mastery Tracking:** Track vocabulary/grammar mastery over time
+
+---
+
+### Story Level Routing & Availability
+- **Non-logged-in users:** Show all stories (not level-dependent). When they click a story, auto-route to Level 2. If L2 doesn't exist, find an available level to route to (TBD logic).
+- **Logged-in users:** Know their level. Consider:
+  - Only showing stories available at user's level
+  - OR: Show unavailable-level stories in a separate UI section ("Available at other levels")
+- **Core fix:** Never route to a level that doesn't exist. If only L4 content exists, don't try to route to L1.
+
+### Translation/Rewrite Error Handling Improvements
+- **Auto-retry with smaller chunks:** If a chunk fails (translation or rewrite), automatically split it into smaller sub-chunks and retry. This isolates problems to smaller sections or may resolve the issue entirely.
+- **Better UI error visibility:** When a chunk fails, highlight it clearly in the admin UI so the user can easily identify and fix the problem. Consider:
+  - Red highlighting on failed chunks
+  - Expandable error details
+  - "Retry this chunk" button
+  - Side-by-side view of source vs failed translation
+- **Error persistence:** Track which chunks failed and allow selective retry without re-processing successful chunks.
+
+### Token Tracking & Cost Analysis for Story Upload Pipeline
+- **Token usage tracking:** Add comprehensive tracking of tokens consumed at each step of the upload pipeline (text preprocessing, metadata extraction, CEFR rewriting, translation)
+- **Cost estimation:** Calculate actual $ cost per story upload based on token usage
+- **Pipeline analysis:** Identify which steps consume the most tokens and where efficiencies could be gained
+- **Algorithm vs AI trade-offs:** Analyze where algorithmic approaches could replace or reduce AI token usage:
+  - Text preprocessing (already algorithmic)
+  - Chapter detection (already algorithmic)
+  - Could simpler models work for some tasks?
+  - Could caching reduce repeat API calls?
+- **User pricing model:** Use cost data to inform pricing when tool is exposed to users
+- **Budget estimates:** Calculate cost to upload an entire story library
 
 ---
 
@@ -199,4 +297,4 @@
 
 ---
 
-*Last updated: 2025-12-04*
+*Last updated: 2025-12-07*

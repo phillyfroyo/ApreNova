@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import LZString from "lz-string";
 import type { StoryType, StoryTag } from "@/types/story";
-import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
+import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS, STORY_METADATA, slugify } from "@/lib/stories";
 import { FormAttribution, formToAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
+import { ComparisonModal } from "./components/ComparisonModal";
+import { useRewritePipeline } from "./hooks/useRewritePipeline";
+import { useTranslationPipeline } from "./hooks/useTranslationPipeline";
+import type { TranslationErrorType, ChunkError } from "./types";
+
+// Track existing slugs for validation (module-level for access across step components)
+const existingSlugs = new Set(STORY_METADATA.map(s => s.slug));
+const isSlugTaken = (slug: string) => slug.length > 0 && existingSlugs.has(slug);
 
 /**
  * Clean text by removing AI artifacts, markdown formatting, and normalizing
@@ -168,11 +177,95 @@ const initialStoryData: StoryData = {
   extractedAnnotations: [],
 };
 
+const STORAGE_KEY = "admin-story-upload-state";
+
 export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFormProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [storyData, setStoryData] = useState<StoryData>(initialStoryData);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string; warnings?: string[] } | null>(null);
+  const [saveResult, setSaveResult] = useState<{
+    success: boolean;
+    message: string;
+    warnings?: string[];
+    errors?: string[];
+    details?: string;
+    filesWritten?: string[];
+  } | null>(null);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
+
+  // Load saved state from localStorage on mount (survives hot reloads)
+  useEffect(() => {
+    try {
+      const compressed = localStorage.getItem(STORAGE_KEY);
+      if (compressed) {
+        // Decompress the data
+        const decompressed = LZString.decompressFromUTF16(compressed);
+        if (decompressed) {
+          const parsed = JSON.parse(decompressed);
+          if (parsed.storyData && parsed.currentStep) {
+            setStoryData(parsed.storyData);
+            setCurrentStep(parsed.currentStep);
+            setHasRestoredState(true);
+            const compressedSize = (compressed.length * 2 / 1024).toFixed(1);
+            const originalSize = (decompressed.length / 1024).toFixed(1);
+            console.log(`[Admin] Restored saved state (step ${parsed.currentStep}), compressed: ${compressedSize}KB → ${originalSize}KB`);
+          }
+        } else {
+          // Try parsing as uncompressed JSON (backward compatibility)
+          const parsed = JSON.parse(compressed);
+          if (parsed.storyData && parsed.currentStep) {
+            setStoryData(parsed.storyData);
+            setCurrentStep(parsed.currentStep);
+            setHasRestoredState(true);
+            console.log("[Admin] Restored uncompressed saved state (step " + parsed.currentStep + ")");
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[Admin] Failed to restore saved state:", e);
+      // Clear corrupted data
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  // Save state to localStorage whenever it changes (debounced, compressed)
+  useEffect(() => {
+    // Don't save if we're on step 1 with no content (initial state)
+    if (currentStep === 1 && !storyData.rawText && !storyData.slug) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      try {
+        const data = JSON.stringify({
+          storyData,
+          currentStep,
+          savedAt: new Date().toISOString(),
+        });
+        // Compress before storing - typically 70-90% reduction for text
+        const compressed = LZString.compressToUTF16(data);
+        localStorage.setItem(STORAGE_KEY, compressed);
+
+        const originalSize = (data.length / 1024).toFixed(1);
+        const compressedSize = (compressed.length * 2 / 1024).toFixed(1);
+        const ratio = ((1 - compressed.length * 2 / data.length) * 100).toFixed(0);
+        console.log(`[Admin] Saved state: ${originalSize}KB → ${compressedSize}KB (${ratio}% reduction)`);
+      } catch (e) {
+        console.error("[Admin] Failed to save state to localStorage:", e);
+      }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeout);
+  }, [storyData, currentStep]);
+
+  const clearSavedState = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    setStoryData(initialStoryData);
+    setCurrentStep(1);
+    setHasRestoredState(false);
+    setSaveResult(null);
+    console.log("[Admin] Cleared saved state");
+  };
 
   const updateStoryData = (updates: Partial<StoryData>) => {
     setStoryData((prev) => ({ ...prev, ...updates }));
@@ -182,6 +275,11 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
     // Clean raw text when moving from Step 1 to Step 2
     if (currentStep === 1 && step === 2) {
       updateStoryData({ rawText: cleanText(storyData.rawText) });
+    }
+    // Reset processing state when navigating away from steps that use async processing
+    // This allows the user to use the Continue button on other steps
+    if ((currentStep === 4 || currentStep === 5) && step !== currentStep) {
+      setIsProcessing(false);
     }
     setCurrentStep(step);
   };
@@ -283,6 +381,23 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
           </div>
         </div>
       </div>
+
+      {/* Restored State Banner */}
+      {hasRestoredState && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+            <span className="text-sm text-amber-800">
+              Restored saved progress (Step {currentStep}{storyData.slug ? `: ${storyData.slug}` : ""})
+            </span>
+            <button
+              onClick={clearSavedState}
+              className="text-xs text-amber-700 hover:text-amber-900 underline"
+            >
+              Clear &amp; Start Fresh
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
@@ -733,7 +848,7 @@ function Step1Upload({
           } else if (genresLower.includes("poem") || genresLower.includes("poetry")) {
             updates.storyType = "poem";
           } else if (genresLower.includes("novella") || genresLower.includes("novel")) {
-            updates.storyType = "novella";
+            updates.storyType = "novel";
           } else if (genresLower.includes("song") || genresLower.includes("lyric")) {
             updates.storyType = "song-lyrics";
           }
@@ -2026,9 +2141,17 @@ function Step3Metadata({
               })
             }
             placeholder="beowulf"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              isSlugTaken(storyData.slug) ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
           />
-          <p className="text-xs text-gray-500 mt-1">URL-friendly identifier (auto-generated from title, but can be edited)</p>
+          {isSlugTaken(storyData.slug) ? (
+            <p className="text-xs text-red-600 mt-1 font-medium">
+              This slug already exists. Please choose a different slug or the existing story will be updated.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">URL-friendly identifier (auto-generated from title, but can be edited)</p>
+          )}
         </div>
 
         {/* Display Title (optional) */}
@@ -2155,7 +2278,7 @@ function Step3Metadata({
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-sm font-medium text-gray-700">Summary (optional)</h4>
-              <p className="text-xs text-gray-500">Full plot summary for the story detail page. Often found in front matter as "THE STORY".</p>
+              <p className="text-xs text-gray-500">Full plot summary for the story detail page. Often found in front matter as &quot;THE STORY&quot;.</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -2693,7 +2816,7 @@ function Step3Metadata({
   );
 }
 
-// Step 4: Generate Levels
+// Step 4: Generate Levels - Refactored to use useRewritePipeline hook
 function Step4Generate({
   storyData,
   updateStoryData,
@@ -2705,308 +2828,36 @@ function Step4Generate({
   isProcessing: boolean;
   setIsProcessing: (v: boolean) => void;
 }) {
-  const [currentGenerating, setCurrentGenerating] = useState<number | null>(null);
-  const [chapterProgress, setChapterProgress] = useState<{ current: number; total: number } | null>(null);
-  const [error, setError] = useState("");
-  const [comparisonLevel, setComparisonLevel] = useState<number | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedText, setEditedText] = useState("");
-  const [splitPosition, setSplitPosition] = useState(50); // Percentage for left panel width
+  // Use the centralized rewrite pipeline hook
+  const pipeline = useRewritePipeline({
+    storyData,
+    updateStoryData,
+    setIsProcessing,
+  });
 
-  // Refs for draggable divider - uses CSS variables for smooth, lag-free dragging
-  const isDragging = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Handle divider drag - updates CSS variable directly for smooth performance
-  const handleDividerMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    document.addEventListener("mousemove", handleDividerMouseMove);
-    document.addEventListener("mouseup", handleDividerMouseUp);
-  };
-
-  const handleDividerMouseMove = (e: MouseEvent) => {
-    if (!isDragging.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const newPosition = ((e.clientX - rect.left) / rect.width) * 100;
-    // Clamp between 20% and 80%
-    const clampedPosition = Math.min(80, Math.max(20, newPosition));
-    // Update CSS variable directly - no React re-render, buttery smooth
-    containerRef.current.style.setProperty("--split-pos", `${clampedPosition}%`);
-  };
-
-  const handleDividerMouseUp = () => {
-    isDragging.current = false;
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    // Sync final position to React state
-    if (containerRef.current) {
-      const finalPos = containerRef.current.style.getPropertyValue("--split-pos");
-      if (finalPos) {
-        setSplitPosition(parseFloat(finalPos));
-      }
-    }
-    document.removeEventListener("mousemove", handleDividerMouseMove);
-    document.removeEventListener("mouseup", handleDividerMouseUp);
-  };
-
-  // Helper to render text with line numbers (single panel mode)
-  const renderNumberedLines = (text: string, className?: string) => {
-    const lines = text.split("\n");
-    return (
-      <div className={`font-mono text-sm leading-relaxed ${className || ""}`}>
-        {lines.map((line, idx) => (
-          <div key={idx} className="flex">
-            <span className="select-none text-gray-400 text-right pr-4 shrink-0" style={{ width: "3.5rem" }}>
-              {idx + 1}
-            </span>
-            <span className="text-gray-700 whitespace-pre-wrap break-words flex-1">{line || "\u00A0"}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Helper to render side-by-side comparison with locked line numbers
-  const renderSideBySideLines = (leftText: string, rightText: string) => {
-    const leftLines = leftText.split("\n");
-    const rightLines = rightText.split("\n");
-    const maxLines = Math.max(leftLines.length, rightLines.length);
-
-    return (
-      <div className="font-mono text-sm leading-relaxed">
-        {Array.from({ length: maxLines }, (_, idx) => (
-          <div key={idx} className="flex border-b border-gray-100 hover:bg-gray-50">
-            {/* Line number */}
-            <div className="select-none text-gray-400 text-right pr-3 shrink-0 py-1 bg-gray-50 border-r border-gray-200" style={{ width: "3.5rem" }}>
-              {idx + 1}
-            </div>
-            {/* Left (original) text */}
-            <div
-              className="py-1 px-3 text-gray-700 whitespace-pre-wrap break-words border-r border-gray-200"
-              style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 1.75rem)` }}
-            >
-              {leftLines[idx] || "\u00A0"}
-            </div>
-            {/* Right (rewritten) text */}
-            <div
-              className="py-1 px-3 text-gray-700 whitespace-pre-wrap break-words flex-1"
-            >
-              {rightLines[idx] || "\u00A0"}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Open comparison panel for a level (-1 = original text review only)
-  const openComparison = (level: number) => {
-    if (level === -1) {
-      // Original text review mode
-      setComparisonLevel(-1);
-      setEditedText(storyData.rawText);
-      setIsEditing(false);
-    } else {
-      const content = storyData.levelContent[level];
-      if (content?.sourceText) {
-        setComparisonLevel(level);
-        setEditedText(content.sourceText);
-        setIsEditing(false);
-      }
-    }
-  };
-
-  // Save edited text
-  const saveEditedText = () => {
-    if (comparisonLevel === -1) {
-      // Saving edited original text
-      updateStoryData({ rawText: editedText });
-      setIsEditing(false);
-    } else if (comparisonLevel !== null) {
-      const current = storyData.levelContent[comparisonLevel];
-      updateStoryData({
-        levelContent: {
-          ...storyData.levelContent,
-          [comparisonLevel]: {
-            ...current,
-            sourceText: editedText,
-          },
-        },
-      });
-      setIsEditing(false);
-    }
-  };
-
-  // Initialize mode for levels that don't have one yet
-  const getLevelMode = (level: number): "generate" | "use-original" | "omit" => {
-    if (storyData.levelContent[level]?.mode) {
-      return storyData.levelContent[level].mode;
-    }
-    // Default: source level uses original, others generate
-    return level === storyData.detectedLevel ? "use-original" : "generate";
-  };
-
-  const setLevelMode = (level: number, mode: "generate" | "use-original" | "omit") => {
-    const current = storyData.levelContent[level] || { sourceText: "", translatedText: "", status: "pending" as const, mode: "generate" as const };
-    const newStatus = mode === "omit" ? "omitted" as const : "pending" as const;
-    updateStoryData({
-      levelContent: {
-        ...storyData.levelContent,
-        [level]: { ...current, mode, status: newStatus },
-      },
-    });
-  };
-
-  // Rewrite a single chunk of text
-  const rewriteChunk = async (text: string, targetLevel: number): Promise<string> => {
-    const response = await fetch("/api/admin/rewrite-level", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        sourceLanguage: storyData.sourceLanguage,
-        targetLevel,
-        sourceLevel: storyData.detectedLevel,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to generate");
-    }
-
-    return data.rewrittenText;
-  };
-
-  const processLevel = async (level: number, accumulator: Record<number, LevelContent>) => {
-    setCurrentGenerating(level);
-    setChapterProgress(null);
-    setError("");
-
-    const mode = getLevelMode(level);
-
-    // Update status to generating
-    accumulator[level] = { sourceText: "", translatedText: "", status: "generating", mode };
-    updateStoryData({ levelContent: { ...accumulator } });
-
-    try {
-      // If using original text (either source level or "use-original" mode)
-      if (level === storyData.detectedLevel || mode === "use-original") {
-        accumulator[level] = {
-          sourceText: cleanText(storyData.rawText),
-          translatedText: "",
-          status: "done",
-          mode,
-        };
-        updateStoryData({ levelContent: { ...accumulator } });
-        setCurrentGenerating(null);
-        return true;
-      }
-
-      // Check if we have chapters from parsing
-      const chapters = storyData.parsedResult?.chapters;
-
-      if (chapters && chapters.length > 1) {
-        // Process chapter by chapter for long texts
-        const rewrittenChapters: string[] = [];
-        setChapterProgress({ current: 0, total: chapters.length });
-
-        for (let i = 0; i < chapters.length; i++) {
-          setChapterProgress({ current: i + 1, total: chapters.length });
-
-          const chapter = chapters[i];
-          const chapterText = chapter.rawText;
-
-          // Skip empty chapters
-          if (!chapterText.trim()) {
-            rewrittenChapters.push("");
-            continue;
-          }
-
-          try {
-            const rewritten = await rewriteChunk(chapterText, level);
-            rewrittenChapters.push(rewritten);
-          } catch (chunkError) {
-            // If a chapter fails, add error marker but continue
-            console.error(`Failed to rewrite chapter ${i + 1}:`, chunkError);
-            rewrittenChapters.push(`[ERROR: Failed to rewrite chapter ${chapter.title || i + 1}]\n\n${chapterText}`);
-          }
-
-          // Small delay between chapters to avoid rate limiting
-          if (i < chapters.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-
-        // Concatenate all rewritten chapters with proper chapter labels
-        const fullRewrittenText = rewrittenChapters
-          .map((text, idx) => {
-            const chapterTitle = chapters[idx]?.title || `Chapter ${idx + 1}`;
-            const chapterNumber = chapters[idx]?.number || idx + 1;
-            // Format: "--- Chapter X: Title ---" or just "--- Chapter X ---"
-            const divider = chapters[idx]?.title
-              ? `--- Chapter ${chapterNumber}: ${chapterTitle} ---`
-              : `--- Chapter ${chapterNumber} ---`;
-            return idx === 0 ? text : `${divider}\n\n${text}`;
-          })
-          .join("\n\n");
-
-        accumulator[level] = {
-          sourceText: cleanText(fullRewrittenText),
-          translatedText: "",
-          status: "done",
-          mode,
-        };
-        updateStoryData({ levelContent: { ...accumulator } });
-        setChapterProgress(null);
-        return true;
-      } else {
-        // No chapters or single chapter - process as single text
-        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText), level);
-
-        accumulator[level] = {
-          sourceText: cleanText(rewrittenText),
-          translatedText: "",
-          status: "done",
-          mode,
-        };
-        updateStoryData({ levelContent: { ...accumulator } });
-        return true;
-      }
-    } catch (err) {
-      accumulator[level] = { sourceText: "", translatedText: "", status: "error", mode };
-      updateStoryData({ levelContent: { ...accumulator } });
-      setError(`Failed to generate L${level}: ${err instanceof Error ? err.message : "Unknown error"}`);
-      return false;
-    } finally {
-      setCurrentGenerating(null);
-      setChapterProgress(null);
-    }
-  };
-
-  const processSingleLevel = async (level: number) => {
-    const accumulator = { ...storyData.levelContent };
-    await processLevel(level, accumulator);
-  };
-
-  const processAllLevels = async () => {
-    setIsProcessing(true);
-    const accumulator = { ...storyData.levelContent };
-
-    for (const level of [1, 2, 3, 4, 5]) {
-      const mode = getLevelMode(level);
-      // Skip omitted levels and already done levels
-      if (mode === "omit" || accumulator[level]?.status === "done") {
-        continue;
-      }
-      await processLevel(level, accumulator);
-    }
-    setIsProcessing(false);
-  };
+  // Derived state from hook
+  const {
+    currentGenerating,
+    chapterProgress,
+    error,
+    setError,
+    getLevelMode,
+    setLevelMode,
+    processSingleLevel,
+    processAllLevels,
+    cancel,
+    getLevelStatus,
+    isLevelDone,
+    isLevelGenerating,
+    comparisonLevel,
+    isEditing,
+    editedText,
+    setEditedText,
+    setIsEditing,
+    openComparison,
+    closeComparison,
+    saveEditedText,
+  } = pipeline;
 
   // Check if all non-omitted levels are done
   const allDone = [1, 2, 3, 4, 5].every((l) => {
@@ -3097,7 +2948,9 @@ function Step4Generate({
                         ? mode === "use-original"
                           ? "Copying original..."
                           : chapterProgress
-                            ? `Generating chapter ${chapterProgress.current} of ${chapterProgress.total}...`
+                            ? chapterProgress.subChunk
+                              ? `Chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} (part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total})...`
+                              : `Generating chapters ${chapterProgress.current}-${chapterProgress.batchEnd} of ${chapterProgress.total}...`
                             : "Generating..."
                         : content?.status === "done"
                         ? `${content.sourceText.split("\n").filter((l) => l.trim()).length} lines • ${content.mode === "use-original" ? "Original text" : "AI generated"}`
@@ -3192,7 +3045,7 @@ function Step4Generate({
       </div>
 
       {!allDone && (
-        <div className="text-center pt-4">
+        <div className="text-center pt-4 flex justify-center gap-3">
           <button
             onClick={processAllLevels}
             disabled={isProcessing}
@@ -3200,198 +3053,116 @@ function Step4Generate({
           >
             {isProcessing
               ? chapterProgress
-                ? `Processing chapter ${chapterProgress.current}/${chapterProgress.total}...`
+                ? chapterProgress.subChunk
+                  ? `Ch ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total}...`
+                  : `Processing chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total}...`
                 : "Processing..."
               : "Process All Levels"}
           </button>
+          {isProcessing && (
+            <button
+              onClick={cancel}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       )}
       </div>
 
-      {/* Full-screen Modal Overlay for Text Comparison/Review */}
-      {comparisonLevel !== null && (comparisonLevel === -1 || comparisonContent) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setComparisonLevel(null)}
-          />
+      {/* Comparison Modal - uses shared component for levels 1-5 */}
+      {comparisonLevel !== null && comparisonLevel > 0 && comparisonContent && (
+        <ComparisonModal
+          isOpen={true}
+          onClose={closeComparison}
+          level={comparisonLevel}
+          leftTitle={`Original (L${storyData.detectedLevel})`}
+          leftText={originalText}
+          rightTitle={`Rewritten (L${comparisonLevel})`}
+          rightText={comparisonContent.sourceText}
+          onSave={(text) => {
+            const current = storyData.levelContent[comparisonLevel];
+            updateStoryData({
+              levelContent: {
+                ...storyData.levelContent,
+                [comparisonLevel]: { ...current, sourceText: text },
+              },
+            });
+          }}
+          editableSide="right"
+        />
+      )}
 
-          {/* Modal Content */}
+      {/* Original Text Review Modal (level -1) - special case with chapter accordions */}
+      {comparisonLevel === -1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeComparison} />
           <div className="relative w-[95vw] h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className={`${comparisonLevel === -1 ? "bg-gradient-to-r from-amber-600 to-orange-600" : "bg-gradient-to-r from-indigo-600 to-purple-600"} text-white px-6 py-4 flex items-center justify-between shrink-0`}>
+            <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
-                <span className="text-lg font-semibold">
-                  {comparisonLevel === -1 ? "Review Original Text" : `Level ${comparisonLevel} Comparison`}
-                </span>
+                <span className="text-lg font-semibold">Review Original Text</span>
                 <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                  {comparisonLevel === -1
-                    ? `${originalText.split("\n").filter(l => l.trim()).length} lines • ${storyData.parsedResult?.chapters.length || 1} chapters`
-                    : `${originalText.split("\n").filter(l => l.trim()).length} → ${comparisonContent!.sourceText.split("\n").filter(l => l.trim()).length} lines`
-                  }
+                  {originalText.split("\n").filter(l => l.trim()).length} lines • {storyData.parsedResult?.chapters.length || 1} chapters
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 {isEditing ? (
                   <>
-                    <button
-                      onClick={saveEditedText}
-                      className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium transition-colors"
-                    >
+                    <button onClick={saveEditedText} className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium transition-colors">
                       Save Changes
                     </button>
-                    <button
-                      onClick={() => {
-                        setEditedText(comparisonLevel === -1 ? originalText : comparisonContent!.sourceText);
-                        setIsEditing(false);
-                      }}
-                      className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
-                    >
+                    <button onClick={() => { setEditedText(originalText); setIsEditing(false); }} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors">
                       Cancel
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
-                  >
+                  <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors">
                     Edit Text
                   </button>
                 )}
-                <button
-                  onClick={() => setComparisonLevel(null)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  title="Close (Esc)"
-                >
+                <button onClick={closeComparison} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Close (Esc)">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
-
-            {comparisonLevel === -1 ? (
-              /* Original text review mode - full width with chapter list */
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="bg-amber-50 px-6 py-3 text-sm font-medium text-amber-700 border-b flex items-center justify-between shrink-0">
-                  <span>Original Text (L{storyData.detectedLevel}) - Review before generation</span>
-                  <span className="text-amber-500">{(isEditing ? editedText : originalText).split("\n").filter(l => l.trim()).length} lines</span>
-                </div>
-                <div className="flex-1 overflow-auto p-6">
-                  {isEditing ? (
-                    <textarea
-                      value={editedText}
-                      onChange={(e) => setEditedText(e.target.value)}
-                      className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-                      spellCheck={false}
-                    />
-                  ) : (
-                    <div className="grid gap-3">
-                      {storyData.parsedResult?.chapters.map((chapter, idx) => (
-                        <details key={idx} className="border border-amber-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                          <summary className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 cursor-pointer hover:from-amber-100 hover:to-orange-100 transition-colors flex items-center justify-between">
-                            <span className="text-sm font-semibold text-amber-800">
-                              Chapter {chapter.number}: {chapter.title}
-                            </span>
-                            <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">
-                              {chapter.rawText.split("\n").filter(l => l.trim()).length} lines • {chapter.rawText.length.toLocaleString()} chars
-                            </span>
-                          </summary>
-                          <div className="p-4 bg-white border-t border-amber-100 max-h-[50vh] overflow-auto">
-                            <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">
-                              {chapter.rawText}
-                            </pre>
-                          </div>
-                        </details>
-                      )) || (
-                        <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">
-                          {originalText}
-                        </pre>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {!isEditing && (
-                  <div className="bg-amber-50 px-6 py-3 text-sm text-amber-600 border-t shrink-0 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Review the text above. Look for non-story content like license text, advertisements, or metadata that should be removed before generation.
-                  </div>
-                )}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="bg-amber-50 px-6 py-3 text-sm font-medium text-amber-700 border-b flex items-center justify-between shrink-0">
+                <span>Original Text (L{storyData.detectedLevel}) - Review before generation</span>
+                <span className="text-amber-500">{(isEditing ? editedText : originalText).split("\n").filter(l => l.trim()).length} lines</span>
               </div>
-            ) : (
-              /* Single-scroll side-by-side view with locked line numbers */
-              <div
-                ref={containerRef}
-                className="flex-1 flex flex-col overflow-hidden"
-                style={{ "--split-pos": `${splitPosition}%` } as React.CSSProperties}
-              >
-                {/* Header row */}
-                <div className="flex shrink-0 border-b border-gray-300">
-                  {/* Line number header */}
-                  <div className="bg-gray-100 text-gray-500 text-xs font-medium py-2 text-center border-r border-gray-200" style={{ width: "3.5rem" }}>
-                    #
-                  </div>
-                  {/* Original header */}
-                  <div
-                    className="bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 border-r border-gray-200 flex items-center justify-between"
-                    style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 1.75rem)` }}
-                  >
-                    <span>Original (L{storyData.detectedLevel})</span>
-                    <span className="text-gray-400 text-xs">{originalText.split("\n").length} lines</span>
-                  </div>
-                  {/* Draggable divider in header */}
-                  <div
-                    onMouseDown={handleDividerMouseDown}
-                    className="w-2 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex items-center justify-center shrink-0 transition-colors"
-                  />
-                  {/* Rewritten header */}
-                  <div className="bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 flex-1 flex items-center justify-between">
-                    <span>Rewritten (L{comparisonLevel})</span>
-                    <span className="text-indigo-400 text-xs">{(isEditing ? editedText : comparisonContent!.sourceText).split("\n").length} lines</span>
-                  </div>
-                </div>
-
-                {/* Scrollable content - single scroll container */}
+              <div className="flex-1 overflow-auto p-6">
                 {isEditing ? (
-                  <div className="flex-1 flex overflow-hidden">
-                    <div className="flex-1 overflow-auto p-4">
-                      <textarea
-                        value={editedText}
-                        onChange={(e) => setEditedText(e.target.value)}
-                        className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded p-3 focus:ring-2 focus:ring-blue-500 resize-none"
-                        spellCheck={false}
-                      />
-                    </div>
-                  </div>
+                  <textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none" spellCheck={false} />
                 ) : (
-                  <div className="flex-1 overflow-auto">
-                    {renderSideBySideLines(originalText, comparisonContent!.sourceText)}
+                  <div className="grid gap-3">
+                    {storyData.parsedResult?.chapters.map((chapter, idx) => (
+                      <details key={idx} className="border border-amber-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                        <summary className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 cursor-pointer hover:from-amber-100 hover:to-orange-100 transition-colors flex items-center justify-between">
+                          <span className="text-sm font-semibold text-amber-800">Chapter {chapter.number}: {chapter.title}</span>
+                          <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">{chapter.rawText.split("\n").filter(l => l.trim()).length} lines • {chapter.rawText.length.toLocaleString()} chars</span>
+                        </summary>
+                        <div className="p-4 bg-white border-t border-amber-100 max-h-[50vh] overflow-auto">
+                          <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">{chapter.rawText}</pre>
+                        </div>
+                      </details>
+                    )) || (
+                      <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">{originalText}</pre>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Footer with feature indicators - only show for comparison mode */}
-            {comparisonLevel !== -1 && (
-              <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500 border-t flex items-center justify-center gap-4 shrink-0">
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              {!isEditing && (
+                <div className="bg-amber-50 px-6 py-3 text-sm text-amber-600 border-t shrink-0 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  Line-locked comparison
-                </span>
-                <span className="text-gray-300">|</span>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  Drag header divider to resize
-                </span>
-              </div>
-            )}
+                  Review the text above. Look for non-story content like license text, advertisements, or metadata that should be removed before generation.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -3399,7 +3170,7 @@ function Step4Generate({
   );
 }
 
-// Step 5: Translate
+// Step 5: Translate - Refactored to use useTranslationPipeline hook
 function Step5Translate({
   storyData,
   updateStoryData,
@@ -3411,8 +3182,278 @@ function Step5Translate({
   isProcessing: boolean;
   setIsProcessing: (v: boolean) => void;
 }) {
-  const [currentTranslating, setCurrentTranslating] = useState<number | null>(null);
-  const [error, setError] = useState("");
+  // Use the centralized translation pipeline hook
+  const pipeline = useTranslationPipeline({
+    storyData,
+    updateStoryData,
+    setIsProcessing,
+  });
+
+  // Destructure hook values for easier access
+  const {
+    translatingLevels,
+    levelProgress,
+    error,
+    setError,
+    chunkErrors,
+    setChunkErrors,
+    copiedFromLevel,
+    translateSingleLevel,
+    translateAllLevels,
+    cancel,
+    isTranslationComplete,
+    isLevelTranslating,
+    comparisonLevel,
+    isEditing,
+    editedText,
+    setEditedText,
+    setIsEditing,
+    openComparison,
+    closeComparison,
+    saveEditedTranslation,
+  } = pipeline;
+
+  // Local UI state for error management
+  const [expandedError, setExpandedError] = useState<string | null>(null);
+  const [manualOverrideText, setManualOverrideText] = useState<Record<string, string>>({});
+
+  // Translation comparison modal state
+  const [translationComparisonLevel, setTranslationComparisonLevel] = useState<number | null>(null);
+  const [translationModalEditing, setTranslationModalEditing] = useState(false);
+  const [translationModalEditText, setTranslationModalEditText] = useState("");
+
+  // Open translation comparison modal
+  const openTranslationComparison = useCallback((level: number) => {
+    const content = storyData.levelContent[level];
+    if (content?.translatedText) {
+      setTranslationComparisonLevel(level);
+      setTranslationModalEditText(content.translatedText);
+      setTranslationModalEditing(false);
+    }
+  }, [storyData.levelContent]);
+
+  // Close translation comparison modal
+  const closeTranslationComparison = useCallback(() => {
+    setTranslationComparisonLevel(null);
+    setTranslationModalEditing(false);
+  }, []);
+
+  // Save translation from modal
+  const saveTranslationFromModal = useCallback((editedText: string) => {
+    if (translationComparisonLevel !== null) {
+      const content = storyData.levelContent[translationComparisonLevel];
+      if (content) {
+        updateStoryData({
+          levelContent: {
+            ...storyData.levelContent,
+            [translationComparisonLevel]: {
+              ...content,
+              translatedText: editedText,
+            },
+          },
+        });
+      }
+    }
+  }, [translationComparisonLevel, storyData.levelContent, updateStoryData]);
+
+  // Error helper functions
+  const getErrorIcon = (errorType: TranslationErrorType): string => {
+    switch (errorType) {
+      case 'rate_limit': return String.fromCodePoint(0x23F1, 0xFE0F); // timer
+      case 'content_refusal': return String.fromCodePoint(0x1F6AB); // prohibited
+      case 'network': return String.fromCodePoint(0x1F4E1); // satellite
+      case 'timeout': return String.fromCodePoint(0x23F3); // hourglass
+      case 'malformed': return String.fromCodePoint(0x26A0, 0xFE0F); // warning
+      default: return String.fromCodePoint(0x2753); // question
+    }
+  };
+
+  const getErrorDisplayMessage = (errorType: TranslationErrorType): string => {
+    switch (errorType) {
+      case 'rate_limit': return 'Rate limited - retry later';
+      case 'content_refusal': return 'Content policy issue';
+      case 'network': return 'Network error';
+      case 'timeout': return 'Request timed out';
+      case 'malformed': return 'Malformed response';
+      default: return 'Unknown error';
+    }
+  };
+
+  // Retry and override functions
+  const retryChunk = useCallback(async (level: number, chunkError: ChunkError) => {
+    setIsProcessing(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: chunkError.originalText,
+          sourceLanguage: storyData.sourceLanguage,
+          targetLanguage: storyData.sourceLanguage === "en" ? "es" : "en",
+          targetLevel: level,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Translation failed");
+      }
+
+      const data = await response.json();
+      const translatedText = data.translatedText;
+
+      const currentContent = storyData.levelContent[level];
+      if (currentContent?.translatedText) {
+        const placeholder = chunkError.subChunkIndex !== undefined
+          ? `[TRANSLATION_FAILED:${chunkError.chapterIndex}:${chunkError.subChunkIndex}]`
+          : `[TRANSLATION_FAILED:${chunkError.chapterIndex}]`;
+
+        const lines = currentContent.translatedText.split('\n');
+        const newLines: string[] = [];
+        let skipUntilDivider = false;
+
+        for (const line of lines) {
+          if (line.includes(placeholder)) {
+            newLines.push(translatedText);
+            skipUntilDivider = true;
+          } else if (skipUntilDivider) {
+            if (line.startsWith('--- Cap') || line.startsWith('[TRANSLATION_FAILED:')) {
+              skipUntilDivider = false;
+              newLines.push(line);
+            }
+          } else {
+            newLines.push(line);
+          }
+        }
+
+        updateStoryData({
+          levelContent: {
+            ...storyData.levelContent,
+            [level]: {
+              ...currentContent,
+              translatedText: newLines.join('\n'),
+            },
+          },
+        });
+
+        setChunkErrors(prev => ({
+          ...prev,
+          [level]: (prev[level] || []).filter(e =>
+            !(e.chapterIndex === chunkError.chapterIndex &&
+              e.subChunkIndex === chunkError.subChunkIndex)
+          ),
+        }));
+      }
+    } catch (err) {
+      setChunkErrors(prev => ({
+        ...prev,
+        [level]: (prev[level] || []).map(e =>
+          e.chapterIndex === chunkError.chapterIndex &&
+          e.subChunkIndex === chunkError.subChunkIndex
+            ? { ...e, retryCount: e.retryCount + 1, errorMessage: (err as Error).message }
+            : e
+        ),
+      }));
+      setError(`Retry failed: ${(err as Error).message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [storyData, updateStoryData, setChunkErrors, setError, setIsProcessing]);
+
+  const applyManualOverride = useCallback((level: number, chunkError: ChunkError) => {
+    const errorKey = `${level}-${chunkError.chapterIndex}-${chunkError.subChunkIndex ?? 'main'}`;
+    const overrideText = manualOverrideText[errorKey];
+
+    if (!overrideText?.trim()) {
+      setError("Please enter translation text before applying override.");
+      return;
+    }
+
+    const currentContent = storyData.levelContent[level];
+    if (currentContent?.translatedText) {
+      const placeholder = chunkError.subChunkIndex !== undefined
+        ? `[TRANSLATION_FAILED:${chunkError.chapterIndex}:${chunkError.subChunkIndex}]`
+        : `[TRANSLATION_FAILED:${chunkError.chapterIndex}]`;
+
+      const lines = currentContent.translatedText.split('\n');
+      const newLines: string[] = [];
+      let skipUntilDivider = false;
+
+      for (const line of lines) {
+        if (line.includes(placeholder)) {
+          newLines.push(overrideText.trim());
+          skipUntilDivider = true;
+        } else if (skipUntilDivider) {
+          if (line.startsWith('--- Cap') || line.startsWith('[TRANSLATION_FAILED:')) {
+            skipUntilDivider = false;
+            newLines.push(line);
+          }
+        } else {
+          newLines.push(line);
+        }
+      }
+
+      updateStoryData({
+        levelContent: {
+          ...storyData.levelContent,
+          [level]: {
+            ...currentContent,
+            translatedText: newLines.join('\n'),
+          },
+        },
+      });
+
+      setChunkErrors(prev => ({
+        ...prev,
+        [level]: (prev[level] || []).filter(e =>
+          !(e.chapterIndex === chunkError.chapterIndex &&
+            e.subChunkIndex === chunkError.subChunkIndex)
+        ),
+      }));
+
+      setManualOverrideText(prev => {
+        const newState = { ...prev };
+        delete newState[errorKey];
+        return newState;
+      });
+
+      setError("");
+    }
+  }, [manualOverrideText, storyData.levelContent, updateStoryData, setChunkErrors, setError]);
+
+  const applyOriginalAsFallback = useCallback((level: number, chunkError: ChunkError) => {
+    const currentContent = storyData.levelContent[level];
+    if (currentContent?.translatedText) {
+      const placeholder = chunkError.subChunkIndex !== undefined
+        ? `[TRANSLATION_FAILED:${chunkError.chapterIndex}:${chunkError.subChunkIndex}]`
+        : `[TRANSLATION_FAILED:${chunkError.chapterIndex}]`;
+
+      const updatedText = currentContent.translatedText.replace(
+        new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\n\\n', 'g'),
+        '[UNTRANSLATED - ORIGINAL TEXT]\n\n'
+      );
+
+      updateStoryData({
+        levelContent: {
+          ...storyData.levelContent,
+          [level]: {
+            ...currentContent,
+            translatedText: updatedText,
+          },
+        },
+      });
+
+      setChunkErrors(prev => ({
+        ...prev,
+        [level]: (prev[level] || []).filter(e =>
+          !(e.chapterIndex === chunkError.chapterIndex &&
+            e.subChunkIndex === chunkError.subChunkIndex)
+        ),
+      }));
+    }
+  }, [storyData.levelContent, updateStoryData, setChunkErrors]);
 
   // Only show levels that have been generated in Step 4 (not omitted)
   const generatedLevels = [1, 2, 3, 4, 5].filter(
@@ -3421,57 +3462,10 @@ function Step5Translate({
            storyData.levelContent[l]?.sourceText?.length > 0
   );
 
-  const translateLevel = async (level: number, accumulator: Record<number, LevelContent>) => {
-    setCurrentTranslating(level);
-    setError("");
-
-    try {
-      const response = await fetch("/api/admin/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: accumulator[level].sourceText,
-          fromLanguage: storyData.sourceLanguage,
-          level,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to translate");
-      }
-
-      accumulator[level] = {
-        ...accumulator[level],
-        translatedText: cleanText(data.translatedText),
-      };
-      updateStoryData({ levelContent: { ...accumulator } });
-      return true;
-    } catch (err) {
-      setError(`Failed to translate L${level}: ${err instanceof Error ? err.message : "Unknown error"}`);
-      return false;
-    } finally {
-      setCurrentTranslating(null);
-    }
-  };
-
-  const translateSingleLevel = async (level: number) => {
-    const accumulator = { ...storyData.levelContent };
-    await translateLevel(level, accumulator);
-  };
-
-  const translateAll = async () => {
-    setIsProcessing(true);
-    const accumulator = { ...storyData.levelContent };
-
-    for (const level of generatedLevels) {
-      if (!accumulator[level]?.translatedText) {
-        await translateLevel(level, accumulator);
-      }
-    }
-    setIsProcessing(false);
-  };
+  /**
+   * Check if any level has errors
+   */
+  const hasErrors = Object.values(chunkErrors).some(errors => errors.length > 0);
 
   const allTranslated = generatedLevels.every(
     (l) => storyData.levelContent[l]?.translatedText?.length > 0
@@ -3506,13 +3500,17 @@ function Step5Translate({
         {generatedLevels.map((level) => {
           const content = storyData.levelContent[level];
           const hasTranslation = content?.translatedText?.length > 0;
-          const isTranslating = currentTranslating === level;
+          const isTranslating = translatingLevels.has(level);
+          const levelErrorList = chunkErrors[level] || [];
+          const hasLevelErrors = levelErrorList.length > 0;
 
           return (
             <div
               key={level}
               className={`p-4 rounded-lg border-2 ${
-                hasTranslation
+                hasLevelErrors
+                  ? "border-red-500 bg-red-50"
+                  : hasTranslation
                   ? "border-green-500 bg-green-50"
                   : isTranslating
                   ? "border-blue-500 bg-blue-50"
@@ -3523,44 +3521,220 @@ function Step5Translate({
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                      hasTranslation
+                      hasLevelErrors
+                        ? "bg-red-600 text-white"
+                        : hasTranslation
                         ? "bg-green-600 text-white"
                         : isTranslating
                         ? "bg-blue-600 text-white animate-pulse"
                         : "bg-gray-200 text-gray-600"
                     }`}
                   >
-                    {hasTranslation ? "✓" : `L${level}`}
+                    {hasLevelErrors ? "!" : hasTranslation ? "✓" : `L${level}`}
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">Level {level}</div>
+                    <div className="font-medium text-gray-900 flex items-center gap-2">
+                      Level {level}
+                      {copiedFromLevel[level] && (
+                        <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-normal">
+                          Copied from L{copiedFromLevel[level]} ✓
+                        </span>
+                      )}
+                      {hasLevelErrors && (
+                        <span className="text-xs text-red-600 font-normal">
+                          ({levelErrorList.length} failed chunk{levelErrorList.length > 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-500">
                       {isTranslating
-                        ? "Translating..."
+                        ? levelProgress[level]
+                          ? levelProgress[level].subChunk
+                            ? `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd}/${levelProgress[level].total} (part ${levelProgress[level].subChunk!.current}/${levelProgress[level].subChunk!.total})...`
+                            : `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd} of ${levelProgress[level].total}...`
+                          : "Translating..."
+                        : hasLevelErrors
+                        ? "Translation incomplete - resolve errors below"
                         : hasTranslation
-                        ? `${content.translatedText.split("\n").filter((l) => l.trim()).length} lines translated`
+                        ? (() => {
+                            const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
+                            const transLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
+                            const isComplete = transLines >= sourceLines;
+                            return isComplete
+                              ? `${transLines} lines translated ✓`
+                              : `${transLines}/${sourceLines} lines translated (partial)`;
+                          })()
                         : "Pending translation"}
                     </div>
                   </div>
                 </div>
-                {!hasTranslation && !isTranslating && (
-                  <button
-                    onClick={() => translateSingleLevel(level)}
-                    disabled={isProcessing}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    Translate
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {/* Translate button - show when no translation started */}
+                  {!hasTranslation && !isTranslating && (
+                    <button
+                      onClick={() => translateSingleLevel(level)}
+                      disabled={isProcessing}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Translate
+                    </button>
+                  )}
+                  {/* Resume button - show when partial translation exists */}
+                  {hasTranslation && !isTranslationComplete(level) && !isTranslating && (
+                    <button
+                      onClick={() => translateSingleLevel(level)}
+                      disabled={isProcessing}
+                      className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      Resume Translation
+                    </button>
+                  )}
+                  {/* Cancel button - show during translation */}
+                  {isTranslating && (
+                    <button
+                      onClick={cancel}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
-              {hasTranslation && (
-                <details className="mt-3">
-                  <summary className="text-sm text-gray-600 cursor-pointer">Preview translation</summary>
-                  <pre className="mt-2 text-xs bg-white p-3 rounded border max-h-40 overflow-auto whitespace-pre-wrap">
-                    {content.translatedText.slice(0, 500)}
-                    {content.translatedText.length > 500 && "..."}
-                  </pre>
-                </details>
+              {/* Line count comparison and View Full Text button */}
+              {content?.translatedText?.length > 0 && (() => {
+                const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
+                const translatedLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
+                const linesMatch = sourceLines === translatedLines;
+                return (
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className={`text-sm font-medium flex items-center gap-2 ${linesMatch ? 'text-green-600' : 'text-amber-600'}`}>
+                      <span>{sourceLines} lines</span>
+                      <span className="text-gray-400">{"<-->"}</span>
+                      <span>{translatedLines} lines</span>
+                      {linesMatch ? (
+                        <span className="text-green-500 ml-1">&#10003;</span>
+                      ) : (
+                        <span className="text-amber-500 ml-1">({translatedLines - sourceLines > 0 ? '+' : ''}{translatedLines - sourceLines})</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => openTranslationComparison(level)}
+                      className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      View Full Text
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* Failed Chunks UI */}
+              {hasLevelErrors && (
+                <div className="mt-4 space-y-3">
+                  <div className="text-sm font-medium text-red-700">Failed Chunks:</div>
+                  {levelErrorList.map((chunkError, idx) => {
+                    const errorKey = `${level}-${chunkError.chapterIndex}-${chunkError.subChunkIndex ?? 'main'}`;
+                    const isExpanded = expandedError === errorKey;
+
+                    return (
+                      <div
+                        key={errorKey}
+                        className="bg-white border border-red-200 rounded-lg overflow-hidden"
+                      >
+                        {/* Error Header */}
+                        <div
+                          className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-red-50"
+                          onClick={() => setExpandedError(isExpanded ? null : errorKey)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{getErrorIcon(chunkError.errorType)}</span>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                Chapter {chunkError.chapterIndex + 1}
+                                {chunkError.subChunkIndex !== undefined && ` (Part ${chunkError.subChunkIndex + 1})`}
+                              </div>
+                              <div className="text-xs text-red-600">
+                                {getErrorDisplayMessage(chunkError.errorType)}
+                                {chunkError.retryCount > 0 && ` (${chunkError.retryCount} retries)`}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                retryChunk(level, chunkError);
+                              }}
+                              disabled={isProcessing}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              Retry
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                applyOriginalAsFallback(level, chunkError);
+                              }}
+                              className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+                            >
+                              Keep Original
+                            </button>
+                            <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="border-t border-red-200 px-4 py-3 space-y-3">
+                            {/* Error Message */}
+                            <div>
+                              <div className="text-xs font-medium text-gray-500 mb-1">Error Details:</div>
+                              <div className="text-xs text-red-600 bg-red-50 p-2 rounded font-mono">
+                                {chunkError.errorMessage}
+                              </div>
+                            </div>
+
+                            {/* Original Text Preview */}
+                            <div>
+                              <div className="text-xs font-medium text-gray-500 mb-1">
+                                Original Text ({chunkError.originalText.length} chars):
+                              </div>
+                              <div className="text-xs text-gray-700 bg-gray-50 p-2 rounded max-h-32 overflow-y-auto font-mono whitespace-pre-wrap">
+                                {chunkError.originalText.substring(0, 500)}
+                                {chunkError.originalText.length > 500 && '...'}
+                              </div>
+                            </div>
+
+                            {/* Manual Override */}
+                            <div>
+                              <div className="text-xs font-medium text-gray-500 mb-1">
+                                Manual Translation Override:
+                              </div>
+                              <textarea
+                                value={manualOverrideText[errorKey] || ''}
+                                onChange={(e) => setManualOverrideText(prev => ({
+                                  ...prev,
+                                  [errorKey]: e.target.value
+                                }))}
+                                placeholder="Paste your manual translation here..."
+                                className="w-full h-24 text-xs border border-gray-300 rounded p-2 font-mono"
+                              />
+                              <button
+                                onClick={() => applyManualOverride(level, chunkError)}
+                                disabled={!manualOverrideText[errorKey]?.trim()}
+                                className="mt-2 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Apply Manual Translation
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
@@ -3568,16 +3742,66 @@ function Step5Translate({
       </div>
 
       {!allTranslated && (
-        <div className="text-center pt-4">
-          <button
-            onClick={translateAll}
-            disabled={isProcessing}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isProcessing ? "Translating..." : "Translate All Levels"}
-          </button>
+        <div className="text-center pt-4 space-y-3">
+          {isProcessing && translatingLevels.size > 0 && (
+            <div className="text-sm text-blue-600 font-medium">
+              Translating {translatingLevels.size} level{translatingLevels.size > 1 ? 's' : ''} in parallel...
+            </div>
+          )}
+          {/* Show error notification during translation if chunks have failed */}
+          {isProcessing && hasErrors && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm">
+              ⚠️ Some chunks failed during translation - you can retry them after translation completes
+            </div>
+          )}
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={translateAllLevels}
+              disabled={isProcessing}
+              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isProcessing ? "Translating..." : "Translate All Levels"}
+            </button>
+            {isProcessing && (
+              <button
+                onClick={cancel}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Summary note when translations complete but errors exist */}
+      {allTranslated && hasErrors && !isProcessing && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-center">
+          <div className="text-amber-800 font-medium mb-1">
+            ⚠️ Translation Complete with Errors
+          </div>
+          <div className="text-sm text-amber-700">
+            Some chunks failed to translate. Review the failed chunks above and retry or provide manual translations before saving.
+          </div>
+        </div>
+      )}
+
+      {/* Translation Comparison Modal */}
+      {translationComparisonLevel !== null && (
+        <ComparisonModal
+          isOpen={translationComparisonLevel !== null}
+          onClose={closeTranslationComparison}
+          level={translationComparisonLevel}
+          leftTitle={`Source (${storyData.sourceLanguage?.toUpperCase() || 'EN'})`}
+          leftText={storyData.levelContent[translationComparisonLevel]?.sourceText || ""}
+          rightTitle={`Translation (${storyData.sourceLanguage === 'en' ? 'ES' : 'EN'})`}
+          rightText={storyData.levelContent[translationComparisonLevel]?.translatedText || ""}
+          onSave={saveTranslationFromModal}
+          editableSide="right"
+          headerGradient="bg-gradient-to-r from-blue-600 to-indigo-600"
+        />
+      )}
+
     </div>
   );
 }
@@ -3711,6 +3935,15 @@ function Step6Paginate({
 }
 
 // Step 7: Preview & Save
+interface SaveResult {
+  success: boolean;
+  message: string;
+  warnings?: string[];
+  errors?: string[];
+  details?: string;
+  filesWritten?: string[];
+}
+
 function Step7Preview({
   storyData,
   isProcessing,
@@ -3721,9 +3954,10 @@ function Step7Preview({
   storyData: StoryData;
   isProcessing: boolean;
   setIsProcessing: (v: boolean) => void;
-  saveResult: { success: boolean; message: string; warnings?: string[] } | null;
-  setSaveResult: (r: { success: boolean; message: string; warnings?: string[] } | null) => void;
+  saveResult: SaveResult | null;
+  setSaveResult: (r: SaveResult | null) => void;
 }) {
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
   // Only include levels that are fully generated and translated (not omitted)
   const completedLevels = [1, 2, 3, 4, 5].filter(
     (l) =>
@@ -3777,25 +4011,54 @@ function Step7Preview({
         }),
       });
 
-      const data = await response.json();
+      // Parse response with error handling for network issues
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("[save-story] Failed to parse response:", parseError);
+        throw new Error("Server returned invalid response. The story may have partially saved - check the codebase.");
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to save story");
+        setSaveResult({
+          success: false,
+          message: data.error || "Failed to save story",
+          errors: data.errors || [],
+          details: data.details,
+          filesWritten: data.filesWritten,
+        });
+        return;
       }
 
       setSaveResult({
         success: true,
-        message: `Story saved successfully! Files written: ${data.filesWritten.join(", ")}`,
+        message: `Story saved successfully!`,
         warnings: data.warnings,
+        filesWritten: data.filesWritten,
       });
     } catch (err) {
       setSaveResult({
         success: false,
-        message: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        message: err instanceof Error ? err.message : "Unknown error",
+        details: err instanceof Error ? err.stack : undefined,
       });
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const copyErrorToClipboard = () => {
+    if (!saveResult) return;
+    const errorText = [
+      `Error: ${saveResult.message}`,
+      saveResult.details ? `Details: ${saveResult.details}` : "",
+      saveResult.errors?.length ? `Errors:\n${saveResult.errors.map(e => `  - ${e}`).join("\n")}` : "",
+      saveResult.filesWritten?.length ? `Files written: ${saveResult.filesWritten.join(", ")}` : "",
+      `\nStory slug: ${storyData.slug}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(errorText);
   };
 
   const content = storyData.levelContent[previewLevel];
@@ -3902,17 +4165,98 @@ function Step7Preview({
               saveResult.success ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
             }`}
           >
-            <div className="font-medium mb-1">
-              {saveResult.success ? "Success!" : "Error"}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="font-medium mb-1">
+                  {saveResult.success ? "Success!" : "Save Failed"}
+                </div>
+                <div className="text-sm">{saveResult.message}</div>
+              </div>
+              {!saveResult.success && (
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={copyErrorToClipboard}
+                    className="px-3 py-1 text-xs bg-red-100 hover:bg-red-200 rounded transition-colors"
+                    title="Copy error details to clipboard"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    onClick={() => setSaveResult(null)}
+                    className="px-3 py-1 text-xs bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="text-sm">{saveResult.message}</div>
+
             {saveResult.success && (
-              <p className="text-sm mt-2">
-                Restart your dev server to see the new story at{" "}
-                <code className="bg-green-100 px-1 rounded">/en/stories/{storyData.slug}/l1/1/1</code>
-              </p>
+              <>
+                {saveResult.filesWritten && saveResult.filesWritten.length > 0 && (
+                  <p className="text-sm mt-2">
+                    Files written: <code className="bg-green-100 px-1 rounded text-xs">{saveResult.filesWritten.length} files</code>
+                  </p>
+                )}
+                <p className="text-sm mt-2">
+                  Restart your dev server to see the new story:
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {completedLevels.map((level) => (
+                    <code key={level} className="bg-green-100 px-2 py-1 rounded text-xs">
+                      /en/stories/{storyData.slug}/l{level}/1/1
+                    </code>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Error details for failures */}
+            {!saveResult.success && (saveResult.errors?.length || saveResult.details || saveResult.filesWritten?.length) && (
+              <div className="mt-3">
+                <button
+                  onClick={() => setShowErrorDetails(!showErrorDetails)}
+                  className="text-xs underline hover:no-underline"
+                >
+                  {showErrorDetails ? "Hide details" : "Show details"}
+                </button>
+
+                {showErrorDetails && (
+                  <div className="mt-2 p-3 bg-red-100 rounded text-xs space-y-2">
+                    {saveResult.errors && saveResult.errors.length > 0 && (
+                      <div>
+                        <div className="font-medium mb-1">Errors:</div>
+                        <ul className="list-disc list-inside">
+                          {saveResult.errors.map((err, idx) => (
+                            <li key={idx}>{err}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {saveResult.filesWritten && saveResult.filesWritten.length > 0 && (
+                      <div>
+                        <div className="font-medium mb-1">Partially saved files:</div>
+                        <ul className="list-disc list-inside">
+                          {saveResult.filesWritten.map((file, idx) => (
+                            <li key={idx}>{file}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {saveResult.details && (
+                      <div>
+                        <div className="font-medium mb-1">Technical details:</div>
+                        <pre className="whitespace-pre-wrap text-[10px] bg-red-200 p-2 rounded overflow-auto max-h-32">
+                          {saveResult.details}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
+
           {saveResult.warnings && saveResult.warnings.length > 0 && (
             <div className="p-4 rounded-lg bg-yellow-50 text-yellow-800">
               <div className="font-medium mb-1">Warnings</div>

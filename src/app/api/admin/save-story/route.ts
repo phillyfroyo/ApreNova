@@ -159,12 +159,19 @@ export async function POST(req: NextRequest) {
       );
 
       // Actually, let's rebuild this properly - we want to paginate within the structure
-      const hasChapters = enChapters.length > 1;
+      const hasChapters = enChapters.length > 1 || esChapters.length > 1;
       const chapters: Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }> = {};
 
-      for (let chIdx = 0; chIdx < enChapters.length; chIdx++) {
-        const enPages = paginateLines(enChapters[chIdx], linesPerPage);
-        const esPages = paginateLines(esChapters[chIdx], linesPerPage);
+      // Use the max of both to handle potential mismatches
+      const maxChapters = Math.max(enChapters.length, esChapters.length);
+
+      for (let chIdx = 0; chIdx < maxChapters; chIdx++) {
+        // Safely get chapter content, defaulting to empty array if missing
+        const enChapter = enChapters[chIdx] || [];
+        const esChapter = esChapters[chIdx] || [];
+
+        const enPages = paginateLines(enChapter, linesPerPage);
+        const esPages = paginateLines(esChapter, linesPerPage);
         const pages: Record<number, { lines: Array<{ en: string; es: string }> }> = {};
 
         const maxPages = Math.max(enPages.length, esPages.length);
@@ -311,13 +318,29 @@ export async function POST(req: NextRequest) {
         updatedThemesContent = themesContent.replace(themeEntryRegex, themeEntry);
       } else {
         // Add new entry before the closing brace
-        updatedThemesContent = themesContent.replace(
-          /(\n};)\s*$/,
-          `  ${themeEntry}\n};`
-        );
+        // Handle various line ending patterns: \n};, \r\n};, },\n};, etc.
+        const closingPattern = /,?\s*\r?\n?};?\s*$/;
+        if (closingPattern.test(themesContent)) {
+          updatedThemesContent = themesContent.replace(
+            closingPattern,
+            `,\n  ${themeEntry}\n};`
+          );
+        } else {
+          // Fallback: just append before the last };
+          const lastBraceIndex = themesContent.lastIndexOf('};');
+          if (lastBraceIndex > -1) {
+            updatedThemesContent =
+              themesContent.slice(0, lastBraceIndex) +
+              `  ${themeEntry}\n};`;
+          } else {
+            console.error("[save-story] Could not find closing }; in storyThemes.ts");
+            throw new Error("Could not find closing brace in storyThemes.ts");
+          }
+        }
       }
 
       await fs.writeFile(themesPath, updatedThemesContent);
+      console.log(`[save-story] Theme entry added for "${slug}"`);
     } catch (themeError) {
       console.error("Failed to update storyThemes.ts:", themeError);
       result.errors.push("Failed to update story theme");

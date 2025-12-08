@@ -100,7 +100,8 @@ export const CEFR_LEVELS: Record<number, CEFRLevel> = {
 export function generateRewritePrompt(
   targetLevel: number,
   sourceText: string,
-  sourceLanguage: "en" | "es"
+  sourceLanguage: "en" | "es",
+  isPoetry: boolean = false
 ): string {
   const level = CEFR_LEVELS[targetLevel];
   const langName = sourceLanguage === "es" ? "Spanish" : "English";
@@ -109,24 +110,36 @@ export function generateRewritePrompt(
     ? `\nFORBIDDEN:\n${level.forbidden.join("\n")}`
     : "";
 
-  return `Rewrite this ${langName} story for CEFR ${level.cefr} (${level.name}).
+  // Different structure rules for poetry vs prose
+  const structureRules = isPoetry
+    ? `STRUCTURE RULES (POETRY):
+- Preserve the exact meaning, plot, and character names
+- KEEP EVERY LINE BREAK - do not merge lines
+- Each input line → one output line (reworded at the target level)
+- Empty lines must remain empty lines
+- Maintain poetic rhythm where possible`
+    : `STRUCTURE RULES (PROSE):
+- Preserve the exact meaning, plot, and character names
+- Preserve PARAGRAPH breaks (empty lines between paragraphs)
+- Within paragraphs, text should flow naturally as prose
+- Do NOT break sentences into separate lines
+- Do NOT add line breaks within paragraphs
+- Keep the narrative flowing and readable`;
+
+  return `Rewrite this ${langName} ${isPoetry ? 'poem' : 'story'} for CEFR ${level.cefr} (${level.name}).
 
 RULES:
 - Sentences: ${level.sentenceLength}
 - Vocabulary: ${level.vocabulary}${forbiddenRules}
 
-STRUCTURE RULES:
-- Preserve the exact meaning, plot, and character names
-- KEEP EVERY LINE BREAK - do not merge lines or paragraphs
-- Each input line → one output line (reworded at the target level)
-- Empty lines must remain empty lines
+${structureRules}
 
-TEXT (${sourceText.split("\n").length} lines):
+TEXT:
 """
 ${sourceText}
 """
 
-Return ONLY the rewritten text with the same line structure.`;
+Return ONLY the rewritten text.`;
 }
 
 /**
@@ -151,14 +164,16 @@ RULES:
 - Vocabulary: ${cefrLevel.vocabulary}
 - Match the sentence complexity of ${cefrLevel.cefr}${forbiddenRules}
 
-Translate line-by-line, preserving meaning exactly.
+CRITICAL - LINE NUMBER PRESERVATION:
+- Each line starts with [N] where N is a number
+- You MUST keep the same [N] prefix for each translated line
+- Each [N] line produces exactly ONE [N] translated line
+- Do NOT split, merge, or reorder lines
 
-TEXT:
-"""
+TEXT TO TRANSLATE:
 ${text}
-"""
 
-Return ONLY the translation, one line per source line.`;
+Return ONLY the numbered translated lines in the same format.`;
 }
 
 /**

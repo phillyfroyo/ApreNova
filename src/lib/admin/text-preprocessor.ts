@@ -1,6 +1,132 @@
 // src/lib/admin/text-preprocessor.ts
 // Algorithmic text preprocessing - no AI needed
 
+// ============================================
+// LINE BREAK NORMALIZATION
+// ============================================
+
+export type LineBreakStyle = "prose-wrapped" | "intentional";
+
+/**
+ * Detect if text has prose-style text wrapping (e.g., Gutenberg ~70 char lines)
+ * or intentional line breaks (e.g., poetry, formatted text)
+ *
+ * Heuristics:
+ * - High ratio of lines ending mid-sentence + consistent line lengths = text wrapping
+ * - Variable line lengths + lines ending with punctuation = intentional breaks
+ */
+export function detectLineBreakStyle(text: string): LineBreakStyle {
+  const lines = text.split('\n').filter(l => l.trim().length > 0);
+
+  // Too few lines to reliably detect
+  if (lines.length < 5) return "intentional";
+
+  // Count lines that end mid-sentence (no terminal punctuation, next line starts lowercase)
+  let midSentenceCount = 0;
+  let totalCheckable = 0;
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i].trim();
+    const nextLine = lines[i + 1]?.trim() || '';
+
+    // Skip very short lines (likely intentional formatting)
+    if (line.length < 20) continue;
+
+    totalCheckable++;
+
+    // Check if line ends with terminal punctuation
+    const endsWithPunctuation = /[.!?;:"'»)\]]$/.test(line);
+
+    // Check if next line starts with lowercase (sentence continuation)
+    const nextStartsLower = /^[a-z]/.test(nextLine);
+
+    // Check if next line starts with common sentence-continuation words
+    const nextIsContinuation = /^(and|or|but|that|which|who|whom|whose|where|when|while|because|although|if|the|a|an|to|in|on|at|for|with|by|from|as|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|must|shall|can)\s/i.test(nextLine);
+
+    if (!endsWithPunctuation && (nextStartsLower || nextIsContinuation)) {
+      midSentenceCount++;
+    }
+  }
+
+  // Calculate metrics
+  const midSentenceRatio = totalCheckable > 0 ? midSentenceCount / totalCheckable : 0;
+  const avgLength = lines.reduce((sum, l) => sum + l.length, 0) / lines.length;
+
+  // Calculate line length variance (coefficient of variation)
+  const variance = lines.reduce((sum, l) => sum + Math.pow(l.length - avgLength, 2), 0) / lines.length;
+  const stdDev = Math.sqrt(variance);
+  const coeffOfVariation = avgLength > 0 ? stdDev / avgLength : 0;
+
+  // Decision logic:
+  // - High mid-sentence ratio (>25%) suggests text wrapping
+  // - Consistent line lengths (low variance) suggests text wrapping
+  // - Longer average lines (>50 chars) suggests prose
+  //
+  // Text wrapping: midSentenceRatio > 0.25 AND avgLength > 50 AND coeffOfVariation < 0.5
+  if (midSentenceRatio > 0.25 && avgLength > 50 && coeffOfVariation < 0.5) {
+    return "prose-wrapped";
+  }
+
+  return "intentional";
+}
+
+/**
+ * Normalize text by joining text-wrapped lines into paragraphs.
+ *
+ * For prose-wrapped text (e.g., Gutenberg):
+ * - Join lines within paragraphs (single newlines become spaces)
+ * - Preserve paragraph breaks (double newlines)
+ * - Result: one "line" per paragraph
+ *
+ * For intentional breaks (e.g., poetry):
+ * - Keep all line breaks as-is
+ */
+export function normalizeLineBreaks(text: string, forceStyle?: LineBreakStyle): string {
+  const style = forceStyle || detectLineBreakStyle(text);
+
+  if (style === "intentional") {
+    // Keep line breaks as-is, just clean up extra whitespace
+    return text
+      .split('\n')
+      .map(line => line.trim())
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines to max 2
+  }
+
+  // Prose-wrapped: join lines within paragraphs
+  // Split by blank lines (paragraph boundaries)
+  const paragraphs = text.split(/\n\s*\n/);
+
+  const normalized = paragraphs.map(para => {
+    // Join lines within paragraph with spaces
+    return para
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join(' ')
+      // Clean up any double spaces that might result
+      .replace(/\s+/g, ' ')
+      .trim();
+  }).filter(para => para.length > 0);
+
+  // Join paragraphs with double newlines
+  return normalized.join('\n\n');
+}
+
+/**
+ * Get a human-readable description of the detected line break style
+ */
+export function getLineBreakStyleDescription(style: LineBreakStyle): string {
+  if (style === "prose-wrapped") {
+    return "Text-wrapped prose detected. Lines will be joined into paragraphs.";
+  }
+  return "Intentional line breaks detected. Original formatting will be preserved.";
+}
+
+// ============================================
+// CHAPTER DETECTION TYPES
+// ============================================
+
 export interface DetectedChapter {
   number: number;
   title: string;
@@ -30,6 +156,7 @@ export interface PreprocessedText {
     asteriskDividersRemoved: number;
     chaptersDetected: number;
     backMatterRemoved: boolean;
+    lineBreakStyle: LineBreakStyle;
   };
 
   // The full cleaned text (all chapters joined)
@@ -220,7 +347,7 @@ interface ChapterMarker {
 }
 
 function detectChapterMarkers(lines: string[]): ChapterMarker[] {
-  // Roman numeral mapping (extended for longer works)
+  // Roman numeral mapping (extended for longer works - up to 100)
   const romanToArabic: Record<string, number> = {
     'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
     'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
@@ -232,6 +359,16 @@ function detectChapterMarkers(lines: string[]): ChapterMarker[] {
     'XXXVI': 36, 'XXXVII': 37, 'XXXVIII': 38, 'XXXIX': 39, 'XL': 40,
     'XLI': 41, 'XLII': 42, 'XLIII': 43, 'XLIV': 44, 'XLV': 45,
     'XLVI': 46, 'XLVII': 47, 'XLVIII': 48, 'XLIX': 49, 'L': 50,
+    'LI': 51, 'LII': 52, 'LIII': 53, 'LIV': 54, 'LV': 55,
+    'LVI': 56, 'LVII': 57, 'LVIII': 58, 'LIX': 59, 'LX': 60,
+    'LXI': 61, 'LXII': 62, 'LXIII': 63, 'LXIV': 64, 'LXV': 65,
+    'LXVI': 66, 'LXVII': 67, 'LXVIII': 68, 'LXIX': 69, 'LXX': 70,
+    'LXXI': 71, 'LXXII': 72, 'LXXIII': 73, 'LXXIV': 74, 'LXXV': 75,
+    'LXXVI': 76, 'LXXVII': 77, 'LXXVIII': 78, 'LXXIX': 79, 'LXXX': 80,
+    'LXXXI': 81, 'LXXXII': 82, 'LXXXIII': 83, 'LXXXIV': 84, 'LXXXV': 85,
+    'LXXXVI': 86, 'LXXXVII': 87, 'LXXXVIII': 88, 'LXXXIX': 89, 'XC': 90,
+    'XCI': 91, 'XCII': 92, 'XCIII': 93, 'XCIV': 94, 'XCV': 95,
+    'XCVI': 96, 'XCVII': 97, 'XCVIII': 98, 'XCIX': 99, 'C': 100,
   };
 
   // First pass: look for EXPLICIT chapter markers only
@@ -246,7 +383,14 @@ function detectChapterMarkers(lines: string[]): ChapterMarker[] {
     if (!line) continue;
 
     // Pattern 1: "CHAPTER X" or "Chapter 1" (explicit chapter marker)
-    const chapterMatch = line.match(/^CHAPTER\s+(\d+|[IVXLC]+)\.?(?:\s*[:\-—–]\s*(.+))?$/i);
+    // Handles various formats:
+    // - "CHAPTER I" (no title)
+    // - "CHAPTER I." (no title, with period)
+    // - "CHAPTER I: Title" (colon separator)
+    // - "CHAPTER I - Title" (dash separator)
+    // - "CHAPTER I. Title" (period + space + title - Gutenberg format)
+    // - "CHAPTER I Title" (just space before title)
+    const chapterMatch = line.match(/^CHAPTER\s+(\d+|[IVXLC]+)\.?\s*(?:[:\-—–]\s*)?(.*)$/i);
     if (chapterMatch) {
       const numStr = chapterMatch[1].toUpperCase();
       const num = romanToArabic[numStr] || parseInt(numStr) || explicitMarkers.length + 1;
@@ -343,6 +487,63 @@ function detectChapterMarkers(lines: string[]): ChapterMarker[] {
 }
 
 /**
+ * Filter out Table of Contents markers
+ * TOC entries appear in rapid succession (consecutive or near-consecutive lines)
+ * Actual chapters have substantial content between them
+ */
+function filterOutTOCMarkers(markers: ChapterMarker[]): ChapterMarker[] {
+  if (markers.length < 3) return markers;
+
+  // Find clusters of markers that are very close together (within 3 lines)
+  // These are almost certainly TOC entries
+  const TOC_LINE_THRESHOLD = 3;
+  const MIN_CLUSTER_SIZE = 3;
+
+  const clusters: number[][] = []; // Array of marker indices in each cluster
+  let currentCluster: number[] = [0];
+
+  for (let i = 1; i < markers.length; i++) {
+    const lineGap = markers[i].lineIndex - markers[i - 1].lineIndex;
+
+    if (lineGap <= TOC_LINE_THRESHOLD) {
+      // This marker is close to the previous one - same cluster
+      currentCluster.push(i);
+    } else {
+      // Gap is large - start a new cluster
+      if (currentCluster.length >= MIN_CLUSTER_SIZE) {
+        clusters.push([...currentCluster]);
+      }
+      currentCluster = [i];
+    }
+  }
+
+  // Don't forget the last cluster
+  if (currentCluster.length >= MIN_CLUSTER_SIZE) {
+    clusters.push([...currentCluster]);
+  }
+
+  // If no TOC clusters found, return all markers
+  if (clusters.length === 0) return markers;
+
+  // Create a set of indices to exclude (TOC markers)
+  const tocIndices = new Set<number>();
+  for (const cluster of clusters) {
+    for (const idx of cluster) {
+      tocIndices.add(idx);
+    }
+  }
+
+  // Return only non-TOC markers
+  const filtered = markers.filter((_, idx) => !tocIndices.has(idx));
+
+  if (filtered.length < markers.length) {
+    console.log(`[preprocessText] Filtered out ${markers.length - filtered.length} TOC markers`);
+  }
+
+  return filtered;
+}
+
+/**
  * Split text into chapters based on detected markers
  */
 function splitIntoChapters(lines: string[], markers: ChapterMarker[]): DetectedChapter[] {
@@ -401,30 +602,47 @@ function extractFrontMatter(lines: string[], firstChapterLine: number): string {
  * Returns the line index where back matter starts, or -1 if not found
  */
 function detectBackMatterStart(lines: string[]): number {
-  // Patterns that indicate the start of back matter (case-insensitive)
-  // These are ordered roughly by priority - supplementary material first, then end markers
-  const backMatterPatterns = [
-    /^\s*ADDENDA\b/i,     // Addenda section (supplementary material)
-    /^\s*APPENDIX\b/i,    // Appendix
-    /^\s*FOOTNOTES\b/i,   // Footnotes section
-    /^\s*ENDNOTES\b/i,    // Endnotes section
-    /^\s*GLOSSARY\b/i,    // Glossary
-    /^\s*INDEX\b/i,       // Index
-    /^\s*NOTES\s*$/i,     // Notes section (when standalone on line)
+  // DEFINITIVE back matter patterns - these are very unlikely to appear in story content
+  // More conservative approach to avoid cutting off chapters prematurely
+  const definitiveBackMatterPatterns = [
     /^\*{3}\s*END OF (THE |THIS )?PROJECT GUTENBERG/i,
     /^End of (the )?Project Gutenberg/i,
     /^END OF (THE |THIS )?PROJECT GUTENBERG/i,
     /^\*{3}\s*END OF THE EBOOK/i,
-    /^THE END\.?\s*$/i,   // "THE END" on its own line (common story ending marker)
-    /^FINIS\.?\s*$/i,     // Latin for "the end"
+    /^\*{3}\s*START:?\s*FULL LICENSE/i,
+    // Publisher advertisements (common in old scanned books)
+    /^GROSSET\s*&\s*DUNLAP/i,
+    /^There's More to Follow/i,
+    /^There is More to Follow/i,
+    /^Ask for .+ list/i,
+    /^May be had wherever books are sold/i,
+    /^In case the wrapper is lost/i,
+    // Other common publishers
+    /^PENGUIN BOOKS/i,
+    /^BANTAM BOOKS/i,
+    /^RANDOM HOUSE/i,
+    /^HARPER\s*&\s*(BROTHERS|ROW|COLLINS)/i,
+    /^SIMON\s*&\s*SCHUSTER/i,
+    /^DOUBLEDAY/i,
   ];
 
-  // Patterns that strongly indicate Gutenberg boilerplate (not story content)
+  // POSSIBLE back matter patterns - these need confirmation from surrounding context
+  // They could appear in story content (letters, journals, etc.)
+  const possibleBackMatterPatterns = [
+    /^\s*ADDENDA\s*$/i,     // Only if exactly "ADDENDA" on line
+    /^\s*APPENDIX\s*$/i,    // Only if exactly "APPENDIX" on line
+    /^\s*FOOTNOTES\s*$/i,   // Footnotes section header
+    /^\s*ENDNOTES\s*$/i,    // Endnotes section header
+    /^THE END\.?\s*$/i,     // Could be end of story OR end of a letter
+    /^FINIS\.?\s*$/i,       // Latin for "the end"
+    /^FIN\.?\s*$/i,         // French/Spanish for "the end"
+  ];
+
+  // Patterns that strongly indicate Gutenberg boilerplate or publisher ads (not story content)
   const boilerplatePatterns = [
     /Project Gutenberg Literary Archive Foundation/i,
     /This eBook is for the use of anyone anywhere/i,
     /SMALL PRINT!/i,
-    /^\*{3}\s*START:?\s*FULL LICENSE/i,
     /^Section \d+\.\s+General Terms of Use/i,
     /trademark\/copyright agreement/i,
     /gutenberg\.org/i,
@@ -432,23 +650,34 @@ function detectBackMatterStart(lines: string[]): number {
     /copyright laws of most countries/i,
     /^Produced by .+ from/i,
     /^Updated editions will replace the previous one/i,
+    // Publisher advertisement patterns
+    /Authors' Alphabetical List/i,
+    /Popular Copyrighted Fiction/i,
+    /books? (here )?you are sure to want/i,
+    /greatest Index of Good Fiction/i,
+    /Look on the Other Side/i,
+    /write to the publishers/i,
+    /complete (free )?list/i,
+    /DETECTIVE STORIES BY/i,
+    /STORIES BY [A-Z]\. [A-Z]\. [A-Z]/i,  // "STORIES BY J. S. FLETCHER" pattern
   ];
 
-  // Search from the LAST 50% of the document FORWARD to find the EARLIEST back matter marker
-  // This ensures we catch supplementary material like ADDENDA that appears before license text
-  const scanStart = Math.floor(lines.length * 0.5);
+  // Search from the LAST 30% of the document for definitive markers
+  // This ensures we catch publisher ads that appear after the story ends
+  const scanStart = Math.floor(lines.length * 0.7);
 
+  // First pass: look for DEFINITIVE markers (these are 100% reliable)
   for (let i = scanStart; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    for (const pattern of backMatterPatterns) {
+    for (const pattern of definitiveBackMatterPatterns) {
       if (pattern.test(line)) {
         return i;
       }
     }
   }
 
-  // If no explicit marker, scan looking for boilerplate content
+  // Second pass: look for boilerplate content (3+ consecutive lines)
   let consecutiveBoilerplate = 0;
   let firstBoilerplateLine = -1;
 
@@ -479,6 +708,19 @@ function detectBackMatterStart(lines: string[]): number {
       // Reset if we find non-boilerplate content
       consecutiveBoilerplate = 0;
       firstBoilerplateLine = -1;
+    }
+  }
+
+  // Third pass: look for POSSIBLE markers in the LAST 10% (very end of document)
+  // These are less reliable so we only trust them near the very end
+  const veryEndStart = Math.floor(lines.length * 0.90);
+  for (let i = veryEndStart; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    for (const pattern of possibleBackMatterPatterns) {
+      if (pattern.test(line)) {
+        return i;
+      }
     }
   }
 
@@ -556,7 +798,10 @@ export function preprocessText(rawText: string): PreprocessedText {
   }
 
   // Step 8: Detect chapter markers
-  const markers = detectChapterMarkers(lines);
+  const rawMarkers = detectChapterMarkers(lines);
+
+  // Step 8b: Filter out Table of Contents markers (clusters of markers close together)
+  const markers = filterOutTOCMarkers(rawMarkers);
 
   // Step 9: Extract front matter
   const firstChapterLine = markers.length > 0 ? markers[0].lineIndex : lines.length;
@@ -581,7 +826,18 @@ export function preprocessText(rawText: string): PreprocessedText {
     number: idx + 1,
   }));
 
-  // Step 12: Build full cleaned text with proper chapter labels
+  // Step 12: Detect line break style and normalize each chapter's text
+  // Detect from the full text (before normalization) to get accurate metrics
+  const fullTextForDetection = chapters.map(ch => ch.rawText).join('\n\n');
+  const detectedLineBreakStyle = detectLineBreakStyle(fullTextForDetection);
+
+  // Normalize each chapter's rawText based on detected style
+  chapters = chapters.map(ch => ({
+    ...ch,
+    rawText: normalizeLineBreaks(ch.rawText, detectedLineBreakStyle),
+  }));
+
+  // Step 13: Build full cleaned text with proper chapter labels
   const cleanedFullText = chapters
     .map((ch, idx) => {
       if (idx === 0) return ch.rawText;
@@ -606,6 +862,7 @@ export function preprocessText(rawText: string): PreprocessedText {
       asteriskDividersRemoved,
       chaptersDetected: chapters.length,
       backMatterRemoved,
+      lineBreakStyle: detectedLineBreakStyle,
     },
     cleanedFullText,
   };

@@ -55,16 +55,42 @@ export async function writeContentFile(
 }
 
 /**
- * Append a new story entry to STORY_METADATA in stories.ts
+ * Add or update a story entry in STORY_METADATA in stories.ts
+ * If the slug already exists, the existing entry is updated.
+ * If not, a new entry is appended.
  */
 export async function updateStoriesMetadata(
-  metadataEntry: string
+  metadataEntry: string,
+  slug?: string
 ): Promise<boolean> {
   const filePath = path.join(PROJECT_ROOT, "src/lib/stories.ts");
 
   try {
     let content = await fs.readFile(filePath, "utf-8");
 
+    // Extract slug from metadataEntry if not provided
+    const extractedSlug = slug || metadataEntry.match(/slug:\s*"([^"]+)"/)?.[1];
+
+    if (extractedSlug) {
+      // Check if this story already exists in STORY_METADATA
+      // Match the entire object entry for this slug
+      const existingEntryPattern = new RegExp(
+        `\\{\\s*\\n\\s*slug:\\s*"${extractedSlug}",[^}]*targetAudience:[^}]*\\},?`,
+        's'
+      );
+
+      if (existingEntryPattern.test(content)) {
+        console.log(`[file-writer] Story "${extractedSlug}" already exists in stories.ts, updating...`);
+        // Remove trailing comma from metadataEntry if present, we'll handle comma logic
+        const cleanEntry = metadataEntry.replace(/,\s*$/, '');
+        content = content.replace(existingEntryPattern, cleanEntry + ',');
+        await fs.writeFile(filePath, content, "utf-8");
+        console.log(`[file-writer] Successfully updated "${extractedSlug}" in stories.ts`);
+        return true;
+      }
+    }
+
+    // Story doesn't exist, append new entry
     // Find the STORY_METADATA array and insert before the closing bracket
     // Look for the pattern "];" that ends the array
     const arrayEndPattern = /(\];)\s*\n\s*export function getStoryUrl/;
@@ -82,6 +108,7 @@ export async function updateStoriesMetadata(
     );
 
     await fs.writeFile(filePath, content, "utf-8");
+    console.log(`[file-writer] Successfully added "${extractedSlug}" to stories.ts`);
     return true;
   } catch (error) {
     console.error("Error updating stories.ts:", error);
@@ -90,7 +117,8 @@ export async function updateStoriesMetadata(
 }
 
 /**
- * Add story metadata to UI translation file
+ * Add or update story metadata in UI translation file
+ * If the slug already exists, the existing entry is updated.
  */
 export async function updateUITranslation(
   lang: "en" | "es",
@@ -102,35 +130,57 @@ export async function updateUITranslation(
   try {
     let content = await fs.readFile(filePath, "utf-8");
 
-    // Find the storiesMetadata object and insert before its closing brace
-    // Look for the pattern that ends storiesMetadata
-    const metadataEndPattern = /(\n}\s*\n\s*\n\s*};?\s*\n\s*export default)/;
-
     if (!content.includes("storiesMetadata:")) {
-      console.error(`storiesMetadata not found in ${lang}.ts`);
+      console.error(`[file-writer] storiesMetadata not found in ${lang}.ts`);
       return false;
     }
 
-    // Find the last entry in storiesMetadata and add after it
-    // We'll look for the pattern of the last entry (ends with },)
-    const lastEntryPattern = /(storiesMetadata:\s*\{[\s\S]*?)(\n\s*}\s*\n*\s*};?\s*\nexport default)/;
+    // Check if this story already exists
+    if (content.includes(`"${slug}":`)) {
+      console.log(`[file-writer] Story "${slug}" already exists in ${lang}.ts, updating...`);
+      // Match the existing entry for this slug
+      const existingEntryPattern = new RegExp(
+        `"${slug}":\\s*\\{[^}]*\\},?`,
+        's'
+      );
+      // Ensure entry has proper comma at end
+      const cleanEntry = entry.replace(/,?\s*$/, ',');
+      content = content.replace(existingEntryPattern, cleanEntry);
+      await fs.writeFile(filePath, content, "utf-8");
+      console.log(`[file-writer] Successfully updated "${slug}" in ${lang}.ts`);
+      return true;
+    }
+
+    // Story doesn't exist, add new entry
+    // Match the end of storiesMetadata object
+    // Structure is: storiesMetadata: { ...entries... },\n};\n\nexport default
+    // The },\n}; pattern closes storiesMetadata (with trailing comma) then closes main object
+    const lastEntryPattern = /(storiesMetadata:\s*\{[\s\S]*?)(\n},\n};\n+export default)/;
     const match = content.match(lastEntryPattern);
 
     if (!match) {
-      console.error(`Could not find end of storiesMetadata in ${lang}.ts`);
-      return false;
+      // Try alternate pattern without trailing comma on storiesMetadata
+      const altPattern = /(storiesMetadata:\s*\{[\s\S]*?)(\n}\n};\n+export default)/;
+      const altMatch = content.match(altPattern);
+
+      if (!altMatch) {
+        console.error(`[file-writer] Could not find end of storiesMetadata in ${lang}.ts`);
+        console.error(`[file-writer] Last 200 chars of file:`, content.slice(-200));
+        return false;
+      }
+
+      // Use alternate pattern
+      content = content.replace(altPattern, `$1\n${entry}$2`);
+    } else {
+      // Insert the new entry before the closing },
+      content = content.replace(lastEntryPattern, `$1\n${entry}$2`);
     }
 
-    // Insert the new entry
-    content = content.replace(
-      lastEntryPattern,
-      `$1\n${entry}$2`
-    );
-
     await fs.writeFile(filePath, content, "utf-8");
+    console.log(`[file-writer] Successfully added "${slug}" to ${lang}.ts`);
     return true;
   } catch (error) {
-    console.error(`Error updating ${lang}.ts:`, error);
+    console.error(`[file-writer] Error updating ${lang}.ts:`, error);
     return false;
   }
 }

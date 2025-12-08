@@ -10,44 +10,31 @@ export interface StoryTheme {
 }
 
 export const STORY_THEMES: Record<string, StoryTheme> = {
-  default: {
+  "aventura": {
     backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
-    textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
-    fontFamily: "font-sans",
-  },
-  aventura: {
-    backgroundImage: "/images/background4.png",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },
   "the-last-word": {
-    backgroundImage: "/images/background6.png",
+    backgroundGradient: "linear-gradient(135deg, #f5f0e6 0%, #e8dcc8 100%)",
     textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
-    fontFamily: "font-sans",
+    accentColor: "bg-amber-600",
+    hoverAccentColor: "hover:bg-amber-300",
+    fontFamily: "font-serif",
   },
   "diego-unplugged": {
-    backgroundImage: "/images/background5.png",
+    backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
     textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
-    fontFamily: "font-sans",
-  },  "my-day": {
-    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
-    textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
-    fontFamily: "font-sans",
-  },  "my-family": {
-    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
-    textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
+    accentColor: "bg-blue-600",
+    hoverAccentColor: "hover:bg-blue-300",
     fontFamily: "font-sans",
   },
-};
+  "my-day": {
+    backgroundGradient: "linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%)",
+    textColor: "text-gray-900",
+    accentColor: "bg-orange-600",
+    hoverAccentColor: "hover:bg-orange-300",
+    fontFamily: "font-serif",
+  },};
