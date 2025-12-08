@@ -2,9 +2,9 @@
 // src\app\translation-guide\page.tsx
 
 import UnifiedTranslator from "@/components/UnifiedTranslator";
-import { STORY_THEMES } from "@/components/storyThemes";
+import { DEFAULT_THEME } from "@/components/storyThemes";
 
-const theme = STORY_THEMES.default;
+const theme = DEFAULT_THEME;
 
 export default function TranslationGuide() {
   const testSentences = [

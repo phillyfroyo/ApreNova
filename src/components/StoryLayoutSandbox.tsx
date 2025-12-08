@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import { STORY_THEMES } from "@/components/storyThemes";
+import { getTheme } from "@/components/storyThemes";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
@@ -185,7 +185,7 @@ export default function StoryLayoutSandbox({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
+  const theme = getTheme(storySlug);
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
