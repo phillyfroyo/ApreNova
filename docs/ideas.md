@@ -42,3 +42,29 @@ Our stories pages need a revamp. Really think through the user experience, layou
 
 ### Story View Analytics
 Track number of views of stories throughout the app, counting all users. This could help identify popular content, inform content strategy, and provide insights into user engagement patterns.
+
+### Aggressive Prefetching Optimization
+Implement intelligent prefetching throughout the app to minimize perceived load times:
+
+**Story Content:**
+- When user enters a chapter, prefetch the next chapter in the background
+- For split-by-chapter content, this gives 5+ minutes of buffer time to load ~50-100KB
+- Prefetch previous chapter too for users who navigate backwards
+
+**Story List/Library:**
+- When hovering over a story card, prefetch that story's first chapter
+- Prefetch story metadata for visible cards in the viewport
+
+**Navigation:**
+- Prefetch likely next pages based on user flow (e.g., after story completion, prefetch dashboard)
+- Use `<link rel="prefetch">` for common navigation paths
+
+**Audio Files:**
+- Prefetch audio for upcoming lines/pages while user reads current content
+- Cache recently played audio for quick replay
+
+**Implementation Notes:**
+- Use Intersection Observer for viewport-based prefetching
+- Respect user's data-saver preferences
+- Implement request prioritization (current content > prefetch)
+- Consider using Service Workers for advanced caching strategies

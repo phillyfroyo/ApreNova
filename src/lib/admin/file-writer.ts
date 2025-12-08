@@ -30,7 +30,7 @@ async function ensureDir(dirPath: string): Promise<void> {
 }
 
 /**
- * Write a content file for a specific story level
+ * Write a content file for a specific story level (single file format)
  */
 export async function writeContentFile(
   storySlug: string,
@@ -38,6 +38,57 @@ export async function writeContentFile(
   content: string
 ): Promise<FileWriteResult> {
   const relativePath = `src/content/${storySlug}/l${level}/content.ts`;
+  const fullPath = path.join(PROJECT_ROOT, relativePath);
+
+  try {
+    await ensureDir(path.dirname(fullPath));
+    await fs.writeFile(fullPath, content, "utf-8");
+
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return {
+      success: false,
+      path: relativePath,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Write a single chapter file (split format)
+ */
+export async function writeChapterFile(
+  storySlug: string,
+  level: number,
+  chapterNum: number,
+  content: string
+): Promise<FileWriteResult> {
+  const relativePath = `src/content/${storySlug}/l${level}/ch${chapterNum}.ts`;
+  const fullPath = path.join(PROJECT_ROOT, relativePath);
+
+  try {
+    await ensureDir(path.dirname(fullPath));
+    await fs.writeFile(fullPath, content, "utf-8");
+
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return {
+      success: false,
+      path: relativePath,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Write the index.ts file for split chapter format
+ */
+export async function writeChapterIndexFile(
+  storySlug: string,
+  level: number,
+  content: string
+): Promise<FileWriteResult> {
+  const relativePath = `src/content/${storySlug}/l${level}/index.ts`;
   const fullPath = path.join(PROJECT_ROOT, relativePath);
 
   try {
@@ -152,29 +203,51 @@ export async function updateUITranslation(
     }
 
     // Story doesn't exist, add new entry
-    // Match the end of storiesMetadata object
-    // Structure is: storiesMetadata: { ...entries... },\n};\n\nexport default
-    // The },\n}; pattern closes storiesMetadata (with trailing comma) then closes main object
-    const lastEntryPattern = /(storiesMetadata:\s*\{[\s\S]*?)(\n},\n};\n+export default)/;
-    const match = content.match(lastEntryPattern);
+    // Simpler approach: find the closing pattern and insert before it
+    // Pattern: last entry ends with },\n then },\n};\n\nexport
+    const lineEnding = content.includes('\r\n') ? '\r\n' : '\n';
 
-    if (!match) {
-      // Try alternate pattern without trailing comma on storiesMetadata
-      const altPattern = /(storiesMetadata:\s*\{[\s\S]*?)(\n}\n};\n+export default)/;
-      const altMatch = content.match(altPattern);
-
-      if (!altMatch) {
-        console.error(`[file-writer] Could not find end of storiesMetadata in ${lang}.ts`);
-        console.error(`[file-writer] Last 200 chars of file:`, content.slice(-200));
-        return false;
-      }
-
-      // Use alternate pattern
-      content = content.replace(altPattern, `$1\n${entry}$2`);
-    } else {
-      // Insert the new entry before the closing },
-      content = content.replace(lastEntryPattern, `$1\n${entry}$2`);
+    // Find "export default" and work backwards to find where to insert
+    const exportIdx = content.indexOf('export default');
+    if (exportIdx === -1) {
+      console.error(`[file-writer] Could not find 'export default' in ${lang}.ts`);
+      return false;
     }
+
+    // Find the storiesMetadata section
+    const metadataIdx = content.indexOf('storiesMetadata:');
+    if (metadataIdx === -1) {
+      console.error(`[file-writer] Could not find 'storiesMetadata:' in ${lang}.ts`);
+      return false;
+    }
+
+    // Find the closing pattern: },\n}, which marks end of last entry and storiesMetadata close
+    // Search backwards from export for the pattern "  },\n},"
+    const closingSection = content.slice(metadataIdx, exportIdx);
+
+    // Find last occurrence of "},\n" or "},\r\n" followed by eventual "},"
+    // The structure is: ...entry},\n},\n};\nexport
+    // We want to insert before the second }, (storiesMetadata close)
+    const lastEntryClose = closingSection.lastIndexOf('  },');
+
+    if (lastEntryClose === -1) {
+      console.error(`[file-writer] Could not find last entry close in ${lang}.ts storiesMetadata`);
+      console.error(`[file-writer] Closing section:`, JSON.stringify(closingSection.slice(-200)));
+      return false;
+    }
+
+    // Insert position is right after the last entry's },
+    const insertPos = metadataIdx + lastEntryClose + 4; // 4 = length of "  },"
+
+    // Find where the line ends after },
+    let lineEndPos = insertPos;
+    while (lineEndPos < content.length && content[lineEndPos] !== '\n') {
+      lineEndPos++;
+    }
+    lineEndPos++; // Include the \n
+
+    // Insert the new entry
+    content = content.slice(0, lineEndPos) + entry + lineEnding + content.slice(lineEndPos);
 
     await fs.writeFile(filePath, content, "utf-8");
     console.log(`[file-writer] Successfully added "${slug}" to ${lang}.ts`);

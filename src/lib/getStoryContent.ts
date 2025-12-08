@@ -1,6 +1,21 @@
 // src/lib/getStoryContent.ts
 import type { Language } from "@/types/i18n";
 
+/**
+ * Try to load story content from either split-chapter format (index.ts) or single-file format (content.ts)
+ */
+async function loadLevelContent(storySlug: string, level: string) {
+  // Try split-chapter format first (index.ts)
+  try {
+    const indexFile = await import(`@/content/${storySlug}/${level}/index.ts`);
+    return indexFile.default || indexFile.levelContent;
+  } catch {
+    // Fall back to single-file format (content.ts)
+    const consolidatedFile = await import(`@/content/${storySlug}/${level}/content.ts`);
+    return consolidatedFile.default || consolidatedFile.levelContent;
+  }
+}
+
 export async function getStoryContent(
   storySlug: string,
   level: string,
@@ -17,12 +32,11 @@ export async function getStoryContent(
       lng,
     });
 
-    const consolidatedFile = await import(`@/content/${storySlug}/${level}/content.ts`);
-    const levelContent = consolidatedFile.default || consolidatedFile.levelContent;
+    const levelContent = await loadLevelContent(storySlug, level);
     const chapterNum = parseInt(chapter.replace('ch', ''));
     const pageNum = parseInt(page.replace('page-', ''));
     const pageData = levelContent.chapters[chapterNum]?.pages[pageNum];
-    
+
     if (pageData) {
       return {
         storySlug: levelContent.storySlug,

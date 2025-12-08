@@ -245,7 +245,7 @@ export function paginateLines(
 }
 
 /**
- * Generate TypeScript content file for a story level
+ * Generate TypeScript content file for a story level (single file format)
  */
 export function generateContentFileTS(content: GeneratedStoryContent): string {
   const chaptersObj: Record<number, { pages: Record<number, { lines: StoryLine[] }> }> = {};
@@ -274,6 +274,77 @@ export function generateContentFileTS(content: GeneratedStoryContent): string {
 
   // Convert JSON to TypeScript export
   return `export const levelContent = ${contentStr};\n`;
+}
+
+/**
+ * Generate TypeScript content file for a single chapter (split format)
+ */
+export function generateChapterFileTS(
+  storySlug: string,
+  level: number,
+  chapterNum: number,
+  chapter: StoryChapter
+): string {
+  const pagesObj: Record<number, { lines: StoryLine[] }> = {};
+
+  for (const [pageNum, page] of Object.entries(chapter.pages)) {
+    pagesObj[parseInt(pageNum)] = { lines: page.lines };
+  }
+
+  const contentStr = JSON.stringify(
+    {
+      storySlug,
+      level,
+      chapter: chapterNum,
+      pages: pagesObj,
+    },
+    null,
+    2
+  );
+
+  return `export const chapterContent = ${contentStr};\n`;
+}
+
+/**
+ * Generate the index.ts file that re-exports all chapters (split format)
+ */
+export function generateChapterIndexTS(
+  storySlug: string,
+  level: number,
+  hasChapters: boolean,
+  chapterCount: number
+): string {
+  const imports: string[] = [];
+  const exports: string[] = [];
+
+  for (let i = 1; i <= chapterCount; i++) {
+    imports.push(`import { chapterContent as ch${i} } from "./ch${i}";`);
+    exports.push(`  ${i}: { pages: ch${i}.pages },`);
+  }
+
+  return `// Auto-generated index file for split chapter format
+${imports.join("\n")}
+
+export const levelContent = {
+  storySlug: "${storySlug}",
+  level: ${level},
+  hasChapters: ${hasChapters},
+  chapters: {
+${exports.join("\n")}
+  },
+};
+
+export default levelContent;
+
+// Export chapter count for lazy loading
+export const chapterCount = ${chapterCount};
+
+// Export function to dynamically load a single chapter
+export async function loadChapter(chapterNum: number) {
+  const module = await import(\`./ch\${chapterNum}\`);
+  return module.chapterContent;
+}
+`;
 }
 
 /**

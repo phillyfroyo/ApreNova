@@ -198,7 +198,12 @@ storiesMetadata: {
   "my-day": {
     title: "My Day",
     description: "A simple poem about the joys of everyday life.",
-  },},
+  },
+  "dracula": {
+    title: "Dracula",
+    description: "",
+  },
+},
 };
 
 export default en;

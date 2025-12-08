@@ -115,3 +115,36 @@ When adding translations:
 - Add new keys to both `src/content/ui/en.ts` and `src/content/ui/es.ts`
 - Use the `t()` function from `src/lib/t.ts` for translations in components
 - Follow the nested object structure for organization
+
+## Code Quality Standards
+
+**This application follows industry best practices for commercial-grade software:**
+
+### Architecture Principles
+- **Single Responsibility**: Components and functions should do one thing well
+- **File Size Limits**: Aim for 200-400 lines per component; split larger files into logical sub-components
+- **Separation of Concerns**: Keep UI, business logic, and data fetching in appropriate layers
+- **Extract Reusable Logic**: Common patterns should be abstracted into custom hooks or utilities
+
+### Component Structure
+When a component exceeds ~400 lines, consider splitting into:
+```
+components/
+├── FeatureName/
+│   ├── index.tsx           # Main orchestration component
+│   ├── SubComponent1.tsx   # Logical sub-unit
+│   ├── SubComponent2.tsx   # Logical sub-unit
+│   └── hooks/
+│       └── useFeatureLogic.ts
+```
+
+### Code Organization
+- Group related functionality into directories
+- Use barrel exports (index.ts) for cleaner imports
+- Keep types close to where they're used, or in dedicated type files for shared types
+- Prefer composition over inheritance
+
+### Technical Debt
+- Document known technical debt with TODO comments
+- Prioritize refactoring when files become difficult to maintain
+- Balance shipping speed with code quality - don't let large files grow indefinitely

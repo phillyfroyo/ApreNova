@@ -21,8 +21,9 @@ export interface LevelProgress {
 
 const TRANSLATION_BATCH_SIZE = 8;
 const MAX_CHUNK_CHARS = 12000;
-const MAX_TRANSLATION_RETRIES = 2;
+const MAX_TRANSLATION_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
+const MAX_TRUNCATION_RETRIES = 2;
 
 // ============================================
 // Hook
@@ -47,6 +48,12 @@ export function useTranslationPipeline({
   const [levelProgress, setLevelProgress] = useState<Record<number, LevelProgress>>({});
   const [error, setError] = useState("");
   const [chunkErrors, setChunkErrors] = useState<Record<number, ChunkError[]>>({});
+  const [truncationRetryStatus, setTruncationRetryStatus] = useState<{
+    chapter: number;
+    attempt: number;
+    maxAttempts: number;
+    reasons: string[];
+  } | null>(null);
 
   // Comparison modal state
   const [comparisonLevel, setComparisonLevel] = useState<number | null>(null);
@@ -59,6 +66,7 @@ export function useTranslationPipeline({
   // Refs
   const cancelledRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const currentChapterRef = useRef<number>(-1);
 
   // ============================================
   // Error Categorization
@@ -108,7 +116,9 @@ export function useTranslationPipeline({
 
   const parseTranslatedChapters = useCallback((translatedText: string): string[] => {
     if (!translatedText?.trim()) return [];
-    const parts = translatedText.split(/---\s*Capítulo\s+\d+\s*---/i);
+    // Split by both Spanish AND English chapter markers
+    // (English markers appear when translation failed and source text was used as fallback)
+    const parts = translatedText.split(/---\s*(?:Capítulo|Chapter)\s+\d+[^-]*---/i);
     return parts.map(p => p.trim()).filter(p => p.length > 0);
   }, []);
 
@@ -121,13 +131,26 @@ export function useTranslationPipeline({
     }
 
     for (let i = 0; i < sourceChapters.length; i++) {
-      const sourceLines = sourceChapters[i].split('\n').filter(l => l.trim()).length;
-      const transLines = (translatedChapters[i] || '').split('\n').filter(l => l.trim()).length;
+      const sourceText = sourceChapters[i] || '';
+      const transText = translatedChapters[i] || '';
+      const sourceLines = sourceText.split('\n').filter(l => l.trim()).length;
+      const transLines = transText.split('\n').filter(l => l.trim()).length;
 
-      if (translatedChapters[i]?.includes('[TRANSLATION_FAILED:')) {
+      // Check for explicit failure marker
+      if (transText.includes('[TRANSLATION_FAILED:')) {
         return i;
       }
 
+      // Check if "translated" text is actually identical to source (not translated)
+      // Normalize whitespace for comparison
+      const normalizedSource = sourceText.replace(/\s+/g, ' ').trim();
+      const normalizedTrans = transText.replace(/\s+/g, ' ').trim();
+      if (normalizedSource === normalizedTrans && normalizedSource.length > 50) {
+        console.log(`[findFirstIncompleteChapter] Chapter ${i + 1} has identical source and translation - not translated`);
+        return i;
+      }
+
+      // Check for missing lines
       if (transLines < sourceLines) {
         return i;
       }
@@ -142,6 +165,7 @@ export function useTranslationPipeline({
 
   const translateChunk = useCallback(async (text: string, level: number): Promise<string> => {
     let lastError: Error | null = null;
+    let truncationRetries = 0;
 
     for (let attempt = 1; attempt <= MAX_TRANSLATION_RETRIES; attempt++) {
       if (cancelledRef.current) {
@@ -173,6 +197,31 @@ export function useTranslationPipeline({
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to translate");
+        }
+
+        // Check for truncation
+        if (data.truncated && truncationRetries < MAX_TRUNCATION_RETRIES) {
+          truncationRetries++;
+          const reasons = data.truncationInfo?.reasons || [data.truncationInfo?.reason || "Unknown"];
+          console.warn(`[translateChunk] Truncation detected: ${reasons.join("; ")}, retry ${truncationRetries}/${MAX_TRUNCATION_RETRIES}`);
+
+          // Update UI to show retry status
+          setTruncationRetryStatus({
+            chapter: currentChapterRef.current,
+            attempt: truncationRetries,
+            maxAttempts: MAX_TRUNCATION_RETRIES,
+            reasons,
+          });
+
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * 2));
+          continue; // Retry the same chunk
+        }
+
+        // Clear retry status on success or final attempt
+        setTruncationRetryStatus(null);
+
+        if (data.truncated) {
+          console.warn(`[translateChunk] Truncation persisted after ${MAX_TRUNCATION_RETRIES} retries:`, data.truncationInfo);
         }
 
         return data.translatedText;
@@ -246,12 +295,9 @@ export function useTranslationPipeline({
   // ============================================
 
   const buildTranslatedText = useCallback((translatedChapters: string[]): string => {
-    return translatedChapters
-      .map((text, idx) => {
-        const divider = `--- Capítulo ${idx + 1} ---`;
-        return idx === 0 ? text : `${divider}\n\n${text}`;
-      })
-      .join("\n\n");
+    // Don't add chapter dividers here - the translated text already contains
+    // translated chapter markers (e.g., "--- Capítulo N ---") from the source
+    return translatedChapters.join("\n\n");
   }, []);
 
   const saveTranslationProgress = useCallback((
@@ -327,6 +373,8 @@ export function useTranslationPipeline({
 
           const batchPromises = batchIndices.map(async (i) => {
             try {
+              // Track current chapter for truncation status display
+              currentChapterRef.current = i;
               const translated = await translateChunk(chapters[i], level);
               return { index: i, translated, success: true as const };
             } catch (err) {
@@ -362,6 +410,8 @@ export function useTranslationPipeline({
         }
       } else {
         try {
+          // Single chapter case
+          currentChapterRef.current = 0;
           const translatedText = await translateChunk(sourceText, level);
           accumulator[level] = {
             ...accumulator[level],
@@ -511,6 +561,7 @@ export function useTranslationPipeline({
     chunkErrors,
     setChunkErrors,
     copiedFromLevel,
+    truncationRetryStatus,
 
     // Processing
     translateSingleLevel,
