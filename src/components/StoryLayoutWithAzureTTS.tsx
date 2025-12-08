@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import { STORY_THEMES } from "@/components/storyThemes";
+import { getTheme } from "@/components/storyThemes";
 import Link from "next/link";
 import { Menu, X, Volume2, Turtle, Loader2, AlertCircle } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
@@ -198,7 +198,7 @@ export default function StoryLayoutWithAzureTTS({
   const accessType = storyAccessMap[storySlug] || "alwaysFree";
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
-  const theme = STORY_THEMES[storySlug] || STORY_THEMES.default;
+  const theme = getTheme(storySlug);
 
   // Build background style - prefer image over gradient over color
   const backgroundStyle = theme.backgroundImage

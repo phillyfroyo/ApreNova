@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import { STORY_THEMES } from "@/components/storyThemes";
+import { getTheme } from "@/components/storyThemes";
 import { Menu, X } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
@@ -136,7 +136,7 @@ export default function StoryLayoutAzure({
   const readOnlyMode = accessType === "conditional" && !isPremiumUser;
 
   // Theme
-  const theme = (STORY_THEMES as Record<string, any>)[storySlug] || STORY_THEMES.default;
+  const theme = getTheme(storySlug);
   const dynamicPageTitle = storyMap.hasChapters
     ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
     : `${t(typedLang, "story", "page")} ${pageNumber}`;
