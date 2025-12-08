@@ -12,7 +12,7 @@ export const STORY_TYPE_LABELS: Record<StoryType, { en: string; es: string }> = 
   "poem": { en: "Poem", es: "Poema" },
   "fable": { en: "Fable", es: "Fábula" },
   "folktale": { en: "Folktale", es: "Cuento popular" },
-  "novella": { en: "Novella", es: "Novela corta" },
+  "novel": { en: "Novel", es: "Novela" },
   "article": { en: "Article", es: "Artículo" },
   "dialogue": { en: "Dialogue", es: "Diálogo" },
   "song-lyrics": { en: "Song Lyrics", es: "Letra de canción" },
@@ -27,7 +27,7 @@ export const STORY_TYPE_LABELS_PLURAL: Record<StoryType, { en: string; es: strin
   "poem": { en: "Poems", es: "Poemas" },
   "fable": { en: "Fables", es: "Fábulas" },
   "folktale": { en: "Folktales", es: "Cuentos populares" },
-  "novella": { en: "Novels", es: "Novelas cortas" },
+  "novel": { en: "Novels", es: "Novelas" },
   "article": { en: "Articles", es: "Artículos" },
   "dialogue": { en: "Dialogues", es: "Diálogos" },
   "song-lyrics": { en: "Song Lyrics", es: "Letras de canciones" },
@@ -83,7 +83,7 @@ export const STORY_TAG_LABELS: Record<StoryTag, { en: string; es: string }> = {
 
 // All available story types for UI dropdowns
 export const ALL_STORY_TYPES: StoryType[] = [
-  "short-story", "poem", "fable", "folktale", "novella", "article", "dialogue", "song-lyrics",
+  "short-story", "poem", "fable", "folktale", "novel", "article", "dialogue", "song-lyrics",
   "epic", "myth", "legend"
 ];
 
@@ -241,17 +241,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["family","multicultural"],
     targetAudience: "all",
-  },
-  {
-    slug: "my-family",
-    image: "/images/my-family-thumbnail-6994.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
-    type: "poem",
-    origin: { isOriginal: true },
-    targetAudience: "all",
-    tags: ["family","heartwarming"]
-  },
-];
+  },];
 
 export function getStoryUrl({
   locale,

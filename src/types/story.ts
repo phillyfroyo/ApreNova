@@ -9,7 +9,7 @@ export type StoryType =
   | "poem"          // Poetry (any form)
   | "fable"         // Moral/teaching stories
   | "folktale"      // Traditional/cultural stories
-  | "novella"       // Longer multi-chapter fiction
+  | "novel"         // Longer multi-chapter fiction
   | "article"       // Non-fiction/informational
   | "dialogue"      // Conversation-based content
   | "song-lyrics"   // Music lyrics

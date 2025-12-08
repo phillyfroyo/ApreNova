@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, sourceLanguage, targetLevel, sourceLevel } = await req.json();
+    const { text, sourceLanguage, targetLevel, sourceLevel, isPoetry } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const prompt = generateRewritePrompt(targetLevel, text, sourceLanguage);
+    const prompt = generateRewritePrompt(targetLevel, text, sourceLanguage, isPoetry ?? false);
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",

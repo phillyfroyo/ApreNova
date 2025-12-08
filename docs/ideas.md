@@ -37,4 +37,8 @@ Need to implement a comprehensive tagging system for stories to improve organiza
 
 ## Other Ideas
 
-(Add future ideas below)
+### Stories Pages Revamp
+Our stories pages need a revamp. Really think through the user experience, layout, navigation, and overall design to make reading more engaging and intuitive.
+
+### Story View Analytics
+Track number of views of stories throughout the app, counting all users. This could help identify popular content, inform content strategy, and provide insights into user engagement patterns.

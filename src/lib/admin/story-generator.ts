@@ -1,6 +1,14 @@
 // src/lib/admin/story-generator.ts
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
 
+// Re-export text normalization utilities from text-preprocessor
+export { detectLineBreakStyle, normalizeLineBreaks, getLineBreakStyleDescription } from "./text-preprocessor";
+export type { LineBreakStyle } from "./text-preprocessor";
+
+// ============================================
+// STRING UTILITIES
+// ============================================
+
 /**
  * Helper to escape strings for JavaScript code output
  */
@@ -110,19 +118,49 @@ export interface StoryMetadataInput {
 }
 
 /**
- * Parse raw text into chapters based on markers (--- or CHAPTER)
+ * Parse raw text into chapters based on markers
+ *
+ * Handles multiple formats:
+ * - "--- Chapter X: Title ---" (full divider format from generation step)
+ * - "--- Capítulo X: Título ---" (Spanish equivalent)
+ * - "CHAPTER X" or "CHAPTER X: Title"
+ * - Simple "---" dividers (legacy)
  */
 export function parseChapters(rawText: string): string[][] {
-  // Split by chapter markers
-  const chapterTexts = rawText.split(/---|\bCHAPTER\b\s*\d*/i).filter((c) => c.trim());
+  // Step 1: Normalize the text - replace full chapter dividers with a clean separator
+  // Match patterns like "--- Chapter 2: Title ---" or "--- Capítulo 3: Título ---"
+  // Also handle cases where the title might be duplicated like "Chapter 3: Chapter 3"
+  let normalized = rawText
+    // Full divider format: --- Chapter X: Title --- (possibly with varying whitespace)
+    .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*[:\-—–]?\s*[^-]*---/gi, '\n---CHAPTER_BREAK---\n')
+    // Also handle simpler format: --- Chapter X ---
+    .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*---/gi, '\n---CHAPTER_BREAK---\n')
+    // Handle standalone CHAPTER markers (not wrapped in ---)
+    .replace(/^\s*(CHAPTER|Capítulo)\s+\d+\s*[:\-—–]?\s*.*$/gim, '\n---CHAPTER_BREAK---\n')
+    // Handle simple --- dividers (but not our placeholder)
+    .replace(/^---(?!CHAPTER_BREAK)---*\s*$/gm, '\n---CHAPTER_BREAK---\n');
 
-  // For each chapter, split into lines
+  // Step 2: Split by our clean marker
+  const chapterTexts = normalized
+    .split('---CHAPTER_BREAK---')
+    .map(chunk => chunk.trim())
+    .filter(chunk => chunk.length > 0);
+
+  // Step 3: For each chapter, split into lines and clean up
   return chapterTexts.map((chapter) =>
     chapter
       .split("\n")
       .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-  );
+      // Filter out empty lines and any remaining chapter title lines that slipped through
+      .filter((line) => {
+        if (line.length === 0) return false;
+        // Filter out lines that are just chapter titles (e.g., "Chapter 2: Chapter 2" or "Capítulo 3")
+        if (/^(Chapter|Capítulo)\s+\d+\s*[:\-—–]?\s*(Chapter|Capítulo)?\s*\d*\s*$/i.test(line)) return false;
+        // Filter out lines that are just a colon (artifact from bad parsing)
+        if (line === ':') return false;
+        return true;
+      })
+  ).filter(chapter => chapter.length > 0); // Remove any empty chapters
 }
 
 /**
@@ -142,6 +180,11 @@ export function paginateLines(
   lines: string[],
   linesPerPage: number = 10
 ): string[][] {
+  // Handle undefined/null/empty lines
+  if (!lines || !Array.isArray(lines) || lines.length === 0) {
+    return [[]];
+  }
+
   // Check if there are any PAGE markers in the content
   const hasPageMarkers = lines.some(isPageMarker);
 
@@ -253,7 +296,7 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
 
   let entry = `  {
     slug: "${metadata.slug}",
-    image: "${metadata.image || `/images/${metadata.slug}-thumbnail.png`}",
+    image: "${metadata.image || "/images/placeholder1.png"}",
     levels: [${levelsArray}],${metadata.isPremiumOnly ? `\n    isPremiumOnly: true,` : ""}
     type: "${metadata.storyType}",
     origin: ${originStr},`;

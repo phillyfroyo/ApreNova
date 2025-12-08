@@ -184,29 +184,22 @@ aiTutor: {
 },
 
 storiesMetadata: {
-  aventura: {
-    title: "La Adventure",
-    description: "Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc) Misterios y criaturas ocultas en un bosque encantado. (etc)",
+  "aventura": {
+    title: "Aventura",
+    description: "Una emocionante historia de descubrimiento y amistad.",
   },
   "the-last-word": {
     title: "La Última Palabra",
-    description: "Maya debe enfrentar sus miedos mientras se prepara para hablar frente a la clase, pero cuando llegue el momento, ¿encontrará su voz?",
+    description: "Una conmovedora historia sobre momentos finales e impresiones duraderas.",
   },
   "diego-unplugged": {
     title: "Diego Desconectado",
-    description: "El viaje de autodescubrimiento de un joven cuando se desconecta del mundo digital.",
+    description: "Diego descubre lo que sucede cuando la tecnología toma un descanso.",
   },
   "my-day": {
-    title: "Un Día Sencillo",
-    description: "Sumérgete en un día lleno de placeres simples y rutinas que dan forma a nuestras vidas.",
-  },
-  "my-family": {
-    title: "Nuestro Hogar Alegre",
-    description: "Únete a una encantadora exploración de la vida familiar, donde cada miembro tiene su papel especial, ¡incluido un amigo peludo y regordete!",
-  },
-}
-
-
+    title: "Mi Día",
+    description: "Un poema simple sobre las alegrías de la vida cotidiana.",
+  },},
 };
 
 export default es;
