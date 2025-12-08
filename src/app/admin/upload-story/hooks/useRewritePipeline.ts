@@ -337,6 +337,15 @@ export function useRewritePipeline({
           setChapterProgress({ current: batchEnd + 1, batchEnd: nextBatchEnd, total: chapters.length });
         }
 
+        // Check if cancelled before saving
+        if (cancelledRef.current) {
+          accumulator[level] = { sourceText: "", translatedText: "", status: "pending", mode };
+          updateStoryData({ levelContent: { ...accumulator } });
+          setChapterProgress(null);
+          console.log(`[processLevel] L${level} generation cancelled, reset to pending`);
+          return false;
+        }
+
         const fullRewrittenText = rewrittenChapters
           .map((text, idx) => {
             const chapterNumber = chapters[idx]?.number || idx + 1;
@@ -346,7 +355,8 @@ export function useRewritePipeline({
             const divider = isMeaningfulTitle
               ? `--- Chapter ${chapterNumber}: ${rawTitle} ---`
               : `--- Chapter ${chapterNumber} ---`;
-            return idx === 0 ? text : `${divider}\n\n${text}`;
+            // Always add chapter header (including Chapter 1 for consistency)
+            return `${divider}\n\n${text}`;
           })
           .join("\n\n");
 
@@ -428,6 +438,14 @@ export function useRewritePipeline({
     return currentGenerating === level;
   }, [currentGenerating]);
 
+  // Reset a level back to pending (clears generated content)
+  const resetLevel = useCallback((level: number) => {
+    const accumulator = { ...storyData.levelContent };
+    accumulator[level] = { sourceText: "", translatedText: "", status: "pending", mode: getLevelMode(level) };
+    updateStoryData({ levelContent: accumulator });
+    console.log(`[resetLevel] L${level} reset to pending`);
+  }, [storyData.levelContent, getLevelMode, updateStoryData]);
+
   return {
     // State
     currentGenerating,
@@ -448,6 +466,7 @@ export function useRewritePipeline({
     getLevelStatus,
     isLevelDone,
     isLevelGenerating,
+    resetLevel,
 
     // Comparison modal
     comparisonLevel,

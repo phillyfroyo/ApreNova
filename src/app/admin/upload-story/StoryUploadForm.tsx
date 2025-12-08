@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import LZString from "lz-string";
 import type { StoryType, StoryTag } from "@/types/story";
+import { useAdminStorage } from "./hooks/useAdminStorage";
 import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS, STORY_METADATA, slugify } from "@/lib/stories";
 import { FormAttribution, formToAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 import { ComparisonModal } from "./components/ComparisonModal";
@@ -177,8 +177,6 @@ const initialStoryData: StoryData = {
   extractedAnnotations: [],
 };
 
-const STORAGE_KEY = "admin-story-upload-state";
-
 export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFormProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [storyData, setStoryData] = useState<StoryData>(initialStoryData);
@@ -191,80 +189,61 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
     details?: string;
     filesWritten?: string[];
   } | null>(null);
-  const [hasRestoredState, setHasRestoredState] = useState(false);
 
-  // Load saved state from localStorage on mount (survives hot reloads)
+  // Use new async storage (IndexedDB + Web Worker for compression)
+  const {
+    saveStatus,
+    hasRestoredState,
+    saveProgress,
+    saveImmediately,
+    clearProgress,
+    lastSavedAt,
+  } = useAdminStorage<StoryData>({
+    initialState: initialStoryData,
+    initialStep: 1,
+    onRestore: (restoredData, restoredStep) => {
+      setStoryData(restoredData);
+      setCurrentStep(restoredStep as Step);
+    },
+  });
+
+  // Refs to access latest state in callbacks
+  const storyDataRef = useRef(storyData);
+  const currentStepRef = useRef(currentStep);
+  storyDataRef.current = storyData;
+  currentStepRef.current = currentStep;
+
+  // Save on beforeunload (user closing tab/navigating away)
   useEffect(() => {
-    try {
-      const compressed = localStorage.getItem(STORAGE_KEY);
-      if (compressed) {
-        // Decompress the data
-        const decompressed = LZString.decompressFromUTF16(compressed);
-        if (decompressed) {
-          const parsed = JSON.parse(decompressed);
-          if (parsed.storyData && parsed.currentStep) {
-            setStoryData(parsed.storyData);
-            setCurrentStep(parsed.currentStep);
-            setHasRestoredState(true);
-            const compressedSize = (compressed.length * 2 / 1024).toFixed(1);
-            const originalSize = (decompressed.length / 1024).toFixed(1);
-            console.log(`[Admin] Restored saved state (step ${parsed.currentStep}), compressed: ${compressedSize}KB → ${originalSize}KB`);
-          }
-        } else {
-          // Try parsing as uncompressed JSON (backward compatibility)
-          const parsed = JSON.parse(compressed);
-          if (parsed.storyData && parsed.currentStep) {
-            setStoryData(parsed.storyData);
-            setCurrentStep(parsed.currentStep);
-            setHasRestoredState(true);
-            console.log("[Admin] Restored uncompressed saved state (step " + parsed.currentStep + ")");
-          }
-        }
+    const handleBeforeUnload = () => {
+      // Only save if there's actual content
+      if (currentStepRef.current > 1 || storyDataRef.current.rawText) {
+        saveImmediately(storyDataRef.current, currentStepRef.current);
       }
-    } catch (e) {
-      console.error("[Admin] Failed to restore saved state:", e);
-      // Clear corrupted data
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
+    };
 
-  // Save state to localStorage whenever it changes (debounced, compressed)
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saveImmediately]);
+
+  // Track previous processing state to detect completion
+  const prevIsProcessingRef = useRef(isProcessing);
   useEffect(() => {
-    // Don't save if we're on step 1 with no content (initial state)
-    if (currentStep === 1 && !storyData.rawText && !storyData.slug) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      try {
-        const data = JSON.stringify({
-          storyData,
-          currentStep,
-          savedAt: new Date().toISOString(),
-        });
-        // Compress before storing - typically 70-90% reduction for text
-        const compressed = LZString.compressToUTF16(data);
-        localStorage.setItem(STORAGE_KEY, compressed);
-
-        const originalSize = (data.length / 1024).toFixed(1);
-        const compressedSize = (compressed.length * 2 / 1024).toFixed(1);
-        const ratio = ((1 - compressed.length * 2 / data.length) * 100).toFixed(0);
-        console.log(`[Admin] Saved state: ${originalSize}KB → ${compressedSize}KB (${ratio}% reduction)`);
-      } catch (e) {
-        console.error("[Admin] Failed to save state to localStorage:", e);
+    // Save when processing completes (transitions from true to false)
+    if (prevIsProcessingRef.current && !isProcessing) {
+      // Processing just finished - save progress
+      if (currentStep > 1 || storyData.rawText) {
+        saveProgress(storyData, currentStep);
       }
-    }, 500); // Debounce 500ms
+    }
+    prevIsProcessingRef.current = isProcessing;
+  }, [isProcessing, storyData, currentStep, saveProgress]);
 
-    return () => clearTimeout(timeout);
-  }, [storyData, currentStep]);
-
-  const clearSavedState = () => {
-    localStorage.removeItem(STORAGE_KEY);
+  const clearSavedState = async () => {
+    await clearProgress();
     setStoryData(initialStoryData);
     setCurrentStep(1);
-    setHasRestoredState(false);
     setSaveResult(null);
-    console.log("[Admin] Cleared saved state");
   };
 
   const updateStoryData = (updates: Partial<StoryData>) => {
@@ -273,8 +252,10 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
 
   const goToStep = (step: Step) => {
     // Clean raw text when moving from Step 1 to Step 2
+    let updatedData = storyData;
     if (currentStep === 1 && step === 2) {
-      updateStoryData({ rawText: cleanText(storyData.rawText) });
+      updatedData = { ...storyData, rawText: cleanText(storyData.rawText) };
+      setStoryData(updatedData);
     }
     // Reset processing state when navigating away from steps that use async processing
     // This allows the user to use the Continue button on other steps
@@ -282,6 +263,11 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
       setIsProcessing(false);
     }
     setCurrentStep(step);
+
+    // Save progress when changing steps (non-blocking)
+    if (step > 1 || updatedData.rawText) {
+      saveProgress(updatedData, step);
+    }
   };
 
   // Get levels that have been generated (have content, not omitted)
@@ -379,6 +365,42 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
               </div>
             ))}
           </div>
+
+          {/* Save Status Indicator */}
+          {(saveStatus !== "idle" || lastSavedAt) && (
+            <div className="mt-2 flex items-center justify-end gap-2 text-xs">
+              {saveStatus === "saving" && (
+                <span className="text-gray-500 flex items-center gap-1">
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Saving...
+                </span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="text-green-600 flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Progress saved
+                </span>
+              )}
+              {saveStatus === "error" && (
+                <span className="text-red-600 flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Save failed
+                </span>
+              )}
+              {saveStatus === "idle" && lastSavedAt && (
+                <span className="text-gray-400">
+                  Last saved {lastSavedAt.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2849,6 +2871,7 @@ function Step4Generate({
     getLevelStatus,
     isLevelDone,
     isLevelGenerating,
+    resetLevel,
     comparisonLevel,
     isEditing,
     editedText,
@@ -3028,15 +3051,31 @@ function Step4Generate({
                       {content.sourceText.length > 500 && "..."}
                     </pre>
                   </details>
-                  <button
-                    onClick={() => openComparison(level)}
-                    className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    View Full Text
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openComparison(level)}
+                      className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      View Full Text
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Reset Level ${level}? This will clear the generated content and allow you to change the mode (Generate/Use Original/Omit).`)) {
+                          resetLevel(level);
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -3198,6 +3237,7 @@ function Step5Translate({
     chunkErrors,
     setChunkErrors,
     copiedFromLevel,
+    truncationRetryStatus,
     translateSingleLevel,
     translateAllLevels,
     cancel,
@@ -3216,6 +3256,7 @@ function Step5Translate({
   // Local UI state for error management
   const [expandedError, setExpandedError] = useState<string | null>(null);
   const [manualOverrideText, setManualOverrideText] = useState<Record<string, string>>({});
+  const [expandedLineBreakdown, setExpandedLineBreakdown] = useState<number | null>(null);
 
   // Translation comparison modal state
   const [translationComparisonLevel, setTranslationComparisonLevel] = useState<number | null>(null);
@@ -3566,6 +3607,22 @@ function Step5Translate({
                           })()
                         : "Pending translation"}
                     </div>
+                    {/* Truncation retry indicator */}
+                    {isTranslating && truncationRetryStatus && (
+                      <div className="mt-1 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span>
+                          Truncation detected in Chapter {truncationRetryStatus.chapter + 1} -
+                          Auto-retry {truncationRetryStatus.attempt}/{truncationRetryStatus.maxAttempts}
+                        </span>
+                        <span className="text-amber-500 text-xs opacity-75">
+                          ({truncationRetryStatus.reasons.join(", ")})
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -3605,27 +3662,114 @@ function Step5Translate({
                 const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
                 const translatedLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
                 const linesMatch = sourceLines === translatedLines;
+                const isBreakdownExpanded = expandedLineBreakdown === level;
+
+                // Parse chapters for breakdown
+                const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
+                const sourceTextLines = (content.sourceText || "").split("\n");
+                const translatedTextLines = content.translatedText.split("\n");
+
+                const parseChapters = (lines: string[]) => {
+                  type ChapterInfo = { number: number; title: string; startLine: number };
+                  const chapters: { number: number; title: string; startLine: number; lineCount: number }[] = [];
+                  let currentChapter: ChapterInfo | null = null;
+
+                  lines.forEach((line, idx) => {
+                    const match = line.match(chapterPattern);
+                    if (match) {
+                      if (currentChapter) {
+                        const contentLines = lines.slice(currentChapter.startLine + 1, idx).filter(l => l.trim()).length;
+                        chapters.push({ number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine, lineCount: contentLines });
+                      }
+                      currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
+                    }
+                  });
+
+                  // Add last chapter
+                  if (currentChapter) {
+                    const chap = currentChapter as ChapterInfo;
+                    const contentLines = lines.slice(chap.startLine + 1).filter(l => l.trim()).length;
+                    chapters.push({ number: chap.number, title: chap.title, startLine: chap.startLine, lineCount: contentLines });
+                  }
+
+                  return chapters;
+                };
+
+                const sourceChapters = parseChapters(sourceTextLines);
+                const translatedChapters = parseChapters(translatedTextLines);
+                const hasChapters = sourceChapters.length > 1 || translatedChapters.length > 1;
+
                 return (
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className={`text-sm font-medium flex items-center gap-2 ${linesMatch ? 'text-green-600' : 'text-amber-600'}`}>
-                      <span>{sourceLines} lines</span>
-                      <span className="text-gray-400">{"<-->"}</span>
-                      <span>{translatedLines} lines</span>
-                      {linesMatch ? (
-                        <span className="text-green-500 ml-1">&#10003;</span>
-                      ) : (
-                        <span className="text-amber-500 ml-1">({translatedLines - sourceLines > 0 ? '+' : ''}{translatedLines - sourceLines})</span>
-                      )}
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {hasChapters && (
+                          <button
+                            onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
+                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                            title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
+                          >
+                            <svg
+                              className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+                        <div className={`text-sm font-medium flex items-center gap-2 ${linesMatch ? 'text-green-600' : 'text-amber-600'}`}>
+                          <span>{sourceLines} lines</span>
+                          <span className="text-gray-400">{"<-->"}</span>
+                          <span>{translatedLines} lines</span>
+                          {linesMatch ? (
+                            <span className="text-green-500 ml-1">&#10003;</span>
+                          ) : (
+                            <span className="text-amber-500 ml-1">({translatedLines - sourceLines > 0 ? '+' : ''}{translatedLines - sourceLines})</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => openTranslationComparison(level)}
+                        className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        View Full Text
+                      </button>
                     </div>
-                    <button
-                      onClick={() => openTranslationComparison(level)}
-                      className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      View Full Text
-                    </button>
+                    {/* Chapter breakdown */}
+                    {isBreakdownExpanded && hasChapters && (
+                      <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
+                        {sourceChapters.map((srcChapter, idx) => {
+                          const transChapter = translatedChapters.find(c => c.number === srcChapter.number);
+                          const srcLines = srcChapter.lineCount;
+                          const transLines = transChapter?.lineCount || 0;
+                          const chapterMatch = srcLines === transLines;
+                          const diff = transLines - srcLines;
+
+                          return (
+                            <div
+                              key={srcChapter.number}
+                              className={`flex items-center justify-between px-2 py-1 rounded ${chapterMatch ? 'bg-green-50' : 'bg-amber-50'}`}
+                            >
+                              <span className="text-gray-700 font-medium">
+                                Ch. {srcChapter.number}
+                                {srcChapter.title && <span className="font-normal text-gray-500 ml-1">({srcChapter.title.slice(0, 20)}{srcChapter.title.length > 20 ? '...' : ''})</span>}
+                              </span>
+                              <span className={chapterMatch ? 'text-green-600' : 'text-amber-600'}>
+                                {srcLines} <span className="text-gray-400 mx-1">→</span> {transLines}
+                                {!chapterMatch && (
+                                  <span className="ml-1 opacity-75">({diff > 0 ? '+' : ''}{diff})</span>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })()}

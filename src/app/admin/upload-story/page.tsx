@@ -9,6 +9,13 @@ const ADMIN_SESSION_KEY = "admin_authenticated";
 
 type AdminTab = "upload" | "manage";
 
+// Warm up serverless functions in the background
+function warmupServerless() {
+  fetch("/api/admin/warmup").catch(() => {
+    // Silently ignore errors - this is just a best-effort warm-up
+  });
+}
+
 export default function UploadStoryPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +28,10 @@ export default function UploadStoryPage() {
       setIsAuthenticated(true);
     }
     setIsLoading(false);
+
+    // Warm up serverless functions immediately on page load
+    // This runs in parallel with auth check so functions are ready when user proceeds
+    warmupServerless();
   }, []);
 
   const handleLogin = () => {

@@ -182,7 +182,7 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 16000,
+      max_tokens: 16000, // Original value - SDK requires streaming above ~20k for Haiku
       system: systemPrompt,
       messages: [
         {
@@ -193,6 +193,7 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
     });
 
     const rawResponse = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    const stopReason = response.stop_reason; // "end_turn" = normal, "max_tokens" = truncated
 
     // ========== LOGGING: RAW CLAUDE RESPONSE ==========
     console.log("\n" + "-".repeat(60));
@@ -272,8 +273,69 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
     console.log(`Translation alignment: ${lineCount} content lines → ${translatedNonEmpty} translated (${blankLinePositions.length} blank lines preserved)`);
     console.log("=".repeat(60) + "\n");
 
-    if (translatedNonEmpty < lineCount * 0.8) {
-      console.warn(`Warning: Only ${translatedNonEmpty}/${lineCount} content lines were translated. Some lines may be missing.`);
+    // Check for truncation and alignment issues
+    let isTruncated = false;
+    let truncationReason = "";
+    let alignmentIssue = "";
+    const truncationDetails: string[] = [];
+
+    // Check 1: API hit max_tokens limit (definitive truncation)
+    if (stopReason === "max_tokens") {
+      isTruncated = true;
+      truncationReason = "API response hit max_tokens limit";
+      truncationDetails.push(truncationReason);
+    }
+
+    // Check 2: Line count mismatch
+    if (translatedNonEmpty < lineCount) {
+      isTruncated = true;
+      truncationReason = `Missing lines: ${translatedNonEmpty}/${lineCount} translated`;
+      truncationDetails.push(truncationReason);
+    } else if (translatedNonEmpty > lineCount) {
+      alignmentIssue = `Extra lines: ${translatedNonEmpty} translated vs ${lineCount} source`;
+      console.warn(`ALIGNMENT ISSUE: ${alignmentIssue}`);
+    }
+
+    // Check 3: Compare last source line length vs last translated line length
+    // If translation is suspiciously short (less than 50% of source), likely truncated
+    const lastSourceLine = text.split("\n").filter(l => l.trim()).pop() || "";
+    const lastTranslatedLine = translatedContentLines.filter(l => l.length > 0).pop() || "";
+
+    if (lastSourceLine.length > 50 && lastTranslatedLine.length < lastSourceLine.length * 0.5) {
+      isTruncated = true;
+      truncationReason = `Final line too short: ${lastTranslatedLine.length} chars vs ${lastSourceLine.length} source chars (${Math.round(lastTranslatedLine.length / lastSourceLine.length * 100)}%)`;
+      truncationDetails.push(truncationReason);
+    }
+
+    // Check 4: Punctuation mismatch at line endings
+    // If source ends with sentence-ending punctuation but translation doesn't, likely truncated
+    const sentenceEndPunctuation = /[.!?。？！]$/;
+    const sourceLines = text.split("\n").filter(l => l.trim());
+    let punctuationMismatches = 0;
+    const mismatchedLines: number[] = [];
+
+    for (let i = 0; i < Math.min(sourceLines.length, translatedContentLines.length); i++) {
+      const sourceLine = sourceLines[i]?.trim() || "";
+      const transLine = translatedContentLines[i]?.trim() || "";
+
+      // If source ends with sentence punctuation but translation doesn't
+      if (sourceLine.length > 10 && sentenceEndPunctuation.test(sourceLine) && !sentenceEndPunctuation.test(transLine) && transLine.length > 0) {
+        punctuationMismatches++;
+        if (mismatchedLines.length < 5) {
+          mismatchedLines.push(i + 1); // 1-indexed for display
+        }
+      }
+    }
+
+    if (punctuationMismatches > 0) {
+      isTruncated = true;
+      const mismatchMsg = `Punctuation mismatch: ${punctuationMismatches} lines end differently (lines: ${mismatchedLines.join(", ")}${mismatchedLines.length < punctuationMismatches ? "..." : ""})`;
+      truncationReason = mismatchMsg;
+      truncationDetails.push(mismatchMsg);
+    }
+
+    if (isTruncated) {
+      console.warn(`TRUNCATION DETECTED: ${truncationDetails.join("; ")}`);
     }
 
     return NextResponse.json({
@@ -287,9 +349,26 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
         translatedLines: translatedNonEmpty,
         blankLines: blankLinePositions.length,
       },
+      truncated: isTruncated,
+      truncationInfo: isTruncated ? {
+        reasons: truncationDetails,
+        expected: lineCount,
+        received: translatedNonEmpty,
+        punctuationMismatches,
+        mismatchedLines: mismatchedLines.length > 0 ? mismatchedLines : undefined,
+        lastSourceLine: lastSourceLine.slice(-100),
+        lastTranslatedLine: lastTranslatedLine.slice(-100),
+      } : undefined,
+      alignmentIssue: alignmentIssue || undefined,
     });
   } catch (error) {
     console.error("Translation error:", error);
-    return NextResponse.json({ error: "Failed to translate text" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", { message: errorMessage, stack: errorStack });
+    return NextResponse.json({
+      error: "Failed to translate text",
+      details: errorMessage,
+    }, { status: 500 });
   }
 }

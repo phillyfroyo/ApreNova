@@ -199,7 +199,12 @@ storiesMetadata: {
   "my-day": {
     title: "Mi Día",
     description: "Un poema simple sobre las alegrías de la vida cotidiana.",
-  },},
+  },
+  "dracula": {
+    title: "",
+    description: "",
+  },
+},
 };
 
 export default es;

@@ -5,6 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { preprocessText } from "@/lib/admin/text-preprocessor";
 
+// Use Edge runtime for faster cold starts (~100ms vs ~60s for Node.js)
+// This route only uses pure JS text processing - no Node.js-specific APIs needed
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   try {
     const { rawText } = await request.json();

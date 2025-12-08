@@ -11,15 +11,21 @@ function generateRandomSuffix(): string {
 }
 import {
   generateContentFileTS,
+  generateChapterFileTS,
+  generateChapterIndexTS,
   generateMetadataEntry,
   generateUITranslationEntry,
   buildContentStructure,
   parseChapters,
   paginateLines,
   type StoryMetadataInput,
+  type StoryChapter,
 } from "@/lib/admin/story-generator";
-import { writeAllStoryFiles } from "@/lib/admin/file-writer";
+import { writeAllStoryFiles, writeChapterFile, writeChapterIndexFile } from "@/lib/admin/file-writer";
 import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
+
+// Threshold for using split chapter format (3+ chapters = split)
+const SPLIT_CHAPTER_THRESHOLD = 3;
 
 /**
  * Clean text by removing AI artifacts, markdown formatting, and normalizing
@@ -121,7 +127,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate content files for each level
-    const levelFiles: Array<{ level: number; content: string }> = [];
+    // Type supports both single-file and split-chapter formats
+    const levelFiles: Array<{
+      level: number;
+      content: string;
+      splitFormat?: boolean;
+      chapters?: Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }>;
+      chapterCount?: number;
+      hasChapters?: boolean;
+    }> = [];
     const warnings: string[] = [];
     const imageErrors: string[] = [];
 
@@ -202,9 +216,24 @@ export async function POST(req: NextRequest) {
         chapters,
       };
 
-      // Generate TypeScript file content
-      const tsContent = generateContentFileTS(finalContent);
-      levelFiles.push({ level: levelData.level, content: tsContent });
+      // Determine whether to use split format based on chapter count
+      const useSplitFormat = maxChapters >= SPLIT_CHAPTER_THRESHOLD;
+
+      if (useSplitFormat) {
+        // Split format: generate individual chapter files + index
+        levelFiles.push({
+          level: levelData.level,
+          content: "", // Will be handled separately
+          splitFormat: true,
+          chapters: finalContent.chapters,
+          chapterCount: maxChapters,
+          hasChapters,
+        });
+      } else {
+        // Single file format
+        const tsContent = generateContentFileTS(finalContent);
+        levelFiles.push({ level: levelData.level, content: tsContent, splitFormat: false });
+      }
     }
 
     // Save thumbnail FIRST to get the correct image path for metadata
@@ -273,14 +302,57 @@ export async function POST(req: NextRequest) {
     const uiEnEntry = generateUITranslationEntry("en", metadata);
     const uiEsEntry = generateUITranslationEntry("es", metadata);
 
-    // Write all content files
+    // Separate split-format and single-file format levels
+    const splitFormatLevels = levelFiles.filter(l => l.splitFormat);
+    const singleFileLevels = levelFiles.filter(l => !l.splitFormat);
+
+    // Write split-format chapter files
+    const splitFileResults: Array<{ success: boolean; path: string; error?: string }> = [];
+    for (const levelData of splitFormatLevels) {
+      if (!levelData.chapters || !levelData.chapterCount) continue;
+
+      // Write individual chapter files
+      for (let chNum = 1; chNum <= levelData.chapterCount; chNum++) {
+        const chapter = levelData.chapters[chNum];
+        if (!chapter) continue;
+
+        const chapterContent = generateChapterFileTS(
+          slug,
+          levelData.level,
+          chNum,
+          { pages: chapter.pages } as StoryChapter
+        );
+        const chResult = await writeChapterFile(slug, levelData.level, chNum, chapterContent);
+        splitFileResults.push(chResult);
+      }
+
+      // Write index file for this level
+      const indexContent = generateChapterIndexTS(
+        slug,
+        levelData.level,
+        levelData.hasChapters || false,
+        levelData.chapterCount
+      );
+      const indexResult = await writeChapterIndexFile(slug, levelData.level, indexContent);
+      splitFileResults.push(indexResult);
+    }
+
+    // Write single-file format levels and metadata
     const result = await writeAllStoryFiles({
       storySlug: slug,
-      levels: levelFiles,
+      levels: singleFileLevels.map(l => ({ level: l.level, content: l.content })),
       metadataEntry,
       uiEnEntry,
       uiEsEntry,
     });
+
+    // Add split file results to the overall result
+    result.contentFiles.push(...splitFileResults);
+    for (const sfr of splitFileResults) {
+      if (!sfr.success && sfr.error) {
+        result.errors.push(`Failed to write ${sfr.path}: ${sfr.error}`);
+      }
+    }
 
     // Merge image errors
     result.errors.push(...imageErrors);
@@ -317,26 +389,39 @@ export async function POST(req: NextRequest) {
         // Update existing entry
         updatedThemesContent = themesContent.replace(themeEntryRegex, themeEntry);
       } else {
-        // Add new entry before the closing brace
-        // Handle various line ending patterns: \n};, \r\n};, },\n};, etc.
-        const closingPattern = /,?\s*\r?\n?};?\s*$/;
-        if (closingPattern.test(themesContent)) {
-          updatedThemesContent = themesContent.replace(
-            closingPattern,
-            `,\n  ${themeEntry}\n};`
-          );
-        } else {
-          // Fallback: just append before the last };
-          const lastBraceIndex = themesContent.lastIndexOf('};');
-          if (lastBraceIndex > -1) {
-            updatedThemesContent =
-              themesContent.slice(0, lastBraceIndex) +
-              `  ${themeEntry}\n};`;
-          } else {
-            console.error("[save-story] Could not find closing }; in storyThemes.ts");
-            throw new Error("Could not find closing brace in storyThemes.ts");
-          }
+        // Find STORY_THEMES object and insert before its closing };
+        // The structure is: export const STORY_THEMES = { ... }; followed by DEFAULT_THEME
+        const storyThemesStart = themesContent.indexOf('STORY_THEMES');
+        const defaultThemeStart = themesContent.indexOf('DEFAULT_THEME');
+
+        if (storyThemesStart === -1) {
+          console.error("[save-story] Could not find STORY_THEMES in storyThemes.ts");
+          throw new Error("Could not find STORY_THEMES in storyThemes.ts");
         }
+
+        // Find the closing }; of STORY_THEMES (before DEFAULT_THEME or end of relevant section)
+        const searchEnd = defaultThemeStart > -1 ? defaultThemeStart : themesContent.length;
+        const storyThemesSection = themesContent.slice(storyThemesStart, searchEnd);
+
+        // Find the last }; in the STORY_THEMES section
+        const lastClosingBrace = storyThemesSection.lastIndexOf('};');
+        if (lastClosingBrace === -1) {
+          console.error("[save-story] Could not find closing }; for STORY_THEMES");
+          throw new Error("Could not find closing brace for STORY_THEMES");
+        }
+
+        // Calculate absolute position and insert before the };
+        const insertPos = storyThemesStart + lastClosingBrace;
+
+        // Check if there's already a comma before the };
+        const beforeClosing = themesContent.slice(insertPos - 10, insertPos).trim();
+        const needsComma = !beforeClosing.endsWith(',');
+
+        updatedThemesContent =
+          themesContent.slice(0, insertPos) +
+          (needsComma ? ',\n' : '\n') +
+          `  ${themeEntry}\n` +
+          themesContent.slice(insertPos);
       }
 
       await fs.writeFile(themesPath, updatedThemesContent);
