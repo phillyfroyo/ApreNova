@@ -127,7 +127,7 @@ export async function GET(
         console.warn('Failed to update metadata access time:', error);
       }
 
-      return new Response(audioBuffer, {
+      return new Response(new Uint8Array(audioBuffer), {
         status: 200,
         headers: {
           'Content-Type': 'audio/mpeg',
