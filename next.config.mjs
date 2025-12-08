@@ -13,6 +13,10 @@ const nextConfig = {
     ],
   },
 
+  // Turbopack config (Next.js 16 default)
+  turbopack: {},
+
+  // Webpack fallback for compatibility
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(process.cwd(), 'src')
     return config
