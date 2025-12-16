@@ -364,8 +364,8 @@ export default function StoryDetailModal({
                   {getStoryTitle(typedLang, storySlug)}
                 </h2>
 
-                {/* Author attribution (short form) */}
-                {!story.origin.isOriginal && attribution && (
+                {/* Author attribution (short form) - only show if author name exists */}
+                {!story.origin.isOriginal && attribution && getAuthorName(attribution) && (
                   <p className="text-gray-600 mb-4">
                     {typedLang === "es" ? "por" : "by"}{" "}
                     <span className="font-medium">{getAuthorName(attribution)}</span>

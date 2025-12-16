@@ -15,7 +15,9 @@ export type StoryType =
   | "song-lyrics"   // Music lyrics
   | "epic"          // Epic poetry (Beowulf, Odyssey, etc.)
   | "myth"          // Mythology
-  | "legend";       // Legendary tales
+  | "legend"        // Legendary tales
+  | "movie-script"  // Movie screenplay
+  | "tv-script";    // TV show script
 
 // Genre/theme tags (curated list for consistency)
 export type StoryTag =

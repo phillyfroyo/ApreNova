@@ -2,13 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-
-/**
- * Generate a random 4-digit number for unique filenames
- */
-function generateRandomSuffix(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-}
 import {
   generateContentFileTS,
   generateChapterFileTS,
@@ -22,63 +15,15 @@ import {
   type StoryChapter,
 } from "@/lib/admin/story-generator";
 import { writeAllStoryFiles, writeChapterFile, writeChapterIndexFile } from "@/lib/admin/file-writer";
+import { cleanText } from "@/lib/admin/text-utils";
+import { SPLIT_CHAPTER_THRESHOLD } from "@/app/admin/upload-story/config/constants";
 import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
 
-// Threshold for using split chapter format (3+ chapters = split)
-const SPLIT_CHAPTER_THRESHOLD = 3;
-
 /**
- * Clean text by removing AI artifacts, markdown formatting, and normalizing
+ * Generate a random 4-digit number for unique filenames
  */
-function cleanText(text: string): string {
-  let cleaned = text
-    // Remove code fences
-    .replace(/^```[\w]*\n?/gm, "")
-    .replace(/\n?```$/gm, "")
-    .replace(/```/g, "")
-    // Remove triple quotes that AI sometimes adds
-    .replace(/^"""\n?/gm, "")
-    .replace(/\n?"""$/gm, "")
-    .replace(/"""/g, "")
-    .replace(/^'''\n?/gm, "")
-    .replace(/\n?'''$/gm, "")
-    .replace(/'''/g, "")
-    // Remove markdown bold/italic
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/_(.*?)_/g, "$1")
-    // Remove markdown headers
-    .replace(/^#{1,6}\s+/gm, "")
-    // Normalize whitespace
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n");
-
-  // Process line by line to remove quote wrapping and empty quote lines
-  cleaned = cleaned
-    .split("\n")
-    .map(line => {
-      let l = line.trim();
-      // Remove surrounding quotes
-      if ((l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith("'") && l.endsWith("'")) ||
-          (l.startsWith("'") && l.endsWith("'"))) {
-        l = l.slice(1, -1);
-      }
-      return l;
-    })
-    // Filter out lines that are only quotes or empty
-    .filter(line => {
-      const trimmed = line.trim();
-      // Remove lines that are just quotes
-      if (/^["'"'""'']+$/.test(trimmed)) return false;
-      // Keep non-empty lines
-      return trimmed.length > 0;
-    })
-    .join("\n");
-
-  return cleaned.trim();
+function generateRandomSuffix(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 interface LevelContent {

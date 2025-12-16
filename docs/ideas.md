@@ -68,3 +68,34 @@ Implement intelligent prefetching throughout the app to minimize perceived load 
 - Respect user's data-saver preferences
 - Implement request prioritization (current content > prefetch)
 - Consider using Service Workers for advanced caching strategies
+
+### Dialogue/Script UI Support
+Currently, when uploading TV show transcripts or movie scripts, character names appear inline with their dialogue but there's no visual distinction between the speaker and their lines. This makes dialogue-heavy content hard to read.
+
+**Potential Solutions:**
+- Detect dialogue patterns (CHARACTER NAME: dialogue or CHARACTER NAME\n dialogue)
+- Style character names differently (bold, different color, smaller font)
+- Consider a "script mode" layout with character names in a left column
+- Add a story type detection that triggers appropriate formatting
+- May need to store dialogue metadata in content structure (speaker, line)
+
+### Admin Portal Refactoring Ideas
+
+#### Extract Wizard Orchestration Hook
+The main `StoryUploadForm.tsx` is quite large (~2000+ lines). Consider extracting the wizard orchestration logic into a `useStoryWizard` hook that manages:
+- Step navigation and validation gates
+- Master `storyData` state
+- Step transition logic
+This would make the form component a thin UI shell.
+
+#### Complete Step Component Extraction
+Step components exist in `/components/steps/` but the main form still contains substantial inline step logic. Complete the migration so `StoryUploadForm.tsx` only renders `<StepN />` components and handles step transitions.
+
+#### API Request Deduplication
+`api-service.ts` could benefit from request deduplication/caching for operations like `detectLevel` or `generateMetadata` that might get called multiple times with the same input.
+
+#### Optimistic UI for Draft Saves
+`useDraftManager` shows `isSaving` but doesn't provide optimistic UI feedback. Add a brief "Saved!" toast or checkmark animation on successful save.
+
+#### Auth Service Persistent Storage
+`auth-service.ts` uses in-memory storage for sessions (notes "In production, use Redis"). If ever running multi-instance, sessions won't sync. Consider implementing Redis/persistent storage or document this as a known limitation for single-instance deployment.

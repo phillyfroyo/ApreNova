@@ -2,7 +2,14 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { StoryData, LevelContent, ChunkError, TranslationErrorType } from "../types";
-import { cleanText, splitIntoSubChunks, parseChaptersFromText } from "./useProcessingPipeline";
+import { cleanText, parseChaptersFromText } from "@/lib/admin/text-utils";
+import {
+  TRANSLATION_BATCH_SIZE,
+  MAX_CHUNK_CHARS,
+  MAX_TRANSLATION_RETRIES,
+  RETRY_DELAY_MS,
+  MAX_TRUNCATION_RETRIES,
+} from "../config/constants";
 
 // ============================================
 // Types
@@ -14,16 +21,6 @@ export interface LevelProgress {
   total: number;
   subChunk?: { current: number; total: number };
 }
-
-// ============================================
-// Constants
-// ============================================
-
-const TRANSLATION_BATCH_SIZE = 8;
-const MAX_CHUNK_CHARS = 12000;
-const MAX_TRANSLATION_RETRIES = 3;
-const RETRY_DELAY_MS = 500;
-const MAX_TRUNCATION_RETRIES = 2;
 
 // ============================================
 // Hook

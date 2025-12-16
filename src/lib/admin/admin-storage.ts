@@ -3,23 +3,59 @@
  *
  * Uses IndexedDB for async storage and a Web Worker for compression.
  * This keeps the UI responsive even with large story data.
+ *
+ * Features:
+ * - Version tracking for schema migrations
+ * - Multiple drafts indexed by slug
+ * - Step checkpoints for recovery
+ * - Auto-cleanup of old drafts
  */
 
 import LZString from "lz-string";
 
 const DB_NAME = "admin-story-upload";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bumped for new schema with drafts store
 const STORE_NAME = "state";
+const DRAFTS_STORE_NAME = "drafts";
 const STATE_KEY = "current";
+
+// Storage limits
+const MAX_DRAFTS_PER_SLUG = 5;
+const MAX_DRAFT_AGE_DAYS = 30;
+const STORAGE_VERSION = 2;
 
 // ============================================
 // Types
 // ============================================
 
+export interface StepCheckpoint {
+  step: number;
+  timestamp: string;
+  hash: string;
+}
+
 export interface StoredState {
+  version: number;
   storyData: unknown;
   currentStep: number;
   savedAt: string;
+  storySlug?: string;
+  checkpoints?: StepCheckpoint[];
+}
+
+export interface DraftMetadata {
+  id: string;
+  slug: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  currentStep: number;
+  version: number;
+}
+
+export interface DraftEntry {
+  metadata: DraftMetadata;
+  compressedData: string;
 }
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -37,11 +73,41 @@ function openDatabase(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const oldVersion = event.oldVersion;
+
+      // Create main state store if doesn't exist
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
+
+      // Create drafts store (new in v2)
+      if (oldVersion < 2 && !db.objectStoreNames.contains(DRAFTS_STORE_NAME)) {
+        const draftsStore = db.createObjectStore(DRAFTS_STORE_NAME, { keyPath: "metadata.id" });
+        draftsStore.createIndex("slug", "metadata.slug", { unique: false });
+        draftsStore.createIndex("updatedAt", "metadata.updatedAt", { unique: false });
+      }
     };
   });
+}
+
+/**
+ * Generate a simple hash for checkpoint comparison
+ */
+function generateHash(data: string): string {
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
+ * Generate a unique draft ID
+ */
+function generateDraftId(): string {
+  return `draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 async function writeToIndexedDB(key: string, value: string): Promise<void> {
@@ -275,3 +341,292 @@ export function cleanup(): void {
   }
   pendingMessages.clear();
 }
+
+// ============================================
+// Draft Management API
+// ============================================
+
+/**
+ * Save a draft with metadata
+ */
+export async function saveDraft(
+  state: StoredState,
+  title: string
+): Promise<{ id: string; originalKB: number; compressedKB: number }> {
+  const slug = state.storySlug || "untitled";
+  const now = new Date().toISOString();
+
+  // Add version to state if not present
+  const stateWithVersion: StoredState = {
+    ...state,
+    version: STORAGE_VERSION,
+  };
+
+  const jsonData = JSON.stringify(stateWithVersion);
+  const originalKB = jsonData.length / 1024;
+  const compressed = await compressWithWorker(jsonData);
+  const compressedKB = (compressed.length * 2) / 1024;
+
+  const id = generateDraftId();
+  const entry: DraftEntry = {
+    metadata: {
+      id,
+      slug,
+      title,
+      createdAt: now,
+      updatedAt: now,
+      currentStep: state.currentStep,
+      version: STORAGE_VERSION,
+    },
+    compressedData: compressed,
+  };
+
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(DRAFTS_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(DRAFTS_STORE_NAME);
+    const request = store.put(entry);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+    transaction.oncomplete = () => db.close();
+  });
+
+  // Run cleanup after save
+  await cleanupOldDrafts(slug);
+
+  return { id, originalKB, compressedKB };
+}
+
+/**
+ * Update an existing draft
+ */
+export async function updateDraft(
+  id: string,
+  state: StoredState
+): Promise<{ originalKB: number; compressedKB: number }> {
+  const db = await openDatabase();
+
+  // First, get the existing entry
+  const existing = await new Promise<DraftEntry | null>((resolve, reject) => {
+    const transaction = db.transaction(DRAFTS_STORE_NAME, "readonly");
+    const store = transaction.objectStore(DRAFTS_STORE_NAME);
+    const request = store.get(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result || null);
+    transaction.oncomplete = () => db.close();
+  });
+
+  if (!existing) {
+    throw new Error(`Draft not found: ${id}`);
+  }
+
+  const stateWithVersion: StoredState = {
+    ...state,
+    version: STORAGE_VERSION,
+  };
+
+  const jsonData = JSON.stringify(stateWithVersion);
+  const originalKB = jsonData.length / 1024;
+  const compressed = await compressWithWorker(jsonData);
+  const compressedKB = (compressed.length * 2) / 1024;
+
+  const updatedEntry: DraftEntry = {
+    metadata: {
+      ...existing.metadata,
+      slug: state.storySlug || existing.metadata.slug,
+      updatedAt: new Date().toISOString(),
+      currentStep: state.currentStep,
+      version: STORAGE_VERSION,
+    },
+    compressedData: compressed,
+  };
+
+  const db2 = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db2.transaction(DRAFTS_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(DRAFTS_STORE_NAME);
+    const request = store.put(updatedEntry);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+    transaction.oncomplete = () => db2.close();
+  });
+
+  return { originalKB, compressedKB };
+}
+
+/**
+ * Load a draft by ID
+ */
+export async function loadDraft(id: string): Promise<StoredState | null> {
+  try {
+    const db = await openDatabase();
+    const entry = await new Promise<DraftEntry | null>((resolve, reject) => {
+      const transaction = db.transaction(DRAFTS_STORE_NAME, "readonly");
+      const store = transaction.objectStore(DRAFTS_STORE_NAME);
+      const request = store.get(id);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result || null);
+      transaction.oncomplete = () => db.close();
+    });
+
+    if (!entry) return null;
+
+    const decompressed = await decompressWithWorker(entry.compressedData);
+    if (!decompressed) return null;
+
+    return JSON.parse(decompressed) as StoredState;
+  } catch (e) {
+    console.error("[AdminStorage] Failed to load draft:", e);
+    return null;
+  }
+}
+
+/**
+ * Delete a draft by ID
+ */
+export async function deleteDraft(id: string): Promise<void> {
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(DRAFTS_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(DRAFTS_STORE_NAME);
+    const request = store.delete(id);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+    transaction.oncomplete = () => db.close();
+  });
+}
+
+/**
+ * List all drafts, optionally filtered by slug
+ */
+export async function listDrafts(slug?: string): Promise<DraftMetadata[]> {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(DRAFTS_STORE_NAME, "readonly");
+    const store = transaction.objectStore(DRAFTS_STORE_NAME);
+    const request = slug
+      ? store.index("slug").getAll(slug)
+      : store.getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const entries = request.result as DraftEntry[];
+      const metadata = entries
+        .map(e => e.metadata)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      resolve(metadata);
+    };
+    transaction.oncomplete = () => db.close();
+  });
+}
+
+/**
+ * Cleanup old drafts: remove drafts older than MAX_DRAFT_AGE_DAYS
+ * and keep only MAX_DRAFTS_PER_SLUG per slug
+ */
+export async function cleanupOldDrafts(currentSlug?: string): Promise<{ deleted: number }> {
+  const allDrafts = await listDrafts();
+  const now = Date.now();
+  const maxAge = MAX_DRAFT_AGE_DAYS * 24 * 60 * 60 * 1000;
+  const toDelete: string[] = [];
+
+  // Group by slug
+  const bySlug = new Map<string, DraftMetadata[]>();
+  for (const draft of allDrafts) {
+    const list = bySlug.get(draft.slug) || [];
+    list.push(draft);
+    bySlug.set(draft.slug, list);
+  }
+
+  // For each slug, keep only MAX_DRAFTS_PER_SLUG most recent
+  for (const [slug, drafts] of bySlug) {
+    // Sort by updatedAt descending (most recent first)
+    drafts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+    for (let i = 0; i < drafts.length; i++) {
+      const draft = drafts[i];
+      const age = now - new Date(draft.updatedAt).getTime();
+
+      // Delete if too old
+      if (age > maxAge) {
+        toDelete.push(draft.id);
+        continue;
+      }
+
+      // Delete if beyond max per slug (but not if it's the current working draft)
+      if (i >= MAX_DRAFTS_PER_SLUG && slug !== currentSlug) {
+        toDelete.push(draft.id);
+      }
+    }
+  }
+
+  // Delete the drafts
+  for (const id of toDelete) {
+    await deleteDraft(id);
+  }
+
+  if (toDelete.length > 0) {
+    console.log(`[AdminStorage] Cleaned up ${toDelete.length} old drafts`);
+  }
+
+  return { deleted: toDelete.length };
+}
+
+/**
+ * Create a checkpoint for the current step
+ */
+export function createCheckpoint(
+  state: StoredState,
+  step: number
+): StoredState {
+  const hash = generateHash(JSON.stringify(state.storyData));
+  const checkpoint: StepCheckpoint = {
+    step,
+    timestamp: new Date().toISOString(),
+    hash,
+  };
+
+  const checkpoints = state.checkpoints || [];
+
+  // Keep only one checkpoint per step, replace if exists
+  const filteredCheckpoints = checkpoints.filter(c => c.step !== step);
+  filteredCheckpoints.push(checkpoint);
+
+  // Sort by step
+  filteredCheckpoints.sort((a, b) => a.step - b.step);
+
+  return {
+    ...state,
+    checkpoints: filteredCheckpoints,
+  };
+}
+
+/**
+ * Check if state has changed since last checkpoint for a step
+ */
+export function hasChangedSinceCheckpoint(
+  state: StoredState,
+  step: number
+): boolean {
+  const checkpoint = state.checkpoints?.find(c => c.step === step);
+  if (!checkpoint) return true;
+
+  const currentHash = generateHash(JSON.stringify(state.storyData));
+  return currentHash !== checkpoint.hash;
+}
+
+/**
+ * Get all checkpoints for a state
+ */
+export function getCheckpoints(state: StoredState): StepCheckpoint[] {
+  return state.checkpoints || [];
+}
+
+// Export constants for consumers
+export { MAX_DRAFTS_PER_SLUG, MAX_DRAFT_AGE_DAYS, STORAGE_VERSION };

@@ -8,145 +8,19 @@ import { FormAttribution, formToAttribution, createEmptyFormAttribution } from "
 import { ComparisonModal } from "./components/ComparisonModal";
 import { useRewritePipeline } from "./hooks/useRewritePipeline";
 import { useTranslationPipeline } from "./hooks/useTranslationPipeline";
-import type { TranslationErrorType, ChunkError } from "./types";
+import { cleanText } from "@/lib/admin/text-utils";
+import type { TranslationErrorType, ChunkError, StoryData, Step, SourceLanguage, PreprocessedResult } from "./types";
+import { STEPS } from "./config/constants";
+import { StepErrorBoundary } from "./components/shared";
 
 // Track existing slugs for validation (module-level for access across step components)
 const existingSlugs = new Set(STORY_METADATA.map(s => s.slug));
 const isSlugTaken = (slug: string) => slug.length > 0 && existingSlugs.has(slug);
 
-/**
- * Clean text by removing AI artifacts, markdown formatting, and normalizing
- */
-function cleanText(text: string): string {
-  let cleaned = text
-    // Remove code fences (```language or just ```)
-    .replace(/^```[\w]*\n?/gm, "")
-    .replace(/\n?```$/gm, "")
-    .replace(/```/g, "")
-    // Remove triple quotes that AI sometimes adds
-    .replace(/^"""\n?/gm, "")
-    .replace(/\n?"""$/gm, "")
-    .replace(/^'''\n?/gm, "")
-    .replace(/\n?'''$/gm, "")
-    // Remove markdown bold/italic
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/_(.*?)_/g, "$1")
-    // Remove markdown headers
-    .replace(/^#{1,6}\s+/gm, "")
-    // Normalize whitespace
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n");
-
-  // Process line by line to remove quote wrapping
-  cleaned = cleaned
-    .split("\n")
-    .map(line => {
-      let l = line.trim();
-      // Remove surrounding double quotes (straight and curly)
-      if ((l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith("'") && l.endsWith("'")) ||
-          (l.startsWith("'") && l.endsWith("'"))) {
-        l = l.slice(1, -1);
-      }
-      // Also handle lines that are just quotes
-      if (l === '""' || l === "''" || l === '""' || l === "''") {
-        return "";
-      }
-      return l;
-    })
-    .filter(line => line.length > 0 || line === "") // Keep empty lines for structure but filter pure quote lines
-    .join("\n");
-
-  // Final trim and remove any remaining quote-only lines
-  return cleaned
-    .split("\n")
-    .filter(line => !/^["'"'""'']+$/.test(line.trim()))
-    .join("\n")
-    .trim();
-}
-
 interface StoryUploadFormProps {
   onLogout: () => void;
   hideHeader?: boolean;
 }
-
-type SourceLanguage = "en" | "es";
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-
-interface LevelContent {
-  sourceText: string;
-  translatedText: string;
-  status: "pending" | "generating" | "done" | "error" | "omitted";
-  mode: "generate" | "use-original" | "omit"; // Whether to AI generate, use source text, or skip
-}
-
-// Preprocessed text result structure (matches algorithmic preprocessor output)
-interface DetectedChapter {
-  number: number;
-  title: string;
-  subtitle?: string;
-  rawText: string;
-  startLine: number;
-  endLine: number;
-}
-
-interface PreprocessedResult {
-  frontMatter: string;
-  chapters: DetectedChapter[];
-  stats: {
-    originalLength: number;
-    cleanedLength: number;
-    lineNumbersRemoved: number;
-    pageMarkersRemoved: number;
-    footnoteIndicatorsRemoved: number;
-    asteriskDividersRemoved: number;
-    chaptersDetected: number;
-    backMatterRemoved: boolean;
-  };
-  cleanedFullText: string;
-}
-
-interface StoryData {
-  rawText: string;
-  sourceLanguage: SourceLanguage;
-  slug: string;
-  detectedLevel: number | null;
-  title: { en: string; es: string };
-  displayTitle: { en: string; es: string } | null; // Optional short version for cards
-  description: { en: string; es: string };
-  hook: { en: string; es: string } | null; // Optional short teaser for cards
-  selectedLevels: number[];
-  levelContent: Record<number, LevelContent>;
-  linesPerPage: number;
-  thumbnailFile: File | null;
-  thumbnailPreview: string | null;
-  backgroundFile: File | null;
-  backgroundPreview: string | null;
-  // Tagging fields
-  storyType: StoryType;
-  isOriginal: boolean;
-  attribution: FormAttribution | null;
-  tags: StoryTag[];
-  targetAudience: "children" | "teen" | "adult" | "all";
-  // Parsed text data
-  parsedResult: PreprocessedResult | null;
-  uploadedFileName: string | null;
-  // Extracted annotations (sidenotes, footnotes, etc.)
-  extractedAnnotations: ExtractedAnnotation[];
-}
-
-const STEPS = [
-  { number: 1, label: "Upload Text" },
-  { number: 2, label: "Parse & Detect" },
-  { number: 3, label: "Metadata" },
-  { number: 4, label: "Generate Levels" },
-  { number: 5, label: "Translate" },
-  { number: 6, label: "Paginate" },
-  { number: 7, label: "Preview & Save" },
-];
 
 const initialStoryData: StoryData = {
   rawText: "",
@@ -303,6 +177,36 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
     }
   };
 
+  // Get list of missing required fields for current step
+  const getMissingFields = (): string[] => {
+    const missing: string[] = [];
+    switch (currentStep) {
+      case 1:
+        if (!storyData.rawText.trim()) missing.push("Story text");
+        break;
+      case 2:
+        if (storyData.detectedLevel === null) missing.push("Level detection (click Detect)");
+        break;
+      case 3:
+        if (!storyData.title.en && !storyData.title.es) missing.push("Title (English or Spanish)");
+        if (!storyData.slug) missing.push("Story slug");
+        break;
+      case 4:
+        if (getGeneratedLevels().length === 0) missing.push("At least one level generated");
+        break;
+      case 5:
+        const generatedLevels = getGeneratedLevels();
+        const untranslated = generatedLevels.filter(
+          (l) => !storyData.levelContent[l]?.translatedText?.length
+        );
+        if (untranslated.length > 0) {
+          missing.push(`Translation for level(s): ${untranslated.join(", ")}`);
+        }
+        break;
+    }
+    return missing;
+  };
+
   return (
     <div className={hideHeader ? "" : "min-h-screen bg-gray-50"}>
       {/* Header - only show if not hidden */}
@@ -425,50 +329,92 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {currentStep === 1 && (
-            <Step1Upload storyData={storyData} updateStoryData={updateStoryData} />
+            <StepErrorBoundary
+              stepNumber={1}
+              stepLabel="Upload Text"
+              onGoBack={undefined}
+            >
+              <Step1Upload storyData={storyData} updateStoryData={updateStoryData} />
+            </StepErrorBoundary>
           )}
           {currentStep === 2 && (
-            <Step2Detect
-              storyData={storyData}
-              updateStoryData={updateStoryData}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-            />
+            <StepErrorBoundary
+              stepNumber={2}
+              stepLabel="Parse & Detect"
+              onGoBack={() => goToStep(1)}
+            >
+              <Step2Detect
+                storyData={storyData}
+                updateStoryData={updateStoryData}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+              />
+            </StepErrorBoundary>
           )}
           {currentStep === 3 && (
-            <Step3Metadata storyData={storyData} updateStoryData={updateStoryData} />
+            <StepErrorBoundary
+              stepNumber={3}
+              stepLabel="Metadata"
+              onGoBack={() => goToStep(2)}
+            >
+              <Step3Metadata storyData={storyData} updateStoryData={updateStoryData} />
+            </StepErrorBoundary>
           )}
           {currentStep === 4 && (
-            <Step4Generate
-              storyData={storyData}
-              updateStoryData={updateStoryData}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-            />
+            <StepErrorBoundary
+              stepNumber={4}
+              stepLabel="Generate Levels"
+              onGoBack={() => goToStep(3)}
+            >
+              <Step4Generate
+                storyData={storyData}
+                updateStoryData={updateStoryData}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+              />
+            </StepErrorBoundary>
           )}
           {currentStep === 5 && (
-            <Step5Translate
-              storyData={storyData}
-              updateStoryData={updateStoryData}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-            />
+            <StepErrorBoundary
+              stepNumber={5}
+              stepLabel="Translate"
+              onGoBack={() => goToStep(4)}
+            >
+              <Step5Translate
+                storyData={storyData}
+                updateStoryData={updateStoryData}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+              />
+            </StepErrorBoundary>
           )}
           {currentStep === 6 && (
-            <Step6Paginate storyData={storyData} updateStoryData={updateStoryData} />
+            <StepErrorBoundary
+              stepNumber={6}
+              stepLabel="Paginate"
+              onGoBack={() => goToStep(5)}
+            >
+              <Step6Paginate storyData={storyData} updateStoryData={updateStoryData} />
+            </StepErrorBoundary>
           )}
           {currentStep === 7 && (
-            <Step7Preview
-              storyData={storyData}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-              saveResult={saveResult}
-              setSaveResult={setSaveResult}
-            />
+            <StepErrorBoundary
+              stepNumber={7}
+              stepLabel="Preview & Save"
+              onGoBack={() => goToStep(6)}
+            >
+              <Step7Preview
+                storyData={storyData}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                saveResult={saveResult}
+                setSaveResult={setSaveResult}
+              />
+            </StepErrorBoundary>
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-start mt-8 pt-6 border-t border-gray-200">
             <button
               onClick={() => goToStep((currentStep - 1) as Step)}
               disabled={currentStep === 1}
@@ -477,13 +423,26 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
               ← Back
             </button>
             {currentStep < 7 ? (
-              <button
-                onClick={() => goToStep((currentStep + 1) as Step)}
-                disabled={!canProceed() || isProcessing}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue →
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                {/* Show missing fields when can't proceed */}
+                {!canProceed() && !isProcessing && (
+                  <div className="text-right">
+                    <p className="text-xs text-amber-600 font-medium mb-1">Missing required fields:</p>
+                    <ul className="text-xs text-gray-500 list-disc list-inside">
+                      {getMissingFields().map((field, i) => (
+                        <li key={i}>{field}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <button
+                  onClick={() => goToStep((currentStep + 1) as Step)}
+                  disabled={!canProceed() || isProcessing}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue →
+                </button>
+              </div>
             ) : null}
           </div>
         </div>

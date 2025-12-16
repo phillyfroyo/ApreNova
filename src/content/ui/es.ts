@@ -54,7 +54,10 @@ story: {
   prev: "Anterior",
   next: "Siguiente",
   markComplete: "Marcar esta historia como completada",
-  markedComplete: "✅ ¡Historia marcada como completada!"
+  markedComplete: "✅ ¡Historia marcada como completada!",
+  levelUnavailable: "Esta historia no está disponible en tu nivel actual.",
+  availableLevelsAre: "Niveles disponibles:",
+  selectLevel: "Selecciona un nivel para continuar leyendo:",
 },
 
 levels: {
@@ -199,12 +202,11 @@ storiesMetadata: {
   "my-day": {
     title: "Mi Día",
     description: "Un poema simple sobre las alegrías de la vida cotidiana.",
+  },},
+  "avatar": {
+    title: "Avatar: The Last Airbender",
+    description: "El episodio comienza con un cuerpo de agua, olas rompiendo contra las rocas. La cámara corta a hierba y palos, antes de moverse lentamente hacia arriba para revelar un alfanje de diente de ballena clavado en el suelo. La mano de Aang aparece en escena mientras agarra la empuñadura del arma y la saca del suelo. Corte a una toma de él levantándola mientras Sokka se desliza por una pendiente de tierra. Aang encuentra una espada hecha de un diente de ballena, y Sokka la identifica como un arma de la Tribu Agua. Descubren evidencia de una batalla entre guerreros de la Tribu Agua y maestros fuego. Mientras tanto, Zuko e Iroh se encuentran con June, una cazarrecompensas, que está buscando a un polizón en su barco. El episodio explora temas de familia y pertenencia mientras Sokka y Katara se reúnen con Bato, un amigo de su tribu, y se enteran del paradero de su padre.",
   },
-  "dracula": {
-    title: "",
-    description: "",
-  },
-},
 };
 
 export default es;
