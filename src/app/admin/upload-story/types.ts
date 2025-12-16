@@ -9,7 +9,7 @@ import type { FormAttribution } from "@/lib/admin/attribution-helpers";
 // ============================================
 
 export type SourceLanguage = "en" | "es";
-export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+// Note: Step type is re-exported from config/constants at bottom of file
 
 // ============================================
 // Processing Status - Explicit State Machine
@@ -171,21 +171,15 @@ export interface PersistedPipelineState {
 }
 
 // ============================================
-// Constants
+// Constants (Re-exported from centralized config)
 // ============================================
 
-export const REWRITE_BATCH_SIZE = 8;
-export const TRANSLATION_BATCH_SIZE = 8;
-export const MAX_CHUNK_CHARS = 12000;
-export const MAX_TRANSLATION_RETRIES = 2;
-export const RETRY_DELAY_MS = 500;
-
-export const STEPS = [
-  { number: 1, label: "Upload Text" },
-  { number: 2, label: "Parse & Detect" },
-  { number: 3, label: "Metadata" },
-  { number: 4, label: "Generate Levels" },
-  { number: 5, label: "Translate" },
-  { number: 6, label: "Paginate" },
-  { number: 7, label: "Preview & Save" },
-] as const;
+export {
+  REWRITE_BATCH_SIZE,
+  TRANSLATION_BATCH_SIZE,
+  MAX_CHUNK_CHARS,
+  MAX_TRANSLATION_RETRIES,
+  RETRY_DELAY_MS,
+  STEPS,
+  type Step,
+} from "./config/constants";

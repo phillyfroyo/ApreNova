@@ -9,7 +9,7 @@ const openai = new OpenAI({
 interface GenerateMetadataRequest {
   storyText: string;
   sourceLanguage: "en" | "es";
-  type: "title" | "description" | "image" | "background" | "translate-to-spanish";
+  type: "title" | "description" | "image" | "background" | "translate-to-spanish" | "translate-to-english";
   customPrompt?: string;
 }
 
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Story text is required" }, { status: 400 });
     }
 
-    if (!type || !["title", "description", "image", "background", "translate-to-spanish"].includes(type)) {
-      return NextResponse.json({ error: "Valid type (title/description/image/background/translate-to-spanish) is required" }, { status: 400 });
+    if (!type || !["title", "description", "image", "background", "translate-to-spanish", "translate-to-english"].includes(type)) {
+      return NextResponse.json({ error: "Valid type (title/description/image/background/translate-to-spanish/translate-to-english) is required" }, { status: 400 });
     }
 
     // For image generation, use DALL-E
@@ -37,7 +37,12 @@ export async function POST(req: NextRequest) {
 
     // For translation to Spanish
     if (type === "translate-to-spanish") {
-      return translateToSpanish(storyText);
+      return translateText(storyText, "es");
+    }
+
+    // For translation to English
+    if (type === "translate-to-english") {
+      return translateText(storyText, "en");
     }
 
     // For title and description, use GPT-4o
@@ -270,20 +275,23 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
   }
 }
 
-async function translateToSpanish(text: string) {
+async function translateText(text: string, targetLanguage: "en" | "es") {
   // Text may contain multiple items separated by ---SEPARATOR---
   const items = text.split("\n\n---SEPARATOR---\n\n");
 
-  const systemPrompt = `You are an expert English to Spanish translator. Translate the following text(s) to Spanish.
+  const sourceLangName = targetLanguage === "es" ? "English" : "Spanish";
+  const targetLangName = targetLanguage === "es" ? "Spanish" : "English";
+
+  const systemPrompt = `You are an expert ${sourceLangName} to ${targetLangName} translator. Translate the following text(s) to ${targetLangName}.
 - Maintain the original meaning and tone
-- For titles, keep proper nouns (like "Beowulf") unchanged
-- Return accurate, natural-sounding Spanish
+- For titles, keep proper nouns unchanged
+- Return accurate, natural-sounding ${targetLangName}
 
 Return the translations as a JSON array of strings, one for each input item.`;
 
   const userPrompt = items.length === 1
-    ? `Translate to Spanish:\n"${items[0]}"\n\nReturn as JSON: { "translations": ["Spanish translation here"] }`
-    : `Translate each of these ${items.length} texts to Spanish:\n\n${items.map((item, i) => `${i + 1}. "${item}"`).join("\n\n")}\n\nReturn as JSON: { "translations": ["translation1", "translation2", ...] }`;
+    ? `Translate to ${targetLangName}:\n"${items[0]}"\n\nReturn as JSON: { "translations": ["${targetLangName} translation here"] }`
+    : `Translate each of these ${items.length} texts to ${targetLangName}:\n\n${items.map((item, i) => `${i + 1}. "${item}"`).join("\n\n")}\n\nReturn as JSON: { "translations": ["translation1", "translation2", ...] }`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",

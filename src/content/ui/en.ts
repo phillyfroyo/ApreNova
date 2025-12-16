@@ -54,7 +54,10 @@ story: {
   prev: "Prev",
   next: "Next",
   markComplete: "Mark this story as complete",
-  markedComplete: "✅ Story marked as complete!"
+  markedComplete: "✅ Story marked as complete!",
+  levelUnavailable: "This story is not available at your current level.",
+  availableLevelsAre: "Available levels:",
+  selectLevel: "Select a level to continue reading:",
 },
 
 levels: {
@@ -198,12 +201,11 @@ storiesMetadata: {
   "my-day": {
     title: "My Day",
     description: "A simple poem about the joys of everyday life.",
+  },},
+  "avatar": {
+    title: "Avatar: The Last Airbender",
+    description: "The episode opens up to a body of water, waves crashing against the rocks. The camera cuts to grass and sticks, before slowly panning up to reveal a whale tooth scimitar standing upright in the ground. Aang's hand comes into view as he grasps the weapon's hilt and yanks it out of the ground. Cut to a shot of him holding it up while Sokka slides down a dirt slope. Aang finds a sword made out of a whale's tooth, and Sokka identifies it as a Water Tribe weapon. They discover evidence of a battle between Water Tribe warriors and firebenders. Meanwhile, Zuko and Iroh encounter June, a bounty hunter, who is searching for a stowaway on their ship. The episode explores themes of family and belonging as Sokka and Katara reunite with Bato, a friend from their tribe, and learn about their father's whereabouts.",
   },
-  "dracula": {
-    title: "Dracula",
-    description: "",
-  },
-},
 };
 
 export default en;

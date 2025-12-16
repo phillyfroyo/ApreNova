@@ -83,7 +83,8 @@ export default function StoryLayoutWithAzureTTS({
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [translationMode, setTranslationMode] = useState<"free" | "premium">("free");
+  // Premium restrictions removed - all users get full translation features
+  const [translationMode, setTranslationMode] = useState<"free" | "premium">("premium");
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isAnyDropdownOpen, setIsAnyDropdownOpen] = useState(false);
@@ -190,13 +191,8 @@ export default function StoryLayoutWithAzureTTS({
     }
   }
 
-  const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
-    aventura: "alwaysPremium",
-    "the-last-word": "conditional",
-    "diego-unplugged": "alwaysPremium",
-  };
-  const accessType = storyAccessMap[storySlug] || "alwaysFree";
-  const readOnlyMode = accessType === "conditional" && !isPremiumUser;
+  // Premium restrictions removed - all users get full access
+  const readOnlyMode = false;
 
   const theme = getTheme(storySlug);
 
@@ -244,15 +240,7 @@ export default function StoryLayoutWithAzureTTS({
     setIsFinalPage(!next);
   }, [chapterNumber, pageNumber, storyMap]);
 
-  useEffect(() => {
-    if (storySlug === "aventura") {
-      setTranslationMode("premium");
-    } else if (storySlug === "the-last-word") {
-      setTranslationMode(isPremiumUser ? "premium" : "free");
-    } else if (storySlug === "diego-unplugged") {
-      setTranslationMode(isPremiumUser ? "premium" : "free");
-    }
-  }, [storySlug, isPremiumUser]);
+  // Premium restrictions removed - translationMode is always "premium" for all users
 
   // Intelligent pre-loading of chat history
   useEffect(() => {

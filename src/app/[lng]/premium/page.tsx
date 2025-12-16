@@ -11,9 +11,13 @@ import type { Language } from "@/types/i18n";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import { t } from "@/lib/t";
 
-export default async function PremiumPage(props: any) {
-  const { params } = props;
-  const lng = (["en", "es"].includes(params?.lng) ? params.lng : "es") as "en" | "es";
+export default async function PremiumPage({
+  params,
+}: {
+  params: Promise<{ lng: string }>;
+}) {
+  const { lng: rawLng } = await params;
+  const lng = (["en", "es"].includes(rawLng) ? rawLng : "es") as "en" | "es";
 
   const session = await getServerSession(authOptions);
 

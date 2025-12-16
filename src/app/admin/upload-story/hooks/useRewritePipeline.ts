@@ -2,7 +2,9 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { StoryData, LevelContent, DetectedChapter } from "../types";
-import { useProcessingPipeline, cleanText, splitIntoSubChunks, type LevelState, type BasePipelineState } from "./useProcessingPipeline";
+import { useProcessingPipeline, type LevelState, type BasePipelineState } from "./useProcessingPipeline";
+import { cleanText, splitIntoSubChunks } from "@/lib/admin/text-utils";
+import { REWRITE_BATCH_SIZE, MAX_CHUNK_CHARS } from "../config/constants";
 
 // ============================================
 // Types
@@ -20,13 +22,6 @@ export interface ChapterProgress {
   total: number;
   subChunk?: { current: number; total: number };
 }
-
-// ============================================
-// Constants
-// ============================================
-
-const REWRITE_BATCH_SIZE = 8;
-const MAX_CHUNK_CHARS = 12000;
 
 // ============================================
 // Hook

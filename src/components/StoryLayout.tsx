@@ -173,13 +173,8 @@ useEffect(() => {
   }
 
 
-  const storyAccessMap: Record<string, "alwaysPremium" | "conditional" | "alwaysFree"> = {
-  aventura: "alwaysPremium",
-  "the-last-word": "conditional",
-  // add more stories here later
-};
-const accessType = storyAccessMap[storySlug] || "alwaysFree";
-const readOnlyMode = accessType === "conditional" && !isPremiumUser;
+  // Premium restrictions removed - all users get full access
+const readOnlyMode = false;
 
   const theme = getTheme(storySlug);
 

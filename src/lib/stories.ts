@@ -19,6 +19,8 @@ export const STORY_TYPE_LABELS: Record<StoryType, { en: string; es: string }> = 
   "epic": { en: "Epic", es: "Épica" },
   "myth": { en: "Myth", es: "Mito" },
   "legend": { en: "Legend", es: "Leyenda" },
+  "movie-script": { en: "Movie Script", es: "Guion de película" },
+  "tv-script": { en: "TV Script", es: "Guion de TV" },
 };
 
 // Plural labels for story types (used in filters)
@@ -34,6 +36,8 @@ export const STORY_TYPE_LABELS_PLURAL: Record<StoryType, { en: string; es: strin
   "epic": { en: "Epics", es: "Épicas" },
   "myth": { en: "Myths", es: "Mitos" },
   "legend": { en: "Legends", es: "Leyendas" },
+  "movie-script": { en: "Movie Scripts", es: "Guiones de película" },
+  "tv-script": { en: "TV Scripts", es: "Guiones de TV" },
 };
 
 // Display labels for story tags
@@ -84,7 +88,7 @@ export const STORY_TAG_LABELS: Record<StoryTag, { en: string; es: string }> = {
 // All available story types for UI dropdowns
 export const ALL_STORY_TYPES: StoryType[] = [
   "short-story", "poem", "fable", "folktale", "novel", "article", "dialogue", "song-lyrics",
-  "epic", "myth", "legend"
+  "epic", "myth", "legend", "movie-script", "tv-script"
 ];
 
 // All available story tags for UI multi-select
@@ -241,52 +245,13 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["family","multicultural"],
     targetAudience: "all",
-  },  {
-    slug: "dracula",
+  },{
+    slug: "avatar",
     image: "/images/placeholder1.png",
     levels: ["l4"],
     type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
-    targetAudience: "all",
-  },
-  {
-    slug: "dracula",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
-    targetAudience: "all",
-  },
-  {
-    slug: "dracula",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
-    targetAudience: "all",
-  },
-  {
-    slug: "dracula",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
-    targetAudience: "all",
-  },
-  {
-    slug: "dracula",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
-    targetAudience: "all",
-  },
-  {
-    slug: "dracula",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "Bram Stoker" }, yearFirstPublished: 1897, sourceEdition: { title: "Dracula", publisher: "Grosset & Dunlap", publicationYear: 1897, isPublicDomain: true, publicDomainNote: "Published in 1897, which is before 1928, making it public domain in the US." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "http://www.gutenberg.org/ebooks/345" } } },
+    origin: { isOriginal: false, attribution: { author: { name: "" }, rights: { originalWorkStatus: "public-domain", displayStatement: "This work is in the public domain. This educational adaptation, translation, and formatting are © Cuentana." } } },
+    tags: ["adventure", "fantasy"],
     targetAudience: "all",
   },
 ];

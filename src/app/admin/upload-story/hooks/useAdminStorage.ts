@@ -91,6 +91,7 @@ export function useAdminStorage<T>({
 
       try {
         const result = await saveState({
+          version: 2,
           storyData: state,
           currentStep: step,
           savedAt: new Date().toISOString(),
@@ -123,6 +124,7 @@ export function useAdminStorage<T>({
 
     try {
       await saveState({
+        version: 2,
         storyData: state,
         currentStep: step,
         savedAt: new Date().toISOString(),

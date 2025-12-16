@@ -46,7 +46,7 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     fontFamily: "font-sans",
   },
 
-  "dracula": {
+  "avatar": {
     backgroundColor: "#f5f0e6",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
