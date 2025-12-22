@@ -154,6 +154,13 @@ useEffect(() => {
 
         <div className="space-y-2">
           <Link
+            href={`/${typedLang}/my-stories`}
+            className="text-indigo-600 cursor-pointer block"
+          >
+            {typedLang === "es" ? "Mis Historias" : "My Stories"}
+          </Link>
+
+          <Link
             href={`/${typedLang}/tutor`}
             className="text-purple-600 cursor-pointer block"
           >

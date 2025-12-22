@@ -1,0 +1,147 @@
+// src/app/api/user-stories/[storyId]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
+import { prisma } from "@/lib/prisma";
+
+interface RouteParams {
+  params: Promise<{ storyId: string }>;
+}
+
+// GET: Get specific user story details
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { storyId } = await params;
+
+    const story = await prisma.userStory.findFirst({
+      where: {
+        id: storyId,
+        userId: session.user.id,
+      },
+      include: {
+        levels: {
+          select: {
+            id: true,
+            level: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { level: "asc" },
+        },
+      },
+    });
+
+    if (!story) {
+      return NextResponse.json({ error: "Story not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ story });
+  } catch (error) {
+    console.error("Error fetching user story:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch story" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Delete user story
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { storyId } = await params;
+
+    // Verify ownership
+    const story = await prisma.userStory.findFirst({
+      where: {
+        id: storyId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!story) {
+      return NextResponse.json({ error: "Story not found" }, { status: 404 });
+    }
+
+    // Delete story (cascades to levels and bookmarks)
+    await prisma.userStory.delete({
+      where: { id: storyId },
+    });
+
+    return NextResponse.json({ success: true, message: "Story deleted" });
+  } catch (error) {
+    console.error("Error deleting user story:", error);
+    return NextResponse.json(
+      { error: "Failed to delete story" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Update story metadata (title, description)
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { storyId } = await params;
+    const body = await req.json();
+    const { title, description, titleEs, titleEn, descriptionEs, descriptionEn } = body;
+
+    // Verify ownership
+    const story = await prisma.userStory.findFirst({
+      where: {
+        id: storyId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!story) {
+      return NextResponse.json({ error: "Story not found" }, { status: 404 });
+    }
+
+    // Build update object
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (titleEs !== undefined) updateData.titleEs = titleEs;
+    if (titleEn !== undefined) updateData.titleEn = titleEn;
+    if (descriptionEs !== undefined) updateData.descriptionEs = descriptionEs;
+    if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
+    const updatedStory = await prisma.userStory.update({
+      where: { id: storyId },
+      data: updateData,
+    });
+
+    return NextResponse.json({ success: true, story: updatedStory });
+  } catch (error) {
+    console.error("Error updating user story:", error);
+    return NextResponse.json(
+      { error: "Failed to update story" },
+      { status: 500 }
+    );
+  }
+}

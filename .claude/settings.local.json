@@ -19,11 +19,13 @@
       "Bash(git log:*)",
       "Bash(npx prisma:*)",
       "Bash(npm info:*)",
-      "Bash(dir:*)",
-      "Bash(xxd:*)",
-      "WebSearch",
-      "WebFetch(domain:www.gutenberg.org)",
-      "Bash(echo:*)"
+      "Bash(git fetch:*)",
+      "Bash(ls:*)",
+      "Bash(git merge:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash push:*)"
     ],
     "deny": []
   }

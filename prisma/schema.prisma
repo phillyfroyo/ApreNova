@@ -32,6 +32,8 @@ model User {
   tutorMessages       TutorMessage[]
   storyTutorMessages  StoryTutorMessage[]
   storyBookmarks      StoryBookmark[]
+  userStories         UserStory[]
+  userStoryBookmarks  UserStoryBookmark[]
 }
 
 model Account {
@@ -131,4 +133,87 @@ model StoryBookmark {
 
   @@unique([userId, storySlug])
   @@index([userId])
+}
+
+// ==========================================
+// User Story Upload System
+// ==========================================
+
+model UserStory {
+  id             String            @id @default(cuid())
+  userId         String
+  slug           String
+  title          String
+  titleEs        String?
+  titleEn        String?
+  description    String?           @db.Text
+  descriptionEs  String?           @db.Text
+  descriptionEn  String?           @db.Text
+  sourceLanguage String            // "en" or "es"
+  detectedLevel  String?           // l1-l5 (detected CEFR level)
+  thumbnailUrl   String?
+  status         UserStoryStatus   @default(PROCESSING)
+  visibility     StoryVisibility   @default(PRIVATE)
+  rawContent     String            @db.Text  // Original uploaded text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  levels    UserStoryLevel[]
+  bookmarks UserStoryBookmark[]
+
+  @@unique([userId, slug])
+  @@index([userId, status])
+}
+
+model UserStoryLevel {
+  id          String      @id @default(cuid())
+  userStoryId String
+  level       String      // l1, l2, l3, l4, l5
+  content     Json        // Same structure as content.ts files
+  status      LevelStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userStory UserStory @relation(fields: [userStoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userStoryId, level])
+  @@index([userStoryId])
+}
+
+model UserStoryBookmark {
+  id          String   @id @default(cuid())
+  userId      String
+  userStoryId String
+  level       String
+  chapter     Int
+  page        Int
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userStory UserStory @relation(fields: [userStoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, userStoryId])
+  @@index([userId])
+}
+
+enum UserStoryStatus {
+  PROCESSING
+  READY
+  FAILED
+  PARTIAL
+}
+
+enum LevelStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum StoryVisibility {
+  PRIVATE
+  SUBMITTED
+  PUBLIC
+  REJECTED
 }
