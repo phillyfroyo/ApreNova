@@ -35,6 +35,8 @@ interface StoryLayoutWithAzureTTSProps {
     hasChapters: boolean;
     chapters: { chapter: number; pages: number[] }[];
   };
+  isUserStory?: boolean;
+  userStoryId?: string;
 }
 
 export default function StoryLayoutWithAzureTTS({
@@ -43,6 +45,8 @@ export default function StoryLayoutWithAzureTTS({
   storySlug,
   title,
   storyMap,
+  isUserStory = false,
+  userStoryId,
 }: StoryLayoutWithAzureTTSProps) {
   useSessionLogger('reading');
 
@@ -120,6 +124,22 @@ export default function StoryLayoutWithAzureTTS({
 
   const chapterNumber = parseInt(currentChapter.replace("ch", ""));
   const pageNumber = parseInt(currentPage.replace("page-", ""));
+
+  // Helper function to generate navigation URLs
+  const getNavigationUrl = (level: string, chapter: number, page: number) => {
+    if (isUserStory && userStoryId) {
+      return `/${typedLang}/my-stories/${userStoryId}/${level}/${chapter}/${page}`;
+    }
+    return `/${typedLang}/stories/${storySlug}/${level}/ch${chapter}/page-${page}`;
+  };
+
+  // Helper for home navigation
+  const getHomeUrl = () => {
+    if (isUserStory) {
+      return `/${typedLang}/my-stories`;
+    }
+    return `/${typedLang}/stories`;
+  };
 
   // Disabled aggressive pre-caching to avoid rate limits
   useEffect(() => {
@@ -603,7 +623,7 @@ export default function StoryLayoutWithAzureTTS({
               options={[{ label: t(typedLang, "story", "home"), value: "home" }]}
               onSelect={(option) => {
                 if (option === "home") {
-                  router.push(`/${typedLang}/stories`);
+                  router.push(getHomeUrl());
                 }
               }}
               onOpenChange={(isOpen) => {
@@ -622,7 +642,7 @@ export default function StoryLayoutWithAzureTTS({
                 { label: t(typedLang, "levels", "l5"), value: "l5" }
               ]}
               onSelect={(selectedValue) => {
-                router.push(`/${typedLang}/stories/${storySlug}/${selectedValue}/ch${chapterNumber}/page-${pageNumber}`);
+                router.push(getNavigationUrl(selectedValue, chapterNumber, pageNumber));
               }}
               onOpenChange={(isOpen) => {
                 setActiveDropdown(isOpen ? "level" : null);
@@ -641,7 +661,7 @@ export default function StoryLayoutWithAzureTTS({
                 onSelect={(selectedValue) => {
                   const selectedChapter = parseInt(selectedValue);
                   const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
-                  router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${selectedChapter}/page-${firstPage}`);
+                  router.push(getNavigationUrl(currentLevel, selectedChapter, firstPage));
                 }}
                 onOpenChange={(isOpen) => {
                   setActiveDropdown(isOpen ? "chapter" : null);
@@ -662,7 +682,7 @@ export default function StoryLayoutWithAzureTTS({
               }
               onSelect={(selectedValue) => {
                 const selectedPage = parseInt(selectedValue);
-                router.push(`/${typedLang}/stories/${storySlug}/${currentLevel}/ch${chapterNumber}/page-${selectedPage}`);
+                router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPage));
               }}
               onOpenChange={(isOpen) => {
                 setActiveDropdown(isOpen ? "page" : null);
@@ -689,7 +709,7 @@ export default function StoryLayoutWithAzureTTS({
                   className={buttonClass(!prev, "bg-green-600")}
                   href={
                     prev
-                      ? `/${typedLang}/stories/${storySlug}/${currentLevel}/ch${prev.ch}/page-${prev.pg}`
+                      ? getNavigationUrl(currentLevel, prev.ch, prev.pg)
                       : undefined
                   }
                   onClick={(e) => !prev && e.preventDefault()}
@@ -700,7 +720,7 @@ export default function StoryLayoutWithAzureTTS({
                   className={buttonClass(!next, "bg-green-700")}
                   href={
                     next
-                      ? `/${typedLang}/stories/${storySlug}/${currentLevel}/ch${next.ch}/page-${next.pg}`
+                      ? getNavigationUrl(currentLevel, next.ch, next.pg)
                       : undefined
                   }
                   onClick={(e) => !next && e.preventDefault()}

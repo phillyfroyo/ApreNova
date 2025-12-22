@@ -1,0 +1,191 @@
+// src/app/api/user-stories/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
+import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/stories";
+import {
+  canCreateStory,
+  canProcessToday,
+  validateContentLength,
+} from "@/lib/user-stories/access-control";
+import { processUserStory } from "@/lib/user-stories/pipeline";
+
+// GET: List user's stories
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status");
+    const visibility = searchParams.get("visibility");
+
+    const where: any = { userId: session.user.id };
+    if (status) where.status = status;
+    if (visibility) where.visibility = visibility;
+
+    const stories = await prisma.userStory.findMany({
+      where,
+      include: {
+        levels: {
+          select: {
+            level: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ stories });
+  } catch (error) {
+    console.error("Error fetching user stories:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch stories" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST: Create new story
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { title, content, sourceLanguage, description } = body;
+
+    // Validate required fields
+    if (!title || !content || !sourceLanguage) {
+      return NextResponse.json(
+        { error: "Missing required fields: title, content, sourceLanguage" },
+        { status: 400 }
+      );
+    }
+
+    // Validate source language
+    if (!["en", "es"].includes(sourceLanguage)) {
+      return NextResponse.json(
+        { error: "sourceLanguage must be 'en' or 'es'" },
+        { status: 400 }
+      );
+    }
+
+    const isPremium = session.user.isPremium ?? false;
+
+    // Check story count limit
+    const canCreate = await canCreateStory(session.user.id, isPremium);
+    if (!canCreate.allowed) {
+      return NextResponse.json(
+        {
+          error: canCreate.reason,
+          currentCount: canCreate.currentCount,
+          maxCount: canCreate.maxCount,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check daily processing limit
+    const canProcess = await canProcessToday(session.user.id, isPremium);
+    if (!canProcess.allowed) {
+      return NextResponse.json(
+        {
+          error: canProcess.reason,
+          currentCount: canProcess.currentCount,
+          maxCount: canProcess.maxCount,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Validate content length
+    const contentValid = validateContentLength(content, isPremium);
+    if (!contentValid.allowed) {
+      return NextResponse.json(
+        {
+          error: contentValid.reason,
+          currentLength: contentValid.currentCount,
+          maxLength: contentValid.maxCount,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate unique slug
+    let baseSlug = slugify(title);
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Check for existing slug and make unique if needed
+    while (true) {
+      const existing = await prisma.userStory.findUnique({
+        where: {
+          userId_slug: {
+            userId: session.user.id,
+            slug,
+          },
+        },
+      });
+      if (!existing) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Create the story
+    const story = await prisma.userStory.create({
+      data: {
+        userId: session.user.id,
+        slug,
+        title,
+        description: description || null,
+        sourceLanguage,
+        rawContent: content,
+        status: "PROCESSING",
+        visibility: "PRIVATE",
+      },
+    });
+
+    // Create placeholder level records for all 5 levels
+    const levels = ["l1", "l2", "l3", "l4", "l5"];
+    await prisma.userStoryLevel.createMany({
+      data: levels.map((level) => ({
+        userStoryId: story.id,
+        level,
+        content: {},
+        status: "PENDING",
+      })),
+    });
+
+    // Start processing in background (fire-and-forget)
+    // In production, consider using a proper job queue
+    processUserStory(story.id).catch((error) => {
+      console.error("Background processing failed for story:", story.id, error);
+    });
+
+    return NextResponse.json({
+      success: true,
+      story: {
+        id: story.id,
+        slug: story.slug,
+        title: story.title,
+        status: story.status,
+      },
+      message: "Story created. Processing will begin shortly.",
+    });
+  } catch (error) {
+    console.error("Error creating user story:", error);
+    return NextResponse.json(
+      { error: "Failed to create story" },
+      { status: 500 }
+    );
+  }
+}
