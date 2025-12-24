@@ -4,6 +4,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import SessionWrapper from '@/components/SessionWrapper';
 import SessionTracker from '@/components/SessionTracker';
+import StoryUploadWrapper from '@/components/user-stories/StoryUploadWrapper';
 import { Alice, Open_Sans, Inter } from 'next/font/google';
 
 export const metadata = {
@@ -32,8 +33,10 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
         <SessionWrapper>
-          <SessionTracker />
-          {children}
+          <StoryUploadWrapper>
+            <SessionTracker />
+            {children}
+          </StoryUploadWrapper>
         </SessionWrapper>
       </body>
     </html>

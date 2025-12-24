@@ -101,7 +101,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     const { storyId } = await params;
     const body = await req.json();
-    const { title, description, titleEs, titleEn, descriptionEs, descriptionEn } = body;
+    const { title, description, titleEs, titleEn, descriptionEs, descriptionEn, thumbnailUrl } = body;
 
     // Verify ownership
     const story = await prisma.userStory.findFirst({
@@ -123,6 +123,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     if (titleEn !== undefined) updateData.titleEn = titleEn;
     if (descriptionEs !== undefined) updateData.descriptionEs = descriptionEs;
     if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn;
+    if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
