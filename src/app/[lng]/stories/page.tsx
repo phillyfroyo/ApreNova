@@ -22,8 +22,32 @@ import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
 import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
+import UserStoryCard from "@/components/user-stories/UserStoryCard"
+import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal"
 
 type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
+
+interface UserStoryLevel {
+  level: string;
+  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+}
+
+interface UserStory {
+  id: string;
+  slug: string;
+  title: string;
+  titleEs?: string | null;
+  titleEn?: string | null;
+  description?: string | null;
+  descriptionEs?: string | null;
+  descriptionEn?: string | null;
+  thumbnailUrl: string | null;
+  sourceLanguage: string;
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  detectedLevel?: string | null;
+  createdAt?: string;
+  levels: UserStoryLevel[];
+}
 
 // All theme tags combined into one list
 const ALL_THEME_TAGS: StoryTag[] = [
@@ -245,6 +269,54 @@ function StoriesPageContent() {
   const [selectedTypes, setSelectedTypes] = useState<StoryType[]>([]);
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+
+  // User stories state
+  const [userStories, setUserStories] = useState<UserStory[]>([]);
+  const [selectedUserStory, setSelectedUserStory] = useState<UserStory | null>(null);
+  const { data: session } = useSession();
+
+  // Fetch user stories
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setUserStories([]);
+      return;
+    }
+
+    const fetchUserStories = async () => {
+      try {
+        const res = await fetch("/api/user-stories");
+        if (res.ok) {
+          const data = await res.json();
+          setUserStories(data.stories || []);
+        }
+      } catch (error) {
+        console.error("Error fetching user stories:", error);
+      }
+    };
+
+    fetchUserStories();
+
+    // Poll for updates if any story is processing
+    const interval = setInterval(() => {
+      const hasProcessing = userStories.some((s) => s.status === "PROCESSING");
+      if (hasProcessing) {
+        fetchUserStories();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
+
+  const handleUserStoryDelete = (storyId: string) => {
+    setUserStories((prev) => prev.filter((s) => s.id !== storyId));
+  };
+
+  const handleUserStoryUpdate = (updatedStory: UserStory) => {
+    setUserStories((prev) =>
+      prev.map((s) => (s.id === updatedStory.id ? { ...s, ...updatedStory } : s))
+    );
+    setSelectedUserStory(updatedStory);
+  };
 
   // Get authors list
   const authors = getUniqueAuthors();
@@ -492,6 +564,45 @@ useEffect(() => {
   </AnimatePresence>
 </div>
 
+{/* My Stories Section - only show if user has stories */}
+{userStories.length > 0 && (
+  <div className="mb-6 px-4">
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-xl font-semibold flex items-center gap-2">
+        <span>📚</span>
+        {typedLang === "es" ? "Mis Historias" : "My Stories"}
+      </h2>
+      <Link
+        href={`/${typedLang}/my-stories`}
+        className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+      >
+        {typedLang === "es" ? "Ver todas" : "View all"}
+      </Link>
+    </div>
+    <div
+      style={{
+        display: "flex",
+        gap: "1rem",
+        overflowX: "auto",
+        paddingBottom: "0.5rem",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+      }}
+      className="hide-scrollbar"
+    >
+      {userStories.map((story) => (
+        <UserStoryCard
+          key={story.id}
+          id={story.id}
+          title={story.title}
+          thumbnailUrl={story.thumbnailUrl}
+          status={story.status}
+          onClick={() => setSelectedUserStory(story)}
+        />
+      ))}
+    </div>
+  </div>
+)}
 
     <div style={{ position: "relative" }}>
       <div
@@ -538,6 +649,15 @@ useEffect(() => {
       <StoryDetailModal
         storySlug={detailStorySlug}
         onClose={closeDetailModal}
+        user={user}
+      />
+
+      {/* User Story Detail Modal */}
+      <UserStoryDetailModal
+        story={selectedUserStory}
+        onClose={() => setSelectedUserStory(null)}
+        onDelete={handleUserStoryDelete}
+        onUpdate={handleUserStoryUpdate}
         user={user}
       />
 {showLangPrompt && (

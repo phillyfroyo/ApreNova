@@ -188,8 +188,8 @@ export default function FloatingProgressWidget() {
             />
             <StageStep
               label="Done"
-              active={progress.stage === "review" || progress.stage === "complete"}
-              complete={progress.stage === "complete"}
+              active={progress.stage === "review"}
+              complete={progress.overallProgress === 100}
             />
           </div>
         </div>
