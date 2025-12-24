@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 import {
   getCEFRDetectionPrompt,
   getLevelRewritePrompt,
-  getTranslationPrompt,
 } from "./cefr-prompts";
 import { USER_STORY_LIMITS } from "./limits";
+import { quickClean } from "@/lib/admin/text-preprocessor";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -248,45 +248,175 @@ export async function rewriteToLevel(
 }
 
 /**
- * Translate text to the other language
+ * Add line numbers to non-blank lines for translation alignment
+ */
+function addLineNumbers(text: string): {
+  numberedText: string;
+  lineCount: number;
+  totalLines: number;
+  blankLinePositions: number[];
+} {
+  const lines = text.split("\n");
+  const blankLinePositions: number[] = [];
+  const contentLines: string[] = [];
+
+  lines.forEach((line, idx) => {
+    if (line.trim() === "") {
+      blankLinePositions.push(idx);
+    } else {
+      contentLines.push(`[${contentLines.length + 1}] ${line}`);
+    }
+  });
+
+  return {
+    numberedText: contentLines.join("\n"),
+    lineCount: contentLines.length,
+    totalLines: lines.length,
+    blankLinePositions,
+  };
+}
+
+/**
+ * Parse numbered lines from translation response
+ */
+function parseNumberedLines(text: string, expectedCount: number): string[] {
+  const result: string[] = new Array(expectedCount).fill("");
+  const linePattern = /\[(\d+)\]\s*([^\n]*)/g;
+
+  let match;
+  while ((match = linePattern.exec(text + "\n")) !== null) {
+    const lineNum = parseInt(match[1], 10);
+    let lineText = match[2].trim();
+    // Strip any remaining [N] prefix
+    lineText = lineText.replace(/^\[\d+\]\s*/, "");
+
+    if (lineNum >= 1 && lineNum <= expectedCount) {
+      result[lineNum - 1] = lineText;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Reconstruct full text by re-inserting blank lines
+ */
+function reconstructWithBlankLines(
+  translatedLines: string[],
+  blankLinePositions: number[],
+  totalLines: number
+): string[] {
+  const result: string[] = [];
+  let translatedIdx = 0;
+
+  for (let i = 0; i < totalLines; i++) {
+    if (blankLinePositions.includes(i)) {
+      result.push("");
+    } else {
+      result.push(translatedLines[translatedIdx] || "");
+      translatedIdx++;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Translate text to the other language using line-by-line alignment
  */
 export async function translateText(
   text: string,
   sourceLanguage: "en" | "es",
   level: string
 ): Promise<string> {
-  const prompt = getTranslationPrompt(text, sourceLanguage, level);
+  const toLanguage = sourceLanguage === "en" ? "Spanish" : "English";
+  const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
+
+  const systemPrompt = `You are an expert literary translator specializing in ${sourceLanguage === "en" ? "English to Spanish" : "Spanish to English"} translation for language learners.
+
+CRITICAL RULES:
+1. Each line in the input starts with a number in brackets like [1], [2], [3], etc.
+2. You MUST preserve these exact line numbers in your output.
+3. Each numbered input line produces EXACTLY ONE numbered output line.
+4. NEVER split a single input line into multiple output lines.
+5. NEVER merge multiple input lines into one output line.
+6. Keep the same [N] prefix for each translated line.
+7. Translate ALL lines - do not skip any.
+
+Example:
+Input:
+[1] The cat sat on the mat.
+[2] It was a sunny day.
+
+Output:
+[1] El gato se sentó en la alfombra.
+[2] Era un día soleado.
+
+Maintain CEFR level ${level} complexity. Return ONLY the numbered translated lines.`;
+
+  const userPrompt = `Translate the following ${sourceLanguage === "en" ? "English" : "Spanish"} text to ${toLanguage}. Maintain the same line-by-line structure.
+
+${numberedText}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
     temperature: 0.3,
   });
 
-  return completion.choices[0]?.message?.content?.trim() || "";
+  const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
+
+  // Parse the numbered lines
+  let translatedContentLines = parseNumberedLines(rawResponse, lineCount);
+
+  // Strip any remaining [N] prefixes
+  translatedContentLines = translatedContentLines.map(line =>
+    line.replace(/^\[\d+\]\s*/, "").trim()
+  );
+
+  // Reconstruct with blank lines
+  const fullTranslatedLines = reconstructWithBlankLines(
+    translatedContentLines,
+    blankLinePositions,
+    totalLines
+  );
+
+  return fullTranslatedLines.join("\n");
 }
 
 /**
- * Parse text into chapters
+ * Parse text into chapters based on markers
  */
 function parseChapters(text: string): { hasChapters: boolean; chapters: string[] } {
-  const lines = text.split("\n").filter((line) => line.trim());
+  // Clean the text first using admin pipeline's quickClean
+  const cleanedText = quickClean(text);
+
+  const lines = cleanedText.split("\n").filter((line) => line.trim());
 
   // Check for chapter markers
-  const chapterPattern = /^(chapter|cap[ií]tulo|\-{3,}|[IVX]+\.|[0-9]+[\.:])[\s]*/i;
+  const chapterPattern = /^(chapter|cap[ií]tulo|---\s*(chapter|cap[ií]tulo))[\s]*/i;
+  const dividerPattern = /^-{3,}$|^\*{3,}$|^={3,}$/;
   const chapterIndices: number[] = [];
 
   lines.forEach((line, index) => {
-    if (chapterPattern.test(line.trim())) {
+    const trimmed = line.trim();
+    if (chapterPattern.test(trimmed)) {
       chapterIndices.push(index);
     }
   });
 
   if (chapterIndices.length <= 1) {
     // No chapters or just one marker at the beginning
+    const filteredLines = lines.filter((l) => {
+      const trimmed = l.trim();
+      return !chapterPattern.test(trimmed) && !dividerPattern.test(trimmed);
+    });
     return {
       hasChapters: false,
-      chapters: [lines.filter((l) => !chapterPattern.test(l.trim())).join("\n")],
+      chapters: [filteredLines.join("\n")],
     };
   }
 
@@ -295,7 +425,10 @@ function parseChapters(text: string): { hasChapters: boolean; chapters: string[]
   for (let i = 0; i < chapterIndices.length; i++) {
     const start = chapterIndices[i];
     const end = chapterIndices[i + 1] || lines.length;
-    const chapterLines = lines.slice(start + 1, end).filter((l) => !chapterPattern.test(l.trim()));
+    const chapterLines = lines.slice(start + 1, end).filter((l) => {
+      const trimmed = l.trim();
+      return !chapterPattern.test(trimmed) && !dividerPattern.test(trimmed);
+    });
     if (chapterLines.length > 0) {
       chapters.push(chapterLines.join("\n"));
     }
@@ -303,7 +436,10 @@ function parseChapters(text: string): { hasChapters: boolean; chapters: string[]
 
   // If first content is before first chapter marker, add it as chapter 1
   if (chapterIndices[0] > 0) {
-    const preContent = lines.slice(0, chapterIndices[0]).filter((l) => !chapterPattern.test(l.trim()));
+    const preContent = lines.slice(0, chapterIndices[0]).filter((l) => {
+      const trimmed = l.trim();
+      return !chapterPattern.test(trimmed) && !dividerPattern.test(trimmed);
+    });
     if (preContent.length > 0) {
       chapters.unshift(preContent.join("\n"));
     }
@@ -315,21 +451,37 @@ function parseChapters(text: string): { hasChapters: boolean; chapters: string[]
 /**
  * Paginate text into pages of ~10 lines
  */
-function paginateText(text: string): string[][] {
-  const lines = text.split("\n").filter((line) => line.trim());
+function paginateLines(lines: string[], linesPerPage: number = 10): string[][] {
+  if (!lines || lines.length === 0) {
+    return [[]];
+  }
+
   const pages: string[][] = [];
-  const linesPerPage = USER_STORY_LIMITS.LINES_PER_PAGE;
+  let currentPage: string[] = [];
 
-  for (let i = 0; i < lines.length; i += linesPerPage) {
-    pages.push(lines.slice(i, i + linesPerPage));
+  for (const line of lines) {
+    currentPage.push(line);
+
+    if (currentPage.length >= linesPerPage) {
+      // Try to find a good breaking point
+      const lastLineEndsSentence =
+        line.endsWith(".") ||
+        line.endsWith("!") ||
+        line.endsWith("?") ||
+        line.endsWith('"');
+
+      if (lastLineEndsSentence || currentPage.length >= linesPerPage + 2) {
+        pages.push([...currentPage]);
+        currentPage = [];
+      }
+    }
   }
 
-  // Ensure we have at least one page
-  if (pages.length === 0) {
-    pages.push([]);
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
   }
 
-  return pages;
+  return pages.length > 0 ? pages : [[]];
 }
 
 /**
@@ -339,32 +491,40 @@ function buildContentStructure(
   storySlug: string,
   levelNum: number,
   hasChapters: boolean,
-  chaptersWithPages: { sourcePages: string[][]; translatedPages: string[][] }[],
+  chaptersData: { sourceLines: string[]; translatedLines: string[] }[],
   sourceLanguage: "en" | "es"
 ): LevelContent {
   const chapters: Record<number, ChapterContent> = {};
 
-  chaptersWithPages.forEach((chapter, chapterIndex) => {
+  chaptersData.forEach((chapter, chapterIndex) => {
+    const sourcePages = paginateLines(chapter.sourceLines);
+    const translatedPages = paginateLines(chapter.translatedLines);
     const pages: Record<number, PageContent> = {};
 
-    chapter.sourcePages.forEach((sourcePageLines, pageIndex) => {
-      const translatedPageLines = chapter.translatedPages[pageIndex] || [];
-      const lines: StoryLine[] = [];
+    const maxPages = Math.max(sourcePages.length, translatedPages.length);
 
+    for (let pIdx = 0; pIdx < maxPages; pIdx++) {
+      const sourcePageLines = sourcePages[pIdx] || [];
+      const translatedPageLines = translatedPages[pIdx] || [];
       const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
-      for (let i = 0; i < maxLines; i++) {
-        const sourceLine = sourcePageLines[i]?.trim() || "";
-        const translatedLine = translatedPageLines[i]?.trim() || "";
 
+      const lines: StoryLine[] = [];
+      for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+        const sourceLine = sourcePageLines[lIdx]?.trim() || "";
+        const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+
+        // IMPORTANT: es always gets Spanish, en always gets English
+        // If source is Spanish, source goes to es, translated goes to en
+        // If source is English, source goes to en, translated goes to es
         if (sourceLanguage === "es") {
           lines.push({ es: sourceLine, en: translatedLine });
         } else {
-          lines.push({ es: translatedLine, en: sourceLine });
+          lines.push({ en: sourceLine, es: translatedLine });
         }
       }
 
-      pages[pageIndex + 1] = { lines };
-    });
+      pages[pIdx + 1] = { lines };
+    }
 
     chapters[chapterIndex + 1] = { pages };
   });
@@ -378,7 +538,7 @@ function buildContentStructure(
 }
 
 /**
- * Process a single level (rewrite + translate + paginate)
+ * Process a single level (rewrite if needed + translate + paginate)
  */
 async function processLevel(
   storyId: string,
@@ -396,30 +556,32 @@ async function processLevel(
       data: { status: "PROCESSING" },
     });
 
-    // Step 1: Rewrite to target level
-    const rewrittenText = await rewriteToLevel(rawContent, detectedLevel, level, sourceLanguage);
+    // Clean the text using admin pipeline's quickClean
+    const cleanedContent = quickClean(rawContent);
 
-    // Add delay between API calls
-    await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
+    // Step 1: Rewrite to target level if different from detected
+    let contentForLevel = cleanedContent;
+    if (level !== detectedLevel) {
+      contentForLevel = await rewriteToLevel(cleanedContent, detectedLevel, level, sourceLanguage);
+      await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
+    }
 
     // Step 2: Parse chapters
-    const { hasChapters, chapters } = parseChapters(rewrittenText);
+    const { hasChapters, chapters } = parseChapters(contentForLevel);
 
-    // Step 3: Process each chapter
-    const processedChapters: { sourcePages: string[][]; translatedPages: string[][] }[] = [];
+    // Step 3: Process each chapter - translate to opposite language
+    const processedChapters: { sourceLines: string[]; translatedLines: string[] }[] = [];
 
     for (const chapterText of chapters) {
-      // Translate chapter
+      // Translate chapter to opposite language
       const translatedChapter = await translateText(chapterText, sourceLanguage, level);
-
-      // Add delay
       await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
 
-      // Paginate both source and translation
-      const sourcePages = paginateText(chapterText);
-      const translatedPages = paginateText(translatedChapter);
+      // Split into lines
+      const sourceLines = chapterText.split("\n").filter(l => l.trim());
+      const translatedLines = translatedChapter.split("\n").filter(l => l.trim());
 
-      processedChapters.push({ sourcePages, translatedPages });
+      processedChapters.push({ sourceLines, translatedLines });
     }
 
     // Step 4: Build content structure
@@ -451,7 +613,30 @@ async function processLevel(
 }
 
 /**
+ * Get the user's current CEFR level
+ */
+async function getUserLevel(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { quizLevel: true },
+  });
+
+  if (!user?.quizLevel) return null;
+
+  // quizLevel might be stored as number (1-5) or string (l1-l5)
+  const level = user.quizLevel;
+  if (typeof level === 'number') {
+    return `l${level}`;
+  }
+  if (typeof level === 'string') {
+    return level.startsWith('l') ? level : `l${level}`;
+  }
+  return null;
+}
+
+/**
  * Main pipeline: Process entire story
+ * Only processes: detected level + user's current level (if different)
  */
 export async function processUserStory(storyId: string): Promise<void> {
   const story = await prisma.userStory.findUnique({
@@ -464,18 +649,12 @@ export async function processUserStory(storyId: string): Promise<void> {
   }
 
   try {
-    // Step 1: Detect language if not set or needs confirmation
-    let sourceLanguage = story.sourceLanguage as "en" | "es";
-    if (!sourceLanguage || sourceLanguage === "es") {
-      // Auto-detect to confirm/correct
-      sourceLanguage = await detectLanguage(story.rawContent);
-      await prisma.userStory.update({
-        where: { id: storyId },
-        data: { sourceLanguage },
-      });
-    }
-
-    // Add delay
+    // Step 1: Detect language
+    const sourceLanguage = await detectLanguage(story.rawContent);
+    await prisma.userStory.update({
+      where: { id: storyId },
+      data: { sourceLanguage },
+    });
     await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
 
     // Step 2: Generate title if using default
@@ -489,8 +668,6 @@ export async function processUserStory(storyId: string): Promise<void> {
           titleEn: titles.titleEn,
         },
       });
-
-      // Add delay
       await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
     }
 
@@ -505,34 +682,38 @@ export async function processUserStory(storyId: string): Promise<void> {
           descriptionEn: descriptions.descriptionEn,
         },
       });
-
-      // Add delay
       await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
     }
 
     // Step 4: Detect CEFR level
-    const { level: detectedLevel } = await detectCEFRLevel(
-      story.rawContent,
-      sourceLanguage
-    );
-
-    // Update story with detected level
+    const { level: detectedLevel } = await detectCEFRLevel(story.rawContent, sourceLanguage);
     await prisma.userStory.update({
       where: { id: storyId },
       data: { detectedLevel },
     });
-
-    // Add delay
     await new Promise((r) => setTimeout(r, USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS));
 
-    // Step 5: Process each level
-    const levels = ["l1", "l2", "l3", "l4", "l5"];
+    // Step 5: Determine which levels to process
+    // Only: detected level + user's level (if different)
+    const levelsToProcess = new Set<string>([detectedLevel]);
+
+    const userLevel = await getUserLevel(story.userId);
+    if (userLevel && userLevel !== detectedLevel) {
+      levelsToProcess.add(userLevel);
+    }
+
+    console.log(`Processing levels for story ${storyId}: ${Array.from(levelsToProcess).join(", ")}`);
+
+    // Step 6: Process each level
     let allSucceeded = true;
     let anySucceeded = false;
 
-    for (const level of levels) {
+    for (const level of levelsToProcess) {
       const levelRecord = story.levels.find((l) => l.level === level);
-      if (!levelRecord) continue;
+      if (!levelRecord) {
+        console.warn(`Level record ${level} not found for story ${storyId}`);
+        continue;
+      }
 
       try {
         await processLevel(
@@ -540,7 +721,7 @@ export async function processUserStory(storyId: string): Promise<void> {
           levelRecord.id,
           level,
           story.rawContent,
-          story.sourceLanguage as "en" | "es",
+          sourceLanguage,
           detectedLevel,
           story.slug
         );
@@ -552,7 +733,7 @@ export async function processUserStory(storyId: string): Promise<void> {
     }
 
     // Update overall status
-    const finalStatus = allSucceeded ? "READY" : anySucceeded ? "PARTIAL" : "FAILED";
+    const finalStatus = allSucceeded && anySucceeded ? "READY" : anySucceeded ? "PARTIAL" : "FAILED";
     await prisma.userStory.update({
       where: { id: storyId },
       data: { status: finalStatus },
