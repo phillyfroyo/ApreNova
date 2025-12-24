@@ -63,21 +63,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { title, content, sourceLanguage, description } = body;
 
-    // Validate required fields
-    if (!title || !content || !sourceLanguage) {
+    // Validate required fields - only content is required now
+    if (!content) {
       return NextResponse.json(
-        { error: "Missing required fields: title, content, sourceLanguage" },
+        { error: "Missing required field: content" },
         { status: 400 }
       );
     }
 
-    // Validate source language
-    if (!["en", "es"].includes(sourceLanguage)) {
-      return NextResponse.json(
-        { error: "sourceLanguage must be 'en' or 'es'" },
-        { status: 400 }
-      );
-    }
+    // Use provided values or defaults (will be auto-detected in pipeline)
+    const finalTitle = title || "Untitled Story";
+    const finalSourceLanguage = sourceLanguage && ["en", "es"].includes(sourceLanguage)
+      ? sourceLanguage
+      : "es"; // Default to Spanish, will be auto-detected
 
     const isPremium = session.user.isPremium ?? false;
 
@@ -121,7 +119,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate unique slug
-    let baseSlug = slugify(title);
+    let baseSlug = slugify(finalTitle);
     let slug = baseSlug;
     let counter = 1;
 
@@ -145,9 +143,9 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.user.id,
         slug,
-        title,
+        title: finalTitle,
         description: description || null,
-        sourceLanguage,
+        sourceLanguage: finalSourceLanguage,
         rawContent: content,
         status: "PROCESSING",
         visibility: "PRIVATE",

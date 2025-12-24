@@ -49,3 +49,4 @@ src/dev/InfraPage.txt
 # TTS cache files
 /cache/
 /public/cache/
+.env

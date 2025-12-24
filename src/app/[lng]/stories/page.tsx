@@ -21,6 +21,7 @@ import Image from "next/image";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
+import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
 
 type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
@@ -86,43 +87,50 @@ useEffect(() => {
 
   return (
 <div ref={dropdownRef}>
-  <div style={{ position: "absolute", top: "1rem", right: "1rem", textAlign: "center" }}>
-    <div
-      style={{
-        cursor: "pointer",
-        borderRadius: "50%",
-        overflow: "hidden",
-        width: "32px",
-        height: "32px",
-        margin: "0 auto",
-      }}
-      onClick={() => setOpen((prev) => !prev)}
-    >
-      <Image
-        src={profilePic || "/images/default-avatar.png"}
-        alt="Account"
-        width={100}
-        height={100}
-        style={{ objectFit: "cover" }}
-      />
-    </div>
+  {/* Top right controls: Upload button + Account */}
+  <div style={{ position: "absolute", top: "1rem", right: "1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+    {/* Upload Story Button */}
+    <UploadStoryButton />
 
-    {session?.user?.isPremium && (
+    {/* Account Avatar */}
+    <div style={{ textAlign: "center" }}>
       <div
         style={{
-          fontSize: "8px",
-          backgroundColor: "rgba(255, 255, 255, 0.6)",
-          padding: "2px 6px",
-          borderRadius: "9999px",
-          backdropFilter: "blur(4px)",
-          fontWeight: "600",
-          color: "#333",
-          display: "inline-block",
+          cursor: "pointer",
+          borderRadius: "50%",
+          overflow: "hidden",
+          width: "32px",
+          height: "32px",
+          margin: "0 auto",
         }}
+        onClick={() => setOpen((prev) => !prev)}
       >
-        Premium 💎
+        <Image
+          src={profilePic || "/images/default-avatar.png"}
+          alt="Account"
+          width={100}
+          height={100}
+          style={{ objectFit: "cover" }}
+        />
       </div>
-    )}
+
+      {session?.user?.isPremium && (
+        <div
+          style={{
+            fontSize: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.6)",
+            padding: "2px 6px",
+            borderRadius: "9999px",
+            backdropFilter: "blur(4px)",
+            fontWeight: "600",
+            color: "#333",
+            display: "inline-block",
+          }}
+        >
+          Premium 💎
+        </div>
+      )}
+    </div>
   </div>
 
   {open && (
