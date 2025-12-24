@@ -8,17 +8,24 @@ import { Plus, ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import UserStoryCard from "@/components/user-stories/UserStoryCard";
+import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal";
 import StorageLimitIndicator from "@/components/user-stories/StorageLimitIndicator";
-import ProcessingStatus from "@/components/user-stories/ProcessingStatus";
 import type { Language } from "@/types/i18n";
 
 interface UserStory {
   id: string;
   slug: string;
   title: string;
+  titleEs?: string | null;
+  titleEn?: string | null;
+  description?: string | null;
+  descriptionEs?: string | null;
+  descriptionEn?: string | null;
   thumbnailUrl: string | null;
+  sourceLanguage: string;
   status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
-  detectedLevel: string | null;
+  detectedLevel?: string | null;
+  createdAt?: string;
   levels: {
     level: string;
     status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
@@ -92,13 +99,21 @@ export default function MyStoriesPage() {
   }, [session, sessionStatus, router, typedLang, stories]);
 
   const handleStoryClick = (story: UserStory) => {
-    if (story.status === "READY") {
-      // Navigate to reader
-      router.push(`/${typedLang}/my-stories/${story.id}/l1/1/1`);
-    } else {
-      // Show status modal
-      setSelectedStory(story);
+    setSelectedStory(story);
+  };
+
+  const handleDeleteStory = (storyId: string) => {
+    setStories((prev) => prev.filter((s) => s.id !== storyId));
+    if (stats) {
+      setStats({ ...stats, totalStories: stats.totalStories - 1 });
     }
+  };
+
+  const handleUpdateStory = (updatedStory: UserStory) => {
+    setStories((prev) =>
+      prev.map((s) => (s.id === updatedStory.id ? { ...s, ...updatedStory } : s))
+    );
+    setSelectedStory(updatedStory);
   };
 
   if (sessionStatus === "loading" || loading) {
@@ -205,33 +220,14 @@ export default function MyStoriesPage() {
         </div>
       )}
 
-      {/* Processing Status Modal */}
-      {selectedStory && selectedStory.status !== "READY" && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedStory(null)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4">
-              <ProcessingStatus
-                storyTitle={selectedStory.title}
-                detectedLevel={selectedStory.detectedLevel}
-                levels={selectedStory.levels}
-                overallStatus={selectedStory.status}
-              />
-              <button
-                onClick={() => setSelectedStory(null)}
-                className="w-full mt-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Story Detail Modal */}
+      <UserStoryDetailModal
+        story={selectedStory}
+        onClose={() => setSelectedStory(null)}
+        onDelete={handleDeleteStory}
+        onUpdate={handleUpdateStory}
+        user={session?.user}
+      />
 
       {/* Premium upsell */}
       {stats && !stats.isPremium && stats.totalStories >= stats.maxStories && (
