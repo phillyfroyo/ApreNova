@@ -9,7 +9,9 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import UserStoryCard from "@/components/user-stories/UserStoryCard";
 import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal";
+import UploadStoryModal from "@/components/user-stories/UploadStoryModal";
 import StorageLimitIndicator from "@/components/user-stories/StorageLimitIndicator";
+import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import type { Language } from "@/types/i18n";
 
 interface UserStory {
@@ -43,6 +45,7 @@ export default function MyStoriesPage() {
   const router = useRouter();
   const { lng } = useParams();
   const typedLang = lng as Language;
+  const { setShowUploadModal, progress } = useStoryUpload();
 
   const [stories, setStories] = useState<UserStory[]>([]);
   const [stats, setStats] = useState<StoryStats | null>(null);
@@ -116,6 +119,31 @@ export default function MyStoriesPage() {
     setSelectedStory(updatedStory);
   };
 
+  // Refetch stories when upload completes
+  useEffect(() => {
+    if (progress.stage === "complete" || progress.stage === "review") {
+      const refetch = async () => {
+        try {
+          const [storiesRes, statsRes] = await Promise.all([
+            fetch("/api/user-stories"),
+            fetch("/api/user-stories/count"),
+          ]);
+          if (storiesRes.ok) {
+            const data = await storiesRes.json();
+            setStories(data.stories || []);
+          }
+          if (statsRes.ok) {
+            const data = await statsRes.json();
+            setStats(data);
+          }
+        } catch (err) {
+          console.error("Failed to refetch stories:", err);
+        }
+      };
+      refetch();
+    }
+  }, [progress.stage]);
+
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
@@ -153,13 +181,13 @@ export default function MyStoriesPage() {
             <BookOpen className="w-5 h-5 text-purple-600" />
             My Stories
           </h1>
-          <Link
-            href={`/${typedLang}/my-stories/upload`}
+          <button
+            onClick={() => setShowUploadModal(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
           >
             <Plus className="w-4 h-4" />
             Upload
-          </Link>
+          </button>
         </div>
 
         {stats && (
@@ -186,13 +214,13 @@ export default function MyStoriesPage() {
           <p className="text-gray-600 mb-4">
             Upload your first story to start learning with your own content!
           </p>
-          <Link
-            href={`/${typedLang}/my-stories/upload`}
+          <button
+            onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             <Plus className="w-5 h-5" />
             Upload Your First Story
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4 px-1 scrollbar-hide">
@@ -209,13 +237,13 @@ export default function MyStoriesPage() {
 
           {/* Add new story card */}
           {stats && stats.totalStories < stats.maxStories && (
-            <Link
-              href={`/${typedLang}/my-stories/upload`}
+            <button
+              onClick={() => setShowUploadModal(true)}
               className="w-40 flex-shrink-0 aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
             >
               <Plus className="w-8 h-8 text-gray-400" />
               <span className="text-sm text-gray-500">Add Story</span>
-            </Link>
+            </button>
           )}
         </div>
       )}
@@ -228,6 +256,9 @@ export default function MyStoriesPage() {
         onUpdate={handleUpdateStory}
         user={session?.user}
       />
+
+      {/* Upload Story Modal */}
+      <UploadStoryModal />
 
       {/* Premium upsell */}
       {stats && !stats.isPremium && stats.totalStories >= stats.maxStories && (

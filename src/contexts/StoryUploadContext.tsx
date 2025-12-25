@@ -38,6 +38,13 @@ export interface StoryUploadData {
   thumbnailUrl?: string;
 }
 
+interface StartUploadOptions {
+  content: string;
+  title?: string;
+  sourceLanguage?: "en" | "es";
+  description?: string;
+}
+
 interface StoryUploadContextType {
   // State
   isUploading: boolean;
@@ -48,7 +55,7 @@ interface StoryUploadContextType {
   showReviewModal: boolean;
 
   // Actions
-  startUpload: (content: string, optionalTitle?: string) => Promise<void>;
+  startUpload: (options: StartUploadOptions) => Promise<void>;
   cancelUpload: () => void;
   toggleMinimized: () => void;
   setShowUploadModal: (show: boolean) => void;
@@ -124,7 +131,8 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     });
   }, []);
 
-  const startUpload = useCallback(async (content: string, optionalTitle?: string) => {
+  const startUpload = useCallback(async (options: StartUploadOptions) => {
+    const { content, title: optionalTitle, sourceLanguage, description } = options;
     const controller = new AbortController();
     setAbortController(controller);
     setIsUploading(true);
@@ -136,10 +144,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       rawContent: content,
       title: optionalTitle || "",
       titleGenerated: !optionalTitle,
-      description: "",
-      descriptionGenerated: true,
-      sourceLanguage: "es",
-      sourceLanguageDetected: true,
+      description: description || "",
+      descriptionGenerated: !description,
+      sourceLanguage: sourceLanguage || "es",
+      sourceLanguageDetected: !sourceLanguage,
       detectedLevel: "",
     };
     setStoryData(initialData);
@@ -154,6 +162,8 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         body: JSON.stringify({
           content,
           title: optionalTitle || "Untitled Story",
+          sourceLanguage,
+          description,
         }),
         signal: controller.signal,
       });
