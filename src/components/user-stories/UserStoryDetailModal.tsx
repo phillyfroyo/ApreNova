@@ -150,8 +150,9 @@ export default function UserStoryDetailModal({
       console.error("Error checking bookmark:", error);
     }
 
-    // No bookmark - use default level (detected level or l1)
-    const defaultLevel = story.detectedLevel || "l1";
+    // No bookmark - use first ready level, then detected level, then l1
+    const readyLevel = story.levels.find((l) => l.status === "READY")?.level;
+    const defaultLevel = readyLevel || story.detectedLevel || "l1";
     router.push(`/${typedLang}/my-stories/${story.id}/${defaultLevel}/1/1`);
   }, [story, typedLang, router]);
 
@@ -426,22 +427,24 @@ export default function UserStoryDetailModal({
                         : "Your story is being processed. This may take a few minutes."}
                     </p>
                     <div className="mt-3 space-y-2">
-                      {story.levels.map((level) => (
-                        <div key={level.level} className="flex items-center gap-2 text-xs">
-                          {level.status === "READY" ? (
-                            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                          ) : level.status === "PROCESSING" ? (
-                            <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
-                          ) : level.status === "FAILED" ? (
-                            <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                          ) : (
-                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          )}
-                          <span className="text-gray-600">
-                            Level {level.level.replace("l", "")}
-                          </span>
-                        </div>
-                      ))}
+                      {story.levels
+                        .filter((level) => level.status !== "PENDING")
+                        .map((level) => (
+                          <div key={level.level} className="flex items-center gap-2 text-xs">
+                            {level.status === "READY" ? (
+                              <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                            ) : level.status === "PROCESSING" ? (
+                              <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+                            ) : level.status === "FAILED" ? (
+                              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5 text-gray-400" />
+                            )}
+                            <span className="text-gray-600">
+                              Level {level.level.replace("l", "")}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 )}
