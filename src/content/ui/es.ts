@@ -19,6 +19,8 @@ const es = {
   signupGoogle: "Registrarse con Google",
   alreadyHaveAccount: "¿Ya tienes una cuenta?",
   newHere: "¿Eres nuevo?",
+  loggingIn: "Iniciando sesión...",
+  creatingAccount: "Creando cuenta...",
 },
 
 language: {

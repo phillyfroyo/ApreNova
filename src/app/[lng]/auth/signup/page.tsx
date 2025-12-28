@@ -1,82 +1,83 @@
 // src/app/[lng]/auth/signup/page.tsx
-'use client'
+'use client';
 
-import { useState, useEffect, useRef, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
-import Logo from '@/components/Logo'
-import { Card, Input, Button, H1, Small } from '@/components/ui'
-import Link from "next/link";
-import { useParams } from 'next/navigation';
+import { useState, FormEvent } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import Logo from '@/components/Logo';
+import { Card, Input, Button, H1, Small } from '@/components/ui';
+import Link from 'next/link';
 import type { Language } from '@/types/i18n';
-import Image from "next/image";
+import Image from 'next/image';
 import { t } from '@/lib/t';
-
+import LanguageDropdown from '@/components/LanguageDropdown';
 
 export default function SignupPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const router = useRouter();
   const { lng } = useParams();
   const typedLang = lng as Language;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSuccess(false)
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nativeLanguage: typedLang, name }),
-    })
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, nativeLanguage: typedLang, name }),
+      });
 
-    const data = await res.json()
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || data.message || 'Something went wrong')
-    } else {
-      setSuccess(true)
+      if (!res.ok) {
+        setError(data.error || data.message || t(typedLang, 'auth', 'signupError'));
+        setIsLoading(false);
+        return;
+      }
 
+      // Auto-login after successful signup
       const result = await signIn('credentials', {
         redirect: false,
         email,
         password,
-      })
+      });
 
       if (result?.ok) {
         // Small delay to ensure session cookie is set
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Fetch user's native language from the session
-        const response = await fetch('/api/auth/session')
-        const session = await response.json()
-        const userLang = session?.user?.nativeLanguage || typedLang
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+        const userLang = session?.user?.nativeLanguage || typedLang;
 
         // Redirect to home page for level selection/quiz
-        window.location.href = `/${userLang}/home`
+        // Keep loading state true during redirect
+        window.location.href = `/${userLang}/home`;
       } else {
-        setError('Login after signup failed.')
+        setError(t(typedLang, 'auth', 'error'));
+        setIsLoading(false);
       }
+    } catch (err) {
+      setError(t(typedLang, 'auth', 'signupError'));
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleGoogleSignIn = () => {
+    setIsLoading(true);
+    signIn('google', {
+      callbackUrl: `${window.location.origin}/api/post-login?lang=${typedLang}`,
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[url('/images/background3.png')] bg-cover bg-center text-black">
@@ -86,120 +87,95 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
         <Card className="glass-card space-y-6">
-          <H1 className="text-center text-[23px]">{t(typedLang, "auth", "createAccountCard")}</H1>
+          <H1 className="text-center text-xl">{t(typedLang, 'auth', 'createAccountCard')}</H1>
 
           <div className="flex flex-col gap-1">
             <p className="text-sm text-black/70">
-              {t(typedLang, "auth", "languagePrompt")}
+              {t(typedLang, 'auth', 'languagePrompt')}
             </p>
-
-            <div className="relative w-full" ref={dropdownRef}>
-              <button
-                type="button"
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-left"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                {t(typedLang, "language", typedLang)}
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow-md z-10">
-                  {typedLang !== 'en' && (
-  <div
-    onClick={() => router.push('/en/auth/signup')}
-    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-  >
-    {t(typedLang, "language", "en")}
-  </div>
-)}
-{typedLang !== 'es' && (
-  <div
-    onClick={() => router.push('/es/auth/signup')}
-    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-  >
-    {t(typedLang, "language", "es")}
-  </div>
-)}
-                </div>
-              )}
-            </div>
+            <LanguageDropdown currentLang={typedLang} redirectPath="/auth/signup" />
           </div>
-          <input
-          type="text"
-          name="name"
-          id="name"
-          required
-          placeholder={t(typedLang, "auth", "name")}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-gray-300 text-black placeholder-gray-400"
-         />
+
+          <Input
+            type="text"
+            placeholder={t(typedLang, 'auth', 'name')}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            disabled={isLoading}
+          />
 
           <Input
             type="email"
-            placeholder={t(typedLang, "auth", "email")}
+            placeholder={t(typedLang, 'auth', 'email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={isLoading}
           />
 
           <Input
             type="password"
-            placeholder={t(typedLang, "auth", "password")}
+            placeholder={t(typedLang, 'auth', 'password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={isLoading}
           />
 
           {error && (
-  <p className="text-red-600 text-sm text-center">
-    {t(typedLang, "auth", "signupError")}
-  </p>
-)}
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          )}
 
-{success && (
-  <p className="text-green-600 text-sm text-center">
-    {t(typedLang, "auth", "signupSuccess")}
-  </p>
-)}
-
-          <Button type="submit" className="w-full" variant="button1">
-           {t(typedLang, "auth", "signup")}
+          <Button
+            type="submit"
+            className="w-full"
+            variant="button1"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                {t(typedLang, 'auth', 'creatingAccount')}
+              </span>
+            ) : (
+              t(typedLang, 'auth', 'signup')
+            )}
           </Button>
 
           <div className="flex items-center justify-center">
-            <Small className="!text-black text-center">{t(typedLang, "auth", "or")}</Small>
+            <Small className="!text-black text-center">{t(typedLang, 'auth', 'or')}</Small>
           </div>
 
           <button
             type="button"
-            onClick={() =>
-            signIn('google', {
-            callbackUrl: `${window.location.origin}/api/post-login?lang=${typedLang}`,
-            })
-          }
-            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Image
-  src="https://www.svgrepo.com/show/475656/google-color.svg"
-  alt="Google"
-  width={20}
-  height={20}
-  className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
-/>
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              alt="Google"
+              width={20}
+              height={20}
+              className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
+            />
             <span className="text-sm text-gray-700 font-medium">
-            {t(typedLang, "auth", "signupGoogle")}
+              {t(typedLang, 'auth', 'signupGoogle')}
             </span>
-
           </button>
-          <p className="mt-4 text-center text-[14px] font-['Open_Sans']">
-  <span className="text-black">{t(typedLang, "auth", "alreadyHaveAccount")} </span>
-  <Link href={`/${typedLang}/auth/login`} className="text-[#1000c8] hover:underline">
-    {t(typedLang, "auth", "login")}
-  </Link>
-</p>
+
+          <p className="mt-4 text-center text-sm">
+            <span className="text-black">{t(typedLang, 'auth', 'alreadyHaveAccount')} </span>
+            <Link href={`/${typedLang}/auth/login`} className="text-[#1000c8] hover:underline">
+              {t(typedLang, 'auth', 'login')}
+            </Link>
+          </p>
         </Card>
       </form>
     </div>
-  )
+  );
 }

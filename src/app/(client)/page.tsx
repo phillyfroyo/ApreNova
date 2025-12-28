@@ -57,22 +57,26 @@ export default function LanguageSelectPage() {
     es: {
       question: "¿Cuál es tu lengua materna?",
       questionSecondary: "What is your native language?",
-      spanishLabel: "Español",
-      spanishDesc: "Quiero aprender inglés",
-      englishLabel: "English",
-      englishDesc: "I want to learn Spanish",
       loginText: "¿Ya tienes una cuenta? Inicia sesión",
       tagline: "Aprende más rápido. Aprende con historias.",
     },
     en: {
       question: "What is your native language?",
       questionSecondary: "¿Cuál es tu lengua materna?",
-      spanishLabel: "Español",
-      spanishDesc: "I want to learn English",
-      englishLabel: "English",
-      englishDesc: "Quiero aprender español",
       loginText: "Already have an account? Log in",
       tagline: "Learn faster. Learn with stories.",
+    },
+  };
+
+  // These are always in the native language of the button
+  const buttonContent = {
+    spanish: {
+      label: "Español",
+      desc: "Quiero aprender inglés",
+    },
+    english: {
+      label: "English",
+      desc: "I want to learn Spanish",
     },
   };
 
@@ -126,10 +130,10 @@ export default function LanguageSelectPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                        {t.spanishLabel}
+                        {buttonContent.spanish.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {t.spanishDesc}
+                        {buttonContent.spanish.desc}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,10 +150,10 @@ export default function LanguageSelectPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                        {t.englishLabel}
+                        {buttonContent.english.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {t.englishDesc}
+                        {buttonContent.english.desc}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,10 +173,10 @@ export default function LanguageSelectPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                        {t.englishLabel}
+                        {buttonContent.english.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {t.englishDesc}
+                        {buttonContent.english.desc}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,10 +193,10 @@ export default function LanguageSelectPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                        {t.spanishLabel}
+                        {buttonContent.spanish.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {t.spanishDesc}
+                        {buttonContent.spanish.desc}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
