@@ -1,7 +1,7 @@
 // src/app/[lng]/my-stories/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Plus, ArrowLeft, BookOpen } from "lucide-react";
@@ -52,6 +52,12 @@ export default function MyStoriesPage() {
   const [selectedStory, setSelectedStory] = useState<UserStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const storiesRef = useRef<UserStory[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    storiesRef.current = stories;
+  }, [stories]);
 
   // Fetch stories and stats
   useEffect(() => {
@@ -88,7 +94,7 @@ export default function MyStoriesPage() {
 
     // Poll for updates if any story is processing
     const interval = setInterval(async () => {
-      const hasProcessing = stories.some((s) => s.status === "PROCESSING");
+      const hasProcessing = storiesRef.current.some((s) => s.status === "PROCESSING");
       if (hasProcessing) {
         const res = await fetch("/api/user-stories");
         if (res.ok) {
@@ -99,7 +105,7 @@ export default function MyStoriesPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [session, sessionStatus, router, typedLang, stories]);
+  }, [session, sessionStatus, router, typedLang]);
 
   const handleStoryClick = (story: UserStory) => {
     setSelectedStory(story);
@@ -236,7 +242,7 @@ export default function MyStoriesPage() {
           ))}
 
           {/* Add new story card */}
-          {stats && stats.totalStories < stats.maxStories && (
+          {stats && (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && (
             <button
               onClick={() => setShowUploadModal(true)}
               className="w-40 flex-shrink-0 aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
@@ -261,7 +267,7 @@ export default function MyStoriesPage() {
       <UploadStoryModal />
 
       {/* Premium upsell */}
-      {stats && !stats.isPremium && stats.totalStories >= stats.maxStories && (
+      {stats && !stats.isPremium && stats.maxStories !== -1 && stats.totalStories >= stats.maxStories && (
         <div className="mt-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl p-4 text-white">
           <h3 className="font-semibold mb-1">Want more stories?</h3>
           <p className="text-sm text-white/90 mb-3">

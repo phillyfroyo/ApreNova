@@ -30,6 +30,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             id: true,
             level: true,
             status: true,
+            processingProgress: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -43,8 +44,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ story });
-  } catch (error) {
-    console.error("Error fetching user story:", error);
+  } catch (error: any) {
+    console.error("[API/user-stories/[storyId]] GET error:", {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
     return NextResponse.json(
       { error: "Failed to fetch story" },
       { status: 500 }

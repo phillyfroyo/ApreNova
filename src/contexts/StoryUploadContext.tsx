@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { ProgressViewerModal } from "@/components/user-stories/ProgressViewerModal";
 
 // Upload status stages
 export type UploadStage =
@@ -16,11 +18,27 @@ export type UploadStage =
   | "complete"
   | "error";
 
+export interface ChapterData {
+  sourceLines: string[];
+  translatedLines: string[];
+}
+
+export interface RewriteChapterData {
+  originalLines: string[];
+  rewrittenLines: string[];
+}
+
 export interface UploadProgress {
   stage: UploadStage;
   stageProgress: number; // 0-100 for current stage
   overallProgress: number; // 0-100 for entire process
   currentLevel?: string; // e.g., "l2" when rewriting
+  userLevel?: string; // user's CEFR level (e.g., "l3")
+  detectedLevel?: string; // source text's detected level
+  currentChapter?: number; // current chapter being processed
+  totalChapters?: number; // total chapters in the story
+  completedChapters?: ChapterData[]; // completed chapter data for translation viewer
+  rewriteChapters?: RewriteChapterData[]; // completed chapter data for rewrite viewer
   message: string;
   error?: string;
 }
@@ -53,6 +71,7 @@ interface StoryUploadContextType {
   storyData: StoryUploadData | null;
   showUploadModal: boolean;
   showReviewModal: boolean;
+  showProgressViewer: boolean;
 
   // Actions
   startUpload: (options: StartUploadOptions) => Promise<void>;
@@ -60,6 +79,7 @@ interface StoryUploadContextType {
   toggleMinimized: () => void;
   setShowUploadModal: (show: boolean) => void;
   setShowReviewModal: (show: boolean) => void;
+  setShowProgressViewer: (show: boolean) => void;
   updateStoryData: (updates: Partial<StoryUploadData>) => void;
   confirmStory: () => Promise<void>;
 }
@@ -74,39 +94,117 @@ export function useStoryUpload() {
   return context;
 }
 
+// Stage weights for initial processing (before per-level work)
+// Levels (rewriting + translating) take 30-90% of total progress
 const STAGE_WEIGHTS: Record<UploadStage, { start: number; end: number }> = {
   idle: { start: 0, end: 0 },
   uploading: { start: 0, end: 5 },
   "detecting-language": { start: 5, end: 10 },
   "detecting-level": { start: 10, end: 20 },
   "generating-description": { start: 20, end: 30 },
-  "rewriting-levels": { start: 30, end: 70 },
-  translating: { start: 70, end: 90 },
+  // These stages are now calculated dynamically based on level progress
+  "rewriting-levels": { start: 30, end: 60 },
+  translating: { start: 60, end: 90 },
   finalizing: { start: 90, end: 95 },
   review: { start: 95, end: 95 },
   complete: { start: 100, end: 100 },
   error: { start: 0, end: 0 },
 };
 
-const STAGE_MESSAGES: Record<UploadStage, string> = {
-  idle: "",
-  uploading: "Uploading your story...",
-  "detecting-language": "Detecting language...",
-  "detecting-level": "Analyzing difficulty level...",
-  "generating-description": "Creating description...",
-  "rewriting-levels": "Adapting to different levels...",
-  translating: "Translating content...",
-  finalizing: "Finalizing your story...",
-  review: "Ready for review!",
-  complete: "Story uploaded successfully!",
-  error: "Something went wrong",
+// Helper to calculate overall progress accounting for multi-level processing
+function calculateMultiLevelProgress(
+  stage: 'rewriting' | 'translating' | 'complete',
+  currentLevel: number, // 0-indexed
+  totalLevels: number,
+  chapterProgress: number, // 0-100 within current level
+  isRewriteNeeded: boolean
+): number {
+  // Levels take from 30% to 90% of total progress
+  const levelStart = 30;
+  const levelEnd = 90;
+  const levelRange = levelEnd - levelStart;
+
+  // Each level gets an equal share of the level range
+  const perLevelRange = levelRange / totalLevels;
+  const levelBase = levelStart + (currentLevel * perLevelRange);
+
+  // Within each level: rewrite (if needed) takes 40%, translate takes 60%
+  let withinLevelProgress: number;
+  if (stage === 'complete') {
+    withinLevelProgress = 100;
+  } else if (stage === 'rewriting') {
+    // Rewriting is 0-40% of level work
+    withinLevelProgress = chapterProgress * 0.4;
+  } else {
+    // Translating is 40-100% of level work (or 0-100 if no rewrite needed)
+    if (isRewriteNeeded) {
+      withinLevelProgress = 40 + (chapterProgress * 0.6);
+    } else {
+      withinLevelProgress = chapterProgress;
+    }
+  }
+
+  return Math.round(levelBase + (withinLevelProgress / 100) * perLevelRange);
+}
+
+// Map level codes to CEFR labels
+const levelToCEFR: Record<string, string> = {
+  l1: "A1",
+  l2: "A2",
+  l3: "B1",
+  l4: "B2",
+  l5: "C1",
 };
 
+// Generate stage message based on context
+function getStageMessage(
+  stage: UploadStage,
+  extra?: { userLevel?: string; detectedLevel?: string; currentLevel?: string; currentChapter?: number; totalChapters?: number }
+): string {
+  const userCEFR = extra?.userLevel ? levelToCEFR[extra.userLevel] || extra.userLevel : null;
+  const detectedCEFR = extra?.detectedLevel ? levelToCEFR[extra.detectedLevel] || extra.detectedLevel : null;
+  const chapterInfo = extra?.currentChapter && extra?.totalChapters
+    ? ` (${extra.currentChapter}/${extra.totalChapters})`
+    : "";
+
+  switch (stage) {
+    case "idle":
+      return "";
+    case "uploading":
+      return "Uploading your story...";
+    case "detecting-language":
+      return "Detecting language...";
+    case "detecting-level":
+      return "Analyzing difficulty level...";
+    case "generating-description":
+      return "Creating title & description...";
+    case "rewriting-levels":
+      if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
+        return `Adapting ${detectedCEFR}→${userCEFR}${chapterInfo}`;
+      }
+      return `Adapting${chapterInfo}`;
+    case "translating":
+      return `Translating${chapterInfo}`;
+    case "finalizing":
+      return "Finalizing your story...";
+    case "review":
+      return "Ready for review!";
+    case "complete":
+      return "Story uploaded successfully!";
+    case "error":
+      return "Something went wrong";
+    default:
+      return "";
+  }
+}
+
 export function StoryUploadProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const [isUploading, setIsUploading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showProgressViewer, setShowProgressViewer] = useState(false);
   const [storyData, setStoryData] = useState<StoryUploadData | null>(null);
   const [progress, setProgress] = useState<UploadProgress>({
     stage: "idle",
@@ -122,12 +220,24 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     const weights = STAGE_WEIGHTS[stage];
     const overallProgress = weights.start + ((weights.end - weights.start) * stageProgress) / 100;
 
-    setProgress({
-      stage,
-      stageProgress,
-      overallProgress: Math.round(overallProgress),
-      message: STAGE_MESSAGES[stage],
-      ...extra,
+    // Merge with existing progress to preserve userLevel/detectedLevel
+    setProgress(prev => {
+      const merged = {
+        ...prev,
+        stage,
+        stageProgress,
+        overallProgress: Math.round(overallProgress),
+        ...extra,
+      };
+      // Generate message with context (including chapter info)
+      merged.message = getStageMessage(stage, {
+        userLevel: merged.userLevel,
+        detectedLevel: merged.detectedLevel,
+        currentLevel: merged.currentLevel,
+        currentChapter: merged.currentChapter,
+        totalChapters: merged.totalChapters,
+      });
+      return merged;
     });
   }, []);
 
@@ -138,6 +248,13 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     setIsUploading(true);
     setIsMinimized(false);
     setShowUploadModal(false);
+
+    console.log("[StoryUpload] Starting upload", {
+      contentLength: content.length,
+      title: optionalTitle || "(auto-generate)",
+      sourceLanguage: sourceLanguage || "(auto-detect)",
+      hasDescription: !!description,
+    });
 
     // Initialize story data
     const initialData: StoryUploadData = {
@@ -154,6 +271,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
     try {
       // Stage 1: Upload and create initial record
+      console.log("[StoryUpload] Stage 1: Creating story record...");
       updateProgress("uploading", 50);
 
       const createResponse = await fetch("/api/user-stories", {
@@ -170,15 +288,18 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       if (!createResponse.ok) {
         const error = await createResponse.json();
+        console.error("[StoryUpload] Failed to create story:", error);
         throw new Error(error.error || "Failed to create story");
       }
 
       const { story } = await createResponse.json();
+      console.log("[StoryUpload] Story created:", { id: story.id, slug: story.slug });
       updateProgress("uploading", 100);
 
       setStoryData(prev => prev ? { ...prev, id: story.id } : null);
 
       // Stage 2: Process the story (this triggers the AI pipeline)
+      console.log("[StoryUpload] Stage 2: Starting AI processing...");
       updateProgress("detecting-language", 0);
 
       const processResponse = await fetch("/api/user-stories/process", {
@@ -190,15 +311,21 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       if (!processResponse.ok) {
         const error = await processResponse.json();
+        console.error("[StoryUpload] Failed to start processing:", error);
         throw new Error(error.error || "Failed to process story");
       }
 
+      console.log("[StoryUpload] Processing started, beginning poll loop...");
+
       // Poll for status updates
+      // Large books like Dracula (27 chapters) can take 30-60 minutes
+      // Each chapter takes ~30-90 seconds to translate
       let attempts = 0;
-      const maxAttempts = 120; // 2 minutes max
+      const maxAttempts = 3600; // 1 hour max (3600 seconds)
 
       while (attempts < maxAttempts) {
         if (controller.signal.aborted) {
+          console.log("[StoryUpload] Upload cancelled by user");
           throw new Error("Upload cancelled");
         }
 
@@ -209,6 +336,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         });
 
         if (!statusResponse.ok) {
+          console.warn("[StoryUpload] Poll attempt failed, retrying...", { attempt: attempts + 1 });
           attempts++;
           continue;
         }
@@ -216,32 +344,126 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         const statusData = await statusResponse.json();
         const storyStatus = statusData.story;
 
+        // Log status every 10 attempts or on status change
+        if (attempts % 10 === 0 || attempts === 0) {
+          console.log("[StoryUpload] Poll status:", {
+            attempt: attempts + 1,
+            status: storyStatus.status,
+            detectedLevel: storyStatus.detectedLevel,
+            levelsCount: storyStatus.levels?.length || 0,
+          });
+        }
+
         // Update progress based on status
         if (storyStatus.status === "PROCESSING") {
+          // Get user's level from session
+          const userQuizLevel = session?.user?.quizLevel;
+          const userLevel = typeof userQuizLevel === "number" ? `l${userQuizLevel}` : userQuizLevel || null;
+          const detectedLevel = storyStatus.detectedLevel;
+
           // Check level statuses to determine progress
           const levels = storyStatus.levels || [];
+          const processingLevel = levels.find((l: any) => l.status === "PROCESSING");
           const completedLevels = levels.filter((l: any) => l.status === "READY").length;
-          const totalLevels = 5;
+          // We only process 1-2 levels (detected + user's level if different)
+          const totalLevelsToProcess = userLevel && userLevel !== detectedLevel ? 2 : 1;
 
-          if (completedLevels === 0) {
-            // Still in early stages
-            if (storyStatus.detectedLevel) {
-              updateProgress("generating-description", 50);
+          if (!processingLevel && completedLevels === 0) {
+            // Still in early stages (language/level detection, description generation)
+            if (detectedLevel) {
+              updateProgress("generating-description", 50, { detectedLevel, userLevel: userLevel || undefined });
             } else {
-              updateProgress("detecting-level", 50);
+              updateProgress("detecting-level", 50, { userLevel: userLevel || undefined });
+            }
+          } else if (processingLevel?.processingProgress) {
+            // Use granular progress from the backend
+            const progress = processingLevel.processingProgress as {
+              stage: 'rewriting' | 'translating' | 'complete';
+              currentChapter: number;
+              totalChapters: number;
+              chaptersCompleted: number[];
+              completedData?: { sourceLines: string[]; translatedLines: string[] }[];
+              rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
+            };
+
+            // Calculate chapter progress within current level
+            const chapterProgress = progress.totalChapters > 0
+              ? (progress.chaptersCompleted.length / progress.totalChapters) * 100
+              : 0;
+
+            // Determine if this level needs rewriting (user level differs from detected)
+            const isRewriteNeeded = processingLevel.level !== detectedLevel;
+
+            // Calculate overall progress accounting for multi-level processing
+            const overallProgress = calculateMultiLevelProgress(
+              progress.stage,
+              completedLevels, // Current level index (0-indexed based on completed count)
+              totalLevelsToProcess,
+              chapterProgress,
+              isRewriteNeeded
+            );
+
+            if (progress.stage === 'rewriting') {
+              // Rewriting stage - use calculated overall progress
+              setProgress(prev => ({
+                ...prev,
+                stage: "rewriting-levels",
+                stageProgress: chapterProgress,
+                overallProgress,
+                currentLevel: processingLevel.level,
+                userLevel: userLevel || undefined,
+                detectedLevel,
+                currentChapter: progress.currentChapter,
+                totalChapters: progress.totalChapters,
+                rewriteChapters: progress.rewriteData || [],
+                message: getStageMessage("rewriting-levels", {
+                  userLevel: userLevel || undefined,
+                  detectedLevel,
+                  currentLevel: processingLevel.level,
+                  currentChapter: progress.currentChapter,
+                  totalChapters: progress.totalChapters,
+                }),
+              }));
+            } else if (progress.stage === 'translating') {
+              // Translating stage - use calculated overall progress
+              setProgress(prev => ({
+                ...prev,
+                stage: "translating",
+                stageProgress: chapterProgress,
+                overallProgress,
+                userLevel: userLevel || undefined,
+                detectedLevel,
+                currentChapter: progress.currentChapter,
+                totalChapters: progress.totalChapters,
+                completedChapters: progress.completedData || [],
+                message: getStageMessage("translating", {
+                  userLevel: userLevel || undefined,
+                  detectedLevel,
+                  currentChapter: progress.currentChapter,
+                  totalChapters: progress.totalChapters,
+                }),
+              }));
             }
           } else {
-            // Rewriting/translating levels
-            const levelProgress = (completedLevels / totalLevels) * 100;
-            if (levelProgress < 100) {
-              updateProgress("rewriting-levels", levelProgress, {
-                currentLevel: `l${completedLevels + 1}`,
-              });
-            } else {
-              updateProgress("translating", 50);
-            }
+            // Fallback: level is processing but no granular progress yet
+            const levelProgress = (completedLevels / totalLevelsToProcess) * 100;
+            updateProgress("rewriting-levels", levelProgress, {
+              currentLevel: processingLevel?.level,
+              userLevel: userLevel || undefined,
+              detectedLevel,
+            });
           }
-        } else if (storyStatus.status === "READY") {
+        } else if (storyStatus.status === "READY" || storyStatus.status === "PARTIAL") {
+          // PARTIAL means some levels succeeded (e.g., detected level worked but user's level was too long to rewrite)
+          // We treat this as success since the user can still read at the detected level
+          console.log("[StoryUpload] Story processing complete!", {
+            id: storyStatus.id,
+            title: storyStatus.title,
+            detectedLevel: storyStatus.detectedLevel,
+            sourceLanguage: storyStatus.sourceLanguage,
+            status: storyStatus.status,
+          });
+
           // Update story data with final values
           setStoryData(prev => prev ? {
             ...prev,
@@ -261,6 +483,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           setIsMinimized(false);
           break;
         } else if (storyStatus.status === "FAILED") {
+          console.error("[StoryUpload] Story processing failed on server");
           throw new Error("Story processing failed");
         }
 
@@ -268,10 +491,12 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       }
 
       if (attempts >= maxAttempts) {
+        console.error("[StoryUpload] Processing timed out after", maxAttempts, "attempts");
         throw new Error("Processing timed out");
       }
 
     } catch (error: any) {
+      console.error("[StoryUpload] Error during upload:", error.message, error);
       if (error.name === "AbortError" || error.message === "Upload cancelled") {
         updateProgress("idle", 0);
       } else {
@@ -280,7 +505,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     } finally {
       setAbortController(null);
     }
-  }, [updateProgress]);
+  }, [updateProgress, session?.user?.quizLevel]);
 
   const cancelUpload = useCallback(() => {
     if (abortController) {
@@ -324,7 +549,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       setShowReviewModal(false);
       setIsUploading(false);
 
-      // Reset after a short delay
+      // Reset after 5 seconds (giving user time to click "Start reading")
       setTimeout(() => {
         setProgress({
           stage: "idle",
@@ -333,7 +558,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           message: "",
         });
         setStoryData(null);
-      }, 3000);
+      }, 5000);
 
     } catch (error: any) {
       updateProgress("error", 0, { error: error.message });
@@ -347,18 +572,38 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     storyData,
     showUploadModal,
     showReviewModal,
+    showProgressViewer,
     startUpload,
     cancelUpload,
     toggleMinimized,
     setShowUploadModal,
     setShowReviewModal,
+    setShowProgressViewer,
     updateStoryData,
     confirmStory,
   };
 
+  // Determine modal stage
+  const isRewriting = progress.stage === "rewriting-levels";
+  const modalStage = isRewriting ? "rewriting" : progress.stage === "translating" ? "translating" : "complete";
+
   return (
     <StoryUploadContext.Provider value={value}>
       {children}
+
+      {/* Progress Viewer Modal - rendered at provider level for full-screen capability */}
+      <ProgressViewerModal
+        isOpen={showProgressViewer}
+        onClose={() => setShowProgressViewer(false)}
+        chapters={progress.completedChapters || []}
+        rewriteChapters={progress.rewriteChapters || []}
+        sourceLanguage={storyData?.sourceLanguage || "es"}
+        currentChapter={progress.currentChapter || 0}
+        totalChapters={progress.totalChapters || 0}
+        stage={modalStage}
+        detectedLevel={progress.detectedLevel}
+        targetLevel={progress.currentLevel}
+      />
     </StoryUploadContext.Provider>
   );
 }

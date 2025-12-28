@@ -14,7 +14,7 @@ export default function StorageLimitIndicator({
   maxCount,
   isPremium,
 }: StorageLimitIndicatorProps) {
-  const isUnlimited = maxCount === Infinity;
+  const isUnlimited = maxCount === -1;
   const percentage = isUnlimited ? 0 : (currentCount / maxCount) * 100;
   const isNearLimit = !isUnlimited && percentage >= 66;
   const isAtLimit = !isUnlimited && currentCount >= maxCount;

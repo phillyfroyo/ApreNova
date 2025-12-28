@@ -1,17 +1,22 @@
 "use client";
 
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
+  const router = useRouter();
+  const { data: session } = useSession();
   const {
     isUploading,
     isMinimized,
     progress,
+    storyData,
     toggleMinimized,
     cancelUpload,
     setShowReviewModal,
+    setShowProgressViewer,
   } = useStoryUpload();
 
   // Don't render if not uploading
@@ -19,15 +24,43 @@ export default function FloatingProgressWidget() {
     return null;
   }
 
-  // Show success message briefly after completion
+  // Show success message with "Start reading" button after completion
   if (progress.stage === "complete") {
+    // Get the best level for reading:
+    // 1. Use user's quiz level if it was processed
+    // 2. Fall back to detected level (always processed)
+    // 3. Default to l3
+    const userQuizLevel = session?.user?.quizLevel;
+    const userLevel = typeof userQuizLevel === "number" ? `l${userQuizLevel}` : userQuizLevel;
+    const detectedLevel = storyData?.detectedLevel;
+
+    // Prefer user's level if set, otherwise use detected level
+    const readingLevel = userLevel || detectedLevel || "l3";
+
+    const handleStartReading = () => {
+      if (storyData?.id) {
+        // Route: /[lng]/my-stories/[storyId]/[level]/[chapter]/[page]
+        router.push(`/${lng}/my-stories/${storyData.id}/${readingLevel}/1/1`);
+      }
+    };
+
     return (
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-        <div className="bg-green-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="font-medium">Story uploaded successfully!</span>
+        <div className="bg-green-600 text-white pl-6 pr-4 py-3 rounded-full shadow-lg flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">
+              {lng === "es" ? "¡Historia lista!" : "Story ready!"}
+            </span>
+          </div>
+          <button
+            onClick={handleStartReading}
+            className="px-4 py-1.5 bg-white text-green-600 rounded-full font-medium text-sm hover:bg-green-50 transition-colors"
+          >
+            {lng === "es" ? "Empezar a leer" : "Start reading"}
+          </button>
         </div>
       </div>
     );
@@ -60,6 +93,11 @@ export default function FloatingProgressWidget() {
 
   // Minimized state - thin horizontal bar at top
   if (isMinimized) {
+    const hasTranslationToView = progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0;
+    const hasRewriteToView = progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0;
+    const hasChaptersToView = hasTranslationToView || hasRewriteToView;
+    const isRewriting = progress.stage === "rewriting-levels";
+
     return (
       <div
         className="fixed top-0 left-0 right-0 z-50 cursor-pointer"
@@ -67,15 +105,29 @@ export default function FloatingProgressWidget() {
       >
         <div className="h-1 bg-gray-200">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+            className={`h-full transition-all duration-500 ${isRewriting ? "bg-gradient-to-r from-amber-500 to-orange-500" : "bg-gradient-to-r from-blue-500 to-purple-500"}`}
             style={{ width: `${progress.overallProgress}%` }}
           />
         </div>
         <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white shadow-md rounded-full px-3 py-1 text-xs text-gray-600 flex items-center gap-2 hover:shadow-lg transition-shadow">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <div className={`w-2 h-2 rounded-full animate-pulse ${isRewriting ? "bg-amber-500" : "bg-blue-500"}`} />
           <span>{progress.overallProgress}%</span>
           <span className="text-gray-400">|</span>
           <span>{progress.message}</span>
+          {hasChaptersToView && (
+            <>
+              <span className="text-gray-400">|</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowProgressViewer(true);
+                }}
+                className={`font-medium ${isRewriting ? "text-amber-500 hover:text-amber-600" : "text-blue-500 hover:text-blue-600"}`}
+              >
+                {lng === "es" ? "Ver" : "View"}
+              </button>
+            </>
+          )}
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -153,11 +205,6 @@ export default function FloatingProgressWidget() {
             </div>
             <div>
               <p className="font-medium text-gray-800">{progress.message}</p>
-              {progress.currentLevel && (
-                <p className="text-sm text-gray-500">
-                  Level {progress.currentLevel.replace("l", "")} of 5
-                </p>
-              )}
             </div>
           </div>
 
@@ -193,6 +240,23 @@ export default function FloatingProgressWidget() {
             />
           </div>
         </div>
+
+        {/* View Progress button during rewriting or translation */}
+        {((progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0) ||
+          (progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0)) && (
+          <div className="px-4 pb-4">
+            <button
+              onClick={() => setShowProgressViewer(true)}
+              className={`w-full py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {lng === "es" ? "Ver progreso" : "View Progress"}
+            </button>
+          </div>
+        )}
 
         {/* Review prompt */}
         {progress.stage === "review" && (

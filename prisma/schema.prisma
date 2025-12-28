@@ -167,13 +167,14 @@ model UserStory {
 }
 
 model UserStoryLevel {
-  id          String      @id @default(cuid())
-  userStoryId String
-  level       String      // l1, l2, l3, l4, l5
-  content     Json        // Same structure as content.ts files
-  status      LevelStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 String      @id @default(cuid())
+  userStoryId        String
+  level              String      // l1, l2, l3, l4, l5
+  content            Json        // Same structure as content.ts files
+  status             LevelStatus @default(PENDING)
+  processingProgress Json?       // { stage: 'rewriting'|'translating', currentChapter: 1, totalChapters: 27, chaptersCompleted: [] }
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   userStory UserStory @relation(fields: [userStoryId], references: [id], onDelete: Cascade)
 

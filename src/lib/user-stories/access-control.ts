@@ -25,7 +25,8 @@ export async function canCreateStory(
     ? USER_STORY_LIMITS.PREMIUM_MAX_STORIES
     : USER_STORY_LIMITS.FREE_MAX_STORIES;
 
-  if (storyCount >= maxStories) {
+  // -1 means unlimited
+  if (maxStories !== -1 && storyCount >= maxStories) {
     return {
       allowed: false,
       reason: isPremium

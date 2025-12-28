@@ -203,7 +203,7 @@ myStories: {
   spanish: "Español",
   english: "Inglés",
   storyContent: "Contenido de la Historia",
-  storyContentPlaceholder: "Pega o escribe tu historia aquí...\n\nUsa '---' en una línea nueva para marcar separaciones de capítulos.",
+  storyContentPlaceholder: "Pega o escribe tu historia aquí...",
   description: "Descripción",
   descriptionOptional: "opcional",
   descriptionPlaceholder: "Una breve descripción de tu historia...",
@@ -213,10 +213,10 @@ myStories: {
   uploadButton: "Subir Historia",
   uploading: "Subiendo...",
   whatHappensNext: "¿Qué pasa después?",
-  step1: "Detectaremos el nivel de dificultad de tu texto",
-  step2: "La IA reescribirá tu historia en los 5 niveles CEFR",
-  step3: "Cada nivel será traducido a ambos idiomas",
-  step4: "Tu historia estará lista para leer en 2-3 minutos",
+  step1: "Procesamiento: Detectaremos el nivel de dificultad, analizaremos capítulos, etc.",
+  step2: "Transcripción: La IA reescribirá la historia para tu nivel CEFR.",
+  step3: "Traducción: Cada nivel será traducido a ambos idiomas.",
+  step4: "Tu historia estará lista en 2-20 minutos, dependiendo de la longitud.",
   storyLimitReached: "Límite de Historias Alcanzado",
   storyLimitMessage: "Has alcanzado el máximo de {max} historias.",
   dailyLimitReached: "Límite Diario Alcanzado",
@@ -275,12 +275,7 @@ storiesMetadata: {
   "my-day": {
     title: "Mi Día",
     description: "Un poema simple sobre las alegrías de la vida cotidiana.",
-  },
-  "avatar": {
-    title: "Avatar: The Last Airbender",
-    description: "El episodio comienza con un cuerpo de agua, olas rompiendo contra las rocas. La cámara corta a hierba y palos, antes de moverse lentamente hacia arriba para revelar un alfanje de diente de ballena clavado en el suelo. La mano de Aang aparece en escena mientras agarra la empuñadura del arma y la saca del suelo. Corte a una toma de él levantándola mientras Sokka se desliza por una pendiente de tierra. Aang encuentra una espada hecha de un diente de ballena, y Sokka la identifica como un arma de la Tribu Agua. Descubren evidencia de una batalla entre guerreros de la Tribu Agua y maestros fuego. Mientras tanto, Zuko e Iroh se encuentran con June, una cazarrecompensas, que está buscando a un polizón en su barco. El episodio explora temas de familia y pertenencia mientras Sokka y Katara se reúnen con Bato, un amigo de su tribu, y se enteran del paradero de su padre.",
-  },
-  "el-viaje-magico": {
+  },"el-viaje-magico": {
     title: "El Viaje Mágico",
     description: "Un tren, un mapa antiguo, y una puerta a otro mundo.",
   },
