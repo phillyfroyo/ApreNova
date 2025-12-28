@@ -19,6 +19,8 @@ auth: {
   signupGoogle: "Sign up with Google",
   alreadyHaveAccount: "Already have an account?",
   newHere: "New Here?",
+  loggingIn: "Logging in...",
+  creatingAccount: "Creating account...",
 },
 
 language: {
