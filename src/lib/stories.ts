@@ -245,16 +245,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["family","multicultural"],
     targetAudience: "all",
-  },{
-    slug: "avatar",
-    image: "/images/placeholder1.png",
-    levels: ["l4"],
-    type: "short-story",
-    origin: { isOriginal: false, attribution: { author: { name: "" }, rights: { originalWorkStatus: "public-domain", displayStatement: "This work is in the public domain. This educational adaptation, translation, and formatting are © Cuentana." } } },
-    tags: ["adventure", "fantasy"],
-    targetAudience: "all",
-  },
-];
+  },];
 
 export function getStoryUrl({
   locale,

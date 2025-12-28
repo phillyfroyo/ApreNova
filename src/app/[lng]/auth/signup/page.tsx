@@ -70,8 +70,8 @@ export default function SignupPage() {
         const session = await response.json()
         const userLang = session?.user?.nativeLanguage || typedLang
 
-        // Force a hard navigation to ensure session is picked up
-        window.location.href = `/${userLang}/stories`
+        // Redirect to home page for level selection/quiz
+        window.location.href = `/${userLang}/home`
       } else {
         setError('Login after signup failed.')
       }
