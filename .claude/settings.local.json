@@ -23,7 +23,8 @@
       "Bash(xxd:*)",
       "WebSearch",
       "WebFetch(domain:www.gutenberg.org)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

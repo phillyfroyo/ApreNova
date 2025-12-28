@@ -1,4 +1,4 @@
-// src/app/[lng]/home/results/page.tsx
+// src/app/[lng]/home/ready/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,41 +11,20 @@ import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 import { t } from "@/lib/t";
 import Link from "next/link";
 
-type Level = "l1" | "l2" | "l3" | "l4";
+type Level = "l1" | "l2" | "l3" | "l4" | "l5";
 
-export default function ResultsPage() {
+export default function ReadyPage() {
   const pathname = usePathname();
   const typedLang = pathname.split("/")[1] as Language;
-
-  const { data: session, update: updateSession } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
 
   const [level, setLevel] = useState<Level>("l1");
-  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    const quizLevel = (sessionStorage.getItem("quizLevel") || "l1") as Level;
+    const quizLevel = (sessionStorage.getItem("quizLevel") || localStorage.getItem("level") || "l1") as Level;
     setLevel(quizLevel);
-    setShowConfetti(true);
-
-    localStorage.setItem("level", quizLevel);
-
-    if (session?.user?.id) {
-      fetch("/api/user-level", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session.user.id, level: quizLevel }),
-      })
-        .then(async (res) => {
-          if (res.ok) {
-            await updateSession();
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to save quiz level:", err);
-        });
-    }
-  }, [session, updateSession]);
+  }, []);
 
   const handleContinue = () => {
     router.push(`/${typedLang}/stories`);
@@ -53,9 +32,8 @@ export default function ResultsPage() {
 
   const getLevelName = () => t(typedLang, "levels", level) || "Beginner";
   const getCefrLabel = () => t(typedLang, "levels", `cefrLabels.${level}`) || "A1";
-  const getCefrDescription = () => t(typedLang, "levels", `cefrDescriptions.${level}`) || "";
 
-  // Check if user is logged in
+  // If user is already logged in, skip the account creation prompt
   const isLoggedIn = !!session?.user;
 
   return (
@@ -63,7 +41,7 @@ export default function ResultsPage() {
       className="min-h-screen flex flex-col bg-[url('/images/background3.png')] bg-cover bg-center text-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
     >
       {/* Progress indicator - step 3 (final) */}
       <OnboardingProgress currentStep={3} totalSteps={3} lang={typedLang} />
@@ -72,75 +50,62 @@ export default function ResultsPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12">
         {/* Logo */}
         <motion.div
-          className="text-center mb-8"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
+          className="text-center mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
         >
           <Logo variant="storiesmain" />
         </motion.div>
 
-        {/* Results card */}
+        {/* Ready card */}
         <motion.div
           className="w-full max-w-md"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15, duration: 0.3 }}
         >
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-white/50 text-center">
-            {/* Success icon */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center"
-            >
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-white/50">
+            {/* Title with inline checkmark */}
+            <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center flex items-center justify-center gap-2">
+              {t(typedLang, "onboarding", "allSetTitle")}
+              <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
-            </motion.div>
+            </h1>
 
-            {/* Result title */}
-            <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
-              {t(typedLang, "onboarding", "yourResult" as any)}
-            </p>
-
-            {/* Level display */}
-            <div className="mb-6">
-              <div className="inline-flex items-center gap-3 mb-2">
-                <span className="text-sm font-bold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full">
+            {/* Level indicator */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 text-center">
+              <p className="text-sm text-gray-500 mb-1">
+                {t(typedLang, "onboarding", "levelSetTo")}
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-sm font-bold text-indigo-600 bg-indigo-100 px-2.5 py-0.5 rounded">
                   {getCefrLabel()}
                 </span>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                {getLevelName()}
-              </h1>
-              <div className="bg-gray-50 rounded-xl p-4 text-left">
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {getCefrDescription()}
-                </p>
+                <span className="text-lg font-bold text-gray-900">
+                  {getLevelName()}
+                </span>
               </div>
             </div>
 
             {/* For logged in users - just show continue button */}
             {isLoggedIn ? (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={handleContinue}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-colors shadow-md"
               >
                 <span className="flex items-center justify-center gap-2">
-                  {t(typedLang, "onboarding", "startReading" as any)}
+                  {t(typedLang, "onboarding", "startReading")}
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </span>
-              </motion.button>
+              </button>
             ) : (
               <>
                 {/* Account creation prompt for non-logged-in users */}
-                <div className="mb-6 text-left">
+                <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3 text-center">
                     {t(typedLang, "onboarding", "createAccountTitle")}
                   </h3>
@@ -192,22 +157,6 @@ export default function ResultsPage() {
               </>
             )}
           </div>
-
-          {/* Change level option */}
-          <motion.p
-            className="text-center mt-6 text-sm text-gray-500"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {typedLang === "es" ? "¿No es tu nivel?" : "Not your level?"}{" "}
-            <a
-              href={`/${typedLang}/home`}
-              className="text-indigo-600 hover:text-indigo-800 font-medium"
-            >
-              {typedLang === "es" ? "Cambiar" : "Change"}
-            </a>
-          </motion.p>
         </motion.div>
       </div>
     </motion.section>

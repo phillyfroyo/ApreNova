@@ -29,5 +29,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // Check if user has a quizLevel set - if not, redirect to home for quiz
+  const userWithLevel = await prisma.user.findUnique({
+    where: { email: token.email },
+    select: { quizLevel: true },
+  });
+
+  if (!userWithLevel?.quizLevel) {
+    // New user without level - send to onboarding
+    return NextResponse.redirect(new URL(`/${lang}/home`, req.url));
+  }
+
+  // Existing user with level - go directly to stories
   return NextResponse.redirect(new URL(`/${lang}/stories`, req.url));
 }

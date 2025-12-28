@@ -65,14 +65,28 @@ levels: {
   l2: "Principiante",
   l3: "Intermedio",
   l4: "Avanzado",
-  l5: "Fluido"
+  l5: "Fluido",
+  cefrLabels: {
+    l1: "A1",
+    l2: "A2",
+    l3: "B1",
+    l4: "B2",
+    l5: "C1",
+  },
+  cefrDescriptions: {
+    l1: "Puede comprender y usar expresiones básicas para necesidades concretas. Puede presentarse y hacer preguntas personales sencillas.",
+    l2: "Puede comprender expresiones frecuentes sobre temas familiares como compras, familia y trabajo. Puede manejar intercambios simples y rutinarios.",
+    l3: "Puede manejar la mayoría de situaciones al viajar. Puede describir experiencias, eventos y explicar brevemente opiniones y planes.",
+    l4: "Puede comprender textos complejos e interactuar con fluidez con hablantes nativos. Puede producir textos claros y detallados sobre una amplia gama de temas.",
+    l5: "Puede comprender textos exigentes y reconocer significados implícitos. Puede expresar ideas con fluidez, precisión y flexibilidad.",
+  },
 },
 
   home: {
   subtitle: "Aprende más rápido. Aprende con historias.",
   quizTitle: "Haz el Quiz",
   recommended: "(recomendado)",
-  letUsPick: "Vamos a personalizar tu experiencia de aprendizaje según los resultados.",
+  letUsPick: "Responde unas preguntas y personalizaremos tu experiencia.",
   startQuiz: "Empezar Quiz",
   noThanksTitle: "No Gracias",
   pickLater: "Puedes personalizar tu nivel más tarde en la aplicación.",
@@ -82,6 +96,32 @@ levels: {
   placeholderInfo: "Put your additional information here 🚀",
   aboutLink: "Conoce Cuentana",
   aboutPrefix: "Conoce"
+},
+
+onboarding: {
+  stepLanguage: "Idioma",
+  stepLevel: "Nivel",
+  stepStart: "Empezar",
+  welcomeTitle: "Bienvenido a Cuentana",
+  welcomeSubtitle: "Personalicemos tu experiencia de aprendizaje",
+  findYourLevel: "Encuentra tu Nivel",
+  findYourLevelDesc: "Responde unas preguntas para encontrar tu punto de partida.",
+  quizDuration: "4 preguntas",
+  knowYourLevel: "¿Ya sabes tu nivel?",
+  selectBelow: "Selecciona tu nivel abajo",
+  continueToStories: "Ir a las Historias",
+  quizProgress: "Pregunta {current} de {total}",
+  yourResult: "Tu Nivel",
+  startReading: "Empezar a Leer",
+  selectLevel: "Seleccionar",
+  allSetTitle: "Todo Listo",
+  levelSetTo: "Tu nivel está configurado en",
+  createAccountTitle: "Crea una Cuenta Gratis",
+  createAccountBenefit1: "Guarda tu progreso en todos tus dispositivos",
+  createAccountBenefit2: "Sube tus propias historias",
+  createAccountBenefit3: "Crea tu lista de vocabulario personal",
+  createAccountCta: "Crear Cuenta",
+  skipForNow: "Omitir por ahora",
 },
 
 settings: {
@@ -202,12 +242,7 @@ storiesMetadata: {
   "my-day": {
     title: "Mi Día",
     description: "Un poema simple sobre las alegrías de la vida cotidiana.",
-  },},
-  "avatar": {
-    title: "Avatar: The Last Airbender",
-    description: "El episodio comienza con un cuerpo de agua, olas rompiendo contra las rocas. La cámara corta a hierba y palos, antes de moverse lentamente hacia arriba para revelar un alfanje de diente de ballena clavado en el suelo. La mano de Aang aparece en escena mientras agarra la empuñadura del arma y la saca del suelo. Corte a una toma de él levantándola mientras Sokka se desliza por una pendiente de tierra. Aang encuentra una espada hecha de un diente de ballena, y Sokka la identifica como un arma de la Tribu Agua. Descubren evidencia de una batalla entre guerreros de la Tribu Agua y maestros fuego. Mientras tanto, Zuko e Iroh se encuentran con June, una cazarrecompensas, que está buscando a un polizón en su barco. El episodio explora temas de familia y pertenencia mientras Sokka y Katara se reúnen con Bato, un amigo de su tribu, y se enteran del paradero de su padre.",
-  },
-};
+  },},};
 
 export default es;
 
