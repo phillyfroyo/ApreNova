@@ -65,14 +65,28 @@ levels: {
   l2: "Beginner",
   l3: "Intermediate",
   l4: "Advanced",
-  l5: "Fluent"
+  l5: "Fluent",
+  cefrLabels: {
+    l1: "A1",
+    l2: "A2",
+    l3: "B1",
+    l4: "B2",
+    l5: "C1",
+  },
+  cefrDescriptions: {
+    l1: "Can understand and use basic expressions for concrete needs. Can introduce yourself and ask simple personal questions.",
+    l2: "Can understand frequently used expressions on familiar topics like shopping, family, and work. Can handle simple, routine exchanges.",
+    l3: "Can handle most situations while traveling. Can describe experiences, events, and briefly explain opinions and plans.",
+    l4: "Can understand complex texts and interact fluently with native speakers. Can produce clear, detailed text on a wide range of subjects.",
+    l5: "Can understand demanding texts and recognize implicit meaning. Can express ideas fluently with precision and flexibility.",
+  },
 },
 
 home: {
   subtitle: "Learn faster. Learn with stories.",
   quizTitle: "Take the Quiz",
   recommended: "(recommended)",
-  letUsPick: "Let us customize your learning experience based on the results.",
+  letUsPick: "Answer a few questions and we'll personalize your experience.",
   startQuiz: "Start Quiz",
   noThanksTitle: "No Thanks",
   pickLater: "You can customize your level later in app",
@@ -82,6 +96,32 @@ home: {
   placeholderInfo: "Put your additional information here 🚀",
   aboutLink: "Get to know Cuentana",
   aboutPrefix: "Get to know"
+},
+
+onboarding: {
+  stepLanguage: "Language",
+  stepLevel: "Level",
+  stepStart: "Start",
+  welcomeTitle: "Welcome to Cuentana",
+  welcomeSubtitle: "Let's personalize your learning experience",
+  findYourLevel: "Find Your Level",
+  findYourLevelDesc: "Take a quick quiz to find the perfect starting point.",
+  quizDuration: "4 questions",
+  knowYourLevel: "Already know your level?",
+  selectBelow: "Select your proficiency below",
+  continueToStories: "Continue to Stories",
+  quizProgress: "Question {current} of {total}",
+  yourResult: "Your Level",
+  startReading: "Start Reading",
+  selectLevel: "Select",
+  allSetTitle: "You're All Set",
+  levelSetTo: "Your level is set to",
+  createAccountTitle: "Create a Free Account",
+  createAccountBenefit1: "Save your progress across devices",
+  createAccountBenefit2: "Upload your own stories",
+  createAccountBenefit3: "Build your personal vocabulary list",
+  createAccountCta: "Create Account",
+  skipForNow: "Skip for now",
 },
 
 settings: {
@@ -201,12 +241,7 @@ storiesMetadata: {
   "my-day": {
     title: "My Day",
     description: "A simple poem about the joys of everyday life.",
-  },},
-  "avatar": {
-    title: "Avatar: The Last Airbender",
-    description: "The episode opens up to a body of water, waves crashing against the rocks. The camera cuts to grass and sticks, before slowly panning up to reveal a whale tooth scimitar standing upright in the ground. Aang's hand comes into view as he grasps the weapon's hilt and yanks it out of the ground. Cut to a shot of him holding it up while Sokka slides down a dirt slope. Aang finds a sword made out of a whale's tooth, and Sokka identifies it as a Water Tribe weapon. They discover evidence of a battle between Water Tribe warriors and firebenders. Meanwhile, Zuko and Iroh encounter June, a bounty hunter, who is searching for a stowaway on their ship. The episode explores themes of family and belonging as Sokka and Katara reunite with Bato, a friend from their tribe, and learn about their father's whereabouts.",
-  },
-};
+  },},};
 
 export default en;
 
