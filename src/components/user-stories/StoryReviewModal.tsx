@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
 
 const translations = { en, es };
 
+// Map level codes to CEFR labels
+const levelToCEFR: Record<string, string> = {
+  l1: "A1",
+  l2: "A2",
+  l3: "B1",
+  l4: "B2",
+  l5: "C1",
+};
+
 export default function StoryReviewModal() {
   const { lng } = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const t = translations[(lng as "en" | "es") || "en"];
 
   const {
@@ -23,7 +34,39 @@ export default function StoryReviewModal() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle file drop
+  const handleFile = useCallback((file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      updateStoryData({ thumbnailUrl: url });
+    }
+  }, [updateStoryData]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFile(files[0]);
+    }
+  }, [handleFile]);
 
   if (!showReviewModal || !storyData) return null;
 
@@ -31,8 +74,8 @@ export default function StoryReviewModal() {
     setIsSubmitting(true);
     await confirmStory();
     setIsSubmitting(false);
-    // Navigate to my stories
-    router.push(`/${lng}/my-stories`);
+    // Don't navigate - user stays where they are
+    // Success message with "Start reading" button will show in FloatingProgressWidget
   };
 
   const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +129,16 @@ export default function StoryReviewModal() {
             <div className="flex-shrink-0">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-32 h-40 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors overflow-hidden"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`w-32 h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                  isDragging
+                    ? "border-blue-500 bg-blue-100 scale-105"
+                    : storyData.thumbnailUrl
+                    ? "border-transparent"
+                    : "border-gray-300 bg-gray-100 hover:border-blue-400 hover:bg-blue-50"
+                }`}
               >
                 {storyData.thumbnailUrl ? (
                   <img
@@ -94,13 +146,22 @@ export default function StoryReviewModal() {
                     alt="Story thumbnail"
                     className="w-full h-full object-cover"
                   />
+                ) : isDragging ? (
+                  <>
+                    <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-xs text-blue-500 mt-2 text-center px-2 font-medium">
+                      {lng === "es" ? "Soltar aquí" : "Drop here"}
+                    </span>
+                  </>
                 ) : (
                   <>
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className="text-xs text-gray-400 mt-2 text-center px-2">
-                      {lng === "es" ? "Añadir portada" : "Add cover"}
+                      {lng === "es" ? "Arrastra o haz clic" : "Drag or click"}
                     </span>
                   </>
                 )}
@@ -219,34 +280,55 @@ export default function StoryReviewModal() {
           </div>
 
           {/* What was created */}
-          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-            <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {lng === "es" ? "Lo que creamos para ti" : "What we created for you"}
-            </h4>
-            <ul className="space-y-1 text-sm text-green-700">
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {lng === "es" ? "5 niveles de dificultad (A1-C1)" : "5 difficulty levels (A1-C1)"}
-              </li>
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {lng === "es" ? "Traducciones en inglés y español" : "English and Spanish translations"}
-              </li>
-              <li className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {lng === "es" ? "Paginación interactiva" : "Interactive pagination"}
-              </li>
-            </ul>
-          </div>
+          {(() => {
+            // Get user's level from session
+            const userLevel = session?.user?.quizLevel;
+            const userLevelStr = typeof userLevel === "number" ? `l${userLevel}` : userLevel;
+            const detectedLevel = storyData.detectedLevel;
+            const wasRewritten = userLevelStr && userLevelStr !== detectedLevel;
+            const userCEFR = userLevelStr ? levelToCEFR[userLevelStr] || userLevelStr : null;
+
+            return (
+              <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {lng === "es" ? "Lo que se creó" : "What was created"}
+                </h4>
+                <ul className="space-y-1 text-sm text-green-700">
+                  <li className="flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>
+                      {wasRewritten ? (
+                        lng === "es"
+                          ? `El texto fue transcrito a tu nivel, ${userCEFR}`
+                          : `The text was transcribed to your level, ${userCEFR}`
+                      ) : (
+                        lng === "es"
+                          ? "No se necesitó reescritura — ¡El texto original coincide con tu nivel de aprendizaje!"
+                          : "No rewrite needed — the source text matched your exact learner level!"
+                      )}
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {lng === "es" ? "Traducciones en inglés y español" : "English and Spanish translations"}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {lng === "es" ? "Paginación interactiva" : "Interactive pagination"}
+                  </li>
+                </ul>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
@@ -255,7 +337,7 @@ export default function StoryReviewModal() {
             onClick={() => setShowReviewModal(false)}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            {lng === "es" ? "Editar más tarde" : "Edit later"}
+            {lng === "es" ? "Revisar después" : "Review later"}
           </button>
           <button
             onClick={handleConfirm}

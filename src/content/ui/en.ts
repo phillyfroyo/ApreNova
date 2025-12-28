@@ -202,7 +202,7 @@ myStories: {
   spanish: "Spanish",
   english: "English",
   storyContent: "Story Content",
-  storyContentPlaceholder: "Paste or type your story here...\n\nUse '---' on a new line to mark chapter breaks.",
+  storyContentPlaceholder: "Paste or type your story here...",
   description: "Description",
   descriptionOptional: "optional",
   descriptionPlaceholder: "A brief description of your story...",
@@ -212,10 +212,10 @@ myStories: {
   uploadButton: "Upload Story",
   uploading: "Uploading...",
   whatHappensNext: "What happens next?",
-  step1: "We'll detect the difficulty level of your text",
-  step2: "AI will rewrite your story at all 5 CEFR levels",
-  step3: "Each level will be translated to both languages",
-  step4: "Your story will be ready to read in 2-3 minutes",
+  step1: "Processing: We'll detect the difficulty level, parse chapters, etc.",
+  step2: "Transcription: AI will rewrite the story to match your CEFR level.",
+  step3: "Translation: Each level will be translated to both languages.",
+  step4: "Your story will be ready to read in 2-20 minutes, depending on length.",
   storyLimitReached: "Story Limit Reached",
   storyLimitMessage: "You've reached the maximum of {max} stories.",
   dailyLimitReached: "Daily Limit Reached",
@@ -274,12 +274,7 @@ storiesMetadata: {
   "my-day": {
     title: "My Day",
     description: "A simple poem about the joys of everyday life.",
-  },
-  "avatar": {
-    title: "Avatar: The Last Airbender",
-    description: "The episode opens up to a body of water, waves crashing against the rocks. The camera cuts to grass and sticks, before slowly panning up to reveal a whale tooth scimitar standing upright in the ground. Aang's hand comes into view as he grasps the weapon's hilt and yanks it out of the ground. Cut to a shot of him holding it up while Sokka slides down a dirt slope. Aang finds a sword made out of a whale's tooth, and Sokka identifies it as a Water Tribe weapon. They discover evidence of a battle between Water Tribe warriors and firebenders. Meanwhile, Zuko and Iroh encounter June, a bounty hunter, who is searching for a stowaway on their ship. The episode explores themes of family and belonging as Sokka and Katara reunite with Bato, a friend from their tribe, and learn about their father's whereabouts.",
-  },
-  "el-viaje-magico": {
+  },"el-viaje-magico": {
     title: "The Magic Journey",
     description: "A train, an ancient map, and a door to another world.",
   },

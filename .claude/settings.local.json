@@ -25,7 +25,14 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(git pull:*)",
-      "Bash(git stash push:*)"
+      "Bash(git stash push:*)",
+      "Bash(openssl rand:*)",
+      "Bash(npx dotenv:*)",
+      "Bash(git -C /Users/philipwooleryprice/ApreNova log --oneline -10)",
+      "Bash(git -C /Users/philipwooleryprice/ApreNova log --oneline --grep=\"story\" -i)",
+      "Bash(git -C /Users/philipwooleryprice/ApreNova show:*)",
+      "Bash(node -e:*)",
+      "WebSearch"
     ],
     "deny": []
   }

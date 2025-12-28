@@ -3,11 +3,11 @@
 export const USER_STORY_LIMITS = {
   // Story count limits
   FREE_MAX_STORIES: 3,
-  PREMIUM_MAX_STORIES: Infinity,
+  PREMIUM_MAX_STORIES: -1, // -1 means unlimited (Infinity doesn't serialize to JSON)
 
   // Character limits per story
   FREE_MAX_STORY_LENGTH: 5000,
-  PREMIUM_MAX_STORY_LENGTH: 50000,
+  PREMIUM_MAX_STORY_LENGTH: 2000000,
 
   // Daily processing limits
   DAILY_PROCESSING_LIMIT_FREE: 1,

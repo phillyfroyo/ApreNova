@@ -54,6 +54,9 @@ export default function UserStoryCard({
   const statusInfo = statusConfig[status];
   const StatusIcon = statusInfo.icon;
 
+  // Filter out invalid blob URLs (they don't persist across page refreshes)
+  const validThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith("blob:") ? thumbnailUrl : null;
+
   return (
     <motion.div
       layoutId={`user-story-${id}`}
@@ -68,9 +71,9 @@ export default function UserStoryCard({
       className="cursor-pointer rounded-xl overflow-hidden w-40 flex-shrink-0 scroll-snap-align-start"
     >
       <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-gray-100">
-        {thumbnailUrl ? (
+        {validThumbnailUrl ? (
           <Image
-            src={thumbnailUrl}
+            src={validThumbnailUrl}
             alt={title}
             fill
             sizes="160px"

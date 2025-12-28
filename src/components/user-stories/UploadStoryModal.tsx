@@ -5,8 +5,14 @@ import { useState, useRef, useEffect } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { X, Upload, FileText, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Upload, FileText, AlertCircle, ChevronDown, ChevronUp, File, Trash2 } from "lucide-react";
 import { USER_STORY_LIMITS } from "@/lib/user-stories/limits";
+import {
+  extractTextFromHTML,
+  stripRTF,
+  isAcceptedFile,
+  SUPPORTED_FILE_TYPES,
+} from "@/lib/admin/text-utils";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
 
@@ -30,12 +36,16 @@ export default function UploadStoryModal() {
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [sourceLanguage, setSourceLanguage] = useState<"en" | "es">("es");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<StoryStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // File upload state
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch user stats when modal opens
   useEffect(() => {
@@ -55,11 +65,88 @@ export default function UploadStoryModal() {
       setContent("");
       setTitle("");
       setDescription("");
-      setSourceLanguage("es");
       setShowAdvanced(false);
       setError("");
+      setUploadedFileName(null);
+      setIsDragging(false);
     }
   }, [showUploadModal]);
+
+
+  // Determine input mode: 'file' if file uploaded, 'text' if text entered, 'none' if empty
+  const inputMode = uploadedFileName ? "file" : content.trim() ? "text" : "none";
+
+  // File handling functions
+  const handleFileRead = async (file: File) => {
+    try {
+      let text = await file.text();
+      const fileName = file.name.toLowerCase();
+
+      // Convert HTML to plain text
+      if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
+        const result = extractTextFromHTML(text);
+        text = result.text;
+      }
+
+      // RTF basic handling - strip RTF codes
+      if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
+        text = stripRTF(text);
+      }
+
+      setContent(text);
+      setUploadedFileName(file.name);
+      setError("");
+    } catch (err) {
+      setError(lng === "es" ? "Error al leer el archivo" : "Error reading file");
+    }
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && isAcceptedFile(file)) {
+      handleFileRead(file);
+    } else if (file) {
+      setError(
+        lng === "es"
+          ? `Tipo de archivo no soportado. Aceptados: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+          : `Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+      );
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (isAcceptedFile(file)) {
+        handleFileRead(file);
+      } else {
+        setError(
+          lng === "es"
+            ? `Tipo de archivo no soportado. Aceptados: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+            : `Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+        );
+      }
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setUploadedFileName(null);
+    setContent("");
+    setError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    // If user starts typing, clear any uploaded file reference
+    if (uploadedFileName) {
+      setUploadedFileName(null);
+    }
+  };
 
   if (!showUploadModal) return null;
 
@@ -72,9 +159,9 @@ export default function UploadStoryModal() {
   const isOverLimit = charCount > maxLength;
   const percentUsed = Math.min((charCount / maxLength) * 100, 100);
 
-  // Check if user can upload
+  // Check if user can upload (-1 means unlimited)
   const canUpload = stats
-    ? stats.totalStories < stats.maxStories && stats.storiesProcessedToday < stats.dailyLimit
+    ? (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && stats.storiesProcessedToday < stats.dailyLimit
     : true;
 
   const handleSubmit = async () => {
@@ -101,11 +188,10 @@ export default function UploadStoryModal() {
       return;
     }
 
-    // Start the upload with all options
+    // Start the upload with all options (language is auto-detected by the pipeline)
     await startUpload({
       content: content.trim(),
       title: title.trim() || undefined,
-      sourceLanguage,
       description: description.trim() || undefined,
     });
   };
@@ -158,7 +244,7 @@ export default function UploadStoryModal() {
             <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between text-sm">
               <span className="text-gray-600">
                 {lng === "es" ? "Historias:" : "Stories:"}{" "}
-                <span className="font-medium">{stats.totalStories} / {stats.maxStories === Infinity ? "∞" : stats.maxStories}</span>
+                <span className="font-medium">{stats.totalStories} / {stats.maxStories === -1 ? "∞" : stats.maxStories}</span>
               </span>
               {!isPremium && (
                 <span className="text-gray-500">
@@ -173,12 +259,12 @@ export default function UploadStoryModal() {
           {stats && !canUpload && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
               <h3 className="font-medium text-yellow-800 mb-1">
-                {stats.totalStories >= stats.maxStories
+                {stats.maxStories !== -1 && stats.totalStories >= stats.maxStories
                   ? (lng === "es" ? "Límite de historias alcanzado" : "Story limit reached")
                   : (lng === "es" ? "Límite diario alcanzado" : "Daily limit reached")}
               </h3>
               <p className="text-sm text-yellow-700">
-                {stats.totalStories >= stats.maxStories
+                {stats.maxStories !== -1 && stats.totalStories >= stats.maxStories
                   ? (lng === "es"
                       ? `Has alcanzado el máximo de ${stats.maxStories} historias.`
                       : `You've reached the maximum of ${stats.maxStories} stories.`)
@@ -196,76 +282,142 @@ export default function UploadStoryModal() {
 
           {canUpload && (
             <>
-              {/* Source Language selector */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {lng === "es" ? "Idioma de la historia" : "Story language"}
-                </label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="radio"
-                      name="sourceLanguage"
-                      value="es"
-                      checked={sourceLanguage === "es"}
-                      onChange={() => setSourceLanguage("es")}
-                      className="w-4 h-4 text-blue-600"
-                      disabled={isUploading}
-                    />
-                    <span className="text-lg">🇪🇸</span>
-                    <span>{lng === "es" ? "Español" : "Spanish"}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <input
-                      type="radio"
-                      name="sourceLanguage"
-                      value="en"
-                      checked={sourceLanguage === "en"}
-                      onChange={() => setSourceLanguage("en")}
-                      className="w-4 h-4 text-blue-600"
-                      disabled={isUploading}
-                    />
-                    <span className="text-lg">🇺🇸</span>
-                    <span>{lng === "es" ? "Inglés" : "English"}</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Main text area */}
+              {/* Story content input area */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {lng === "es" ? "Contenido de la historia" : "Story content"}
                 </label>
-                <div className="relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder={t.myStories.storyContentPlaceholder}
-                    className={`w-full h-48 px-4 py-3 border rounded-xl focus:ring-2 focus:outline-none resize-none text-gray-800 font-mono text-sm ${
-                      isOverLimit
-                        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                        : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"
-                    }`}
-                    disabled={isUploading}
-                  />
 
-                  {/* Character count with progress bar */}
-                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${
-                          isOverLimit ? "bg-red-500" : percentUsed > 80 ? "bg-yellow-500" : "bg-blue-500"
-                        }`}
-                        style={{ width: `${percentUsed}%` }}
-                      />
+                {/* File uploaded state - show file info with remove option */}
+                {inputMode === "file" && (
+                  <div className="mb-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <File className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-800">{uploadedFileName}</p>
+                          <p className="text-sm text-green-600">
+                            {content.length.toLocaleString()} {lng === "es" ? "caracteres" : "characters"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveFile}
+                        disabled={isUploading}
+                        className="p-2 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title={lng === "es" ? "Eliminar archivo" : "Remove file"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
-                    <span className={`text-xs ${isOverLimit ? "text-red-500 font-medium" : "text-gray-400"}`}>
-                      {charCount.toLocaleString()} / {maxLength.toLocaleString()}
-                    </span>
+                    {/* Character limit indicator for file */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-green-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            isOverLimit ? "bg-red-500" : percentUsed > 80 ? "bg-yellow-500" : "bg-green-500"
+                          }`}
+                          style={{ width: `${percentUsed}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs ${isOverLimit ? "text-red-500 font-medium" : "text-green-600"}`}>
+                        {charCount.toLocaleString()} / {maxLength.toLocaleString()}
+                      </span>
+                    </div>
+                    {isOverLimit && (
+                      <p className="text-xs text-red-600 mt-2">
+                        {lng === "es"
+                          ? "El archivo excede el límite de caracteres. Por favor usa un archivo más corto."
+                          : "File exceeds character limit. Please use a shorter file."}
+                      </p>
+                    )}
                   </div>
-                </div>
-                {!isPremium && (
+                )}
+
+                {/* File drop zone - show when no file and no text */}
+                {inputMode === "none" && (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleFileDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`mb-3 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                      isDragging
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".txt,.html,.htm,.rtf,text/plain,text/html,application/rtf"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                    <div className="text-gray-500">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm font-medium">
+                        {lng === "es" ? "Arrastra un archivo aquí o haz clic" : "Drop a file here or click to browse"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {lng === "es" ? "Soporta: .txt, .html, .rtf" : "Supports: .txt, .html, .rtf"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider - show when no file and no text */}
+                {inputMode === "none" && (
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400 uppercase">
+                      {lng === "es" ? "o pega tu texto" : "or paste your text"}
+                    </span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                )}
+
+                {/* Text area - show when no file uploaded (either empty or has text) */}
+                {inputMode !== "file" && (
+                  <div className="relative">
+                    <textarea
+                      ref={textareaRef}
+                      value={content}
+                      onChange={handleTextChange}
+                      placeholder={t.myStories.storyContentPlaceholder}
+                      className={`w-full h-48 px-4 py-3 border rounded-xl focus:ring-2 focus:outline-none resize-none text-gray-800 font-mono text-sm ${
+                        isOverLimit
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"
+                      }`}
+                      disabled={isUploading}
+                    />
+
+                    {/* Character count with progress bar */}
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            isOverLimit ? "bg-red-500" : percentUsed > 80 ? "bg-yellow-500" : "bg-blue-500"
+                          }`}
+                          style={{ width: `${percentUsed}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs ${isOverLimit ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                        {charCount.toLocaleString()} / {maxLength.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Premium upsell - only show when not in file mode */}
+                {!isPremium && inputMode !== "file" && (
                   <p className="text-xs text-gray-500 mt-1">
                     {lng === "es"
                       ? `Límite gratuito: ${USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH.toLocaleString()} caracteres.`

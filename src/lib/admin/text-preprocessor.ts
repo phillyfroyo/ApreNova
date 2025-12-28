@@ -873,7 +873,23 @@ export function preprocessText(rawText: string): PreprocessedText {
  * Useful for short stories or when user just wants basic cleanup
  */
 export function quickClean(rawText: string): string {
-  const { text: noLineNumbers } = removeLineNumbers(rawText);
+  let text = rawText;
+
+  // Remove markdown formatting (bold, italic, headers)
+  text = text
+    .replace(/\*\*(.*?)\*\*/g, "$1")  // **bold**
+    .replace(/\*(.*?)\*/g, "$1")       // *italic*
+    .replace(/__(.*?)__/g, "$1")       // __bold__
+    .replace(/_(.*?)_/g, "$1")         // _italic_
+    .replace(/^#{1,6}\s+/gm, "");      // # headers
+
+  // Remove code fences that AI sometimes adds
+  text = text
+    .replace(/^```[\w]*\n?/gm, "")
+    .replace(/\n?```$/gm, "")
+    .replace(/```/g, "");
+
+  const { text: noLineNumbers } = removeLineNumbers(text);
   const { text: noPageMarkers } = removePageMarkers(noLineNumbers);
   const { text: noFootnotes } = removeFootnoteIndicators(noPageMarkers);
   const { text: noAsterisks } = removeAsteriskDividers(noFootnotes);

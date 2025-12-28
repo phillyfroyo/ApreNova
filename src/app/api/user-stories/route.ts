@@ -9,7 +9,6 @@ import {
   canProcessToday,
   validateContentLength,
 } from "@/lib/user-stories/access-control";
-import { processUserStory } from "@/lib/user-stories/pipeline";
 
 // GET: List user's stories
 export async function GET(req: NextRequest) {
@@ -57,11 +56,19 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
+      console.log("[API/user-stories] POST: Unauthorized request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { title, content, sourceLanguage, description } = body;
+
+    console.log("[API/user-stories] POST: Creating story", {
+      userId: session.user.id,
+      contentLength: content?.length || 0,
+      title: title || "(auto-generate)",
+      sourceLanguage: sourceLanguage || "(auto-detect)",
+    });
 
     // Validate required fields - only content is required now
     if (!content) {
@@ -82,6 +89,7 @@ export async function POST(req: NextRequest) {
     // Check story count limit
     const canCreate = await canCreateStory(session.user.id, isPremium);
     if (!canCreate.allowed) {
+      console.log("[API/user-stories] POST: Story limit reached", canCreate);
       return NextResponse.json(
         {
           error: canCreate.reason,
@@ -95,6 +103,7 @@ export async function POST(req: NextRequest) {
     // Check daily processing limit
     const canProcess = await canProcessToday(session.user.id, isPremium);
     if (!canProcess.allowed) {
+      console.log("[API/user-stories] POST: Daily limit reached", canProcess);
       return NextResponse.json(
         {
           error: canProcess.reason,
@@ -108,6 +117,7 @@ export async function POST(req: NextRequest) {
     // Validate content length
     const contentValid = validateContentLength(content, isPremium);
     if (!contentValid.allowed) {
+      console.log("[API/user-stories] POST: Content too long", contentValid);
       return NextResponse.json(
         {
           error: contentValid.reason,
@@ -163,11 +173,13 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    // Start processing in background (fire-and-forget)
-    // In production, consider using a proper job queue
-    processUserStory(story.id).catch((error) => {
-      console.error("Background processing failed for story:", story.id, error);
+    console.log("[API/user-stories] POST: Story created", {
+      storyId: story.id,
+      slug: story.slug,
     });
+
+    // Note: Processing is triggered separately via POST /api/user-stories/process
+    // This allows the client to control when processing starts
 
     return NextResponse.json({
       success: true,
@@ -179,8 +191,11 @@ export async function POST(req: NextRequest) {
       },
       message: "Story created. Processing will begin shortly.",
     });
-  } catch (error) {
-    console.error("Error creating user story:", error);
+  } catch (error: any) {
+    console.error("[API/user-stories] POST: Error creating story:", {
+      error: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
       { error: "Failed to create story" },
       { status: 500 }

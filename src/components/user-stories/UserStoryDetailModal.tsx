@@ -211,6 +211,11 @@ export default function UserStoryDetailModal({
   const StatusIcon = statusInfo.icon;
   const readyLevels = story.levels.filter((l) => l.status === "READY");
 
+  // Filter out invalid blob URLs (they don't persist across page refreshes)
+  const validThumbnailUrl = story.thumbnailUrl && !story.thumbnailUrl.startsWith("blob:")
+    ? story.thumbnailUrl
+    : null;
+
   // Get localized title/description
   const displayTitle = typedLang === "es"
     ? (story.titleEs || story.title)
@@ -257,9 +262,9 @@ export default function UserStoryDetailModal({
               {/* Left side - Image */}
               <div className="relative w-full md:w-2/5 md:flex-shrink-0">
                 <div className="aspect-[2/3] md:aspect-auto md:h-full relative">
-                  {story.thumbnailUrl ? (
+                  {validThumbnailUrl ? (
                     <Image
-                      src={story.thumbnailUrl}
+                      src={validThumbnailUrl}
                       alt={displayTitle}
                       fill
                       sizes="(max-width: 768px) 100vw, 40vw"

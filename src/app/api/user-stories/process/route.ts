@@ -46,11 +46,27 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Check if already processing (prevent duplicate processing)
+    if (story.status === "PROCESSING") {
+      const processingLevels = await prisma.userStoryLevel.findMany({
+        where: {
+          userStoryId: storyId,
+          status: "PROCESSING",
+        },
+      });
+
+      if (processingLevels.length > 0) {
+        return NextResponse.json({
+          success: true,
+          message: "Story is already being processed",
+          status: story.status,
+        });
+      }
+    }
+
     // Start processing in background
-    // Note: In production, this should be a proper job queue
-    // For now, we'll use a fire-and-forget approach
     processUserStory(storyId).catch((error) => {
-      console.error("Background processing failed:", error);
+      console.error("[API/process] Failed:", error.message);
     });
 
     return NextResponse.json({
