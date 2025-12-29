@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cuentana.org';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
 export async function POST(req: Request) {
@@ -13,14 +13,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { error, timestamp } = body;
 
-    // Don't send if no API key configured
-    if (!process.env.RESEND_API_KEY) {
-      console.log('OAuth error (no email sent - RESEND_API_KEY not configured):', { error, timestamp });
+    // Always log to console for debugging
+    console.log('[OAuth Error]', { error, timestamp, hasApiKey: !!process.env.RESEND_API_KEY, adminEmail: ADMIN_EMAIL });
+
+    // Don't send if no API key or admin email configured
+    if (!process.env.RESEND_API_KEY || !ADMIN_EMAIL) {
+      console.log('OAuth error notification skipped - missing RESEND_API_KEY or ADMIN_EMAIL');
       return NextResponse.json({ success: true, logged: true });
     }
 
     // Send notification email to admin
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `[Cuentana] OAuth Error: ${error}`,
@@ -41,10 +44,11 @@ export async function POST(req: Request) {
       `,
     });
 
+    console.log('[OAuth Error] Email sent:', result);
     return NextResponse.json({ success: true, notified: true });
   } catch (err) {
-    // Silent fail - don't expose errors to client
-    console.error('Failed to send OAuth error notification:', err);
+    // Log error but don't expose to client
+    console.error('[OAuth Error] Failed to send notification:', err);
     return NextResponse.json({ success: true, logged: true });
   }
 }
