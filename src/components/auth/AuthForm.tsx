@@ -3,6 +3,7 @@
 
 import { useState, FormEvent, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import Logo from '@/components/Logo';
 import { Card, Input, Button, H1 } from '@/components/ui';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ type LoginMode = 'password' | 'otp';
 type OtpStep = 'email' | 'code';
 
 export default function AuthForm({ mode, lang }: AuthFormProps) {
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +30,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [googleAuthError, setGoogleAuthError] = useState(false);
 
   // Login-specific state
   const [loginMode, setLoginMode] = useState<LoginMode>('password');
@@ -38,6 +41,20 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
 
   const isLogin = mode === 'login';
   const isOtpMode = isLogin && loginMode === 'otp';
+
+  // Detect Google OAuth callback error from URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'Callback' || errorParam === 'OAuthCallback') {
+      setGoogleAuthError(true);
+      // Optionally notify admin about the issue
+      fetch('/api/auth/notify-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: errorParam, timestamp: new Date().toISOString() }),
+      }).catch(() => {}); // Silent fail - don't block user
+    }
+  }, [searchParams]);
 
   // Auto-focus first OTP input when entering code step
   useEffect(() => {
@@ -452,23 +469,38 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
             <div className="flex-1 h-px bg-gray-300" />
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
-            className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Image
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              width={20}
-              height={20}
-              className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5"
-            />
-            <span className="text-sm text-gray-700 font-medium">
-              {googleButtonText}
-            </span>
-          </button>
+          {googleAuthError ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center space-y-2">
+              <p className="text-amber-800 text-sm font-medium">
+                {lang === 'en'
+                  ? 'Google sign-in is temporarily unavailable'
+                  : 'El inicio de sesión con Google no está disponible temporalmente'}
+              </p>
+              <p className="text-amber-700 text-xs">
+                {lang === 'en'
+                  ? 'Please use the email login option above, or try the one-time code option.'
+                  : 'Por favor usa el inicio de sesión con correo arriba, o prueba la opción de código único.'}
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+              className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Image
+                src="https://www.svgrepo.com/show/475656/google-color.svg"
+                alt="Google"
+                width={20}
+                height={20}
+                className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+              <span className="text-sm text-gray-700 font-medium">
+                {googleButtonText}
+              </span>
+            </button>
+          )}
 
           <p className="mt-4 text-center text-sm">
             <span className="text-black">{switchText} </span>
