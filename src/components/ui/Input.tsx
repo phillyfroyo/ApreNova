@@ -14,7 +14,7 @@ export default function Input({ label, className = '', ...props }: InputProps) {
       <input
         {...props}
         className={clsx(
-          'rounded-lg px-4 py-2 border border-gray-300 bg-white text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-200 ease-in-out',
+          'rounded-lg px-4 py-2 border border-gray-300 bg-white text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 ease-in-out',
           className
         )}
       />
