@@ -19,6 +19,20 @@ auth: {
   signupGoogle: "Sign up with Google",
   alreadyHaveAccount: "Already have an account?",
   newHere: "New Here?",
+  loggingIn: "Logging in...",
+  creatingAccount: "Creating account...",
+  sendOneTimeCode: "Get a one-time login code instead",
+  usePassword: "Use password instead",
+  forgotPassword: "Forgot password?",
+  resetPassword: "Reset Password",
+  resetPasswordTitle: "Reset your password",
+  resetPasswordSubtitle: "Enter your email and we'll send you a code to reset your password.",
+  newPassword: "New Password",
+  confirmNewPassword: "Confirm New Password",
+  passwordUpdated: "Password updated successfully!",
+  passwordMismatch: "Passwords do not match",
+  setNewPassword: "Set New Password",
+  updating: "Updating...",
 },
 
 language: {
@@ -75,13 +89,29 @@ levels: {
   B2: "B2 - Upper-Intermediate",
   C1: "C1 - Advanced",
   C2: "C2 - Mastery",
+  // CEFR labels (for dropdown displays)
+  cefrLabels: {
+    l1: "A1",
+    l2: "A2",
+    l3: "B1",
+    l4: "B2",
+    l5: "C1",
+  },
+  // CEFR descriptions (for onboarding/quiz)
+  cefrDescriptions: {
+    l1: "Can understand and use basic expressions for concrete needs. Can introduce yourself and ask simple personal questions.",
+    l2: "Can understand frequently used expressions on familiar topics like shopping, family, and work. Can handle simple, routine exchanges.",
+    l3: "Can handle most situations while traveling. Can describe experiences, events, and briefly explain opinions and plans.",
+    l4: "Can understand complex texts and interact fluently with native speakers. Can produce clear, detailed text on a wide range of subjects.",
+    l5: "Can understand demanding texts and recognize implicit meaning. Can express ideas fluently with precision and flexibility.",
+  },
 },
 
 home: {
   subtitle: "Learn faster. Learn with stories.",
   quizTitle: "Take the Quiz",
   recommended: "(recommended)",
-  letUsPick: "Let us customize your learning experience based on the results.",
+  letUsPick: "Answer a few questions and we'll personalize your experience.",
   startQuiz: "Start Quiz",
   noThanksTitle: "No Thanks",
   pickLater: "You can customize your level later in app",
@@ -91,6 +121,32 @@ home: {
   placeholderInfo: "Put your additional information here 🚀",
   aboutLink: "Get to know Cuentana",
   aboutPrefix: "Get to know"
+},
+
+onboarding: {
+  stepLanguage: "Language",
+  stepLevel: "Level",
+  stepStart: "Start",
+  welcomeTitle: "Welcome to Cuentana",
+  welcomeSubtitle: "Let's personalize your learning experience",
+  findYourLevel: "Find Your Level",
+  findYourLevelDesc: "Take a quick quiz to find the perfect starting point.",
+  quizDuration: "5 questions",
+  knowYourLevel: "Already know your level?",
+  selectBelow: "Select your proficiency below",
+  continueToStories: "Continue to Stories",
+  quizProgress: "Question {current} of {total}",
+  yourResult: "Your Level",
+  startReading: "Start Reading",
+  selectLevel: "Select",
+  allSetTitle: "You're All Set",
+  levelSetTo: "Your level is set to",
+  createAccountTitle: "Create a Free Account",
+  createAccountBenefit1: "Save your progress across devices",
+  createAccountBenefit2: "Upload your own stories",
+  createAccountBenefit3: "Build your personal vocabulary list",
+  createAccountCta: "Create Account",
+  skipForNow: "Skip for now",
 },
 
 settings: {
@@ -283,7 +339,8 @@ storiesMetadata: {
   "my-day": {
     title: "My Day",
     description: "A simple poem about the joys of everyday life.",
-  },"el-viaje-magico": {
+  },
+  "el-viaje-magico": {
     title: "The Magic Journey",
     description: "A train, an ancient map, and a door to another world.",
   },
@@ -291,7 +348,7 @@ storiesMetadata: {
     title: "Secrets of the Desert",
     description: "The past comes alive among the desert dunes.",
   },
-}
+},
 
 };
 

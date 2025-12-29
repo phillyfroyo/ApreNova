@@ -33,7 +33,12 @@
       "Bash(git -C /Users/philipwooleryprice/ApreNova show:*)",
       "Bash(node -e:*)",
       "WebSearch",
-      "Bash(git worktree:*)"
+      "WebFetch(domain:www.gutenberg.org)",
+      "Bash(echo:*)",
+      "Bash(git worktree add:*)",
+      "Bash(git worktree:*)",
+      "Bash(git for-each-ref:*)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }

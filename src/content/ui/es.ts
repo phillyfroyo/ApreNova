@@ -19,6 +19,20 @@ const es = {
   signupGoogle: "Registrarse con Google",
   alreadyHaveAccount: "¿Ya tienes una cuenta?",
   newHere: "¿Eres nuevo?",
+  loggingIn: "Iniciando sesión...",
+  creatingAccount: "Creando cuenta...",
+  sendOneTimeCode: "Obtener un código de inicio de sesión",
+  usePassword: "Usar contraseña",
+  forgotPassword: "¿Olvidaste tu contraseña?",
+  resetPassword: "Restablecer contraseña",
+  resetPasswordTitle: "Restablece tu contraseña",
+  resetPasswordSubtitle: "Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.",
+  newPassword: "Nueva contraseña",
+  confirmNewPassword: "Confirmar nueva contraseña",
+  passwordUpdated: "¡Contraseña actualizada!",
+  passwordMismatch: "Las contraseñas no coinciden",
+  setNewPassword: "Establecer nueva contraseña",
+  updating: "Actualizando...",
 },
 
 language: {
@@ -75,13 +89,29 @@ levels: {
   B2: "B2 - Intermedio Alto",
   C1: "C1 - Avanzado",
   C2: "C2 - Maestría",
+  // CEFR labels (for dropdown displays)
+  cefrLabels: {
+    l1: "A1",
+    l2: "A2",
+    l3: "B1",
+    l4: "B2",
+    l5: "C1",
+  },
+  // CEFR descriptions (for onboarding/quiz)
+  cefrDescriptions: {
+    l1: "Puede comprender y usar expresiones básicas para necesidades concretas. Puede presentarse y hacer preguntas personales sencillas.",
+    l2: "Puede comprender expresiones frecuentes sobre temas familiares como compras, familia y trabajo. Puede manejar intercambios simples y rutinarios.",
+    l3: "Puede manejar la mayoría de situaciones al viajar. Puede describir experiencias, eventos y explicar brevemente opiniones y planes.",
+    l4: "Puede comprender textos complejos e interactuar con fluidez con hablantes nativos. Puede producir textos claros y detallados sobre una amplia gama de temas.",
+    l5: "Puede comprender textos exigentes y reconocer significados implícitos. Puede expresar ideas con fluidez, precisión y flexibilidad.",
+  },
 },
 
   home: {
   subtitle: "Aprende más rápido. Aprende con historias.",
   quizTitle: "Haz el Quiz",
   recommended: "(recomendado)",
-  letUsPick: "Vamos a personalizar tu experiencia de aprendizaje según los resultados.",
+  letUsPick: "Responde unas preguntas y personalizaremos tu experiencia.",
   startQuiz: "Empezar Quiz",
   noThanksTitle: "No Gracias",
   pickLater: "Puedes personalizar tu nivel más tarde en la aplicación.",
@@ -91,6 +121,32 @@ levels: {
   placeholderInfo: "Put your additional information here 🚀",
   aboutLink: "Conoce Cuentana",
   aboutPrefix: "Conoce"
+},
+
+onboarding: {
+  stepLanguage: "Idioma",
+  stepLevel: "Nivel",
+  stepStart: "Empezar",
+  welcomeTitle: "Bienvenido a Cuentana",
+  welcomeSubtitle: "Personalicemos tu experiencia de aprendizaje",
+  findYourLevel: "Encuentra tu Nivel",
+  findYourLevelDesc: "Responde unas preguntas para encontrar tu punto de partida.",
+  quizDuration: "5 preguntas",
+  knowYourLevel: "¿Ya sabes tu nivel?",
+  selectBelow: "Selecciona tu nivel abajo",
+  continueToStories: "Ir a las Historias",
+  quizProgress: "Pregunta {current} de {total}",
+  yourResult: "Tu Nivel",
+  startReading: "Empezar a Leer",
+  selectLevel: "Seleccionar",
+  allSetTitle: "Todo Listo",
+  levelSetTo: "Tu nivel está configurado en",
+  createAccountTitle: "Crea una Cuenta Gratis",
+  createAccountBenefit1: "Guarda tu progreso en todos tus dispositivos",
+  createAccountBenefit2: "Sube tus propias historias",
+  createAccountBenefit3: "Crea tu lista de vocabulario personal",
+  createAccountCta: "Crear Cuenta",
+  skipForNow: "Omitir por ahora",
 },
 
 settings: {
@@ -284,7 +340,8 @@ storiesMetadata: {
   "my-day": {
     title: "Mi Día",
     description: "Un poema simple sobre las alegrías de la vida cotidiana.",
-  },"el-viaje-magico": {
+  },
+  "el-viaje-magico": {
     title: "El Viaje Mágico",
     description: "Un tren, un mapa antiguo, y una puerta a otro mundo.",
   },
@@ -292,7 +349,7 @@ storiesMetadata: {
     title: "Secretos del Desierto",
     description: "El pasado cobra vida entre las dunas del desierto.",
   },
-}
+},
 
 };
 

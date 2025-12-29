@@ -661,30 +661,41 @@ useEffect(() => {
         user={user}
       />
 {showLangPrompt && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-xl shadow-lg text-center space-y-4 max-w-sm">
-      <p className="text-lg font-semibold">
-        ¿Cuál es tu lengua materna? <br />
-        <span className="text-gray-600">What is your native language?</span>
-      </p>
-      <button
-        className="w-full bg-[#1000c8] text-white py-2 px-4 rounded"
-        onClick={async () => {
-          await updateNativeLanguage('es')
-          setShowLangPrompt(false)
-        }}
-      >
-        Español
-      </button>
-      <button
-        className="w-full bg-gray-800 text-white py-2 px-4 rounded"
-        onClick={async () => {
-          await updateNativeLanguage('en')
-          router.replace('/en/stories')
-        }}
-      >
-        English
-      </button>
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl text-center space-y-6 max-w-sm w-full border border-white/50">
+      <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xl font-bold text-gray-900 mb-1">
+          ¿Cuál es tu lengua materna?
+        </p>
+        <p className="text-gray-500">
+          What is your native language?
+        </p>
+      </div>
+      <div className="space-y-3">
+        <button
+          className="w-full bg-gradient-to-r from-red-500 to-yellow-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
+          onClick={async () => {
+            await updateNativeLanguage('es')
+            setShowLangPrompt(false)
+          }}
+        >
+          Español
+        </button>
+        <button
+          className="w-full bg-gradient-to-r from-blue-600 to-red-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
+          onClick={async () => {
+            await updateNativeLanguage('en')
+            router.replace('/en/stories')
+          }}
+        >
+          English
+        </button>
+      </div>
     </div>
   </div>
 )}
