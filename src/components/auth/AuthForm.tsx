@@ -46,15 +46,27 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam === 'Callback' || errorParam === 'OAuthCallback') {
+      // Check if we need to redirect to correct language
+      if (typeof window !== 'undefined') {
+        const storedLang = localStorage.getItem('oauth_lang');
+        if (storedLang && storedLang !== lang) {
+          // Redirect to the correct language version with the error preserved
+          localStorage.removeItem('oauth_lang');
+          window.location.href = `/${storedLang}/auth/login?error=${errorParam}`;
+          return;
+        }
+        localStorage.removeItem('oauth_lang');
+      }
+
       setGoogleAuthError(true);
-      // Optionally notify admin about the issue
+      // Notify admin about the issue
       fetch('/api/auth/notify-error', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: errorParam, timestamp: new Date().toISOString() }),
       }).catch(() => {}); // Silent fail - don't block user
     }
-  }, [searchParams]);
+  }, [searchParams, lang]);
 
   // Auto-focus first OTP input when entering code step
   useEffect(() => {
@@ -247,6 +259,10 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
 
   const handleGoogleSignIn = () => {
     setIsLoading(true);
+    // Store language preference before OAuth redirect so we can restore it on error
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('oauth_lang', lang);
+    }
     signIn('google', {
       callbackUrl: `${window.location.origin}/api/post-login?lang=${lang}`,
     });

@@ -28,7 +28,13 @@
       "Bash(git merge:*)",
       "Bash(git stash:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(timeout 10 npm run dev)"
+      "Bash(timeout 10 npm run dev)",
+      "Bash(if [ -f .env ])",
+      "Bash(then grep -E \"^DATABASE_URL\" .env)",
+      "Bash(elif [ -f .env.local ])",
+      "Bash(then grep -E \"^DATABASE_URL\" .env.local)",
+      "Bash(else echo \"No .env or .env.local found\")",
+      "Bash(fi)"
     ],
     "deny": []
   }
