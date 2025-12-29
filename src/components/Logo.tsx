@@ -25,7 +25,7 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
     auth: ['text-[#70e0dc]', 'text-[#5100a2]'],
     storiesmain: ['text-[#1000c8]', 'text-purple-800'],
     corporate: ['text-blue-800', 'text-indigo-900', 'font-sans'],
-    classic: ['text-indigo-600', 'text-purple-700', 'font-serif'],
+    classic: ['text-indigo-600', 'text-purple-700', 'font-times'],
     coolgray: ['text-gray-800', 'text-blue-600', 'font-sans'],
     steel: ['text-slate-800', 'text-blue-900', 'font-sans'],
     vibrant: ['text-fuchsia-500', 'text-purple-700', 'font-[Fredoka]'],

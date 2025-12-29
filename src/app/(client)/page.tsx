@@ -58,13 +58,13 @@ export default function LanguageSelectPage() {
       question: "¿Cuál es tu lengua materna?",
       questionSecondary: "What is your native language?",
       loginText: "¿Ya tienes una cuenta? Inicia sesión",
-      tagline: "Aprende más rápido. Aprende con historias.",
+      tagline: "Aprende idiomas con historias.",
     },
     en: {
       question: "What is your native language?",
       questionSecondary: "¿Cuál es tu lengua materna?",
       loginText: "Already have an account? Log in",
-      tagline: "Learn faster. Learn with stories.",
+      tagline: "Learn language through stories.",
     },
   };
 
@@ -89,7 +89,15 @@ export default function LanguageSelectPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Progress indicator */}
+      {/* Logo and tagline at top */}
+      <div className="text-center pt-8 pb-2">
+        <Logo variant="classic" />
+        <p className="text-sm text-gray-600 mt-2 font-[Alice]">
+          {t.tagline}
+        </p>
+      </div>
+
+      {/* Progress indicator below logo */}
       <OnboardingProgress currentStep={1} totalSteps={3} lang={preferredLang} />
 
       {/* Main content */}
@@ -101,13 +109,8 @@ export default function LanguageSelectPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <Logo variant="classic" />
-          </div>
-
-          {/* Main selection card */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 border border-white/50">
+          {/* Main selection card - glass effect */}
+          <div className="glass-card rounded-2xl shadow-lg p-8">
             {/* Question - primary language first */}
             <h1 className="text-xl font-bold text-center text-gray-900 mb-2">
               {t.question}
@@ -125,8 +128,8 @@ export default function LanguageSelectPage() {
                     onClick={() => handleLanguageSelect('es')}
                     className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 via-yellow-400 to-red-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                      ES
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center shadow-sm">
+                      <span className="text-white text-sm font-bold">ES</span>
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
@@ -145,8 +148,8 @@ export default function LanguageSelectPage() {
                     onClick={() => handleLanguageSelect('en')}
                     className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 via-white to-red-500 flex items-center justify-center text-blue-800 font-bold text-sm shadow-sm">
-                      EN
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-red-500 flex items-center justify-center shadow-sm">
+                      <span className="text-white text-sm font-bold">EN</span>
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
@@ -168,8 +171,8 @@ export default function LanguageSelectPage() {
                     onClick={() => handleLanguageSelect('en')}
                     className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 via-white to-red-500 flex items-center justify-center text-blue-800 font-bold text-sm shadow-sm">
-                      EN
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-red-500 flex items-center justify-center shadow-sm">
+                      <span className="text-white text-sm font-bold">EN</span>
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
@@ -188,8 +191,8 @@ export default function LanguageSelectPage() {
                     onClick={() => handleLanguageSelect('es')}
                     className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 via-yellow-400 to-red-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                      ES
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center shadow-sm">
+                      <span className="text-white text-sm font-bold">ES</span>
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
@@ -208,10 +211,9 @@ export default function LanguageSelectPage() {
             </div>
 
             {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-gray-200"></div>
-              <span className="text-xs text-gray-400">{preferredLang === 'es' ? 'o' : 'or'}</span>
-              <div className="flex-1 h-px bg-gray-200"></div>
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-gray-300"></div>
+              <div className="flex-1 h-px bg-gray-300"></div>
             </div>
 
             {/* Login link */}
@@ -224,11 +226,6 @@ export default function LanguageSelectPage() {
               </a>
             </div>
           </div>
-
-          {/* Tagline below card */}
-          <p className="text-center text-sm text-gray-600 mt-6 font-[Alice]">
-            {t.tagline}
-          </p>
         </motion.div>
       </div>
     </motion.section>

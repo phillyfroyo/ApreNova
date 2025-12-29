@@ -5,6 +5,7 @@ module.exports = {
     extend: {
       fontFamily: {
         serif: ['Alice', 'serif'],
+        times: ['"Times New Roman"', 'Times', 'serif'],
         sans: ["Inter", '"Open Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       dropShadow: {

@@ -19,7 +19,7 @@ export default function OnboardingProgress({
   lang,
 }: OnboardingProgressProps) {
   return (
-    <div className="w-full px-4 sm:px-6 pt-16 sm:pt-6 pb-2">
+    <div className="w-full px-4 sm:px-6 pt-4 pb-2">
       <div className="max-w-xs sm:max-w-md mx-auto">
         {/* Step indicators */}
         <div className="flex justify-between mb-3">

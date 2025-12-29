@@ -264,6 +264,50 @@
 
 ---
 
+## Pre-Deployment Tasks
+
+### Facebook Login Setup (auth-improvements-v1 branch)
+**Status:** Code ready, needs Facebook Developer configuration
+
+**When deploying, complete these steps:**
+
+1. **Facebook Developer App Configuration:**
+   - Go to [developers.facebook.com](https://developers.facebook.com/) → My Apps → Cuentana app
+   - Settings → Basic:
+     - Add production **App Domains**: `cuentana.com` (or your domain)
+     - Add **Privacy Policy URL**: `https://cuentana.com/privacy`
+     - Add **Terms of Service URL**: `https://cuentana.com/terms` (if created)
+     - Upload **App Icon** (1024x1024 PNG)
+   - Facebook Login → Settings:
+     - Add **Valid OAuth Redirect URI**: `https://cuentana.com/api/auth/callback/facebook`
+
+2. **Environment Variables (Production):**
+   ```
+   FACEBOOK_CLIENT_ID=your_app_id
+   FACEBOOK_CLIENT_SECRET=your_app_secret
+   ```
+
+3. **Facebook App Review:**
+   - Go to App Review → Permissions and Features
+   - Request `email` and `public_profile` permissions
+   - Provide brief description: "Cuentana uses Facebook Login to let users create accounts and sign in to our language learning app. We only request email and basic profile info for authentication."
+   - Submit for review (may take 1-5 business days)
+
+4. **Add Facebook Button to UI:**
+   - Button code exists in authOptions.ts (auto-enabled when env vars present)
+   - Need to add Facebook button to AuthForm.tsx (similar to Google button)
+
+5. **Switch App to Live Mode:**
+   - After App Review approval, go to app dashboard
+   - Toggle from "Development" to "Live" mode
+
+### Privacy Policy Updates Needed
+- [ ] Update contact email from `privacy@cuentana.com` to real email
+- [ ] Verify analytics services mentioned match what's actually used
+- [ ] Consider adding Terms of Service page
+
+---
+
 ## In Progress
 - Fix GPT formatting in Story Tutor (proactive endpoint approach)
 - Remove text bubbles from GPT responses
@@ -297,4 +341,4 @@
 
 ---
 
-*Last updated: 2025-12-07*
+*Last updated: 2025-12-29*
