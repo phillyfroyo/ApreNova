@@ -1,128 +1,38 @@
 // src/lib/story-processing/cefr-prompts.ts
-// Unified CEFR prompts for both admin and user story pipelines
-// Uses the "forbidden" approach for precise level enforcement
+// CEFR prompts for AI processing - uses central cefr.ts definitions
 
-export interface CEFRLevel {
-  level: number;
-  cefr: string;
-  name: string;
-  sentenceLength: string;
-  vocabulary: string;
-  forbidden: string[]; // The key constraints - what NOT to use
-}
+import {
+  type CEFRCode,
+  CEFR_LEVEL_DETAILS,
+  getLevelDetails,
+  toCEFR,
+  toNumericLevel,
+  fromNumericLevel,
+} from "@/lib/cefr";
 
-/**
- * CEFR levels with explicit constraints.
- * Using "forbidden" rules is more effective than positive descriptions
- * for getting AI to stay within level boundaries.
- */
-export const CEFR_LEVELS: Record<number, CEFRLevel> = {
-  1: {
-    level: 1,
-    cefr: "A1",
-    name: "Beginner",
-    sentenceLength: "3-7 words",
-    vocabulary: "500 most common words",
-    forbidden: [
-      "NO past tense",
-      "NO future tense",
-      "NO perfect tenses",
-      "NO conditionals",
-      "NO relative clauses",
-      "NO abstract nouns",
-    ],
-  },
-  2: {
-    level: 2,
-    cefr: "A2",
-    name: "Elementary",
-    sentenceLength: "6-10 words",
-    vocabulary: "1,000 most common words",
-    forbidden: [
-      "NO present perfect",
-      "NO past perfect",
-      "NO 'will' future (use 'going to')",
-      "NO passive voice",
-      "NO conditionals",
-      "NO subjunctive",
-    ],
-  },
-  3: {
-    level: 3,
-    cefr: "B1",
-    name: "Intermediate",
-    sentenceLength: "8-15 words",
-    vocabulary: "2,500 words",
-    forbidden: [
-      "NO past perfect",
-      "NO third conditional",
-      "NO complex passive",
-      "NO literary language",
-      "NO rare vocabulary",
-    ],
-  },
-  4: {
-    level: 4,
-    cefr: "B2",
-    name: "Upper Intermediate",
-    sentenceLength: "10-20 words",
-    vocabulary: "5,000 words",
-    forbidden: [
-      "NO third conditional (save for C1)",
-      "NO obscure vocabulary",
-      "NO archaic constructions",
-    ],
-  },
-  5: {
-    level: 5,
-    cefr: "C1",
-    name: "Advanced",
-    sentenceLength: "No limit",
-    vocabulary: "10,000+ common modern words",
-    forbidden: [
-      "NO archaic vocabulary (thane, hither, wherefore, etc.)",
-      "NO obsolete grammar (thee, thou, hast, doth, etc.)",
-      "NO literary/poetic inversions",
-      "NO specialized academic jargon",
-      "Use modern equivalents for dated expressions",
-    ],
-  },
-  6: {
-    level: 6,
-    cefr: "C2+",
-    name: "Literary/Archaic",
-    sentenceLength: "No limit",
-    vocabulary: "Unrestricted (including archaic, literary, specialized)",
-    forbidden: [], // No restrictions - original literary texts
-  },
-};
+// Re-export from cefr.ts for backwards compatibility
+export { toCEFR, toNumericLevel, fromNumericLevel };
 
-/**
- * Convert level string (l1, l2, etc.) to level number (1, 2, etc.)
- */
-export function levelStringToNumber(level: string): number {
-  if (typeof level === "number") return level;
-  const num = parseInt(level.replace(/^l/, ""), 10);
-  return isNaN(num) ? 3 : num; // Default to B1 if parsing fails
-}
+// Legacy function names for backwards compatibility
+export const levelStringToNumber = toNumericLevel;
+export const levelNumberToString = (level: number): string => fromNumericLevel(level);
 
-/**
- * Convert level number to level string
- */
-export function levelNumberToString(level: number): string {
-  return `l${level}`;
-}
+// Re-export the level details interface
+export type { CEFRLevelDetails as CEFRLevel } from "@/lib/cefr";
+
+// Re-export level details for code that imports from here
+export const CEFR_LEVELS = CEFR_LEVEL_DETAILS;
 
 /**
  * Generate a prompt for rewriting text at a specific CEFR level
  */
 export function generateRewritePrompt(
-  targetLevel: number,
+  targetLevel: CEFRCode | number | string,
   sourceText: string,
   sourceLanguage: "en" | "es",
   isPoetry: boolean = false
 ): string {
-  const level = CEFR_LEVELS[targetLevel] || CEFR_LEVELS[3];
+  const level = getLevelDetails(targetLevel);
   const langName = sourceLanguage === "es" ? "Spanish" : "English";
 
   const forbiddenRules =
@@ -146,7 +56,7 @@ export function generateRewritePrompt(
 - Do NOT add line breaks within paragraphs
 - Keep the narrative flowing and readable`;
 
-  return `Rewrite this ${langName} ${isPoetry ? "poem" : "story"} for CEFR ${level.cefr} (${level.name}).
+  return `Rewrite this ${langName} ${isPoetry ? "poem" : "story"} for CEFR ${level.code} (${level.name}).
 
 RULES:
 - Sentences: ${level.sentenceLength}
@@ -168,22 +78,22 @@ Return ONLY the rewritten text.`;
 export function generateTranslationPrompt(
   text: string,
   fromLang: "en" | "es",
-  level: number
+  level: CEFRCode | number | string
 ): string {
   const toLangName = fromLang === "en" ? "Spanish" : "English";
   const fromLangName = fromLang === "en" ? "English" : "Spanish";
-  const cefrLevel = CEFR_LEVELS[level] || CEFR_LEVELS[3];
+  const cefrLevel = getLevelDetails(level);
 
   const forbiddenRules =
     cefrLevel.forbidden.length > 0
       ? `\nFORBIDDEN:\n${cefrLevel.forbidden.join("\n")}`
       : "";
 
-  return `Translate this ${fromLangName} text to ${toLangName} at CEFR ${cefrLevel.cefr} (${cefrLevel.name}).
+  return `Translate this ${fromLangName} text to ${toLangName} at CEFR ${cefrLevel.code} (${cefrLevel.name}).
 
 RULES:
 - Vocabulary: ${cefrLevel.vocabulary}
-- Match the sentence complexity of ${cefrLevel.cefr}${forbiddenRules}
+- Match the sentence complexity of ${cefrLevel.code}${forbiddenRules}
 
 CRITICAL - LINE NUMBER PRESERVATION:
 - Each line starts with [N] where N is a number
@@ -209,14 +119,14 @@ export function generateDetectionPrompt(
   return `Analyze this ${langName} text and determine its CEFR level.
 
 LEVELS:
-- A1 (Level 1): 3-7 word sentences, ~500 words, present tense only
-- A2 (Level 2): 6-10 word sentences, ~1000 words, simple past/present
-- B1 (Level 3): 8-15 word sentences, ~2500 words, present perfect, basic conditionals
-- B2 (Level 4): 10-20 word sentences, ~5000 words, all tenses, second conditional
-- C1 (Level 5): No limits, 10000+ words, full modern native expression
-- C2+ (Level 6): Literary/archaic texts with obsolete vocabulary, archaic grammar (thee/thou/hath), poetic inversions, or specialized historical language that exceeds modern native usage
+- A1 (Foundations): 3-7 word sentences, ~500 words, present tense only
+- A2 (Developing): 6-10 word sentences, ~1000 words, simple past/present
+- B1 (Independent): 8-15 word sentences, ~2500 words, present perfect, basic conditionals
+- B2 (Upper-Intermediate): 10-20 word sentences, ~5000 words, all tenses, second conditional
+- C1 (Advanced): No limits, 10000+ words, full modern native expression
+- C2 (Mastery): Literary/archaic texts with obsolete vocabulary, archaic grammar (thee/thou/hath), poetic inversions, or specialized historical language that exceeds modern native usage
 
-IMPORTANT: Use Level 6 for:
+IMPORTANT: Use C2 for:
 - Texts with archaic vocabulary (thane, mead-hall, hither, wherefore)
 - Old/Middle English translations or adaptations
 - Classical literature with preserved period language
@@ -229,8 +139,8 @@ ${text}
 
 Return ONLY JSON:
 {
-  "level": 1-6,
-  "cefr": "A1/A2/B1/B2/C1/C2+",
+  "level": "A1/A2/B1/B2/C1/C2",
+  "cefr": "A1/A2/B1/B2/C1/C2",
   "confidence": "high/medium/low",
   "reasoning": "brief explanation"
 }`;

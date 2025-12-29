@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { ProgressViewerModal } from "@/components/user-stories/ProgressViewerModal";
+import { toCEFR } from "@/lib/cefr";
 
 // Upload status stages
 export type UploadStage =
@@ -147,23 +148,13 @@ function calculateMultiLevelProgress(
   return Math.round(levelBase + (withinLevelProgress / 100) * perLevelRange);
 }
 
-// Map level codes to CEFR labels
-const levelToCEFR: Record<string, string> = {
-  l1: "A1",
-  l2: "A2",
-  l3: "B1",
-  l4: "B2",
-  l5: "C1",
-  l6: "C2",
-};
-
 // Generate stage message based on context
 function getStageMessage(
   stage: UploadStage,
   extra?: { userLevel?: string; detectedLevel?: string; currentLevel?: string; currentChapter?: number; totalChapters?: number }
 ): string {
-  const userCEFR = extra?.userLevel ? levelToCEFR[extra.userLevel] || extra.userLevel : null;
-  const detectedCEFR = extra?.detectedLevel ? levelToCEFR[extra.detectedLevel] || extra.detectedLevel : null;
+  const userCEFR = extra?.userLevel ? toCEFR(extra.userLevel) : null;
+  const detectedCEFR = extra?.detectedLevel ? toCEFR(extra.detectedLevel) : null;
   // Chapter info is now displayed as subtitle in UI, not in message
 
   switch (stage) {

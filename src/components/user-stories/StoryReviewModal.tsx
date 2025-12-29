@@ -6,18 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
+import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 
 const translations = { en, es };
-
-// Map level codes to CEFR labels
-const levelToCEFR: Record<string, string> = {
-  l1: "A1",
-  l2: "A2",
-  l3: "B1",
-  l4: "B2",
-  l5: "C1",
-  l6: "C2",
-};
 
 export default function StoryReviewModal() {
   const { lng } = useParams();
@@ -118,11 +109,12 @@ export default function StoryReviewModal() {
   };
 
   const levelLabels: Record<string, string> = {
-    l1: t.myStories.levelBeginner,
-    l2: t.myStories.levelElementary,
-    l3: t.myStories.levelIntermediate,
-    l4: t.myStories.levelUpperIntermediate,
-    l5: t.myStories.levelAdvanced,
+    A1: t.myStories.levelBeginner,
+    A2: t.myStories.levelElementary,
+    B1: t.myStories.levelIntermediate,
+    B2: t.myStories.levelUpperIntermediate,
+    C1: t.myStories.levelAdvanced,
+    C2: t.myStories.levelAdvanced, // Use same label for C2
   };
 
   return (
@@ -313,9 +305,9 @@ export default function StoryReviewModal() {
                 {lng === "es" ? "Nivel detectado" : "Detected Level"}
               </div>
               <div className="font-medium text-gray-800">
-                {levelToCEFR[storyData.detectedLevel] || storyData.detectedLevel}
+                {toCEFR(storyData.detectedLevel)}
                 <span className="text-sm text-gray-500 ml-2">
-                  ({levelLabels[storyData.detectedLevel] || storyData.detectedLevel})
+                  ({levelLabels[toCEFR(storyData.detectedLevel)] || storyData.detectedLevel})
                 </span>
               </div>
             </div>
@@ -323,12 +315,11 @@ export default function StoryReviewModal() {
 
           {/* What was created */}
           {(() => {
-            // Get user's level from session
+            // Get user's level from session (now stored as CEFR codes)
             const userLevel = session?.user?.quizLevel;
-            const userLevelStr = typeof userLevel === "number" ? `l${userLevel}` : userLevel;
-            const detectedLevel = storyData.detectedLevel;
-            const wasRewritten = userLevelStr && userLevelStr !== detectedLevel;
-            const userCEFR = userLevelStr ? levelToCEFR[userLevelStr] || userLevelStr : null;
+            const userCEFR = userLevel ? toCEFR(userLevel) : null;
+            const detectedCEFR = toCEFR(storyData.detectedLevel);
+            const wasRewritten = userCEFR && userCEFR !== detectedCEFR;
 
             return (
               <div className="p-4 bg-green-50 rounded-xl border border-green-100">

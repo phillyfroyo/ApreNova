@@ -210,7 +210,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "aventura",
     image: "/images/aventura-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
     type: "short-story",
     origin: { isOriginal: true },
@@ -220,7 +220,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "the-last-word",
     image: "/images/the-last-word-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
     type: "short-story",
     origin: { isOriginal: true },
@@ -230,7 +230,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "diego-unplugged",
     image: "/images/diego-unplugged-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
     type: "short-story",
     origin: { isOriginal: true },
@@ -240,7 +240,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "my-day",
     image: "/images/my-day-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     type: "poem",
     origin: { isOriginal: true },
     tags: ["family","multicultural"],

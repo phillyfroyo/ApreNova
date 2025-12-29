@@ -1,7 +1,13 @@
 // /src/types/story.ts
 
-export type LevelKey = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
-export type Level = "l1" | "l2" | "l3" | "l4" | "l5";
+import type { CEFRCode } from "@/lib/cefr";
+
+// Re-export CEFRCode for convenience
+export type { CEFRCode };
+
+// Legacy type aliases for backwards compatibility
+export type LevelKey = CEFRCode;
+export type Level = CEFRCode;
 
 // Story type classification
 export type StoryType =
@@ -92,7 +98,7 @@ export type ProcessingMetadata = {
 
   // Per-level availability
   cefrLevels: {
-    level: LevelKey;
+    level: CEFRCode;
     available: boolean;
     hasAudio?: boolean;
     hasGrammarNotes?: boolean;
@@ -101,7 +107,7 @@ export type ProcessingMetadata = {
   }[];
 
   // Reading time estimates per level (in minutes)
-  readingTimeByLevel?: Record<LevelKey, number>;
+  readingTimeByLevel?: Record<CEFRCode, number>;
 };
 
 // ============================================
@@ -172,7 +178,7 @@ export type StoryDescriptions = {
 export type StoryMetadata = {
   slug: string;
   image: string;
-  levels: LevelKey[];
+  levels: CEFRCode[];
   isPremiumOnly?: boolean;
 
   // Title info
