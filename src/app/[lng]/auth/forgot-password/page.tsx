@@ -6,11 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Language } from '@/types/i18n';
 import { t } from '@/lib/t';
-import { Card } from '@/components/Card';
-import { H1 } from '@/components/typography/H1';
-import { Input } from '@/components/Input';
-import { Button } from '@/components/Button';
-import { Logo } from '@/components/Logo';
+import { Card, Input, Button, H1 } from '@/components/ui';
+import Logo from '@/components/Logo';
 
 type Step = 'email' | 'code' | 'password';
 
