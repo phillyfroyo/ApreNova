@@ -4,7 +4,7 @@
 import { useState, FormEvent, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import Logo from '@/components/Logo';
-import { Card, Input, Button, H1, Small } from '@/components/ui';
+import { Card, Input, Button, H1 } from '@/components/ui';
 import Link from 'next/link';
 import Image from 'next/image';
 import { t } from '@/lib/t';
@@ -301,15 +301,10 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         <Card className="glass-card space-y-6">
           <H1 className="text-center text-xl">{title}</H1>
 
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-black/70">
-              {t(lang, 'auth', 'languagePrompt')}
-            </p>
-            <LanguageDropdown
-              currentLang={lang}
-              redirectPath={isLogin ? '/auth/login' : '/auth/signup'}
-            />
-          </div>
+          <LanguageDropdown
+            currentLang={lang}
+            redirectPath={isLogin ? '/auth/login' : '/auth/signup'}
+          />
 
           {/* Name field - signup only */}
           {!isLogin && (
@@ -335,14 +330,24 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
 
           {/* Password field - hidden in OTP mode */}
           {!isOtpMode && (
-            <Input
-              type="password"
-              placeholder={t(lang, 'auth', 'password')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+            <div className="space-y-1">
+              <Input
+                type="password"
+                placeholder={t(lang, 'auth', 'password')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+              {isLogin && (
+                <Link
+                  href={`/${lang}/auth/forgot-password`}
+                  className="block text-sm text-indigo-600 hover:text-indigo-800 hover:underline text-right"
+                >
+                  {t(lang, 'auth', 'forgotPassword')}
+                </Link>
+              )}
+            </div>
           )}
 
           {/* OTP Code input - shown in OTP mode, code step */}
@@ -362,6 +367,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
                     ref={(el) => { otpInputRefs.current[index] = el; }}
                     type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     maxLength={1}
                     value={otpCode[index] || ''}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
@@ -436,29 +442,28 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
               className="w-full text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
             >
               {loginMode === 'password'
-                ? (lang === 'en' ? 'Send me a code instead' : 'Envíame un código')
-                : (lang === 'en' ? 'Use password instead' : 'Usar contraseña')}
+                ? t(lang, 'auth', 'sendOneTimeCode')
+                : t(lang, 'auth', 'usePassword')}
             </button>
           )}
 
-          <div className="flex items-center justify-center">
-            <Small className="!text-black text-center">
-              {t(lang, 'auth', 'or')}
-            </Small>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-300" />
+            <div className="flex-1 h-px bg-gray-300" />
           </div>
 
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-100 transition group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Image
               src="https://www.svgrepo.com/show/475656/google-color.svg"
               alt="Google"
               width={20}
               height={20}
-              className="w-5 h-5 transform transition-transform duration-300 group-hover:translate-x-1"
+              className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5"
             />
             <span className="text-sm text-gray-700 font-medium">
               {googleButtonText}

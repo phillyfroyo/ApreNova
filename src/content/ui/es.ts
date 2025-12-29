@@ -21,6 +21,18 @@ const es = {
   newHere: "¿Eres nuevo?",
   loggingIn: "Iniciando sesión...",
   creatingAccount: "Creando cuenta...",
+  sendOneTimeCode: "Obtener un código de inicio de sesión",
+  usePassword: "Usar contraseña",
+  forgotPassword: "¿Olvidaste tu contraseña?",
+  resetPassword: "Restablecer contraseña",
+  resetPasswordTitle: "Restablece tu contraseña",
+  resetPasswordSubtitle: "Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.",
+  newPassword: "Nueva contraseña",
+  confirmNewPassword: "Confirmar nueva contraseña",
+  passwordUpdated: "¡Contraseña actualizada!",
+  passwordMismatch: "Las contraseñas no coinciden",
+  setNewPassword: "Establecer nueva contraseña",
+  updating: "Actualizando...",
 },
 
 language: {

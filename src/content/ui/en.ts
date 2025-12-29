@@ -21,6 +21,18 @@ auth: {
   newHere: "New Here?",
   loggingIn: "Logging in...",
   creatingAccount: "Creating account...",
+  sendOneTimeCode: "Get a one-time login code instead",
+  usePassword: "Use password instead",
+  forgotPassword: "Forgot password?",
+  resetPassword: "Reset Password",
+  resetPasswordTitle: "Reset your password",
+  resetPasswordSubtitle: "Enter your email and we'll send you a code to reset your password.",
+  newPassword: "New Password",
+  confirmNewPassword: "Confirm New Password",
+  passwordUpdated: "Password updated successfully!",
+  passwordMismatch: "Passwords do not match",
+  setNewPassword: "Set New Password",
+  updating: "Updating...",
 },
 
 language: {
