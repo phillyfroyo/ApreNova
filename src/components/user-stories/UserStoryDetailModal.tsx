@@ -10,6 +10,16 @@ import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock } from "luc
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 
+// Map internal level codes to CEFR labels
+const levelToCEFR: Record<string, string> = {
+  l1: "A1",
+  l2: "A2",
+  l3: "B1",
+  l4: "B2",
+  l5: "C1",
+  l6: "C2",
+};
+
 interface UserStoryLevel {
   level: string;
   status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
@@ -317,7 +327,8 @@ export default function UserStoryDetailModal({
                     <>
                       <span>•</span>
                       <span>
-                        CEFR: {story.detectedLevel.toUpperCase().replace("L", "")}
+                        {typedLang === "es" ? "CEFR original:" : "Original CEFR:"}{" "}
+                        {levelToCEFR[story.detectedLevel] || story.detectedLevel}
                       </span>
                     </>
                   )}

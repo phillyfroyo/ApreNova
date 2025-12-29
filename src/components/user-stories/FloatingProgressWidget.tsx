@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -18,6 +19,8 @@ export default function FloatingProgressWidget() {
     setShowReviewModal,
     setShowProgressViewer,
   } = useStoryUpload();
+
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Don't render if not uploading
   if (!isUploading && progress.stage === "idle") {
@@ -38,7 +41,8 @@ export default function FloatingProgressWidget() {
     const readingLevel = userLevel || detectedLevel || "l3";
 
     const handleStartReading = () => {
-      if (storyData?.id) {
+      if (storyData?.id && !isNavigating) {
+        setIsNavigating(true);
         // Route: /[lng]/my-stories/[storyId]/[level]/[chapter]/[page]
         router.push(`/${lng}/my-stories/${storyData.id}/${readingLevel}/1/1`);
       }
@@ -57,9 +61,20 @@ export default function FloatingProgressWidget() {
           </div>
           <button
             onClick={handleStartReading}
-            className="px-4 py-1.5 bg-white text-green-600 rounded-full font-medium text-sm hover:bg-green-50 transition-colors"
+            disabled={isNavigating}
+            className="px-4 py-1.5 bg-white text-green-600 rounded-full font-medium text-sm hover:bg-green-50 transition-colors disabled:opacity-70 flex items-center gap-2"
           >
-            {lng === "es" ? "Empezar a leer" : "Start reading"}
+            {isNavigating ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                {lng === "es" ? "Cargando..." : "Loading..."}
+              </>
+            ) : (
+              lng === "es" ? "Empezar a leer" : "Start reading"
+            )}
           </button>
         </div>
       </div>
@@ -205,19 +220,17 @@ export default function FloatingProgressWidget() {
             </div>
             <div>
               <p className="font-medium text-gray-800">{progress.message}</p>
+              {(progress.stage === "rewriting-levels" || progress.stage === "translating") &&
+                progress.currentChapter && progress.totalChapters && (
+                <p className="text-sm text-gray-500">
+                  Chapter {progress.currentChapter}/{progress.totalChapters}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
-              style={{ width: `${progress.overallProgress}%` }}
-            />
-          </div>
-
           {/* Stage steps */}
-          <div className="mt-4 flex justify-between text-xs text-gray-400">
+          <div className="mt-3 flex justify-between text-xs text-gray-400">
             <StageStep
               label="Detect"
               active={["detecting-language", "detecting-level"].includes(progress.stage)}
@@ -237,6 +250,14 @@ export default function FloatingProgressWidget() {
               label="Done"
               active={progress.stage === "review"}
               complete={progress.overallProgress === 100}
+            />
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
+              style={{ width: `${progress.overallProgress}%` }}
             />
           </div>
         </div>

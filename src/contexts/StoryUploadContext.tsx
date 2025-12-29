@@ -154,6 +154,7 @@ const levelToCEFR: Record<string, string> = {
   l3: "B1",
   l4: "B2",
   l5: "C1",
+  l6: "C2",
 };
 
 // Generate stage message based on context
@@ -163,9 +164,7 @@ function getStageMessage(
 ): string {
   const userCEFR = extra?.userLevel ? levelToCEFR[extra.userLevel] || extra.userLevel : null;
   const detectedCEFR = extra?.detectedLevel ? levelToCEFR[extra.detectedLevel] || extra.detectedLevel : null;
-  const chapterInfo = extra?.currentChapter && extra?.totalChapters
-    ? ` (${extra.currentChapter}/${extra.totalChapters})`
-    : "";
+  // Chapter info is now displayed as subtitle in UI, not in message
 
   switch (stage) {
     case "idle":
@@ -180,11 +179,15 @@ function getStageMessage(
       return "Creating title & description...";
     case "rewriting-levels":
       if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
-        return `Adapting ${detectedCEFR}→${userCEFR}${chapterInfo}`;
+        return `Adapting ${detectedCEFR}→${userCEFR}`;
       }
-      return `Adapting${chapterInfo}`;
+      return "Adapting";
     case "translating":
-      return `Translating${chapterInfo}`;
+      // Show which text is being translated with CEFR level
+      if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
+        return `Translating (${userCEFR} text)`;
+      }
+      return `Translating (${detectedCEFR || "original"} text)`;
     case "finalizing":
       return "Finalizing your story...";
     case "review":
@@ -320,8 +323,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       // Poll for status updates
       // Large books like Dracula (27 chapters) can take 30-60 minutes
       // Each chapter takes ~30-90 seconds to translate
+      // Poll every 5 seconds to reduce database transfer costs
       let attempts = 0;
-      const maxAttempts = 3600; // 1 hour max (3600 seconds)
+      const maxAttempts = 720; // 1 hour max (720 * 5s = 3600 seconds)
+      const pollIntervalMs = 5000;
 
       while (attempts < maxAttempts) {
         if (controller.signal.aborted) {
@@ -329,9 +334,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           throw new Error("Upload cancelled");
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
 
-        const statusResponse = await fetch(`/api/user-stories/${story.id}`, {
+        // Use lightweight status endpoint to minimize data transfer
+        const statusResponse = await fetch(`/api/user-stories/${story.id}/status`, {
           signal: controller.signal,
         });
 
@@ -344,8 +350,8 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         const statusData = await statusResponse.json();
         const storyStatus = statusData.story;
 
-        // Log status every 10 attempts or on status change
-        if (attempts % 10 === 0 || attempts === 0) {
+        // Log status every 2 attempts (every 10 seconds)
+        if (attempts % 2 === 0 || attempts === 0) {
           console.log("[StoryUpload] Poll status:", {
             attempt: attempts + 1,
             status: storyStatus.status,
@@ -465,12 +471,19 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           });
 
           // Update story data with final values
+          // Use localized description based on source language, with fallbacks
+          const finalDescription = storyStatus.description
+            || (storyStatus.sourceLanguage === "es" ? storyStatus.descriptionEs : storyStatus.descriptionEn)
+            || storyStatus.descriptionEs
+            || storyStatus.descriptionEn
+            || "";
+
           setStoryData(prev => prev ? {
             ...prev,
             id: storyStatus.id,
             title: storyStatus.title || prev.title,
             titleGenerated: !optionalTitle,
-            description: storyStatus.description || "",
+            description: finalDescription,
             descriptionGenerated: true,
             sourceLanguage: storyStatus.sourceLanguage || "es",
             sourceLanguageDetected: true,

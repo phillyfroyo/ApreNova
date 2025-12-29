@@ -146,10 +146,10 @@ export function detectTruncation(
     reasons.push("API response hit max_tokens limit");
   }
 
-  // Check 2: Line count mismatch - too few translated lines
-  if (translatedNonEmpty < lineCount * 0.8) {
+  // Check 2: Line count mismatch - MUST be exact match for bilingual alignment
+  if (translatedNonEmpty !== lineCount) {
     isTruncated = true;
-    reasons.push(`Missing lines: ${translatedNonEmpty}/${lineCount} translated`);
+    reasons.push(`Line count mismatch: ${translatedNonEmpty}/${lineCount} (must be exact)`);
   }
 
   // Check 3: Compare last source line length vs last translated line length

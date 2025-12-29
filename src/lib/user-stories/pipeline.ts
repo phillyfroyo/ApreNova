@@ -230,9 +230,24 @@ async function processAllLevels(
 export async function processUserStory(storyId: string): Promise<void> {
   console.log(`[Pipeline] Processing story: ${storyId}`);
 
+  // Use select to avoid fetching large content fields from levels
   const story = await prisma.userStory.findUnique({
     where: { id: storyId },
-    include: { levels: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      rawContent: true,
+      userId: true,
+      sourceLanguage: true,
+      levels: {
+        select: {
+          id: true,
+          level: true,
+        },
+      },
+    },
   });
 
   if (!story) {
@@ -303,9 +318,22 @@ export async function retryLevel(
   storyId: string,
   level: string
 ): Promise<{ success: boolean; error?: string }> {
+  // Use select to avoid fetching large content fields
   const story = await prisma.userStory.findUnique({
     where: { id: storyId },
-    include: { levels: true },
+    select: {
+      id: true,
+      slug: true,
+      rawContent: true,
+      sourceLanguage: true,
+      detectedLevel: true,
+      levels: {
+        select: {
+          id: true,
+          level: true,
+        },
+      },
+    },
   });
 
   if (!story) {
@@ -328,10 +356,16 @@ export async function retryLevel(
   });
 
   if (result.success) {
-    // Check if all levels are now ready
+    // Check if all levels are now ready (only need status, not content)
     const updatedStory = await prisma.userStory.findUnique({
       where: { id: storyId },
-      include: { levels: true },
+      select: {
+        levels: {
+          select: {
+            status: true,
+          },
+        },
+      },
     });
 
     if (updatedStory) {
@@ -353,9 +387,18 @@ export async function getProcessingStatus(storyId: string): Promise<{
   storyStatus: string;
   levels: { level: string; status: string; error?: string }[];
 } | null> {
+  // Only fetch status fields, not content
   const story = await prisma.userStory.findUnique({
     where: { id: storyId },
-    include: { levels: true },
+    select: {
+      status: true,
+      levels: {
+        select: {
+          level: true,
+          status: true,
+        },
+      },
+    },
   });
 
   if (!story) return null;

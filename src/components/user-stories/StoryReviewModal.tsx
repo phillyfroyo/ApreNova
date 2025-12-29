@@ -16,6 +16,7 @@ const levelToCEFR: Record<string, string> = {
   l3: "B1",
   l4: "B2",
   l5: "C1",
+  l6: "C2",
 };
 
 export default function StoryReviewModal() {
@@ -35,15 +36,46 @@ export default function StoryReviewModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file drop
-  const handleFile = useCallback((file: File) => {
-    if (file && file.type.startsWith("image/")) {
-      const url = URL.createObjectURL(file);
+  // Handle file upload to Azure
+  const handleFile = useCallback(async (file: File) => {
+    if (!file || !file.type.startsWith("image/")) return;
+
+    setIsUploadingThumbnail(true);
+
+    // Show preview immediately while uploading
+    const previewUrl = URL.createObjectURL(file);
+    updateStoryData({ thumbnailUrl: previewUrl });
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (storyData?.id) {
+        formData.append("storyId", storyData.id);
+      }
+
+      const response = await fetch("/api/upload/thumbnail", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const { url } = await response.json();
       updateStoryData({ thumbnailUrl: url });
+      URL.revokeObjectURL(previewUrl); // Clean up preview
+    } catch (error: any) {
+      console.error("Thumbnail upload failed:", error.message);
+      // Keep preview URL as fallback, but it won't persist
+    } finally {
+      setIsUploadingThumbnail(false);
     }
-  }, [updateStoryData]);
+  }, [updateStoryData, storyData?.id]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -81,10 +113,7 @@ export default function StoryReviewModal() {
   const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // For now, create a local URL preview
-      // In production, this would upload to cloud storage
-      const url = URL.createObjectURL(file);
-      updateStoryData({ thumbnailUrl: url });
+      handleFile(file);
     }
   };
 
@@ -141,11 +170,21 @@ export default function StoryReviewModal() {
                 }`}
               >
                 {storyData.thumbnailUrl ? (
-                  <img
-                    src={storyData.thumbnailUrl}
-                    alt="Story thumbnail"
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-full">
+                    <img
+                      src={storyData.thumbnailUrl}
+                      alt="Story thumbnail"
+                      className="w-full h-full object-cover"
+                    />
+                    {isUploadingThumbnail && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                 ) : isDragging ? (
                   <>
                     <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,7 +313,10 @@ export default function StoryReviewModal() {
                 {lng === "es" ? "Nivel detectado" : "Detected Level"}
               </div>
               <div className="font-medium text-gray-800">
-                {levelLabels[storyData.detectedLevel] || storyData.detectedLevel}
+                {levelToCEFR[storyData.detectedLevel] || storyData.detectedLevel}
+                <span className="text-sm text-gray-500 ml-2">
+                  ({levelLabels[storyData.detectedLevel] || storyData.detectedLevel})
+                </span>
               </div>
             </div>
           </div>

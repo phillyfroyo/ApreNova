@@ -27,9 +27,25 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (visibility) where.visibility = visibility;
 
+    // Use select to exclude rawContent (can be very large)
     const stories = await prisma.userStory.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        titleEs: true,
+        titleEn: true,
+        description: true,
+        descriptionEs: true,
+        descriptionEn: true,
+        sourceLanguage: true,
+        detectedLevel: true,
+        thumbnailUrl: true,
+        status: true,
+        visibility: true,
+        createdAt: true,
+        updatedAt: true,
         levels: {
           select: {
             level: true,

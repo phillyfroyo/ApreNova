@@ -19,12 +19,28 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const { storyId } = await params;
 
+    // Use select to exclude rawContent (can be very large)
     const story = await prisma.userStory.findFirst({
       where: {
         id: storyId,
         userId: session.user.id,
       },
-      include: {
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        titleEs: true,
+        titleEn: true,
+        description: true,
+        descriptionEs: true,
+        descriptionEn: true,
+        sourceLanguage: true,
+        detectedLevel: true,
+        thumbnailUrl: true,
+        status: true,
+        visibility: true,
+        createdAt: true,
+        updatedAt: true,
         levels: {
           select: {
             id: true,

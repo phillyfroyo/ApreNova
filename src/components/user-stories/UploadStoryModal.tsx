@@ -52,9 +52,25 @@ export default function UploadStoryModal() {
     if (showUploadModal && session?.user) {
       setLoadingStats(true);
       fetch("/api/user-stories/count")
-        .then((res) => res.json())
-        .then((data) => setStats(data))
-        .catch(() => setStats(null))
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to fetch stats");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          // Validate that we got actual stats, not an error object
+          if (data && typeof data.totalStories === "number") {
+            setStats(data);
+          } else {
+            console.error("Invalid stats response:", data);
+            setStats(null);
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching story stats:", err);
+          setStats(null);
+        })
         .finally(() => setLoadingStats(false));
     }
   }, [showUploadModal, session?.user]);

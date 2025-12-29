@@ -34,17 +34,54 @@ export function ProgressViewerModal({
 }: ProgressViewerModalProps) {
   const [selectedChapter, setSelectedChapter] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Drag state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
 
   // Determine which data to show based on stage
   const isRewriting = stage === "rewriting";
   const displayChapters = isRewriting ? rewriteChapters : chapters;
 
-  // Reset to first chapter when opening
+  // Reset to first chapter and position when opening
   useEffect(() => {
     if (isOpen) {
       setSelectedChapter(0);
+      setPosition({ x: 0, y: 0 });
     }
   }, [isOpen]);
+
+  // Drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return; // Don't drag from buttons
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Handle Escape key
   useEffect(() => {
@@ -95,8 +132,8 @@ export function ProgressViewerModal({
     const translationData = currentChapterData as ChapterData;
     leftLines = translationData.sourceLines || [];
     rightLines = translationData.translatedLines || [];
-    leftTitle = sourceLanguage === "en" ? "English (Source)" : "Español (Fuente)";
-    rightTitle = sourceLanguage === "en" ? "Español (Translation)" : "English (Translation)";
+    leftTitle = sourceLanguage === "en" ? "English (Source)" : "Spanish (Source)";
+    rightTitle = sourceLanguage === "en" ? "Spanish (Translation)" : "English (Translation)";
     footerLeftLabel = "source";
     footerRightLabel = "translated";
   }
@@ -131,9 +168,16 @@ export function ProgressViewerModal({
       {/* Modal Container - uses min-height and padding to ensure modal is always fully visible */}
       <div className="min-h-full flex items-start justify-center p-4 sm:p-6 md:p-8">
         {/* Modal Content - responsive width, max height with scroll */}
-        <div className="relative w-full max-w-[95vw] xl:max-w-7xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 max-h-[calc(100vh-4rem)]">
-          {/* Header */}
-          <div className={`${headerGradient} text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shrink-0`}>
+        <div
+          ref={modalRef}
+          className="relative w-full max-w-[95vw] xl:max-w-7xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 max-h-[calc(100vh-4rem)]"
+          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        >
+          {/* Header - draggable */}
+          <div
+            className={`${headerGradient} text-white px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shrink-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            onMouseDown={handleMouseDown}
+          >
             <div className="flex items-center gap-2 md:gap-4 flex-wrap">
               <span className="text-base md:text-lg font-semibold">
                 {stageTitle}
