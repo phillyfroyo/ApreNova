@@ -24,7 +24,11 @@
       "WebSearch",
       "WebFetch(domain:www.gutenberg.org)",
       "Bash(echo:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(timeout 10 npm run dev)"
     ],
     "deny": []
   }

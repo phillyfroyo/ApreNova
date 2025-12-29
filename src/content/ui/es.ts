@@ -108,7 +108,7 @@ onboarding: {
   welcomeSubtitle: "Personalicemos tu experiencia de aprendizaje",
   findYourLevel: "Encuentra tu Nivel",
   findYourLevelDesc: "Responde unas preguntas para encontrar tu punto de partida.",
-  quizDuration: "4 preguntas",
+  quizDuration: "5 preguntas",
   knowYourLevel: "¿Ya sabes tu nivel?",
   selectBelow: "Selecciona tu nivel abajo",
   continueToStories: "Ir a las Historias",

@@ -126,15 +126,21 @@ export class RateLimiter {
 const rateLimiters = {
   // Individual TTS generation: 30 requests per minute
   generate: new RateLimiter(60000, 30),
-  
+
   // Batch TTS generation: 5 requests per minute (more resource intensive)
   batch: new RateLimiter(60000, 5),
-  
+
   // Audio retrieval: 200 requests per minute (less intensive)
-  retrieve: new RateLimiter(60000, 200)
+  retrieve: new RateLimiter(60000, 200),
+
+  // Auth endpoints: 5 attempts per minute (stricter for security)
+  authLogin: new RateLimiter(60000, 5),
+
+  // Signup: 3 attempts per minute (even stricter)
+  authSignup: new RateLimiter(60000, 3),
 };
 
-export function getRateLimiter(type: 'generate' | 'batch' | 'retrieve'): RateLimiter {
+export function getRateLimiter(type: 'generate' | 'batch' | 'retrieve' | 'authLogin' | 'authSignup'): RateLimiter {
   return rateLimiters[type];
 }
 

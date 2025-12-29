@@ -108,7 +108,7 @@ onboarding: {
   welcomeSubtitle: "Let's personalize your learning experience",
   findYourLevel: "Find Your Level",
   findYourLevelDesc: "Take a quick quiz to find the perfect starting point.",
-  quizDuration: "4 questions",
+  quizDuration: "5 questions",
   knowYourLevel: "Already know your level?",
   selectBelow: "Select your proficiency below",
   continueToStories: "Continue to Stories",
