@@ -26,8 +26,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string
     name?: string;
+    image?: string;
     nativeLanguage?: string;
-    quizLevel?: string; // 👈 ADD THIS
+    quizLevel?: string;
     isPremium?: boolean;
   }
 }

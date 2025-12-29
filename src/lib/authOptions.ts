@@ -71,6 +71,7 @@ export const authOptions: AuthOptions = {
 
     if (dbUser) {
       token.id = dbUser.id;
+      if (dbUser.image) token.image = dbUser.image;
       if (dbUser.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
       if (dbUser.quizLevel) token.quizLevel = dbUser.quizLevel;
       if (dbUser.name) token.name = dbUser.name;
@@ -91,6 +92,7 @@ export const authOptions: AuthOptions = {
     session.user.id = dbUser.id;
     session.user.name = dbUser.name ?? undefined;
     session.user.email = dbUser.email ?? undefined;
+    session.user.image = dbUser.image ?? undefined;
     session.user.nativeLanguage = dbUser.nativeLanguage ?? undefined;
     session.user.quizLevel = dbUser.quizLevel ?? undefined;
     session.user.isPremium = dbUser.isPremium ?? false;

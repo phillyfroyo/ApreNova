@@ -2,36 +2,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // uncomment next line if you use Prisma <5.10
-  // directUrl = env("DATABASE_URL_UNPOOLED")
-}
-
-model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String    @unique
-  emailVerified  DateTime?
-  image          String?
-  password       String?
-  nativeLanguage String?
-  quizLevel      String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  isPremium Boolean @default(false)
-
-
-  accounts Account[]
-  sessions Session[]
-
-  sessionLogs         SessionLog[]
-  completedStories    CompletedStory[]
-  tutorMessages       TutorMessage[]
-  storyTutorMessages  StoryTutorMessage[]
-  storyBookmarks      StoryBookmark[]
 }
 
 model Account {
@@ -47,10 +20,35 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model CompletedStory {
+  id          String   @id @default(cuid())
+  userId      String
+  storySlug   String
+  level       String
+  completedAt DateTime @default(now())
+  chapter     Int      @default(1)
+  page        Int      @default(1)
+  User        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, storySlug, level, chapter, page])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  email     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([email, expiresAt])
 }
 
 model Session {
@@ -58,8 +56,76 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SessionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  ms        Int
+  type      String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model StoryBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  storySlug String
+  level     String
+  chapter   Int
+  page      Int
+  updatedAt DateTime
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storySlug])
+  @@index([userId])
+}
+
+model StoryTutorMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  storySlug String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storySlug, createdAt])
+}
+
+model TutorMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model User {
+  id                String              @id @default(cuid())
+  name              String?
+  email             String              @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  nativeLanguage    String?
+  quizLevel         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  isPremium         Boolean             @default(false)
+  Account           Account[]
+  CompletedStory    CompletedStory[]
+  Session           Session[]
+  SessionLog        SessionLog[]
+  StoryBookmark     StoryBookmark[]
+  StoryTutorMessage StoryTutorMessage[]
+  TutorMessage      TutorMessage[]
+  UserStory         UserStory[]
+  UserStoryBookmark UserStoryBookmark[]
 }
 
 model VerificationToken {
@@ -70,79 +136,79 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model SessionLog {
-  id        String   @id @default(cuid())
-  userId    String
-  ms        Int
-  type      String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+model UserStory {
+  id                String              @id
+  userId            String
+  slug              String
+  title             String
+  titleEs           String?
+  titleEn           String?
+  description       String?
+  descriptionEs     String?
+  descriptionEn     String?
+  sourceLanguage    String
+  detectedLevel     String?
+  thumbnailUrl      String?
+  status            UserStoryStatus     @default(PROCESSING)
+  visibility        StoryVisibility     @default(PRIVATE)
+  rawContent        String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  User              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  UserStoryBookmark UserStoryBookmark[]
+  UserStoryLevel    UserStoryLevel[]
+
+  @@unique([userId, slug])
+  @@index([userId, status])
 }
 
-model CompletedStory {
-  id          String   @id @default(cuid())
+model UserStoryBookmark {
+  id          String    @id
   userId      String
-  storySlug   String
+  userStoryId String
   level       String
-  chapter     Int      @default(1)
-  page        Int      @default(1)
-  completedAt DateTime @default(now())
+  chapter     Int
+  page        Int
+  updatedAt   DateTime
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  UserStory   UserStory @relation(fields: [userStoryId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([userId, storySlug, level, chapter, page])
-}
-
-model TutorMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  role      String   // "user" or "assistant"
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-}
-
-model StoryTutorMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  storySlug String
-  role      String   // "user" or "assistant"
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, storySlug, createdAt])
-}
-
-model StoryBookmark {
-  id        String   @id @default(cuid())
-  userId    String
-  storySlug String
-  level     String
-  chapter   Int
-  page      Int
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, storySlug])
+  @@unique([userId, userStoryId])
   @@index([userId])
 }
 
-// OTP codes for passwordless login
-model OtpCode {
-  id          String   @id @default(cuid())
-  email       String
-  codeHash    String   // Hashed OTP code (never store plain text)
-  expiresAt   DateTime
-  attempts    Int      @default(0) // Track failed verification attempts
-  used        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+model UserStoryLevel {
+  id                 String      @id
+  userStoryId        String
+  level              String
+  content            Json
+  status             LevelStatus @default(PENDING)
+  processingProgress Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime
+  UserStory          UserStory   @relation(fields: [userStoryId], references: [id], onDelete: Cascade)
 
-  @@index([email, expiresAt])
-  @@index([createdAt]) // For cleanup job
+  @@unique([userStoryId, level])
+  @@index([userStoryId])
+}
+
+enum LevelStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum StoryVisibility {
+  PRIVATE
+  SUBMITTED
+  PUBLIC
+  REJECTED
+}
+
+enum UserStoryStatus {
+  PROCESSING
+  READY
+  FAILED
+  PARTIAL
 }
