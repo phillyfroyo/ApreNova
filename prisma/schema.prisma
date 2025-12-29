@@ -132,3 +132,17 @@ model StoryBookmark {
   @@unique([userId, storySlug])
   @@index([userId])
 }
+
+// OTP codes for passwordless login
+model OtpCode {
+  id          String   @id @default(cuid())
+  email       String
+  codeHash    String   // Hashed OTP code (never store plain text)
+  expiresAt   DateTime
+  attempts    Int      @default(0) // Track failed verification attempts
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([email, expiresAt])
+  @@index([createdAt]) // For cleanup job
+}
