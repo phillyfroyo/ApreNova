@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
         level,
         chapter,
         page,
+        updatedAt: new Date(),
       },
       create: {
         userId: session.user.id,
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
         level,
         chapter,
         page,
+        updatedAt: new Date(),
       },
     });
 
