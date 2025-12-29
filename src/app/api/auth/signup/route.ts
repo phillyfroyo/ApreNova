@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         password: hashed,
         nativeLanguage: nativeLanguage ?? null,
         name: name ?? null,
+        updatedAt: new Date(),
       },
     });
 
