@@ -231,6 +231,15 @@ export function toNumericLevel(level: CEFRCode | string | number): number {
 }
 
 /**
+ * Convert CEFR to legacy folder name (l1-l6) for content file paths
+ * Used when loading content from /content/[story]/[level]/ folders
+ */
+export function toFolderName(level: CEFRCode | string | number): string {
+  const numLevel = toNumericLevel(level);
+  return `l${numLevel}`;
+}
+
+/**
  * Convert numeric level to CEFR
  */
 export function fromNumericLevel(level: number): CEFRCode {

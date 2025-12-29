@@ -490,6 +490,10 @@ function detectChapterMarkers(lines: string[]): ChapterMarker[] {
  * Filter out Table of Contents markers
  * TOC entries appear in rapid succession (consecutive or near-consecutive lines)
  * Actual chapters have substantial content between them
+ *
+ * Strategy: Find the FIRST cluster of 3+ markers within 3 lines of each other.
+ * This is the TOC. The next marker after a significant gap (>10 lines) starts
+ * the actual chapter content.
  */
 function filterOutTOCMarkers(markers: ChapterMarker[]): ChapterMarker[] {
   if (markers.length < 3) return markers;
@@ -498,46 +502,79 @@ function filterOutTOCMarkers(markers: ChapterMarker[]): ChapterMarker[] {
   // These are almost certainly TOC entries
   const TOC_LINE_THRESHOLD = 3;
   const MIN_CLUSTER_SIZE = 3;
+  const MIN_GAP_AFTER_TOC = 10; // Require at least 10 lines gap after TOC
 
-  const clusters: number[][] = []; // Array of marker indices in each cluster
-  let currentCluster: number[] = [0];
+  // Find the first cluster (the TOC)
+  let tocEndIndex = -1;
+  let clusterStart = 0;
+  let clusterSize = 1;
 
   for (let i = 1; i < markers.length; i++) {
     const lineGap = markers[i].lineIndex - markers[i - 1].lineIndex;
 
     if (lineGap <= TOC_LINE_THRESHOLD) {
-      // This marker is close to the previous one - same cluster
-      currentCluster.push(i);
-    } else {
-      // Gap is large - start a new cluster
-      if (currentCluster.length >= MIN_CLUSTER_SIZE) {
-        clusters.push([...currentCluster]);
+      // This marker is close to the previous one - extend cluster
+      clusterSize++;
+    } else if (lineGap >= MIN_GAP_AFTER_TOC) {
+      // Large gap - if we have a valid cluster, this marks the end of TOC
+      if (clusterSize >= MIN_CLUSTER_SIZE) {
+        tocEndIndex = i - 1; // Last marker in the TOC cluster
+        break;
       }
-      currentCluster = [i];
+      // Not a valid cluster, reset
+      clusterStart = i;
+      clusterSize = 1;
+    } else {
+      // Medium gap (between 4-9 lines) - could be end of TOC or just spacing
+      // If we already have a cluster, check if next marker continues the pattern
+      if (clusterSize >= MIN_CLUSTER_SIZE) {
+        // We have a TOC cluster, but next marker is in a gray zone
+        // Look ahead to see if there's another cluster forming
+        let nextClusterSize = 1;
+        for (let j = i + 1; j < markers.length; j++) {
+          const nextGap = markers[j].lineIndex - markers[j - 1].lineIndex;
+          if (nextGap <= TOC_LINE_THRESHOLD) {
+            nextClusterSize++;
+          } else {
+            break;
+          }
+        }
+        // If next markers don't form a cluster, this is probably the first real chapter
+        if (nextClusterSize < MIN_CLUSTER_SIZE) {
+          tocEndIndex = i - 1;
+          break;
+        }
+      }
+      clusterStart = i;
+      clusterSize = 1;
     }
   }
 
-  // Don't forget the last cluster
-  if (currentCluster.length >= MIN_CLUSTER_SIZE) {
-    clusters.push([...currentCluster]);
-  }
-
-  // If no TOC clusters found, return all markers
-  if (clusters.length === 0) return markers;
-
-  // Create a set of indices to exclude (TOC markers)
-  const tocIndices = new Set<number>();
-  for (const cluster of clusters) {
-    for (const idx of cluster) {
-      tocIndices.add(idx);
+  // If we ended in a cluster but never found a large gap, check if it's the whole file
+  if (tocEndIndex === -1 && clusterSize >= MIN_CLUSTER_SIZE) {
+    // All markers are in one cluster - this might be all TOC or all chapters
+    // If they span < 50 lines total, it's probably TOC
+    const firstLine = markers[clusterStart].lineIndex;
+    const lastLine = markers[markers.length - 1].lineIndex;
+    if (lastLine - firstLine < 50) {
+      tocEndIndex = markers.length - 1;
     }
   }
 
-  // Return only non-TOC markers
-  const filtered = markers.filter((_, idx) => !tocIndices.has(idx));
+  // If no TOC cluster found, return all markers
+  if (tocEndIndex === -1) return markers;
+
+  // Filter out TOC markers (indices 0 through tocEndIndex)
+  const filtered = markers.slice(tocEndIndex + 1);
 
   if (filtered.length < markers.length) {
     console.log(`[preprocessText] Filtered out ${markers.length - filtered.length} TOC markers`);
+  }
+
+  // If all markers were filtered, that's wrong - return at least the last few
+  if (filtered.length === 0) {
+    console.log(`[preprocessText] WARNING: All markers filtered as TOC, keeping last ${Math.min(12, markers.length)} markers`);
+    return markers.slice(-Math.min(12, markers.length));
   }
 
   return filtered;

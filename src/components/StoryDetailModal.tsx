@@ -5,13 +5,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Badge, Button } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution, getAuthorName, getAuthorLifespan, getYearPublished, isPublicDomain, getPublicDomainNote } from "@/lib/stories";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { getStoryTitle, getStoryDescription } from "@/lib/stories";
 import type { StoryMetadata, StoryAttribution } from "@/types/story";
+import { toCEFR, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
+
+// CEFR badge colors
+const CEFR_BADGE_COLORS: Record<string, string> = {
+  A1: "bg-green-100 text-green-800",
+  A2: "bg-blue-100 text-blue-800",
+  B1: "bg-yellow-100 text-yellow-800",
+  B2: "bg-orange-100 text-orange-800",
+  C1: "bg-purple-100 text-purple-800",
+  C2: "bg-red-100 text-red-800",
+};
 
 type StoryDetailModalProps = {
   storySlug: string | null;
@@ -268,13 +279,10 @@ export default function StoryDetailModal({
       }
     }
 
-    // No bookmark - use default level
+    // No bookmark - use default level (convert any format to CEFR)
     const storedLevel =
       typeof window !== "undefined" ? localStorage.getItem("level") : null;
-    const level =
-      user?.quizLevel?.toLowerCase?.() ||
-      storedLevel?.toLowerCase?.() ||
-      "l2";
+    const level = toCEFR(user?.quizLevel || storedLevel || "A2");
 
     const url = getStoryUrl(story.slug, level, 1, 1, typedLang);
     router.push(url);
@@ -396,16 +404,15 @@ export default function StoryDetailModal({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {story.levels.map((lvl, idx) => {
-                      const badgeLevel = `level${lvl.replace("l", "")}` as
-                        | "level1"
-                        | "level2"
-                        | "level3"
-                        | "level4"
-                        | "level5";
+                      const cefrLevel = toCEFR(lvl);
+                      const colorClass = CEFR_BADGE_COLORS[cefrLevel] || "bg-gray-100 text-gray-800";
                       return (
-                        <Badge key={idx} level={badgeLevel}>
-                          {t(typedLang, "stories", "level")} {lvl.replace("l", "")}
-                        </Badge>
+                        <span
+                          key={idx}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass}`}
+                        >
+                          {getCEFRLabel(cefrLevel, typedLang)}
+                        </span>
                       );
                     })}
                   </div>

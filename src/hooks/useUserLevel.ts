@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 
-export function useUserLevel(defaultLevel: string = 'l2') {
+export function useUserLevel(defaultLevel: string = 'A2') {
   const { data: session } = useSession()
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
 

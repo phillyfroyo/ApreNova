@@ -61,11 +61,20 @@ story: {
 },
 
 levels: {
-  l1: "Brand New",
-  l2: "Beginner",
-  l3: "Intermediate",
-  l4: "Advanced",
-  l5: "Fluent"
+  // Legacy keys for backwards compatibility
+  l1: "A1 - Foundations",
+  l2: "A2 - Developing",
+  l3: "B1 - Independent",
+  l4: "B2 - Upper-Intermediate",
+  l5: "C1 - Advanced",
+  l6: "C2 - Mastery",
+  // CEFR codes
+  A1: "A1 - Foundations",
+  A2: "A2 - Developing",
+  B1: "B1 - Independent",
+  B2: "B2 - Upper-Intermediate",
+  C1: "C1 - Advanced",
+  C2: "C2 - Mastery",
 },
 
 home: {

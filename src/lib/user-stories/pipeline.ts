@@ -17,6 +17,7 @@ import { updateStoryStatus, determineFinalStatus } from "./progress-tracker";
 
 // Shared library imports
 import { detectLanguage, detectCEFRLevel } from "@/lib/story-processing";
+import { toCEFR } from "@/lib/cefr";
 
 // Re-export types for consumers
 export type { ProcessingProgress } from "./progress-tracker";
@@ -38,14 +39,8 @@ async function getUserLevel(userId: string): Promise<string | null> {
 
   if (!user?.quizLevel) return null;
 
-  const level = user.quizLevel;
-  if (typeof level === "number") {
-    return `l${level}`;
-  }
-  if (typeof level === "string") {
-    return level.startsWith("l") ? level : `l${level}`;
-  }
-  return null;
+  // Convert any format (l1-l6, 1-6, A1-C2) to CEFR code
+  return toCEFR(user.quizLevel);
 }
 
 /**
@@ -149,17 +144,30 @@ async function detectAndSaveLevel(
 
 /**
  * Step 5: Determine which levels need processing
- * Returns: Set of level strings (e.g., "l2", "l3")
+ * Returns: Set of level strings in CEFR format (e.g., "A2", "B1")
  */
 async function determineLevelsToProcess(
   userId: string,
   detectedLevel: string
 ): Promise<Set<string>> {
-  const levelsToProcess = new Set<string>([detectedLevel]);
+  // Supported levels for user stories (A1-C1)
+  const SUPPORTED_LEVELS = ["A1", "A2", "B1", "B2", "C1"];
+
+  // Map detected level to supported level (C2 -> C1, anything outside range -> B1)
+  let effectiveLevel = detectedLevel;
+  if (!SUPPORTED_LEVELS.includes(detectedLevel)) {
+    effectiveLevel = detectedLevel === "C2" ? "C1" : "B1";
+    console.log(`[Pipeline] Mapping unsupported level ${detectedLevel} to ${effectiveLevel}`);
+  }
+
+  const levelsToProcess = new Set<string>([effectiveLevel]);
 
   const userLevel = await getUserLevel(userId);
-  if (userLevel && userLevel !== detectedLevel) {
-    levelsToProcess.add(userLevel);
+  if (userLevel && userLevel !== effectiveLevel) {
+    // Also ensure user level is supported
+    if (SUPPORTED_LEVELS.includes(userLevel)) {
+      levelsToProcess.add(userLevel);
+    }
   }
 
   return levelsToProcess;

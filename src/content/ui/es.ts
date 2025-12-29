@@ -61,11 +61,20 @@ story: {
 },
 
 levels: {
-  l1: "Recién empezado",
-  l2: "Principiante",
-  l3: "Intermedio",
-  l4: "Avanzado",
-  l5: "Fluido"
+  // Legacy keys for backwards compatibility
+  l1: "A1 - Fundamentos",
+  l2: "A2 - En Desarrollo",
+  l3: "B1 - Independiente",
+  l4: "B2 - Intermedio Alto",
+  l5: "C1 - Avanzado",
+  l6: "C2 - Maestría",
+  // CEFR codes
+  A1: "A1 - Fundamentos",
+  A2: "A2 - En Desarrollo",
+  B1: "B1 - Independiente",
+  B2: "B2 - Intermedio Alto",
+  C1: "C1 - Avanzado",
+  C2: "C2 - Maestría",
 },
 
   home: {

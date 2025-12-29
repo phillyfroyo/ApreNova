@@ -10,6 +10,7 @@ import {
   buildContentStructure,
   quickClean,
   cleanText,
+  levelStringToNumber,
 } from "@/lib/story-processing";
 
 // ============================================================================
@@ -92,7 +93,7 @@ export async function processLevel(
     );
 
     // Step 3: Build content structure
-    const levelNum = parseInt(level.replace("l", ""));
+    const levelNum = levelStringToNumber(level);
     const content = buildContentStructure(
       storySlug,
       levelNum,

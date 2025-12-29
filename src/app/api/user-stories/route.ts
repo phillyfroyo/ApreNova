@@ -9,6 +9,7 @@ import {
   canProcessToday,
   validateContentLength,
 } from "@/lib/user-stories/access-control";
+import { ALL_CEFR_LEVELS } from "@/lib/cefr";
 
 // GET: List user's stories
 export async function GET(req: NextRequest) {
@@ -178,8 +179,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create placeholder level records for all 5 levels
-    const levels = ["l1", "l2", "l3", "l4", "l5"];
+    // Create placeholder level records for all CEFR levels (A1-C1)
+    const levels = ALL_CEFR_LEVELS.slice(0, 5); // A1, A2, B1, B2, C1
     await prisma.userStoryLevel.createMany({
       data: levels.map((level) => ({
         userStoryId: story.id,

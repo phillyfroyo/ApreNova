@@ -7,14 +7,14 @@ import { useRouter, useParams } from "next/navigation";
 import { useSession } from 'next-auth/react';
 import type { Language } from "@/types/i18n";
 import { t } from '@/lib/t';
+import { ALL_CEFR_LEVELS, getCEFRLabel, toCEFR, type CEFRCode } from '@/lib/cefr';
 
-const levelOptions = [
-  { value: 'l1', label: 'Level 1 - Brand New' },
-  { value: 'l2', label: 'Level 2 - Beginner' },
-  { value: 'l3', label: 'Level 3 - Intermediate' },
-  { value: 'l4', label: 'Level 4 - Advanced' },
-  { value: 'l5', label: 'Level 5 - Fluent' },
-];
+// Generate level options from CEFR definitions
+const levelOptions = ALL_CEFR_LEVELS.slice(0, 5).map((level) => ({
+  value: level,
+  labelEn: getCEFRLabel(level, 'en'),
+  labelEs: getCEFRLabel(level, 'es'),
+}));
 
 export default function SettingsLevelDisplay() {
   const selectedLevel = useUserLevel()
@@ -68,11 +68,14 @@ export default function SettingsLevelDisplay() {
     )
   }
 
+  // Convert to CEFR for display
+  const displayLevel = toCEFR(selectedLevel);
+
   return (
     <div className="text-sm mb-2">
       <div className="flex items-center justify-between">
         <span className="font-medium">
-          🎯 <span className="text-black">{t(typedLang, 'settings', 'currentLevel')}:</span> {selectedLevel.toUpperCase()}
+          🎯 <span className="text-black">{t(typedLang, 'settings', 'currentLevel')}:</span> {getCEFRLabel(displayLevel, typedLang)}
         </span>
 
         <button
@@ -87,14 +90,14 @@ export default function SettingsLevelDisplay() {
       {editing && (
         <div className="mt-2 space-y-2">
           <select
-            value={selectedLevel}
+            value={displayLevel}
             onChange={(e) => handleLevelChange(e.target.value)}
             disabled={saving}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {levelOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {typedLang === 'es' ? option.labelEs : option.labelEn}
               </option>
             ))}
           </select>

@@ -151,9 +151,9 @@ export default function UserStoryDetailModal({
       console.error("Error checking bookmark:", error);
     }
 
-    // No bookmark - use first ready level, then detected level, then l1
+    // No bookmark - use first ready level, then detected level, then A1
     const readyLevel = story.levels.find((l) => l.status === "READY")?.level;
-    const defaultLevel = readyLevel || story.detectedLevel || "l1";
+    const defaultLevel = readyLevel || story.detectedLevel || "A1";
     router.push(`/${typedLang}/my-stories/${story.id}/${defaultLevel}/1/1`);
   }, [story, typedLang, router]);
 

@@ -73,10 +73,13 @@ interface StoryUploadContextType {
   showUploadModal: boolean;
   showReviewModal: boolean;
   showProgressViewer: boolean;
+  showCancelConfirm: boolean;
 
   // Actions
   startUpload: (options: StartUploadOptions) => Promise<void>;
   cancelUpload: () => void;
+  requestCancel: () => void;
+  dismissCancelConfirm: () => void;
   toggleMinimized: () => void;
   setShowUploadModal: (show: boolean) => void;
   setShowReviewModal: (show: boolean) => void;
@@ -175,10 +178,11 @@ function getStageMessage(
       return "Adapting";
     case "translating":
       // Show which text is being translated with CEFR level
+      // If text was rewritten (userCEFR !== detectedCEFR), indicate it's the rewritten version
       if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
-        return `Translating (${userCEFR} text)`;
+        return `Translating rewritten ${userCEFR} text...`;
       }
-      return `Translating (${detectedCEFR || "original"} text)`;
+      return `Translating ${detectedCEFR || "original"} text...`;
     case "finalizing":
       return "Finalizing your story...";
     case "review":
@@ -199,6 +203,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showProgressViewer, setShowProgressViewer] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [storyData, setStoryData] = useState<StoryUploadData | null>(null);
   const [progress, setProgress] = useState<UploadProgress>({
     stage: "idle",
@@ -478,7 +483,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             descriptionGenerated: true,
             sourceLanguage: storyStatus.sourceLanguage || "es",
             sourceLanguageDetected: true,
-            detectedLevel: storyStatus.detectedLevel || "l3",
+            detectedLevel: storyStatus.detectedLevel || "B1",
             thumbnailUrl: storyStatus.thumbnailUrl,
           } : null);
 
@@ -500,10 +505,12 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       }
 
     } catch (error: any) {
-      console.error("[StoryUpload] Error during upload:", error.message, error);
+      // Don't log AbortError as an error - it's expected when user cancels
       if (error.name === "AbortError" || error.message === "Upload cancelled") {
+        console.log("[StoryUpload] Upload cancelled by user");
         updateProgress("idle", 0);
       } else {
+        console.error("[StoryUpload] Error during upload:", error.message, error);
         updateProgress("error", 0, { error: error.message });
       }
     } finally {
@@ -517,6 +524,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     }
     setIsUploading(false);
     setIsMinimized(false);
+    setShowCancelConfirm(false);
     setProgress({
       stage: "idle",
       stageProgress: 0,
@@ -525,6 +533,16 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     });
     setStoryData(null);
   }, [abortController]);
+
+  // Show cancel confirmation dialog
+  const requestCancel = useCallback(() => {
+    setShowCancelConfirm(true);
+  }, []);
+
+  // Dismiss cancel confirmation without canceling
+  const dismissCancelConfirm = useCallback(() => {
+    setShowCancelConfirm(false);
+  }, []);
 
   const toggleMinimized = useCallback(() => {
     setIsMinimized(prev => !prev);
@@ -577,8 +595,11 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     showUploadModal,
     showReviewModal,
     showProgressViewer,
+    showCancelConfirm,
     startUpload,
     cancelUpload,
+    requestCancel,
+    dismissCancelConfirm,
     toggleMinimized,
     setShowUploadModal,
     setShowReviewModal,
@@ -608,6 +629,34 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         detectedLevel={progress.detectedLevel}
         targetLevel={progress.currentLevel}
       />
+
+      {/* Cancel Confirmation Dialog */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Cancel Upload?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              This will stop the upload and discard all progress. Are you sure you want to cancel?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={dismissCancelConfirm}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              >
+                Keep Uploading
+              </button>
+              <button
+                onClick={cancelUpload}
+                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+              >
+                Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </StoryUploadContext.Provider>
   );
 }

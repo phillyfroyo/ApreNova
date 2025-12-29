@@ -3,7 +3,7 @@
 // Used by both admin and user story pipelines
 
 import { OpenAI } from "openai";
-import { generateDetectionPrompt, levelNumberToString } from "./cefr-prompts";
+import { generateDetectionPrompt, levelNumberToString, toNumericLevel, fromNumericLevel } from "./cefr-prompts";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -86,8 +86,8 @@ ${text.substring(0, 500)}`,
 
 export interface CEFRDetectionResult {
   level: number; // 1-6
-  levelString: string; // "l1" through "l6"
-  cefr: string; // "A1", "A2", "B1", "B2", "C1", "C2+"
+  levelString: string; // CEFR code: "A1", "A2", "B1", "B2", "C1", "C2"
+  cefr: string; // CEFR code: "A1", "A2", "B1", "B2", "C1", "C2"
   confidence: "high" | "medium" | "low";
   reasoning: string;
 }
@@ -143,14 +143,28 @@ export async function detectCEFRLevel(
     try {
       const result = JSON.parse(cleaned);
 
-      const level = typeof result.level === "number" ? result.level : 3;
-      const cefr = result.cefr || ["A1", "A2", "B1", "B2", "C1", "C2+"][level - 1] || "B1";
+      // AI returns level as CEFR string ("A1", "B1", "C2", etc.) - convert to number
+      let level: number;
+      if (typeof result.level === "number") {
+        level = result.level;
+      } else if (typeof result.level === "string") {
+        // Convert CEFR string to numeric level
+        level = toNumericLevel(result.level);
+      } else {
+        level = 3; // Default to B1
+      }
+
+      // Ensure level is valid (1-6)
+      if (level < 1 || level > 6) level = 3;
+
+      // Get CEFR code from numeric level (ensures consistency)
+      const cefr = fromNumericLevel(level);
       const confidence = result.confidence || "medium";
       const reasoning = result.reasoning || "";
 
       return {
         level,
-        levelString: levelNumberToString(level),
+        levelString: cefr, // Use CEFR format directly (A1, A2, B1, etc.)
         cefr,
         confidence,
         reasoning,
@@ -159,7 +173,7 @@ export async function detectCEFRLevel(
       // Default to B1 if parsing fails
       return {
         level: 3,
-        levelString: "l3",
+        levelString: "B1",
         cefr: "B1",
         confidence: "low",
         reasoning: "Failed to parse AI response",
@@ -169,7 +183,7 @@ export async function detectCEFRLevel(
     // Default to B1 if AI fails
     return {
       level: 3,
-      levelString: "l3",
+      levelString: "B1",
       cefr: "B1",
       confidence: "low",
       reasoning: "AI detection failed",

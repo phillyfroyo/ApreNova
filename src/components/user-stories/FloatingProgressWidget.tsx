@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toCEFR } from "@/lib/cefr";
 
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
@@ -16,6 +17,7 @@ export default function FloatingProgressWidget() {
     storyData,
     toggleMinimized,
     cancelUpload,
+    requestCancel,
     setShowReviewModal,
     setShowProgressViewer,
   } = useStoryUpload();
@@ -32,13 +34,14 @@ export default function FloatingProgressWidget() {
     // Get the best level for reading:
     // 1. Use user's quiz level if it was processed
     // 2. Fall back to detected level (always processed)
-    // 3. Default to l3
+    // 3. Default to B1
     const userQuizLevel = session?.user?.quizLevel;
-    const userLevel = typeof userQuizLevel === "number" ? `l${userQuizLevel}` : userQuizLevel;
+    // Convert any level format (number, l1-l6, A1-C2) to CEFR format
+    const userLevel = userQuizLevel ? toCEFR(userQuizLevel) : null;
     const detectedLevel = storyData?.detectedLevel;
 
     // Prefer user's level if set, otherwise use detected level
-    const readingLevel = userLevel || detectedLevel || "l3";
+    const readingLevel = userLevel || detectedLevel || "B1";
 
     const handleStartReading = () => {
       if (storyData?.id && !isNavigating) {
@@ -172,7 +175,7 @@ export default function FloatingProgressWidget() {
               </svg>
             </button>
             <button
-              onClick={cancelUpload}
+              onClick={requestCancel}
               className="p-1 hover:bg-white/20 rounded transition-colors"
               title="Cancel"
             >

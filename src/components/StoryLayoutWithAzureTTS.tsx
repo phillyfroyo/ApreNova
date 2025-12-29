@@ -16,6 +16,7 @@ import { slugify } from '@/lib/stories';
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from '@/lib/t';
+import { ALL_CEFR_LEVELS, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
 
 type ActiveAudio = {
   index: number;
@@ -632,15 +633,12 @@ export default function StoryLayoutWithAzureTTS({
               }}
             />
             <Dropdown
-              label={`${t(typedLang, "story", "levelSelect")} ▾ ${t(typedLang, "levels", currentLevel)}`}
+              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}`}
               variant="glass"
-              options={[
-                { label: t(typedLang, "levels", "l1"), value: "l1" },
-                { label: t(typedLang, "levels", "l2"), value: "l2" },
-                { label: t(typedLang, "levels", "l3"), value: "l3" },
-                { label: t(typedLang, "levels", "l4"), value: "l4" },
-                { label: t(typedLang, "levels", "l5"), value: "l5" }
-              ]}
+              options={ALL_CEFR_LEVELS.slice(0, 5).map((level) => ({
+                label: getCEFRLabel(level, typedLang),
+                value: level,
+              }))}
               onSelect={(selectedValue) => {
                 router.push(getNavigationUrl(selectedValue, chapterNumber, pageNumber));
               }}

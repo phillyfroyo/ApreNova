@@ -10,6 +10,17 @@ import Logo from "@/components/Logo";
 import ProcessingStatus from "@/components/user-stories/ProcessingStatus";
 import SubmitForReviewButton from "@/components/user-stories/SubmitForReviewButton";
 import type { Language } from "@/types/i18n";
+import { ALL_CEFR_LEVELS, getCEFRLabel, toCEFR, type CEFRCode } from "@/lib/cefr";
+
+// CEFR badge colors
+const CEFR_BADGE_COLORS: Record<string, string> = {
+  A1: "bg-green-100 text-green-700 hover:bg-green-200",
+  A2: "bg-blue-100 text-blue-700 hover:bg-blue-200",
+  B1: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
+  B2: "bg-orange-100 text-orange-700 hover:bg-orange-200",
+  C1: "bg-purple-100 text-purple-700 hover:bg-purple-200",
+  C2: "bg-red-100 text-red-700 hover:bg-red-200",
+};
 
 interface UserStory {
   id: string;
@@ -153,7 +164,7 @@ export default function StoryDetailPage() {
             </span>
             {story.detectedLevel && (
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                Detected: {story.detectedLevel.toUpperCase()}
+                Detected: {getCEFRLabel(toCEFR(story.detectedLevel), typedLang)}
               </span>
             )}
             <span className="px-2 py-1 bg-gray-100 rounded">
@@ -196,25 +207,25 @@ export default function StoryDetailPage() {
               Read Your Story
             </h2>
             <div className="grid grid-cols-5 gap-2">
-              {["l1", "l2", "l3", "l4", "l5"].map((level) => {
-                const levelData = story.levels.find((l) => l.level === level);
+              {ALL_CEFR_LEVELS.slice(0, 5).map((cefrLevel) => {
+                // Check if this level is ready in the story
+                const levelData = story.levels.find((l) => toCEFR(l.level) === cefrLevel);
                 const isReady = levelData?.status === "READY";
+                const colorClass = isReady
+                  ? CEFR_BADGE_COLORS[cefrLevel] || "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed";
                 return (
                   <Link
-                    key={level}
+                    key={cefrLevel}
                     href={
                       isReady
-                        ? `/${typedLang}/my-stories/${story.id}/${level}/1/1`
+                        ? `/${typedLang}/my-stories/${story.id}/${cefrLevel}/1/1`
                         : "#"
                     }
-                    className={`py-3 px-2 rounded-lg text-center text-sm font-medium transition-colors ${
-                      isReady
-                        ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
+                    className={`py-3 px-2 rounded-lg text-center text-sm font-medium transition-colors ${colorClass}`}
                     onClick={(e) => !isReady && e.preventDefault()}
                   >
-                    {level.toUpperCase()}
+                    {cefrLevel}
                   </Link>
                 );
               })}

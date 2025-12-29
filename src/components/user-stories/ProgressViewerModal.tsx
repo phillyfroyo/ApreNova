@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { ChapterData, RewriteChapterData } from "@/contexts/StoryUploadContext";
+import { getCEFRLabel } from "@/lib/cefr";
 
 export interface ProgressViewerModalProps {
   isOpen: boolean;
@@ -122,8 +123,9 @@ export function ProgressViewerModal({
     const rewriteData = currentChapterData as RewriteChapterData;
     leftLines = rewriteData.originalLines || [];
     rightLines = rewriteData.rewrittenLines || [];
-    const fromLevel = detectedLevel?.replace("l", "Level ") || "Original";
-    const toLevel = targetLevel?.replace("l", "Level ") || "Rewritten";
+    // Use CEFR labels for level display
+    const fromLevel = detectedLevel ? getCEFRLabel(detectedLevel) : "Original";
+    const toLevel = targetLevel ? getCEFRLabel(targetLevel) : "Rewritten";
     leftTitle = `${fromLevel} (Original)`;
     rightTitle = `${toLevel} (Rewritten)`;
     footerLeftLabel = "original";
@@ -167,11 +169,14 @@ export function ProgressViewerModal({
 
       {/* Modal Container - uses min-height and padding to ensure modal is always fully visible */}
       <div className="min-h-full flex items-start justify-center p-4 sm:p-6 md:p-8">
-        {/* Modal Content - responsive width, max height with scroll */}
+        {/* Modal Content - responsive width, max height with scroll, draggable */}
         <div
           ref={modalRef}
-          className="relative w-full max-w-[95vw] xl:max-w-7xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 max-h-[calc(100vh-4rem)]"
-          style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+          className={`relative w-full max-w-[95vw] xl:max-w-7xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 max-h-[calc(100vh-4rem)] ${isDragging ? "select-none" : ""}`}
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px)`,
+            willChange: isDragging ? "transform" : "auto",
+          }}
         >
           {/* Header - draggable */}
           <div
