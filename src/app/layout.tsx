@@ -4,7 +4,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import SessionWrapper from '@/components/SessionWrapper';
 import SessionTracker from '@/components/SessionTracker';
-import { Alice, Open_Sans, Inter } from 'next/font/google';
+import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
 
 export const metadata = {
   title: 'Cuentana',
@@ -14,6 +14,7 @@ export const metadata = {
 const alice = Alice({ subsets: ['latin'], weight: '400' });
 const openSans = Open_Sans({ subsets: ['latin'], weight: ['400', '600'] });
 const inter = Inter({ subsets: ['latin'] });
+const crimsonText = Crimson_Text({ subsets: ['latin'], weight: '400', variable: '--font-crimson' });
 
 export default function RootLayout({
   children,
@@ -21,7 +22,7 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.className} ${alice.className} ${openSans.className}`} translate="no">
+    <html lang="es" className={`${inter.className} ${alice.className} ${openSans.className} ${crimsonText.variable}`} translate="no">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="google" content="notranslate" />

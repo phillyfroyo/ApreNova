@@ -36,14 +36,14 @@ export default function LanguageSelectPage() {
     setPreferredLang(detectBrowserLanguage());
   }, []);
 
-  // If logged in, send to their nativeLanguage
+  // If logged in, send to dashboard
   useEffect(() => {
     if (status === 'authenticated' && session) {
       const lng = session.user?.nativeLanguage;
       if (lng === 'en' || lng === 'es') {
-        router.replace(`/${lng}/stories`);
+        router.replace(`/${lng}/dashboard`);
       } else {
-        router.replace('/es/stories');
+        router.replace('/es/dashboard');
       }
     }
   }, [session, status, router]);

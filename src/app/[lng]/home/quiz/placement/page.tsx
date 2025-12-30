@@ -60,7 +60,7 @@ export default function PlacementQuiz() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
         >
-          <Logo variant="quiz" />
+          <Logo variant="storiesmain" />
         </motion.div>
 
         {/* Quiz card */}

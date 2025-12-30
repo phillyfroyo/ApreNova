@@ -3,9 +3,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import Logo from '@/components/Logo';
 import { Card } from '@/components/ui';
 import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TYPE_LABELS_PLURAL, STORY_TAG_LABELS, ALL_STORY_TAGS, ALL_STORY_TYPES, getAuthorName } from "@/lib/stories";
 import { getStoryUrl } from "@/lib/stories";
@@ -17,10 +16,10 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
 import type { StoryTag, StoryType } from "@/types/story";
-import Image from "next/image";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
+import { AppLayout } from '@/components/layout';
 
 type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
@@ -52,139 +51,6 @@ function getUniqueAuthors(): Array<{ id: string; name: string }> {
 
   return authors;
 }
-
-function AccountDropdown() {
-  const router = useRouter();
-  const { lng } = useParams();
-  const typedLang = lng as Language;
-
-  const goToQuiz = () => router.push(`/${typedLang}/home/quiz/placement`);
-  const goToSettings = () => router.push(`/${typedLang}/settings`);
-
-  const { data: session } = useSession();
-  const [open, setOpen] = useState(false);
-  const profilePic = session?.user?.image;
-  const dropdownRef = useRef<HTMLDivElement | null>(null)
-
-useEffect(() => {
-  function handleClickOutside(event: MouseEvent) {
-    if (!dropdownRef.current?.contains(event.target as Node)) {
-      setOpen(false)
-    }
-  }
-
-  if (open) {
-    document.addEventListener("mousedown", handleClickOutside)
-  }
-
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside)
-  }
-}, [open])
-
-
-
-  return (
-<div ref={dropdownRef}>
-  <div style={{ position: "absolute", top: "1rem", right: "1rem", textAlign: "center" }}>
-    <div
-      style={{
-        cursor: "pointer",
-        borderRadius: "50%",
-        overflow: "hidden",
-        width: "32px",
-        height: "32px",
-        margin: "0 auto",
-      }}
-      onClick={() => setOpen((prev) => !prev)}
-    >
-      <Image
-        src={profilePic || "/images/default-avatar.png"}
-        alt="Account"
-        width={100}
-        height={100}
-        style={{ objectFit: "cover" }}
-      />
-    </div>
-
-    {session?.user?.isPremium && (
-      <div
-        style={{
-          fontSize: "8px",
-          backgroundColor: "rgba(255, 255, 255, 0.6)",
-          padding: "2px 6px",
-          borderRadius: "9999px",
-          backdropFilter: "blur(4px)",
-          fontWeight: "600",
-          color: "#333",
-          display: "inline-block",
-        }}
-      >
-        Premium 💎
-      </div>
-    )}
-  </div>
-
-  {open && (
-    <div
-      style={{
-        position: "absolute",
-        top: "70px",
-        right: "15px",
-        backgroundColor: "white",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        minWidth: "200px",
-        maxWidth: "300px",
-        padding: "1rem",
-        zIndex: 1000,
-      }}
-    >
-      <div style={{ marginBottom: "1rem", fontWeight: "bold", fontSize: "14px" }}>
-        {session?.user?.email ? (
-          <div style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>{session.user.email}</div>
-        ) : (
-          <a href={`/${typedLang}/auth/signup`} className="text-blue-800 hover:underline">
-            {t(typedLang, "stories", "createAccount")}
-          </a>
-        )}
-      </div>
-
-
-        <div className="space-y-2">
-          <Link
-            href={`/${typedLang}/tutor`}
-            className="text-purple-600 cursor-pointer block"
-          >
-            {t(typedLang, "stories", "aiTutor")}
-          </Link>
-
-          <button
-            onClick={goToQuiz}
-            className="text-green-600 cursor-pointer block w-full text-left"
-          >
-            {t(typedLang, "stories", "takeQuiz")}
-          </button>
-
-          <button
-            onClick={goToSettings}
-            className="text-blue-800 cursor-pointer block w-full text-left"
-          >
-            {t(typedLang, "stories", "myAccount")}
-          </button>
-
-          <Link
-            href={`/${typedLang}/premium`}
-            className="text-yellow-700 cursor-pointer block"
-          >
-            {t(typedLang, "stories", "goPremium")}
-          </Link>
-        </div>
-      </div>
-    )}
-  </div>
-);}
 
 function isLevel(value: unknown): value is Level {
   return (
@@ -315,21 +181,27 @@ useEffect(() => {
 }, [user, nativeLanguage])
 
   return (
+    <>
+    {/* Full-screen background that extends under sidebar */}
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundImage: "url('/images/background3.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        zIndex: -1,
+      }}
+    />
     <div style={{
     padding: "2rem",
     position: "relative",
-    backgroundImage: "url('/images/background3.png')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
     minHeight: "100vh",
   }}>
-    <AccountDropdown />
 
-    <div className="absolute top-4 left-4 z-50">
-  <Logo variant="storiesmain" size="text-[32px]" />
-</div>
+{/* // TODO: Add "My Stories" section here for user-upload-story branch */}
 
-<div className="mt-16 mb-4 px-4">
+<div className="mt-4 mb-4 px-4">
   <div className="flex items-center justify-between">
     <h2 className="text-xl font-semibold text-left">
       {t(typedLang, "stories", "storiesAll")}
@@ -564,14 +436,24 @@ useEffect(() => {
     </div>
   </div>
 )}
-    </div> 
+    </div>
+    </>
+  );
+}
+
+function StoriesPageWrapper() {
+  const { lng } = useParams();
+  const lang = (lng as Language) || 'es';
+
+  return (
+    <AppLayout lang={lang}>
+      <Suspense>
+        <StoriesPageContent />
+      </Suspense>
+    </AppLayout>
   );
 }
 
 export default function StoriesPage() {
-  return (
-    <Suspense>
-      <StoriesPageContent />
-    </Suspense>
-  );
+  return <StoriesPageWrapper />;
 }
