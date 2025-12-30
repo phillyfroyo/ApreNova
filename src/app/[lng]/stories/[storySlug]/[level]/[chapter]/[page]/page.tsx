@@ -60,6 +60,7 @@ export default async function Page({ params }: { params: Promise<{ lng: string; 
       sentences={story.lines}
       initialLevel={cefrLevel}
       storyMap={storyMap}
+      availableLevels={storyMeta.levels}
     />
   );
 }

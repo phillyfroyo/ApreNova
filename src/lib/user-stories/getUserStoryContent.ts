@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { Language } from "@/types/i18n";
+import type { CEFRCode } from "@/lib/cefr";
 
 interface StoryLine {
   es: string;
@@ -165,5 +166,38 @@ export async function getUserStoryMap(
   } catch (err) {
     console.error(`Failed to load user story map:`, err);
     return { hasChapters: false, chapters: [] };
+  }
+}
+
+/**
+ * Get available levels for a user story (levels with READY status)
+ */
+export async function getUserStoryAvailableLevels(
+  userStoryId: string,
+  userId: string
+): Promise<CEFRCode[]> {
+  try {
+    // Verify ownership or public visibility
+    const story = await prisma.userStory.findFirst({
+      where: {
+        id: userStoryId,
+        OR: [{ userId }, { visibility: "PUBLIC" }],
+      },
+      include: {
+        UserStoryLevel: {
+          where: { status: "READY" },
+          select: { level: true },
+        },
+      },
+    });
+
+    if (!story) {
+      return [];
+    }
+
+    return story.UserStoryLevel.map((l) => l.level as CEFRCode);
+  } catch (err) {
+    console.error(`Failed to load user story available levels:`, err);
+    return [];
   }
 }

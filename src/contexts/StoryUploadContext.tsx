@@ -19,6 +19,17 @@ export type UploadStage =
   | "complete"
   | "error";
 
+// Progress phases from backend (main titles)
+export type ProgressPhase = "detecting" | "adapting" | "translating" | "finalizing";
+
+// Phase display names
+export const PHASE_TITLES: Record<ProgressPhase, string> = {
+  detecting: "Detecting...",
+  adapting: "Adapting...",
+  translating: "Translating...",
+  finalizing: "Wrapping things up...",
+};
+
 export interface ChapterData {
   sourceLines: string[];
   translatedLines: string[];
@@ -27,6 +38,17 @@ export interface ChapterData {
 export interface RewriteChapterData {
   originalLines: string[];
   rewrittenLines: string[];
+}
+
+// Story-level progress from backend
+export interface StoryProcessingProgress {
+  phase: ProgressPhase;
+  step: string;
+  stepLabel: string;
+  chapterCurrent?: number;
+  chapterTotal?: number;
+  currentLevel?: string;
+  timestamp: string;
 }
 
 export interface UploadProgress {
@@ -42,6 +64,10 @@ export interface UploadProgress {
   rewriteChapters?: RewriteChapterData[]; // completed chapter data for rewrite viewer
   message: string;
   error?: string;
+  // New detailed progress fields
+  phase?: ProgressPhase; // Main phase: detecting, adapting, translating, finalizing
+  stepLabel?: string; // Detailed step label (subtitle)
+  phaseTitle?: string; // Display title for current phase
 }
 
 export interface StoryUploadData {
@@ -55,6 +81,17 @@ export interface StoryUploadData {
   sourceLanguageDetected: boolean;
   detectedLevel: string;
   thumbnailUrl?: string;
+  // New metadata fields
+  storyType?: string;
+  storyTypeDetected?: boolean;
+  targetAudience?: string;
+  targetAudienceDetected?: boolean;
+  tags?: string[];
+  tagsDetected?: boolean;
+  hook?: string;
+  hookEs?: string;
+  hookEn?: string;
+  hookDetected?: boolean;
 }
 
 interface StartUploadOptions {
@@ -149,6 +186,37 @@ function calculateMultiLevelProgress(
   }
 
   return Math.round(levelBase + (withinLevelProgress / 100) * perLevelRange);
+}
+
+// Step ordering for calculating progress during detecting phase
+const DETECTING_STEPS = [
+  "creating_record",
+  "creating_levels",
+  "detecting_language",
+  "generating_title",
+  "generating_description",
+  "generating_hook",
+  "detecting_story_type",
+  "detecting_audience",
+  "extracting_tags",
+  "detecting_level",
+];
+
+// Calculate progress percentage for detecting phase based on current step
+function calculateProgressForPhase(phase: string, step: string): number {
+  if (phase === "detecting") {
+    const stepIndex = DETECTING_STEPS.indexOf(step);
+    if (stepIndex >= 0) {
+      // Detecting phase is 0-30% of overall progress
+      return Math.round((stepIndex / DETECTING_STEPS.length) * 30);
+    }
+    return 15; // Default to middle of detecting phase
+  }
+  // For other phases, return a reasonable default
+  if (phase === "adapting") return 50;
+  if (phase === "translating") return 70;
+  if (phase === "finalizing") return 90;
+  return 50;
 }
 
 // Generate stage message based on context
@@ -271,7 +339,11 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     try {
       // Stage 1: Upload and create initial record
       console.log("[StoryUpload] Stage 1: Creating story record...");
-      updateProgress("uploading", 50);
+      updateProgress("uploading", 50, {
+        phase: "detecting",
+        phaseTitle: PHASE_TITLES.detecting,
+        stepLabel: "Creating story record",
+      });
 
       const createResponse = await fetch("/api/user-stories", {
         method: "POST",
@@ -293,13 +365,21 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       const { story } = await createResponse.json();
       console.log("[StoryUpload] Story created:", { id: story.id, slug: story.slug });
-      updateProgress("uploading", 100);
+      updateProgress("uploading", 100, {
+        phase: "detecting",
+        phaseTitle: PHASE_TITLES.detecting,
+        stepLabel: "Preparing reading levels",
+      });
 
       setStoryData(prev => prev ? { ...prev, id: story.id } : null);
 
       // Stage 2: Process the story (this triggers the AI pipeline)
       console.log("[StoryUpload] Stage 2: Starting AI processing...");
-      updateProgress("detecting-language", 0);
+      updateProgress("detecting-language", 0, {
+        phase: "detecting",
+        phaseTitle: PHASE_TITLES.detecting,
+        stepLabel: "Detecting language",
+      });
 
       const processResponse = await fetch("/api/user-stories/process", {
         method: "POST",
@@ -363,6 +443,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           const userLevel = typeof userQuizLevel === "number" ? `l${userQuizLevel}` : userQuizLevel || null;
           const detectedLevel = storyStatus.detectedLevel;
 
+          // Get story-level progress (detailed step info)
+          const storyProgress = storyStatus.processingProgress as StoryProcessingProgress | null;
+
           // Check level statuses to determine progress
           const levels = storyStatus.levels || [];
           const processingLevel = levels.find((l: any) => l.status === "PROCESSING");
@@ -370,9 +453,39 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           // We only process 1-2 levels (detected + user's level if different)
           const totalLevelsToProcess = userLevel && userLevel !== detectedLevel ? 2 : 1;
 
+          // Use story-level progress if available for detailed step info
+          const phase = storyProgress?.phase;
+          const stepLabel = storyProgress?.stepLabel;
+          const phaseTitle = phase ? PHASE_TITLES[phase] : undefined;
+
           if (!processingLevel && completedLevels === 0) {
             // Still in early stages (language/level detection, description generation)
-            if (detectedLevel) {
+            // Use detailed progress from backend if available
+            if (storyProgress) {
+              const stageMap: Record<string, UploadStage> = {
+                detecting_language: "detecting-language",
+                generating_title: "detecting-language",
+                generating_description: "generating-description",
+                generating_hook: "generating-description",
+                detecting_story_type: "generating-description",
+                detecting_audience: "generating-description",
+                extracting_tags: "generating-description",
+                detecting_level: "detecting-level",
+              };
+              const stage = stageMap[storyProgress.step] || "detecting-level";
+              setProgress(prev => ({
+                ...prev,
+                stage,
+                stageProgress: 50,
+                overallProgress: calculateProgressForPhase(storyProgress.phase, storyProgress.step),
+                detectedLevel,
+                userLevel: userLevel || undefined,
+                message: getStageMessage(stage, { detectedLevel, userLevel: userLevel || undefined }),
+                phase,
+                stepLabel,
+                phaseTitle,
+              }));
+            } else if (detectedLevel) {
               updateProgress("generating-description", 50, { detectedLevel, userLevel: userLevel || undefined });
             } else {
               updateProgress("detecting-level", 50, { userLevel: userLevel || undefined });
@@ -425,6 +538,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                   currentChapter: progress.currentChapter,
                   totalChapters: progress.totalChapters,
                 }),
+                phase,
+                stepLabel,
+                phaseTitle,
               }));
             } else if (progress.stage === 'translating') {
               // Translating stage - use calculated overall progress
@@ -444,16 +560,31 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                   currentChapter: progress.currentChapter,
                   totalChapters: progress.totalChapters,
                 }),
+                phase,
+                stepLabel,
+                phaseTitle,
               }));
             }
           } else {
             // Fallback: level is processing but no granular progress yet
             const levelProgress = (completedLevels / totalLevelsToProcess) * 100;
-            updateProgress("rewriting-levels", levelProgress, {
+            setProgress(prev => ({
+              ...prev,
+              stage: "rewriting-levels",
+              stageProgress: levelProgress,
+              overallProgress: 30 + levelProgress * 0.6,
               currentLevel: processingLevel?.level,
               userLevel: userLevel || undefined,
               detectedLevel,
-            });
+              message: getStageMessage("rewriting-levels", {
+                currentLevel: processingLevel?.level,
+                userLevel: userLevel || undefined,
+                detectedLevel,
+              }),
+              phase,
+              stepLabel,
+              phaseTitle,
+            }));
           }
         } else if (storyStatus.status === "READY" || storyStatus.status === "PARTIAL") {
           // PARTIAL means some levels succeeded (e.g., detected level worked but user's level was too long to rewrite)
@@ -474,6 +605,11 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             || storyStatus.descriptionEn
             || "";
 
+          // Use localized hook based on source language
+          const finalHook = storyStatus.hook
+            || (storyStatus.sourceLanguage === "es" ? storyStatus.hookEs : storyStatus.hookEn)
+            || "";
+
           setStoryData(prev => prev ? {
             ...prev,
             id: storyStatus.id,
@@ -485,6 +621,17 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             sourceLanguageDetected: true,
             detectedLevel: storyStatus.detectedLevel || "B1",
             thumbnailUrl: storyStatus.thumbnailUrl,
+            // New metadata fields
+            storyType: storyStatus.storyType || undefined,
+            storyTypeDetected: !!storyStatus.storyType,
+            targetAudience: storyStatus.targetAudience || undefined,
+            targetAudienceDetected: !!storyStatus.targetAudience,
+            tags: storyStatus.tags || [],
+            tagsDetected: Array.isArray(storyStatus.tags) && storyStatus.tags.length > 0,
+            hook: finalHook,
+            hookEs: storyStatus.hookEs || undefined,
+            hookEn: storyStatus.hookEn || undefined,
+            hookDetected: !!storyStatus.hook || !!storyStatus.hookEs || !!storyStatus.hookEn,
           } : null);
 
           updateProgress("review", 100);
@@ -556,7 +703,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     if (!storyData?.id) return;
 
     try {
-      // Update story with any user edits
+      // Update story with any user edits (including new metadata fields)
       await fetch(`/api/user-stories/${storyData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -564,6 +711,12 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           title: storyData.title,
           description: storyData.description,
           thumbnailUrl: storyData.thumbnailUrl,
+          storyType: storyData.storyType,
+          targetAudience: storyData.targetAudience,
+          tags: storyData.tags,
+          hook: storyData.hook,
+          hookEs: storyData.hookEs,
+          hookEn: storyData.hookEn,
         }),
       });
 

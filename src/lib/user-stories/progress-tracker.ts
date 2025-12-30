@@ -17,6 +17,7 @@ export interface ChapterRewriteData {
   rewrittenLines: string[];
 }
 
+// Level-specific progress (for rewriting/translating chapters)
 export interface ProcessingProgress {
   stage: "rewriting" | "translating" | "complete";
   currentChapter: number;
@@ -24,10 +25,130 @@ export interface ProcessingProgress {
   chaptersCompleted: number[];
   completedData?: ChapterTranslationData[];
   rewriteData?: ChapterRewriteData[];
+  // Extended fields for detailed UI
+  stepLabel?: string;
 }
+
+// Story-level progress phases
+export type StoryPhase = "detecting" | "adapting" | "translating" | "finalizing";
+
+// Story-level progress steps
+export type StoryStep =
+  | "creating_record"
+  | "creating_levels"
+  | "detecting_language"
+  | "generating_title"
+  | "generating_description"
+  | "generating_hook"
+  | "detecting_story_type"
+  | "detecting_audience"
+  | "extracting_tags"
+  | "detecting_level"
+  | "cleaning_text"
+  | "parsing_chapters"
+  | "rewriting_chapter"
+  | "translating_chapter"
+  | "building_structure"
+  | "saving_content"
+  | "complete";
+
+// Story-level progress (stored on UserStory.processingProgress)
+export interface StoryProcessingProgress {
+  phase: StoryPhase;
+  step: StoryStep;
+  stepLabel: string;
+  // For chapter-based steps
+  chapterCurrent?: number;
+  chapterTotal?: number;
+  // Current level being processed
+  currentLevel?: string;
+  timestamp: string;
+}
+
+// Step definitions with labels
+export const STEP_LABELS: Record<StoryStep, string> = {
+  creating_record: "Creating story record",
+  creating_levels: "Preparing reading levels",
+  detecting_language: "Detecting language",
+  generating_title: "Generating title",
+  generating_description: "Generating description",
+  generating_hook: "Generating hook",
+  detecting_story_type: "Detecting story type",
+  detecting_audience: "Detecting target audience",
+  extracting_tags: "Extracting tags",
+  detecting_level: "Detecting CEFR level",
+  cleaning_text: "Cleaning text",
+  parsing_chapters: "Parsing chapters",
+  rewriting_chapter: "Rewriting chapter",
+  translating_chapter: "Translating chapter",
+  building_structure: "Building content structure",
+  saving_content: "Saving level content",
+  complete: "Complete",
+};
+
+// Map steps to phases
+export const STEP_PHASES: Record<StoryStep, StoryPhase> = {
+  creating_record: "detecting",
+  creating_levels: "detecting",
+  detecting_language: "detecting",
+  generating_title: "detecting",
+  generating_description: "detecting",
+  generating_hook: "detecting",
+  detecting_story_type: "detecting",
+  detecting_audience: "detecting",
+  extracting_tags: "detecting",
+  detecting_level: "detecting",
+  cleaning_text: "adapting",
+  parsing_chapters: "adapting",
+  rewriting_chapter: "adapting",
+  translating_chapter: "translating",
+  building_structure: "finalizing",
+  saving_content: "finalizing",
+  complete: "finalizing",
+};
 
 export type LevelStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED";
 export type StoryStatus = "PROCESSING" | "READY" | "PARTIAL" | "FAILED";
+
+// ============================================================================
+// STORY PROGRESS HELPER
+// ============================================================================
+
+/**
+ * Update story-level processing progress
+ */
+export async function updateStoryProgress(
+  storyId: string,
+  step: StoryStep,
+  options?: {
+    chapterCurrent?: number;
+    chapterTotal?: number;
+    currentLevel?: string;
+  }
+): Promise<void> {
+  const phase = STEP_PHASES[step];
+  let stepLabel = STEP_LABELS[step];
+
+  // Add chapter info to label if applicable
+  if (options?.chapterCurrent !== undefined && options?.chapterTotal !== undefined) {
+    stepLabel = `${stepLabel} ${options.chapterCurrent} of ${options.chapterTotal}`;
+  }
+
+  const progress: StoryProcessingProgress = {
+    phase,
+    step,
+    stepLabel,
+    chapterCurrent: options?.chapterCurrent,
+    chapterTotal: options?.chapterTotal,
+    currentLevel: options?.currentLevel,
+    timestamp: new Date().toISOString(),
+  };
+
+  await prisma.userStory.update({
+    where: { id: storyId },
+    data: { processingProgress: progress as any },
+  });
+}
 
 // ============================================================================
 // PROGRESS TRACKER CLASS

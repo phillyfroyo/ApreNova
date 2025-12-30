@@ -1,6 +1,7 @@
 // src/app/api/user-stories/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { randomUUID } from "crypto";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/stories";
@@ -43,11 +44,17 @@ export async function GET(req: NextRequest) {
         sourceLanguage: true,
         detectedLevel: true,
         thumbnailUrl: true,
+        storyType: true,
+        targetAudience: true,
+        tags: true,
+        hook: true,
+        hookEs: true,
+        hookEn: true,
         status: true,
         visibility: true,
         createdAt: true,
         updatedAt: true,
-        levels: {
+        UserStoryLevel: {
           select: {
             level: true,
             status: true,
@@ -57,7 +64,13 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ stories });
+    // Map UserStoryLevel to levels for frontend compatibility
+    const storiesWithLevels = stories.map(({ UserStoryLevel, ...rest }) => ({
+      ...rest,
+      levels: UserStoryLevel,
+    }));
+
+    return NextResponse.json({ stories: storiesWithLevels });
   } catch (error) {
     console.error("Error fetching user stories:", error);
     return NextResponse.json(
@@ -165,9 +178,10 @@ export async function POST(req: NextRequest) {
       counter++;
     }
 
-    // Create the story
+    // Create the story with initial progress
     const story = await prisma.userStory.create({
       data: {
+        id: randomUUID(),
         userId: session.user.id,
         slug,
         title: finalTitle,
@@ -176,6 +190,13 @@ export async function POST(req: NextRequest) {
         rawContent: content,
         status: "PROCESSING",
         visibility: "PRIVATE",
+        updatedAt: new Date(),
+        processingProgress: {
+          phase: "detecting",
+          step: "creating_record",
+          stepLabel: "Creating story record",
+          timestamp: new Date().toISOString(),
+        },
       },
     });
 
@@ -183,11 +204,26 @@ export async function POST(req: NextRequest) {
     const levels = ALL_CEFR_LEVELS.slice(0, 5); // A1, A2, B1, B2, C1
     await prisma.userStoryLevel.createMany({
       data: levels.map((level) => ({
+        id: randomUUID(),
         userStoryId: story.id,
         level,
         content: {},
         status: "PENDING",
+        updatedAt: new Date(),
       })),
+    });
+
+    // Update progress after creating levels
+    await prisma.userStory.update({
+      where: { id: story.id },
+      data: {
+        processingProgress: {
+          phase: "detecting",
+          step: "creating_levels",
+          stepLabel: "Preparing reading levels",
+          timestamp: new Date().toISOString(),
+        },
+      },
     });
 
     console.log("[API/user-stories] POST: Story created", {

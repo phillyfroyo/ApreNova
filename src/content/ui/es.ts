@@ -81,14 +81,14 @@ levels: {
   l3: "B1 - Independiente",
   l4: "B2 - Intermedio Alto",
   l5: "C1 - Avanzado",
-  l6: "C2 - Maestría",
+  l6: "C2 - Casi Nativo",
   // CEFR codes
   A1: "A1 - Fundamentos",
   A2: "A2 - En Desarrollo",
   B1: "B1 - Independiente",
   B2: "B2 - Intermedio Alto",
   C1: "C1 - Avanzado",
-  C2: "C2 - Maestría",
+  C2: "C2 - Casi Nativo",
   // CEFR labels (for dropdown displays)
   cefrLabels: {
     l1: "A1",
@@ -96,6 +96,7 @@ levels: {
     l3: "B1",
     l4: "B2",
     l5: "C1",
+    l6: "C2",
   },
   // CEFR descriptions (for onboarding/quiz)
   cefrDescriptions: {
@@ -104,6 +105,7 @@ levels: {
     l3: "Puede manejar la mayoría de situaciones al viajar. Puede describir experiencias, eventos y explicar brevemente opiniones y planes.",
     l4: "Puede comprender textos complejos e interactuar con fluidez con hablantes nativos. Puede producir textos claros y detallados sobre una amplia gama de temas.",
     l5: "Puede comprender textos exigentes y reconocer significados implícitos. Puede expresar ideas con fluidez, precisión y flexibilidad.",
+    l6: "Puede comprender prácticamente todo lo que oye o lee. Puede resumir información de diferentes fuentes, reconstruyendo argumentos de manera coherente.",
   },
 },
 
@@ -314,11 +316,11 @@ myStories: {
   public: "Pública",
   notApproved: "No aprobada para público",
   premiumRequired: "Premium requerido para compartir públicamente",
-  levelBeginner: "Nivel 1 (A1 - Principiante)",
-  levelElementary: "Nivel 2 (A2 - Elemental)",
-  levelIntermediate: "Nivel 3 (B1 - Intermedio)",
-  levelUpperIntermediate: "Nivel 4 (B2 - Intermedio Alto)",
-  levelAdvanced: "Nivel 5 (C1 - Avanzado)",
+  levelBeginner: "A1 - Fundamentos",
+  levelElementary: "A2 - En Desarrollo",
+  levelIntermediate: "B1 - Independiente",
+  levelUpperIntermediate: "B2 - Intermedio Alto",
+  levelAdvanced: "C1 - Avanzado",
   waiting: "Esperando",
   storyTooShort: "La historia es muy corta. Por favor proporciona al menos 100 caracteres.",
   storyTooLong: "La historia excede la longitud máxima.",

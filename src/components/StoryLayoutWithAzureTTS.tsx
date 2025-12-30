@@ -38,6 +38,7 @@ interface StoryLayoutWithAzureTTSProps {
   };
   isUserStory?: boolean;
   userStoryId?: string;
+  availableLevels?: CEFRCode[];
 }
 
 export default function StoryLayoutWithAzureTTS({
@@ -48,6 +49,7 @@ export default function StoryLayoutWithAzureTTS({
   storyMap,
   isUserStory = false,
   userStoryId,
+  availableLevels,
 }: StoryLayoutWithAzureTTSProps) {
   useSessionLogger('reading');
 
@@ -635,10 +637,17 @@ export default function StoryLayoutWithAzureTTS({
             <Dropdown
               label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}`}
               variant="glass"
-              options={ALL_CEFR_LEVELS.slice(0, 5).map((level) => ({
-                label: getCEFRLabel(level, typedLang),
-                value: level,
-              }))}
+              options={ALL_CEFR_LEVELS.slice(0, 5).map((level) => {
+                const isAvailable = !availableLevels || availableLevels.includes(level);
+                const notAvailableText = typedLang === "es" ? "(no disponible)" : "(not available)";
+                return {
+                  label: isAvailable
+                    ? getCEFRLabel(level, typedLang)
+                    : `${getCEFRLabel(level, typedLang)} ${notAvailableText}`,
+                  value: level,
+                  disabled: !isAvailable,
+                };
+              })}
               onSelect={(selectedValue) => {
                 router.push(getNavigationUrl(selectedValue, chapterNumber, pageNumber));
               }}

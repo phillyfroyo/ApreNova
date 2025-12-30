@@ -149,7 +149,14 @@ model UserStory {
   sourceLanguage    String
   detectedLevel     String?
   thumbnailUrl      String?
+  storyType         String?
+  targetAudience    String?
+  tags              String[]
+  hook              String?
+  hookEs            String?
+  hookEn            String?
   status            UserStoryStatus     @default(PROCESSING)
+  processingProgress Json?
   visibility        StoryVisibility     @default(PRIVATE)
   rawContent        String
   createdAt         DateTime            @default(now())

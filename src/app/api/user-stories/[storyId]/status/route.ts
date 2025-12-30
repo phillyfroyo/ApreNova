@@ -36,10 +36,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         descriptionEs: true,
         descriptionEn: true,
         status: true,
+        processingProgress: true,
         detectedLevel: true,
         sourceLanguage: true,
         thumbnailUrl: true,
-        levels: {
+        // New metadata fields
+        storyType: true,
+        targetAudience: true,
+        tags: true,
+        hook: true,
+        hookEs: true,
+        hookEn: true,
+        UserStoryLevel: {
           select: {
             id: true,
             level: true,
@@ -55,7 +63,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ story });
+    // Map UserStoryLevel to levels for frontend compatibility
+    const { UserStoryLevel, ...rest } = story;
+    const storyWithLevels = { ...rest, levels: UserStoryLevel };
+
+    return NextResponse.json({ story: storyWithLevels });
   } catch (error: any) {
     console.error("[API/user-stories/[storyId]/status] GET error:", {
       error: error.message,

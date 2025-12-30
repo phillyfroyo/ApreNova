@@ -124,7 +124,7 @@ LEVELS:
 - B1 (Independent): 8-15 word sentences, ~2500 words, present perfect, basic conditionals
 - B2 (Upper-Intermediate): 10-20 word sentences, ~5000 words, all tenses, second conditional
 - C1 (Advanced): No limits, 10000+ words, full modern native expression
-- C2 (Mastery): Literary/archaic texts with obsolete vocabulary, archaic grammar (thee/thou/hath), poetic inversions, or specialized historical language that exceeds modern native usage
+- C2 (Near-Native): Literary/archaic texts with obsolete vocabulary, archaic grammar (thee/thou/hath), poetic inversions, or specialized historical language that exceeds modern native usage
 
 IMPORTANT: Use C2 for:
 - Texts with archaic vocabulary (thane, mead-hall, hither, wherefore)

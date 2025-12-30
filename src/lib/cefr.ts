@@ -21,7 +21,7 @@ export const CEFR_NAMES_EN: Record<CEFRCode, string> = {
   B1: "Independent",
   B2: "Upper-Intermediate",
   C1: "Advanced",
-  C2: "Mastery",
+  C2: "Near-Native",
 };
 
 /**
@@ -33,7 +33,7 @@ export const CEFR_NAMES_ES: Record<CEFRCode, string> = {
   B1: "Independiente",
   B2: "Intermedio Alto",
   C1: "Avanzado",
-  C2: "Maestr\u00eda",
+  C2: "Casi Nativo",
 };
 
 /**
@@ -139,7 +139,7 @@ export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
   C2: {
     code: "C2",
     numericLevel: 6,
-    name: "Mastery",
+    name: "Near-Native",
     sentenceLength: "No limit",
     vocabulary: "Unrestricted (including archaic, literary, specialized)",
     forbidden: [], // No restrictions - original literary texts

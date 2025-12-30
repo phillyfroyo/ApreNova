@@ -10,6 +10,26 @@ import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 
 const translations = { en, es };
 
+// Story type options
+const STORY_TYPES = [
+  "short-story", "poem", "fable", "folktale", "novel", "article",
+  "dialogue", "song-lyrics", "epic", "myth", "legend", "movie-script", "tv-script"
+];
+
+// Target audience options
+const TARGET_AUDIENCES = ["all", "children", "teen", "adult"];
+
+// Tag options
+const STORY_TAGS = [
+  "family", "friendship", "adventure", "mystery", "romance",
+  "coming-of-age", "nature", "technology", "travel", "food",
+  "humorous", "heartwarming", "suspenseful", "reflective", "inspiring",
+  "urban", "rural", "historical", "fantasy", "contemporary",
+  "latin-america", "spain", "usa", "multicultural",
+  "epic", "mythology", "heroic", "tragedy", "comedy",
+  "monsters", "heros-journey", "war", "love", "death", "revenge"
+];
+
 export default function StoryReviewModal() {
   const { lng } = useParams();
   const router = useRouter();
@@ -28,6 +48,10 @@ export default function StoryReviewModal() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const [generatedThumbnailOptions, setGeneratedThumbnailOptions] = useState<{url: string; revisedPrompt?: string}[]>([]);
+  const [showThumbnailPicker, setShowThumbnailPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle file upload to Azure
@@ -91,6 +115,76 @@ export default function StoryReviewModal() {
     }
   }, [handleFile]);
 
+  // Generate AI thumbnail using DALL-E
+  const handleGenerateAIThumbnail = useCallback(async () => {
+    if (!storyData?.id) return;
+
+    setIsGeneratingThumbnail(true);
+    setGeneratedThumbnailOptions([]);
+
+    try {
+      const response = await fetch("/api/user-stories/generate-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: storyData.id }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Generation failed");
+      }
+
+      const { options } = await response.json();
+      setGeneratedThumbnailOptions(options);
+      setShowThumbnailPicker(true);
+    } catch (error: any) {
+      console.error("AI thumbnail generation failed:", error.message);
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
+  }, [storyData?.id]);
+
+  // Select and upload generated thumbnail
+  const handleSelectGeneratedThumbnail = useCallback(async (imageUrl: string) => {
+    if (!storyData?.id) return;
+
+    setIsUploadingThumbnail(true);
+    setShowThumbnailPicker(false);
+
+    // Don't set temporary DALL-E URL - it's not configured in Next.js Image
+    // The loading overlay will show until Azure upload completes
+
+    try {
+      const response = await fetch("/api/user-stories/generate-thumbnail", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: storyData.id, imageUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save thumbnail");
+      }
+
+      const { url } = await response.json();
+      // Only set the Azure URL after successful upload
+      updateStoryData({ thumbnailUrl: url });
+    } catch (error: any) {
+      console.error("Failed to save AI thumbnail:", error.message);
+    } finally {
+      setIsUploadingThumbnail(false);
+      setGeneratedThumbnailOptions([]);
+    }
+  }, [storyData?.id, updateStoryData]);
+
+  // Handle tag toggle
+  const handleTagToggle = useCallback((tag: string) => {
+    const currentTags = storyData?.tags || [];
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter(t => t !== tag)
+      : [...currentTags, tag].slice(0, 5); // Max 5 tags
+    updateStoryData({ tags: newTags, tagsDetected: false });
+  }, [storyData?.tags, updateStoryData]);
+
   if (!showReviewModal || !storyData) return null;
 
   const handleConfirm = async () => {
@@ -106,15 +200,6 @@ export default function StoryReviewModal() {
     if (file) {
       handleFile(file);
     }
-  };
-
-  const levelLabels: Record<string, string> = {
-    A1: t.myStories.levelBeginner,
-    A2: t.myStories.levelElementary,
-    B1: t.myStories.levelIntermediate,
-    B2: t.myStories.levelUpperIntermediate,
-    C1: t.myStories.levelAdvanced,
-    C2: t.myStories.levelAdvanced, // Use same label for C2
   };
 
   return (
@@ -177,6 +262,16 @@ export default function StoryReviewModal() {
                       </div>
                     )}
                   </div>
+                ) : isUploadingThumbnail ? (
+                  <div className="flex flex-col items-center justify-center">
+                    <svg className="w-8 h-8 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="text-xs text-blue-500 mt-2 text-center px-2 font-medium">
+                      {lng === "es" ? "Subiendo..." : "Uploading..."}
+                    </span>
+                  </div>
                 ) : isDragging ? (
                   <>
                     <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,6 +299,29 @@ export default function StoryReviewModal() {
                 onChange={handleThumbnailUpload}
                 className="hidden"
               />
+              {/* AI Generate Button */}
+              <button
+                onClick={handleGenerateAIThumbnail}
+                disabled={isGeneratingThumbnail || isUploadingThumbnail}
+                className="w-full mt-2 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+              >
+                {isGeneratingThumbnail ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {lng === "es" ? "Generando..." : "Generating..."}
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    {lng === "es" ? "Generar con IA" : "Generate with AI"}
+                  </>
+                )}
+              </button>
               <p className="text-xs text-gray-400 mt-1 text-center">
                 {lng === "es" ? "Opcional" : "Optional"}
               </p>
@@ -305,10 +423,7 @@ export default function StoryReviewModal() {
                 {lng === "es" ? "Nivel detectado" : "Detected Level"}
               </div>
               <div className="font-medium text-gray-800">
-                {toCEFR(storyData.detectedLevel)}
-                <span className="text-sm text-gray-500 ml-2">
-                  ({levelLabels[toCEFR(storyData.detectedLevel)] || storyData.detectedLevel})
-                </span>
+{getCEFRLabel(toCEFR(storyData.detectedLevel), lng as "en" | "es")}
               </div>
             </div>
           </div>
@@ -362,6 +477,144 @@ export default function StoryReviewModal() {
               </div>
             );
           })()}
+
+          {/* Advanced Options (Collapsible) */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <span className="font-medium text-gray-700">
+                {lng === "es" ? "Opciones avanzadas" : "Advanced Options"}
+              </span>
+              <svg
+                className={`w-5 h-5 text-gray-500 transition-transform ${showAdvancedOptions ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showAdvancedOptions && (
+              <div className="p-4 space-y-4 bg-white">
+                {/* Story Type */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      {lng === "es" ? "Tipo de historia" : "Story Type"}
+                    </label>
+                    {storyData.storyTypeDetected && (
+                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {lng === "es" ? "Auto-detectado" : "Auto-detected"}
+                      </span>
+                    )}
+                  </div>
+                  <select
+                    value={storyData.storyType || "short-story"}
+                    onChange={(e) => updateStoryData({ storyType: e.target.value, storyTypeDetected: false })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                  >
+                    {STORY_TYPES.map(type => (
+                      <option key={type} value={type}>
+                        {type.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Target Audience */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      {lng === "es" ? "Audiencia objetivo" : "Target Audience"}
+                    </label>
+                    {storyData.targetAudienceDetected && (
+                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {lng === "es" ? "Auto-detectado" : "Auto-detected"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {TARGET_AUDIENCES.map(audience => (
+                      <button
+                        key={audience}
+                        onClick={() => updateStoryData({ targetAudience: audience, targetAudienceDetected: false })}
+                        className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                          storyData.targetAudience === audience
+                            ? "bg-blue-500 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {audience.charAt(0).toUpperCase() + audience.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      {lng === "es" ? "Etiquetas (máx. 5)" : "Tags (max 5)"}
+                    </label>
+                    {storyData.tagsDetected && (
+                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {lng === "es" ? "Auto-detectadas" : "Auto-detected"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
+                    {STORY_TAGS.map(tag => {
+                      const isSelected = storyData.tags?.includes(tag);
+                      const canSelect = isSelected || (storyData.tags?.length || 0) < 5;
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => canSelect && handleTagToggle(tag)}
+                          disabled={!canSelect}
+                          className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                            isSelected
+                              ? "bg-emerald-500 text-white"
+                              : canSelect
+                              ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                          }`}
+                        >
+                          {tag.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Hook/Teaser */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      {lng === "es" ? "Gancho/Teaser" : "Hook/Teaser"}
+                    </label>
+                    {storyData.hookDetected && (
+                      <span className="text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">
+                        {lng === "es" ? "Auto-generado" : "Auto-generated"}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={storyData.hook || ""}
+                    onChange={(e) => updateStoryData({ hook: e.target.value, hookDetected: false })}
+                    placeholder={lng === "es" ? "Un gancho corto para atraer lectores..." : "A short hook to draw readers in..."}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {lng === "es" ? "Máximo 15 palabras" : "Maximum 15 words"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -374,16 +627,18 @@ export default function StoryReviewModal() {
           </button>
           <button
             onClick={handleConfirm}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingThumbnail}
             className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           >
-            {isSubmitting ? (
+            {isSubmitting || isUploadingThumbnail ? (
               <>
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                {lng === "es" ? "Guardando..." : "Saving..."}
+                {isUploadingThumbnail
+                  ? (lng === "es" ? "Subiendo imagen..." : "Uploading image...")
+                  : (lng === "es" ? "Guardando..." : "Saving...")}
               </>
             ) : (
               <>
@@ -396,6 +651,53 @@ export default function StoryReviewModal() {
           </button>
         </div>
       </div>
+
+      {/* AI Thumbnail Picker Modal */}
+      {showThumbnailPicker && generatedThumbnailOptions.length > 0 && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowThumbnailPicker(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {lng === "es" ? "Elige una imagen" : "Choose an image"}
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {generatedThumbnailOptions.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSelectGeneratedThumbnail(option.url)}
+                  className="group relative aspect-[2/3] rounded-xl overflow-hidden border-2 border-transparent hover:border-purple-500 transition-all"
+                >
+                  <img
+                    src={option.url}
+                    alt={`Option ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 bg-white/90 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-800 transition-opacity">
+                      {lng === "es" ? "Seleccionar" : "Select"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowThumbnailPicker(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                {lng === "es" ? "Cancelar" : "Cancel"}
+              </button>
+              <button
+                onClick={handleGenerateAIThumbnail}
+                disabled={isGeneratingThumbnail}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+              >
+                {lng === "es" ? "Regenerar" : "Regenerate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 "use client";
 
 import { CheckCircle, Loader2, Clock, AlertCircle } from "lucide-react";
+import { getCEFRLabel, toCEFR, type CEFRCode } from "@/lib/cefr";
 
 interface LevelStatus {
   level: string;
@@ -13,15 +14,8 @@ interface ProcessingStatusProps {
   detectedLevel?: string | null;
   levels: LevelStatus[];
   overallStatus: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  lng?: "en" | "es";
 }
-
-const levelLabels: Record<string, string> = {
-  l1: "Level 1 (A1 - Beginner)",
-  l2: "Level 2 (A2 - Elementary)",
-  l3: "Level 3 (B1 - Intermediate)",
-  l4: "Level 4 (B2 - Upper Intermediate)",
-  l5: "Level 5 (C1 - Advanced)",
-};
 
 const statusIcons = {
   PENDING: { icon: Clock, color: "text-gray-400", label: "Waiting" },
@@ -35,6 +29,7 @@ export default function ProcessingStatus({
   detectedLevel,
   levels,
   overallStatus,
+  lng = "en",
 }: ProcessingStatusProps) {
   const sortedLevels = [...levels].sort((a, b) => a.level.localeCompare(b.level));
 
@@ -44,9 +39,9 @@ export default function ProcessingStatus({
 
       {detectedLevel && (
         <p className="text-sm text-gray-600 mb-4">
-          Detected CEFR Level:{" "}
+          {lng === "es" ? "Nivel CEFR detectado:" : "Detected CEFR Level:"}{" "}
           <span className="font-medium text-blue-600">
-            {levelLabels[detectedLevel] || detectedLevel}
+            {getCEFRLabel(toCEFR(detectedLevel), lng)}
           </span>
         </p>
       )}
@@ -62,7 +57,7 @@ export default function ProcessingStatus({
               className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
             >
               <span className="text-sm text-gray-700">
-                {levelLabels[level.level] || level.level}
+                {getCEFRLabel(toCEFR(level.level), lng)}
               </span>
               <div className="flex items-center gap-2">
                 <StatusIcon

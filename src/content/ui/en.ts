@@ -81,14 +81,14 @@ levels: {
   l3: "B1 - Independent",
   l4: "B2 - Upper-Intermediate",
   l5: "C1 - Advanced",
-  l6: "C2 - Mastery",
+  l6: "C2 - Near-Native",
   // CEFR codes
   A1: "A1 - Foundations",
   A2: "A2 - Developing",
   B1: "B1 - Independent",
   B2: "B2 - Upper-Intermediate",
   C1: "C1 - Advanced",
-  C2: "C2 - Mastery",
+  C2: "C2 - Near-Native",
   // CEFR labels (for dropdown displays)
   cefrLabels: {
     l1: "A1",
@@ -96,6 +96,7 @@ levels: {
     l3: "B1",
     l4: "B2",
     l5: "C1",
+    l6: "C2",
   },
   // CEFR descriptions (for onboarding/quiz)
   cefrDescriptions: {
@@ -104,6 +105,7 @@ levels: {
     l3: "Can handle most situations while traveling. Can describe experiences, events, and briefly explain opinions and plans.",
     l4: "Can understand complex texts and interact fluently with native speakers. Can produce clear, detailed text on a wide range of subjects.",
     l5: "Can understand demanding texts and recognize implicit meaning. Can express ideas fluently with precision and flexibility.",
+    l6: "Can understand virtually everything heard or read. Can summarize information from different sources, reconstructing arguments coherently.",
   },
 },
 
@@ -313,11 +315,11 @@ myStories: {
   public: "Public",
   notApproved: "Not approved for public",
   premiumRequired: "Premium required to share publicly",
-  levelBeginner: "Level 1 (A1 - Beginner)",
-  levelElementary: "Level 2 (A2 - Elementary)",
-  levelIntermediate: "Level 3 (B1 - Intermediate)",
-  levelUpperIntermediate: "Level 4 (B2 - Upper Intermediate)",
-  levelAdvanced: "Level 5 (C1 - Advanced)",
+  levelBeginner: "A1 - Foundations",
+  levelElementary: "A2 - Developing",
+  levelIntermediate: "B1 - Independent",
+  levelUpperIntermediate: "B2 - Upper-Intermediate",
+  levelAdvanced: "C1 - Advanced",
   waiting: "Waiting",
   storyTooShort: "Story is too short. Please provide at least 100 characters.",
   storyTooLong: "Story exceeds maximum length.",

@@ -10,6 +10,7 @@ import type { Language } from "@/types/i18n";
 import {
   getUserStoryContent,
   getUserStoryMap,
+  getUserStoryAvailableLevels,
 } from "@/lib/user-stories/getUserStoryContent";
 
 interface PageParams {
@@ -38,6 +39,9 @@ export default async function UserStoryReaderPage({
 
   // Get story map for navigation
   const storyMap = await getUserStoryMap(storyId, session.user.id, level);
+
+  // Get available levels for this story
+  const availableLevels = await getUserStoryAvailableLevels(storyId, session.user.id);
 
   // Get story content
   const story = await getUserStoryContent(
@@ -68,6 +72,7 @@ export default async function UserStoryReaderPage({
       storyMap={storyMap}
       isUserStory={true}
       userStoryId={storyId}
+      availableLevels={availableLevels}
     />
   );
 }

@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
+
+// Minimum duration for displaying each step label (ms)
+const MIN_STEP_DURATION = 800;
+// Total animation time (exit + enter)
+const ANIMATION_DURATION = 500;
 
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
@@ -23,6 +28,98 @@ export default function FloatingProgressWidget() {
   } = useStoryUpload();
 
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // Animated subtitle state management
+  const [displayedStepLabel, setDisplayedStepLabel] = useState<string | undefined>();
+  const [previousStepLabel, setPreviousStepLabel] = useState<string | undefined>();
+  const [isAnimating, setIsAnimating] = useState(false);
+  const lastStepChangeRef = useRef<number>(Date.now());
+  const pendingStepRef = useRef<string | undefined>();
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const newStepLabel = progress.stepLabel;
+
+    // If no change, do nothing
+    if (newStepLabel === displayedStepLabel) return;
+
+    // Always update pending to the latest value
+    pendingStepRef.current = newStepLabel;
+
+    // If currently animating, just queue it - don't start a new transition
+    if (isAnimating) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastChange = now - lastStepChangeRef.current;
+
+    const performTransition = (labelToShow: string | undefined) => {
+      // Clear any existing timeouts
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+
+      // Start exit animation
+      setPreviousStepLabel(displayedStepLabel);
+      setIsAnimating(true);
+
+      // After exit animation, show new label
+      animationTimeoutRef.current = setTimeout(() => {
+        setDisplayedStepLabel(labelToShow);
+        lastStepChangeRef.current = Date.now();
+
+        // Clear previous after enter animation completes
+        animationTimeoutRef.current = setTimeout(() => {
+          setPreviousStepLabel(undefined);
+          setIsAnimating(false);
+
+          // Check if there's a newer pending step we should transition to
+          if (pendingStepRef.current && pendingStepRef.current !== labelToShow) {
+            // Schedule the next transition after minimum duration
+            delayTimeoutRef.current = setTimeout(() => {
+              const nextLabel = pendingStepRef.current;
+              pendingStepRef.current = undefined;
+              if (nextLabel) {
+                performTransition(nextLabel);
+              }
+            }, MIN_STEP_DURATION);
+          } else {
+            pendingStepRef.current = undefined;
+          }
+        }, 300);
+      }, 200);
+    };
+
+    if (timeSinceLastChange >= MIN_STEP_DURATION) {
+      // Enough time has passed, transition immediately
+      pendingStepRef.current = undefined;
+      performTransition(newStepLabel);
+    } else {
+      // Queue the update - clear any existing delay timeout
+      if (delayTimeoutRef.current) {
+        clearTimeout(delayTimeoutRef.current);
+      }
+
+      const delay = MIN_STEP_DURATION - timeSinceLastChange;
+
+      delayTimeoutRef.current = setTimeout(() => {
+        const labelToShow = pendingStepRef.current;
+        pendingStepRef.current = undefined;
+        if (labelToShow) {
+          performTransition(labelToShow);
+        }
+      }, delay);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (delayTimeoutRef.current) {
+        clearTimeout(delayTimeoutRef.current);
+      }
+    };
+  }, [progress.stepLabel, displayedStepLabel, isAnimating]);
 
   // Don't render if not uploading
   if (!isUploading && progress.stage === "idle") {
@@ -127,11 +224,11 @@ export default function FloatingProgressWidget() {
             style={{ width: `${progress.overallProgress}%` }}
           />
         </div>
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white shadow-md rounded-full px-3 py-1 text-xs text-gray-600 flex items-center gap-2 hover:shadow-lg transition-shadow">
-          <div className={`w-2 h-2 rounded-full animate-pulse ${isRewriting ? "bg-amber-500" : "bg-blue-500"}`} />
-          <span>{progress.overallProgress}%</span>
-          <span className="text-gray-400">|</span>
-          <span>{progress.message}</span>
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white shadow-md rounded-full px-3 py-1 text-xs text-gray-600 flex items-center gap-2 hover:shadow-lg transition-shadow max-w-md">
+          <div className={`w-2 h-2 rounded-full animate-pulse flex-shrink-0 ${isRewriting ? "bg-amber-500" : "bg-blue-500"}`} />
+          <span className="flex-shrink-0">{progress.overallProgress}%</span>
+          <span className="text-gray-400 flex-shrink-0">|</span>
+          <span className="truncate">{progress.phaseTitle || progress.message}</span>
           {hasChaptersToView && (
             <>
               <span className="text-gray-400">|</span>
@@ -162,7 +259,9 @@ export default function FloatingProgressWidget() {
         <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="font-medium">Uploading Story</span>
+            <span className="font-medium">
+              {lng === "es" ? "Procesando historia" : "Processing Story"}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -221,14 +320,35 @@ export default function FloatingProgressWidget() {
                 {progress.overallProgress}%
               </span>
             </div>
-            <div>
-              <p className="font-medium text-gray-800">{progress.message}</p>
-              {(progress.stage === "rewriting-levels" || progress.stage === "translating") &&
-                progress.currentChapter && progress.totalChapters && (
-                <p className="text-sm text-gray-500">
-                  Chapter {progress.currentChapter}/{progress.totalChapters}
-                </p>
-              )}
+            <div className="flex-1 min-w-0">
+              {/* Phase title (main) */}
+              <p className="font-medium text-gray-800">
+                {progress.phaseTitle || progress.message}
+              </p>
+              {/* Step label (subtitle) with cylinder animation - fixed height container */}
+              <div className="h-5 relative overflow-hidden" style={{ perspective: "200px" }}>
+                {/* Exiting label */}
+                {previousStepLabel && isAnimating && (
+                  <p className="text-sm text-gray-500 truncate absolute inset-0 animate-subtitle-exit">
+                    {previousStepLabel}
+                  </p>
+                )}
+                {/* Current/entering label - use absolute during animation to prevent layout shift */}
+                {displayedStepLabel && (
+                  <p
+                    className={`text-sm text-gray-500 truncate ${isAnimating ? 'absolute inset-0 animate-subtitle-enter' : ''}`}
+                  >
+                    {displayedStepLabel}
+                  </p>
+                )}
+                {/* Chapter progress if no step label but in chapter processing */}
+                {!displayedStepLabel && !previousStepLabel && (progress.stage === "rewriting-levels" || progress.stage === "translating") &&
+                  progress.currentChapter && progress.totalChapters && (
+                  <p className="text-sm text-gray-500">
+                    Chapter {progress.currentChapter}/{progress.totalChapters}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

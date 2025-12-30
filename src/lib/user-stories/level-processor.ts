@@ -2,7 +2,7 @@
 // Handles processing of a single CEFR level for a user story
 
 import { USER_STORY_LIMITS } from "./limits";
-import { LevelProgressTracker } from "./progress-tracker";
+import { LevelProgressTracker, updateStoryProgress } from "./progress-tracker";
 import {
   rewriteToLevel,
   translateText,
@@ -55,6 +55,7 @@ export async function processLevel(
   params: LevelProcessingParams
 ): Promise<LevelProcessingResult> {
   const {
+    storyId,
     levelId,
     level,
     rawContent,
@@ -64,9 +65,11 @@ export async function processLevel(
   } = params;
 
   // Clean the text using shared utilities
+  await updateStoryProgress(storyId, "cleaning_text", { currentLevel: level });
   const cleanedContent = cleanText(quickClean(rawContent));
 
   // Parse chapters FIRST (before rewriting, to enable chunked processing)
+  await updateStoryProgress(storyId, "parsing_chapters", { currentLevel: level });
   const { hasChapters, chapters: rawChapters } = parseChapters(cleanedContent);
 
   // Initialize progress tracker
@@ -77,6 +80,7 @@ export async function processLevel(
 
     // Step 1: Rewrite if needed
     const chapters = await rewriteChaptersIfNeeded(
+      storyId,
       rawChapters,
       level,
       detectedLevel,
@@ -86,6 +90,7 @@ export async function processLevel(
 
     // Step 2: Translate all chapters
     const processedChapters = await translateChapters(
+      storyId,
       chapters,
       sourceLanguage,
       level,
@@ -93,6 +98,7 @@ export async function processLevel(
     );
 
     // Step 3: Build content structure
+    await updateStoryProgress(storyId, "building_structure", { currentLevel: level });
     const levelNum = levelStringToNumber(level);
     const content = buildContentStructure(
       storySlug,
@@ -103,6 +109,7 @@ export async function processLevel(
     );
 
     // Step 4: Mark complete
+    await updateStoryProgress(storyId, "saving_content", { currentLevel: level });
     await tracker.markComplete(content);
 
     return { success: true };
@@ -121,6 +128,7 @@ export async function processLevel(
  * Rewrite chapters to target level if different from detected level
  */
 async function rewriteChaptersIfNeeded(
+  storyId: string,
   rawChapters: string[],
   targetLevel: string,
   detectedLevel: string,
@@ -139,7 +147,14 @@ async function rewriteChaptersIfNeeded(
   for (let i = 0; i < rawChapters.length; i++) {
     const chapterText = rawChapters[i];
 
-    // Update progress - starting this chapter
+    // Update story-level progress with chapter info
+    await updateStoryProgress(storyId, "rewriting_chapter", {
+      chapterCurrent: i + 1,
+      chapterTotal: rawChapters.length,
+      currentLevel: targetLevel,
+    });
+
+    // Update level-specific progress
     await tracker.updateRewriteProgress(i + 1);
 
     // Rewrite this chapter
@@ -176,6 +191,7 @@ interface ProcessedChapter {
  * Translate all chapters to the opposite language
  */
 async function translateChapters(
+  storyId: string,
   chapters: string[],
   sourceLanguage: "en" | "es",
   level: string,
@@ -187,7 +203,14 @@ async function translateChapters(
   for (let i = 0; i < chapters.length; i++) {
     const chapterText = chapters[i];
 
-    // Update progress - starting this chapter
+    // Update story-level progress with chapter info
+    await updateStoryProgress(storyId, "translating_chapter", {
+      chapterCurrent: i + 1,
+      chapterTotal: chapters.length,
+      currentLevel: level,
+    });
+
+    // Update level-specific progress
     await tracker.updateTranslationProgress(i + 1);
 
     // Translate chapter

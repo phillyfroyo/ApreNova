@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { ChapterData, RewriteChapterData } from "@/contexts/StoryUploadContext";
-import { getCEFRLabel } from "@/lib/cefr";
+import { getCEFRLabel, toCEFR } from "@/lib/cefr";
 
 export interface ProgressViewerModalProps {
   isOpen: boolean;
@@ -124,8 +124,8 @@ export function ProgressViewerModal({
     leftLines = rewriteData.originalLines || [];
     rightLines = rewriteData.rewrittenLines || [];
     // Use CEFR labels for level display
-    const fromLevel = detectedLevel ? getCEFRLabel(detectedLevel) : "Original";
-    const toLevel = targetLevel ? getCEFRLabel(targetLevel) : "Rewritten";
+    const fromLevel = detectedLevel ? getCEFRLabel(toCEFR(detectedLevel)) : "Original";
+    const toLevel = targetLevel ? getCEFRLabel(toCEFR(targetLevel)) : "Rewritten";
     leftTitle = `${fromLevel} (Original)`;
     rightTitle = `${toLevel} (Rewritten)`;
     footerLeftLabel = "original";

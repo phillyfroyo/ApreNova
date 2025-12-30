@@ -21,7 +21,7 @@ export const LEVEL_LABELS: Record<CEFRCode, string> = {
   B1: "B1 - Independent",
   B2: "B2 - Upper-Intermediate",
   C1: "C1 - Advanced",
-  C2: "C2 - Mastery",
+  C2: "C2 - Near-Native",
 };
 
 // Spanish labels
@@ -31,7 +31,7 @@ export const LEVEL_LABELS_ES: Record<CEFRCode, string> = {
   B1: "B1 - Independiente",
   B2: "B2 - Intermedio Alto",
   C1: "C1 - Avanzado",
-  C2: "C2 - Maestría",
+  C2: "C2 - Casi Nativo",
 };
 
 // Get label by language

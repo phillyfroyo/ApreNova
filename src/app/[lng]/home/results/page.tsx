@@ -51,7 +51,7 @@ export default function ResultsPage() {
     router.push(`/${typedLang}/stories`);
   };
 
-  const getLevelName = () => t(typedLang, "levels", level) || "Beginner";
+  const getLevelName = () => t(typedLang, "levels", level) || "Foundations";
   const getCefrLabel = () => t(typedLang, "levels", `cefrLabels.${level}`) || "A1";
   const getCefrDescription = () => t(typedLang, "levels", `cefrDescriptions.${level}`) || "";
 

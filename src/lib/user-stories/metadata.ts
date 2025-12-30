@@ -1,7 +1,8 @@
 // src/lib/user-stories/metadata.ts
-// Handles title and description generation for user stories
+// Handles title, description, and metadata generation for user stories
 
 import { OpenAI } from "openai";
+import type { StoryType, StoryTag } from "@/types/story";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -20,6 +21,31 @@ export interface DescriptionResult {
   descriptionEs: string;
   descriptionEn: string;
 }
+
+export interface HookResult {
+  hook: string;
+  hookEs: string;
+  hookEn: string;
+}
+
+export type TargetAudience = "all" | "children" | "teen" | "adult";
+
+// Valid story types for detection
+const STORY_TYPES: StoryType[] = [
+  "short-story", "poem", "fable", "folktale", "novel", "article",
+  "dialogue", "song-lyrics", "epic", "myth", "legend", "movie-script", "tv-script"
+];
+
+// Valid tags for extraction
+const STORY_TAGS: StoryTag[] = [
+  "family", "friendship", "adventure", "mystery", "romance",
+  "coming-of-age", "nature", "technology", "travel", "food",
+  "humorous", "heartwarming", "suspenseful", "reflective", "inspiring",
+  "urban", "rural", "historical", "fantasy", "contemporary",
+  "latin-america", "spain", "usa", "multicultural",
+  "epic", "mythology", "heroic", "tragedy", "comedy",
+  "monsters", "heros-journey", "war", "love", "death", "revenge"
+];
 
 // ============================================================================
 // TITLE GENERATION
@@ -133,5 +159,233 @@ ${text.substring(0, 2000)}`;
       descriptionEs: "",
       descriptionEn: "",
     };
+  }
+}
+
+// ============================================================================
+// HOOK/TEASER GENERATION
+// ============================================================================
+
+/**
+ * Generate a short hook/teaser for the story (max 15 words)
+ * Uses GPT-4o-mini for fast, cost-effective generation
+ */
+export async function generateHook(
+  text: string,
+  language: "en" | "es"
+): Promise<HookResult> {
+  const prompt =
+    language === "es"
+      ? `Lee el siguiente texto en español y escribe un gancho corto y atractivo (máximo 15 palabras) que capture la esencia y atraiga a los lectores. Debe ser intrigante y conciso.
+
+Responde en JSON con este formato exacto:
+{"hookEs": "gancho en español", "hookEn": "hook in English"}
+
+Texto:
+${text.substring(0, 1500)}`
+      : `Read the following English text and write a short, engaging hook (maximum 15 words) that captures the essence and draws readers in. It should be intriguing and concise.
+
+Respond in JSON with this exact format:
+{"hookEs": "gancho en español", "hookEn": "hook in English"}
+
+Text:
+${text.substring(0, 1500)}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 100,
+    });
+
+    const response = completion.choices[0]?.message?.content || "";
+    const cleaned = response.replace(/```json|```/g, "").trim();
+
+    const result = JSON.parse(cleaned);
+    return {
+      hook: language === "es" ? result.hookEs : result.hookEn,
+      hookEs: result.hookEs || "",
+      hookEn: result.hookEn || "",
+    };
+  } catch {
+    return {
+      hook: "",
+      hookEs: "",
+      hookEn: "",
+    };
+  }
+}
+
+// ============================================================================
+// STORY TYPE DETECTION
+// ============================================================================
+
+/**
+ * Detect the story type from the content
+ * Uses GPT-4o-mini for fast, cost-effective detection
+ */
+export async function detectStoryType(
+  text: string,
+  language: "en" | "es"
+): Promise<StoryType> {
+  const typeList = STORY_TYPES.join(", ");
+
+  const prompt =
+    language === "es"
+      ? `Analiza el siguiente texto y determina qué tipo de contenido es.
+
+Opciones válidas: ${typeList}
+
+Responde SOLO con una de las opciones exactas de arriba, sin explicación.
+
+Texto:
+${text.substring(0, 2000)}`
+      : `Analyze the following text and determine what type of content it is.
+
+Valid options: ${typeList}
+
+Respond with ONLY one of the exact options above, no explanation.
+
+Text:
+${text.substring(0, 2000)}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 30,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim().toLowerCase() || "";
+
+    // Validate the response is a valid story type
+    if (STORY_TYPES.includes(response as StoryType)) {
+      return response as StoryType;
+    }
+
+    // Fallback to short-story if not recognized
+    return "short-story";
+  } catch {
+    return "short-story";
+  }
+}
+
+// ============================================================================
+// TARGET AUDIENCE DETECTION
+// ============================================================================
+
+/**
+ * Detect the target audience for the story
+ * Uses GPT-4o-mini for fast, cost-effective detection
+ */
+export async function detectTargetAudience(
+  text: string,
+  language: "en" | "es"
+): Promise<TargetAudience> {
+  const prompt =
+    language === "es"
+      ? `Analiza el siguiente texto y determina la audiencia objetivo más apropiada.
+
+Opciones:
+- "children" (niños, contenido simple y apropiado para todas las edades)
+- "teen" (adolescentes, puede incluir temas más complejos)
+- "adult" (adultos, temas maduros o complejos)
+- "all" (apropiado para todas las edades)
+
+Responde SOLO con una palabra: children, teen, adult, o all
+
+Texto:
+${text.substring(0, 2000)}`
+      : `Analyze the following text and determine the most appropriate target audience.
+
+Options:
+- "children" (simple content appropriate for all ages)
+- "teen" (may include more complex themes)
+- "adult" (mature or complex themes)
+- "all" (appropriate for all ages)
+
+Respond with ONLY one word: children, teen, adult, or all
+
+Text:
+${text.substring(0, 2000)}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 10,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim().toLowerCase() || "";
+
+    if (["children", "teen", "adult", "all"].includes(response)) {
+      return response as TargetAudience;
+    }
+
+    return "all";
+  } catch {
+    return "all";
+  }
+}
+
+// ============================================================================
+// TAG EXTRACTION
+// ============================================================================
+
+/**
+ * Extract relevant tags from the story content
+ * Uses GPT-4o-mini for fast, cost-effective extraction
+ */
+export async function extractTags(
+  text: string,
+  language: "en" | "es"
+): Promise<StoryTag[]> {
+  const tagList = STORY_TAGS.join(", ");
+
+  const prompt =
+    language === "es"
+      ? `Analiza el siguiente texto y selecciona de 2 a 5 etiquetas que mejor describan su contenido, temas y tono.
+
+Etiquetas válidas: ${tagList}
+
+Responde en JSON con este formato exacto:
+{"tags": ["tag1", "tag2", "tag3"]}
+
+Texto:
+${text.substring(0, 2000)}`
+      : `Analyze the following text and select 2 to 5 tags that best describe its content, themes, and tone.
+
+Valid tags: ${tagList}
+
+Respond in JSON with this exact format:
+{"tags": ["tag1", "tag2", "tag3"]}
+
+Text:
+${text.substring(0, 2000)}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.5,
+      max_tokens: 100,
+    });
+
+    const response = completion.choices[0]?.message?.content || "";
+    const cleaned = response.replace(/```json|```/g, "").trim();
+
+    const result = JSON.parse(cleaned);
+
+    // Validate and filter to only valid tags
+    const validTags = (result.tags || [])
+      .filter((tag: string) => STORY_TAGS.includes(tag as StoryTag))
+      .slice(0, 5) as StoryTag[];
+
+    return validTags.length > 0 ? validTags : ["adventure"];
+  } catch {
+    return ["adventure"];
   }
 }

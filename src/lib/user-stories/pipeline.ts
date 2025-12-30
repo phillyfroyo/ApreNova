@@ -11,9 +11,16 @@ import { prisma } from "@/lib/prisma";
 import { USER_STORY_LIMITS } from "./limits";
 
 // Modular imports
-import { extractOrGenerateTitle, generateDescription } from "./metadata";
+import {
+  extractOrGenerateTitle,
+  generateDescription,
+  generateHook,
+  detectStoryType,
+  detectTargetAudience,
+  extractTags,
+} from "./metadata";
 import { processLevel } from "./level-processor";
-import { updateStoryStatus, determineFinalStatus } from "./progress-tracker";
+import { updateStoryStatus, determineFinalStatus, updateStoryProgress } from "./progress-tracker";
 
 // Shared library imports
 import { detectLanguage, detectCEFRLevel } from "@/lib/story-processing";
@@ -114,6 +121,74 @@ async function generateDescriptionIfNeeded(
       descriptionEs: descriptions.descriptionEs,
       descriptionEn: descriptions.descriptionEn,
     },
+  });
+  await apiDelay();
+}
+
+/**
+ * Step 3.5: Generate hook/teaser
+ */
+async function generateAndSaveHook(
+  storyId: string,
+  rawContent: string,
+  sourceLanguage: "en" | "es"
+): Promise<void> {
+  const hookResult = await generateHook(rawContent, sourceLanguage);
+  await prisma.userStory.update({
+    where: { id: storyId },
+    data: {
+      hook: hookResult.hook,
+      hookEs: hookResult.hookEs,
+      hookEn: hookResult.hookEn,
+    },
+  });
+  await apiDelay();
+}
+
+/**
+ * Step 3.6: Detect story type
+ */
+async function detectAndSaveStoryType(
+  storyId: string,
+  rawContent: string,
+  sourceLanguage: "en" | "es"
+): Promise<void> {
+  const storyType = await detectStoryType(rawContent, sourceLanguage);
+  await prisma.userStory.update({
+    where: { id: storyId },
+    data: { storyType },
+  });
+  await apiDelay();
+}
+
+/**
+ * Step 3.7: Detect target audience
+ */
+async function detectAndSaveTargetAudience(
+  storyId: string,
+  rawContent: string,
+  sourceLanguage: "en" | "es"
+): Promise<void> {
+  const targetAudience = await detectTargetAudience(rawContent, sourceLanguage);
+  await prisma.userStory.update({
+    where: { id: storyId },
+    data: { targetAudience },
+  });
+  await apiDelay();
+}
+
+/**
+ * Step 3.8: Extract tags
+ */
+async function extractAndSaveTags(
+  storyId: string,
+  rawContent: string,
+  sourceLanguage: "en" | "es"
+): Promise<void> {
+  const tags = await extractTags(rawContent, sourceLanguage);
+  await prisma.userStory.update({
+    where: { id: storyId },
+    data: { tags },
   });
   await apiDelay();
 }
@@ -230,6 +305,10 @@ async function processAllLevels(
  * 1. Detect source language (English or Spanish)
  * 2. Generate title if using default
  * 3. Generate description if not provided
+ * 3.5. Generate hook/teaser
+ * 3.6. Detect story type
+ * 3.7. Detect target audience
+ * 3.8. Extract tags
  * 4. Detect CEFR level
  * 5. Determine which levels to process (detected + user's level)
  * 6. Process each level (rewrite + translate + paginate)
@@ -249,7 +328,7 @@ export async function processUserStory(storyId: string): Promise<void> {
       rawContent: true,
       userId: true,
       sourceLanguage: true,
-      levels: {
+      UserStoryLevel: {
         select: {
           id: true,
           level: true,
@@ -262,11 +341,19 @@ export async function processUserStory(storyId: string): Promise<void> {
     throw new Error("Story not found");
   }
 
+  // Map UserStoryLevel to levels for internal use
+  const storyWithLevels = {
+    ...story,
+    levels: story.UserStoryLevel,
+  };
+
   try {
     // Step 1: Detect language
+    await updateStoryProgress(storyId, "detecting_language");
     const sourceLanguage = await detectAndSaveLanguage(storyId, story.rawContent);
 
     // Step 2: Generate title if needed
+    await updateStoryProgress(storyId, "generating_title");
     await generateTitleIfNeeded(
       storyId,
       story.title,
@@ -275,6 +362,7 @@ export async function processUserStory(storyId: string): Promise<void> {
     );
 
     // Step 3: Generate description if needed
+    await updateStoryProgress(storyId, "generating_description");
     await generateDescriptionIfNeeded(
       storyId,
       story.description,
@@ -282,7 +370,24 @@ export async function processUserStory(storyId: string): Promise<void> {
       sourceLanguage
     );
 
+    // Step 3.5: Generate hook/teaser
+    await updateStoryProgress(storyId, "generating_hook");
+    await generateAndSaveHook(storyId, story.rawContent, sourceLanguage);
+
+    // Step 3.6: Detect story type
+    await updateStoryProgress(storyId, "detecting_story_type");
+    await detectAndSaveStoryType(storyId, story.rawContent, sourceLanguage);
+
+    // Step 3.7: Detect target audience
+    await updateStoryProgress(storyId, "detecting_audience");
+    await detectAndSaveTargetAudience(storyId, story.rawContent, sourceLanguage);
+
+    // Step 3.8: Extract tags
+    await updateStoryProgress(storyId, "extracting_tags");
+    await extractAndSaveTags(storyId, story.rawContent, sourceLanguage);
+
     // Step 4: Detect CEFR level
+    await updateStoryProgress(storyId, "detecting_level");
     const detectedLevel = await detectAndSaveLevel(
       storyId,
       story.rawContent,
@@ -295,15 +400,16 @@ export async function processUserStory(storyId: string): Promise<void> {
       detectedLevel
     );
 
-    // Step 6: Process all levels
+    // Step 6: Process all levels (progress updates happen inside processAllLevels)
     const { allSucceeded, anySucceeded } = await processAllLevels(
-      story,
+      storyWithLevels,
       levelsToProcess,
       sourceLanguage,
       detectedLevel
     );
 
     // Step 7: Update final status
+    await updateStoryProgress(storyId, "complete");
     const finalStatus = determineFinalStatus(allSucceeded, anySucceeded);
     await updateStoryStatus(storyId, finalStatus);
     console.log(`[Pipeline] Complete: ${finalStatus}`);
@@ -335,7 +441,7 @@ export async function retryLevel(
       rawContent: true,
       sourceLanguage: true,
       detectedLevel: true,
-      levels: {
+      UserStoryLevel: {
         select: {
           id: true,
           level: true,
@@ -348,7 +454,7 @@ export async function retryLevel(
     return { success: false, error: "Story not found" };
   }
 
-  const levelRecord = story.levels.find((l) => l.level === level);
+  const levelRecord = story.UserStoryLevel.find((l) => l.level === level);
   if (!levelRecord) {
     return { success: false, error: `Level ${level} not found` };
   }
@@ -368,7 +474,7 @@ export async function retryLevel(
     const updatedStory = await prisma.userStory.findUnique({
       where: { id: storyId },
       select: {
-        levels: {
+        UserStoryLevel: {
           select: {
             status: true,
           },
@@ -377,8 +483,8 @@ export async function retryLevel(
     });
 
     if (updatedStory) {
-      const allReady = updatedStory.levels.every((l) => l.status === "READY");
-      const anyReady = updatedStory.levels.some((l) => l.status === "READY");
+      const allReady = updatedStory.UserStoryLevel.every((l) => l.status === "READY");
+      const anyReady = updatedStory.UserStoryLevel.some((l) => l.status === "READY");
       const status = determineFinalStatus(allReady, anyReady);
       await updateStoryStatus(storyId, status);
     }
@@ -400,7 +506,7 @@ export async function getProcessingStatus(storyId: string): Promise<{
     where: { id: storyId },
     select: {
       status: true,
-      levels: {
+      UserStoryLevel: {
         select: {
           level: true,
           status: true,
@@ -413,7 +519,7 @@ export async function getProcessingStatus(storyId: string): Promise<{
 
   return {
     storyStatus: story.status,
-    levels: story.levels.map((l) => ({
+    levels: story.UserStoryLevel.map((l) => ({
       level: l.level,
       status: l.status,
     })),

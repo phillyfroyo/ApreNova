@@ -37,11 +37,17 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         sourceLanguage: true,
         detectedLevel: true,
         thumbnailUrl: true,
+        storyType: true,
+        targetAudience: true,
+        tags: true,
+        hook: true,
+        hookEs: true,
+        hookEn: true,
         status: true,
         visibility: true,
         createdAt: true,
         updatedAt: true,
-        levels: {
+        UserStoryLevel: {
           select: {
             id: true,
             level: true,
@@ -59,7 +65,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ story });
+    // Map UserStoryLevel to levels for frontend compatibility
+    const { UserStoryLevel, ...rest } = story;
+    const storyWithLevels = { ...rest, levels: UserStoryLevel };
+
+    return NextResponse.json({ story: storyWithLevels });
   } catch (error: any) {
     console.error("[API/user-stories/[storyId]] GET error:", {
       error: error.message,
@@ -111,7 +121,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH: Update story metadata (title, description)
+// PATCH: Update story metadata (title, description, and all new metadata fields)
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -122,7 +132,21 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     const { storyId } = await params;
     const body = await req.json();
-    const { title, description, titleEs, titleEn, descriptionEs, descriptionEn, thumbnailUrl } = body;
+    const {
+      title,
+      description,
+      titleEs,
+      titleEn,
+      descriptionEs,
+      descriptionEn,
+      thumbnailUrl,
+      storyType,
+      targetAudience,
+      tags,
+      hook,
+      hookEs,
+      hookEn,
+    } = body;
 
     // Verify ownership
     const story = await prisma.userStory.findFirst({
@@ -145,6 +169,12 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     if (descriptionEs !== undefined) updateData.descriptionEs = descriptionEs;
     if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn;
     if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+    if (storyType !== undefined) updateData.storyType = storyType;
+    if (targetAudience !== undefined) updateData.targetAudience = targetAudience;
+    if (tags !== undefined) updateData.tags = tags;
+    if (hook !== undefined) updateData.hook = hook;
+    if (hookEs !== undefined) updateData.hookEs = hookEs;
+    if (hookEn !== undefined) updateData.hookEn = hookEn;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
