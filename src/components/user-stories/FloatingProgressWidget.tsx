@@ -8,8 +8,8 @@ import { toCEFR } from "@/lib/cefr";
 
 // Minimum duration for displaying each step label (ms)
 const MIN_STEP_DURATION = 800;
-// Total animation time (exit + enter)
-const ANIMATION_DURATION = 500;
+// Animation time (must match CSS animation duration)
+const ANIMATION_DURATION = 350;
 
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
@@ -28,6 +28,70 @@ export default function FloatingProgressWidget() {
   } = useStoryUpload();
 
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // Drag state for movable card
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+
+  // Handle drag start
+  const handleDragStart = (e: React.MouseEvent) => {
+    // Only start drag on left click
+    if (e.button !== 0) return;
+
+    const currentX = dragPosition?.x ?? 0;
+    const currentY = dragPosition?.y ?? 0;
+
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: currentX,
+      posY: currentY,
+    };
+    setIsDragging(true);
+    e.preventDefault();
+  };
+
+  // Handle drag move and end
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+
+      setDragPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Reset drag position after minimize transition completes
+  useEffect(() => {
+    if (isMinimized) {
+      // Wait for opacity transition (200ms) before resetting position
+      const timeout = setTimeout(() => {
+        setDragPosition(null);
+      }, 200);
+      return () => clearTimeout(timeout);
+    }
+  }, [isMinimized]);
 
   // Animated subtitle state management
   const [displayedStepLabel, setDisplayedStepLabel] = useState<string | undefined>();
@@ -61,35 +125,31 @@ export default function FloatingProgressWidget() {
         clearTimeout(animationTimeoutRef.current);
       }
 
-      // Start exit animation
+      // Start animation - set both labels immediately so enter animation shows correct text
       setPreviousStepLabel(displayedStepLabel);
+      setDisplayedStepLabel(labelToShow);
       setIsAnimating(true);
+      lastStepChangeRef.current = Date.now();
 
-      // After exit animation, show new label
+      // Clear previous after animation completes
       animationTimeoutRef.current = setTimeout(() => {
-        setDisplayedStepLabel(labelToShow);
-        lastStepChangeRef.current = Date.now();
+        setPreviousStepLabel(undefined);
+        setIsAnimating(false);
 
-        // Clear previous after enter animation completes
-        animationTimeoutRef.current = setTimeout(() => {
-          setPreviousStepLabel(undefined);
-          setIsAnimating(false);
-
-          // Check if there's a newer pending step we should transition to
-          if (pendingStepRef.current && pendingStepRef.current !== labelToShow) {
-            // Schedule the next transition after minimum duration
-            delayTimeoutRef.current = setTimeout(() => {
-              const nextLabel = pendingStepRef.current;
-              pendingStepRef.current = undefined;
-              if (nextLabel) {
-                performTransition(nextLabel);
-              }
-            }, MIN_STEP_DURATION);
-          } else {
+        // Check if there's a newer pending step we should transition to
+        if (pendingStepRef.current && pendingStepRef.current !== labelToShow) {
+          // Schedule the next transition after minimum duration
+          delayTimeoutRef.current = setTimeout(() => {
+            const nextLabel = pendingStepRef.current;
             pendingStepRef.current = undefined;
-          }
-        }, 300);
-      }, 200);
+            if (nextLabel) {
+              performTransition(nextLabel);
+            }
+          }, MIN_STEP_DURATION);
+        } else {
+          pendingStepRef.current = undefined;
+        }
+      }, ANIMATION_DURATION);
     };
 
     if (timeSinceLastChange >= MIN_STEP_DURATION) {
@@ -206,16 +266,20 @@ export default function FloatingProgressWidget() {
     );
   }
 
-  // Minimized state - thin horizontal bar at top
-  if (isMinimized) {
-    const hasTranslationToView = progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0;
-    const hasRewriteToView = progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0;
-    const hasChaptersToView = hasTranslationToView || hasRewriteToView;
-    const isRewriting = progress.stage === "rewriting-levels";
+  // Compute values needed for minimized state
+  const hasTranslationToView = progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0;
+  const hasRewriteToView = progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0;
+  const hasChaptersToView = hasTranslationToView || hasRewriteToView;
+  const isRewriting = progress.stage === "rewriting-levels";
 
-    return (
+  // Render both states with opacity transitions for smooth minimize/maximize
+  return (
+    <>
+      {/* Minimized state - thin horizontal bar at top */}
       <div
-        className="fixed top-0 left-0 right-0 z-50 cursor-pointer"
+        className={`fixed top-0 left-0 right-0 z-50 cursor-pointer transition-opacity duration-200 ${
+          isMinimized ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
         onClick={toggleMinimized}
       >
         <div className="h-1 bg-gray-200">
@@ -248,16 +312,27 @@ export default function FloatingProgressWidget() {
           </svg>
         </div>
       </div>
-    );
-  }
 
-  // Expanded state - floating card
-  return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+      {/* Expanded state - floating card */}
+      <div
+        className={`fixed z-50 w-full max-w-md px-4 transition-opacity duration-200 ${
+          isMinimized ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+        style={{
+          top: dragPosition ? `calc(1rem + ${dragPosition.y}px)` : "1rem",
+          left: dragPosition ? `calc(50% + ${dragPosition.x}px)` : "50%",
+          transform: "translateX(-50%)",
+        }}
+      >
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {/* Header - drag handle */}
+        <div
+          className={`px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          onMouseDown={handleDragStart}
+        >
+          <div className="flex items-center gap-2 select-none">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
             <span className="font-medium">
               {lng === "es" ? "Procesando historia" : "Processing Story"}
@@ -414,7 +489,8 @@ export default function FloatingProgressWidget() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

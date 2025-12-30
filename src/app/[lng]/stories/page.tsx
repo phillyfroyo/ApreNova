@@ -24,6 +24,7 @@ import { updateNativeLanguage } from '@/lib/updateLanguage'
 import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
 import UserStoryCard from "@/components/user-stories/UserStoryCard"
 import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal"
+import { useStoryUpload } from "@/contexts/StoryUploadContext"
 
 type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
@@ -274,6 +275,7 @@ function StoriesPageContent() {
   const [userStories, setUserStories] = useState<UserStory[]>([]);
   const [selectedUserStory, setSelectedUserStory] = useState<UserStory | null>(null);
   const { data: session } = useSession();
+  const { lastConfirmedAt } = useStoryUpload();
 
   // Fetch user stories
   useEffect(() => {
@@ -305,7 +307,7 @@ function StoriesPageContent() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [session?.user?.id]);
+  }, [session?.user?.id, lastConfirmedAt]);
 
   const handleUserStoryDelete = (storyId: string) => {
     setUserStories((prev) => prev.filter((s) => s.id !== storyId));
@@ -584,7 +586,8 @@ useEffect(() => {
         display: "flex",
         gap: "1rem",
         overflowX: "auto",
-        paddingBottom: "0.5rem",
+        paddingTop: "0.75rem",
+        paddingBottom: "0.75rem",
         scrollbarWidth: "none",
         msOverflowStyle: "none",
       }}

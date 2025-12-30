@@ -45,7 +45,7 @@ export default function MyStoriesPage() {
   const router = useRouter();
   const { lng } = useParams();
   const typedLang = lng as Language;
-  const { setShowUploadModal, progress } = useStoryUpload();
+  const { setShowUploadModal, progress, lastConfirmedAt } = useStoryUpload();
 
   const [stories, setStories] = useState<UserStory[]>([]);
   const [stats, setStats] = useState<StoryStats | null>(null);
@@ -125,30 +125,30 @@ export default function MyStoriesPage() {
     setSelectedStory(updatedStory);
   };
 
-  // Refetch stories when upload completes
+  // Refetch stories when upload completes or story is confirmed
   useEffect(() => {
-    if (progress.stage === "complete" || progress.stage === "review") {
-      const refetch = async () => {
-        try {
-          const [storiesRes, statsRes] = await Promise.all([
-            fetch("/api/user-stories"),
-            fetch("/api/user-stories/count"),
-          ]);
-          if (storiesRes.ok) {
-            const data = await storiesRes.json();
-            setStories(data.stories || []);
-          }
-          if (statsRes.ok) {
-            const data = await statsRes.json();
-            setStats(data);
-          }
-        } catch (err) {
-          console.error("Failed to refetch stories:", err);
+    if (!lastConfirmedAt) return;
+
+    const refetch = async () => {
+      try {
+        const [storiesRes, statsRes] = await Promise.all([
+          fetch("/api/user-stories"),
+          fetch("/api/user-stories/count"),
+        ]);
+        if (storiesRes.ok) {
+          const data = await storiesRes.json();
+          setStories(data.stories || []);
         }
-      };
-      refetch();
-    }
-  }, [progress.stage]);
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          setStats(data);
+        }
+      } catch (err) {
+        console.error("Failed to refetch stories:", err);
+      }
+    };
+    refetch();
+  }, [lastConfirmedAt]);
 
   if (sessionStatus === "loading" || loading) {
     return (
@@ -229,7 +229,7 @@ export default function MyStoriesPage() {
           </button>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 px-1 scrollbar-hide">
+        <div className="flex gap-4 overflow-x-auto py-3 px-1 scrollbar-hide">
           {stories.map((story) => (
             <UserStoryCard
               key={story.id}

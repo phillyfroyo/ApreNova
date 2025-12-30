@@ -60,14 +60,25 @@ body {
   animation: fade-in 0.3s ease-out;
 }
 
+/* Simple opacity fade for minimize/maximize transitions */
+@keyframes fade-opacity {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-opacity {
+  animation: fade-opacity 0.2s ease-out;
+}
+
 /* Cylinder spin animation for subtitle transitions */
 @keyframes subtitle-enter {
   0% {
     opacity: 0;
-    transform: translateY(80%) rotateX(-60deg);
-  }
-  50% {
-    opacity: 0.7;
+    transform: translateY(100%) rotateX(-45deg);
   }
   100% {
     opacity: 1;
@@ -80,23 +91,20 @@ body {
     opacity: 1;
     transform: translateY(0) rotateX(0deg);
   }
-  50% {
-    opacity: 0.5;
-  }
   100% {
     opacity: 0;
-    transform: translateY(-80%) rotateX(60deg);
+    transform: translateY(-100%) rotateX(45deg);
   }
 }
 
 .animate-subtitle-enter {
-  animation: subtitle-enter 0.3s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  animation: subtitle-enter 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   transform-origin: center bottom;
   will-change: transform, opacity;
 }
 
 .animate-subtitle-exit {
-  animation: subtitle-exit 0.2s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  animation: subtitle-exit 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   transform-origin: center top;
   will-change: transform, opacity;
 }

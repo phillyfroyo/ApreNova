@@ -111,6 +111,7 @@ interface StoryUploadContextType {
   showReviewModal: boolean;
   showProgressViewer: boolean;
   showCancelConfirm: boolean;
+  lastConfirmedAt: number | null; // Timestamp of last story confirmation
 
   // Actions
   startUpload: (options: StartUploadOptions) => Promise<void>;
@@ -282,6 +283,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
   // Abort controller for cancellation
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  // Timestamp for when a story was last confirmed (for triggering refetch in UI)
+  const [lastConfirmedAt, setLastConfirmedAt] = useState<number | null>(null);
 
   const updateProgress = useCallback((stage: UploadStage, stageProgress: number = 0, extra?: Partial<UploadProgress>) => {
     const weights = STAGE_WEIGHTS[stage];
@@ -634,7 +638,11 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             hookDetected: !!storyStatus.hook || !!storyStatus.hookEs || !!storyStatus.hookEn,
           } : null);
 
-          updateProgress("review", 100);
+          updateProgress("review", 100, {
+            phase: "finalizing",
+            phaseTitle: PHASE_TITLES.finalizing,
+            stepLabel: "Ready for review",
+          });
           setShowReviewModal(true);
           setIsMinimized(false);
           break;
@@ -720,9 +728,14 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         }),
       });
 
-      updateProgress("complete", 100);
+      updateProgress("complete", 100, {
+        phase: "finalizing",
+        phaseTitle: PHASE_TITLES.finalizing,
+        stepLabel: "All done!",
+      });
       setShowReviewModal(false);
       setIsUploading(false);
+      setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
       // Reset after 5 seconds (giving user time to click "Start reading")
       setTimeout(() => {
@@ -749,6 +762,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     showReviewModal,
     showProgressViewer,
     showCancelConfirm,
+    lastConfirmedAt,
     startUpload,
     cancelUpload,
     requestCancel,
