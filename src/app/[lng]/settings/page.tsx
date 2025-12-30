@@ -48,6 +48,9 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
 
+  // Billing error state
+  const [billingError, setBillingError] = useState<string | null>(null)
+
   if (status === 'loading') {
     return (
       <AppLayout lang={typedLang}>
@@ -125,8 +128,6 @@ export default function SettingsPage() {
     setEditingField(null)
     setEditValue('')
   }
-
-  const [billingError, setBillingError] = useState<string | null>(null)
 
   const openBillingPortal = async () => {
     setLoadingPortal(true)
