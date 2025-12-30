@@ -230,7 +230,7 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
         className="z-50"
         style={positionStyles}
       >
-        <Button
+        <button
           ref={buttonRef}
           onClick={() => {
             // Only open if not dragged (to distinguish click from drag)
@@ -242,12 +242,11 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
           }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          variant="muted"
-          className={`!px-3 !py-2 text-xl rounded-full leading-none min-w-0 select-none touch-none cursor-grab active:cursor-grabbing ${isDragging ? 'scale-110 shadow-lg opacity-80' : ''}`}
+          className={`px-3 py-2 text-xl rounded-full leading-none min-w-0 select-none touch-none cursor-grab active:cursor-grabbing bg-gray-300 hover:bg-gray-400 transition-all ${isDragging ? 'scale-110 shadow-lg opacity-80' : ''}`}
           aria-label={text.title1}
         >
           💬
-        </Button>
+        </button>
       </div>
 
       {isOpen && (
