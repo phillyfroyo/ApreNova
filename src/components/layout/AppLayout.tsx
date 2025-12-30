@@ -17,15 +17,14 @@ interface AppLayoutProps {
 export default function AppLayout({ children, lang, hideNavigation = false }: AppLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load persisted sidebar state on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved === 'true') {
-      setSidebarCollapsed(true);
+  // Initialize from localStorage synchronously to prevent flash
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebarCollapsed') === 'true';
     }
-  }, []);
+    return false;
+  });
 
   const handleSidebarToggle = (collapsed: boolean) => {
     setSidebarCollapsed(collapsed);

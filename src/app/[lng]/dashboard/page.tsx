@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout';
-import { BookOpen, MessageCircle, TrendingUp, Clock, Award, ChevronRight } from 'lucide-react';
+import { BookOpen, MessageCircle, TrendingUp, Clock, Award, ChevronRight, Flame, FileText, Layers } from 'lucide-react';
 import type { Language } from '@/types/i18n';
 
 type Bookmark = {
@@ -22,6 +22,10 @@ type UserStats = {
   totalMs: number;
   readingMs: number;
   storiesCompleted: number;
+  wordsRead: number;
+  pagesRead: number;
+  chaptersVisited: number;
+  currentStreak: number;
 };
 
 export default function DashboardPage() {
@@ -63,9 +67,14 @@ export default function DashboardPage() {
       .join(' ');
   };
 
+  // Greeting in target language (the language user is learning, opposite of native)
   const greeting = () => {
     const hour = new Date().getHours();
-    if (lang === 'es') {
+    const nativeLang = session?.user?.nativeLanguage;
+    // Target language is opposite of native (if native is 'en', learning Spanish; if 'es', learning English)
+    const targetLang = nativeLang === 'en' ? 'es' : 'en';
+
+    if (targetLang === 'es') {
       if (hour < 12) return 'Buenos días';
       if (hour < 18) return 'Buenas tardes';
       return 'Buenas noches';
@@ -73,6 +82,13 @@ export default function DashboardPage() {
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toString();
   };
 
   const content = {
@@ -91,6 +107,11 @@ export default function DashboardPage() {
       memberSince: 'Member Since',
       chapter: 'Chapter',
       page: 'Page',
+      wordsRead: 'Words Read',
+      currentStreak: 'Day Streak',
+      chaptersVisited: 'Chapters Read',
+      pagesRead: 'Pages Read',
+      days: 'days',
     },
     es: {
       continueReading: 'Continuar Leyendo',
@@ -107,6 +128,11 @@ export default function DashboardPage() {
       memberSince: 'Miembro Desde',
       chapter: 'Capítulo',
       page: 'Página',
+      wordsRead: 'Palabras Leídas',
+      currentStreak: 'Racha de Días',
+      chaptersVisited: 'Capítulos Leídos',
+      pagesRead: 'Páginas Leídas',
+      days: 'días',
     },
   };
 
@@ -122,7 +148,7 @@ export default function DashboardPage() {
       <div className="min-h-screen">
       <div className="p-6 md:p-8 max-w-5xl mx-auto">
         {/* Welcome Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             {greeting()}, {session?.user?.name?.split(' ')[0] || 'Reader'}!
           </h1>
@@ -130,6 +156,63 @@ export default function DashboardPage() {
             {lang === 'es' ? '¿Qué quieres aprender hoy?' : 'What would you like to learn today?'}
           </p>
         </div>
+
+        {/* Stats Section - Moved to top */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-indigo-600" />
+            {t.yourProgress}
+          </h2>
+
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 animate-pulse">
+                  <div className="h-8 bg-gray-200 rounded w-12 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-20" />
+                </div>
+              ))}
+            </div>
+          ) : stats ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Current Streak - highlighted */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 shadow-sm border border-orange-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                  <span className="text-2xl font-bold text-gray-900">{stats.currentStreak}</span>
+                </div>
+                <p className="text-sm text-gray-600">{t.currentStreak}</p>
+              </div>
+
+              {/* Words Read */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  <span className="text-2xl font-bold text-gray-900">{formatNumber(stats.wordsRead)}</span>
+                </div>
+                <p className="text-sm text-gray-500">{t.wordsRead}</p>
+              </div>
+
+              {/* Chapters Visited */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <Layers className="w-5 h-5 text-purple-500" />
+                  <span className="text-2xl font-bold text-gray-900">{stats.chaptersVisited}</span>
+                </div>
+                <p className="text-sm text-gray-500">{t.chaptersVisited}</p>
+              </div>
+
+              {/* Time Reading */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-5 h-5 text-indigo-500" />
+                  <span className="text-2xl font-bold text-gray-900">{formatMinutes(stats.readingMs)}</span>
+                </div>
+                <p className="text-sm text-gray-500">{t.timeReading}</p>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         {/* Continue Reading Section */}
         <section className="mb-8">
@@ -201,55 +284,6 @@ export default function DashboardPage() {
               <p className="text-sm text-white/80 mt-1">{t.aiTutorDesc}</p>
             </Link>
           </div>
-        </section>
-
-        {/* Stats Section */}
-        <section>
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-600" />
-            {t.yourProgress}
-          </h2>
-
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded w-12 mb-2" />
-                  <div className="h-3 bg-gray-200 rounded w-20" />
-                </div>
-              ))}
-            </div>
-          ) : stats ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <Award className="w-5 h-5 text-amber-500" />
-                  <span className="text-2xl font-bold text-gray-900">{stats.storiesCompleted}</span>
-                </div>
-                <p className="text-sm text-gray-500">{t.storiesCompleted}</p>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-5 h-5 text-indigo-500" />
-                  <span className="text-2xl font-bold text-gray-900">{formatMinutes(stats.readingMs)}</span>
-                </div>
-                <p className="text-sm text-gray-500">{t.timeReading}</p>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 col-span-2 md:col-span-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg font-bold text-gray-900">
-                    {new Date(stats.createdAt).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500">{t.memberSince}</p>
-              </div>
-            </div>
-          ) : null}
         </section>
       </div>
       </div>
