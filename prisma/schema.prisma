@@ -82,6 +82,21 @@ model StoryBookmark {
   @@index([userId])
 }
 
+model PageVisit {
+  id        String   @id @default(cuid())
+  userId    String
+  storySlug String
+  level     String
+  chapter   Int
+  page      Int
+  wordCount Int      @default(0)
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storySlug, level, chapter, page])
+  @@index([userId])
+}
+
 model StoryTutorMessage {
   id        String   @id @default(cuid())
   userId    String
@@ -120,6 +135,7 @@ model User {
   stripeCustomerId  String?             @unique
   Account           Account[]
   CompletedStory    CompletedStory[]
+  PageVisit         PageVisit[]
   Session           Session[]
   SessionLog        SessionLog[]
   StoryBookmark     StoryBookmark[]

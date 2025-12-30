@@ -86,13 +86,13 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
   };
 
   return (
-    <div className="hidden md:block fixed left-0 top-0 z-40 h-screen">
+    <div className={`hidden md:block fixed left-0 top-0 z-40 h-screen overflow-hidden ${collapsed ? 'w-[78px]' : 'w-[238px]'} transition-[width] duration-300`}>
       {/* Collapse Toggle - outside aside to avoid overflow clipping */}
       <button
         onClick={() => onToggle(!collapsed)}
         className={`
-          absolute top-20 z-50
-          ${collapsed ? 'left-[52px]' : 'left-[212px]'}
+          absolute top-1/2 -translate-y-1/2 z-50
+          ${collapsed ? 'left-[51px]' : 'left-[211px]'}
           w-6 h-6 rounded-full
           bg-white border border-gray-200 shadow-md
           flex items-center justify-center
@@ -120,22 +120,22 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
         `}
       >
       {/* Logo Area */}
-      <div className="p-4 border-b border-white/20">
-        <Link href={`/${lang}/dashboard`} className="flex items-center gap-2">
+      <div className="p-4 border-b border-white/20 h-[60px]">
+        <Link href={`/${lang}/dashboard`} className="flex items-center gap-2 h-full">
           <BookOpen className="w-6 h-6 text-indigo-600 flex-shrink-0" />
-          <span
-            className={`text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap transition-opacity ${collapsed ? 'opacity-0 duration-100' : 'opacity-100 duration-200 delay-150'}`}
-          >
-            <span className="text-indigo-700">
-              {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+          {!collapsed && (
+            <span className="text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap">
+              <span className="text-indigo-700">
+                {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+              </span>
+              <span className="text-purple-800">ana</span>
             </span>
-            <span className="text-purple-800">ana</span>
-          </span>
+          )}
         </Link>
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-hidden">
         <ul className="space-y-1 px-2">
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -144,7 +144,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-lg
+                    flex items-center gap-3 px-3 h-10 rounded-lg
                     transition-colors duration-200
                     ${active
                       ? 'bg-indigo-600/90 text-white font-medium shadow-sm'
@@ -154,11 +154,11 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                   title={collapsed ? getLabel(item) : undefined}
                 >
                   <span className={`flex-shrink-0 ${active ? 'text-white' : 'text-gray-700'}`}>{item.icon}</span>
-                  <span
-                    className={`whitespace-nowrap transition-opacity ${collapsed ? 'opacity-0 duration-100' : 'opacity-100 duration-200 delay-150'}`}
-                  >
-                    {getLabel(item)}
-                  </span>
+                  {!collapsed && (
+                    <span className="whitespace-nowrap">
+                      {getLabel(item)}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
@@ -168,7 +168,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
 
       {/* User Section */}
       {session?.user && (
-        <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm">
+        <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm overflow-hidden h-[62px]">
           {/* User Menu Dropdown - appears above the user section */}
           {userMenuOpen && !collapsed && (
             <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
@@ -205,7 +205,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
           {/* Clickable User Info */}
           <button
             onClick={() => !collapsed && setUserMenuOpen(!userMenuOpen)}
-            className="w-full flex items-center gap-3 hover:bg-white/30 rounded-lg transition-colors p-1 -m-1"
+            className="w-full flex items-center gap-3 p-1 hover:bg-white/30 rounded-lg transition-colors"
           >
             {session.user.image ? (
               <Image
@@ -220,30 +220,32 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                 {session.user.name?.[0] || session.user.email?.[0] || '?'}
               </div>
             )}
-            <div
-              className={`flex-1 min-w-0 text-left transition-opacity ${collapsed ? 'opacity-0 duration-100' : 'opacity-100 duration-200 delay-150'}`}
-            >
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {session.user.name || 'User'}
-              </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {/* Level badge with crown - orange */}
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
-                  <Crown className="w-2.5 h-2.5" />
-                  {session.user.quizLevel || 'Level 2'}
-                </span>
-                {/* Premium badge with gem - silver/gray */}
-                {session.user.isPremium && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-medium">
-                    <Gem className="w-2.5 h-2.5" />
-                    PRO
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChevronUp
-              className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-all ${collapsed ? 'opacity-0' : 'opacity-100'} ${userMenuOpen ? '' : 'rotate-180'}`}
-            />
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {session.user.name || 'User'}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {/* Level badge with crown - orange */}
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
+                      <Crown className="w-2.5 h-2.5" />
+                      {session.user.quizLevel || 'Level 2'}
+                    </span>
+                    {/* Premium badge with gem - silver/gray */}
+                    {session.user.isPremium && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-medium">
+                        <Gem className="w-2.5 h-2.5" />
+                        PRO
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronUp
+                  className={`w-4 h-4 text-gray-400 flex-shrink-0 ${userMenuOpen ? '' : 'rotate-180'}`}
+                />
+              </>
+            )}
           </button>
         </div>
       )}
