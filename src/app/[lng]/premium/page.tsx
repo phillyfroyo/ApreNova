@@ -3,12 +3,10 @@ export const dynamic = "force-dynamic";
 // src/app/[lng]/premium/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import PremiumDevToggle from "@/components/PremiumDevToggle";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import SubscribeButton from "@/components/SubscribeButton";
 import type { Language } from "@/types/i18n";
-import { getStoryUrl } from "@/utils/getStoryUrl";
 import { t } from "@/lib/t";
 
 export default async function PremiumPage({
@@ -66,14 +64,11 @@ export default async function PremiumPage({
 )}
 
 
-  {/* 🔁 Dev toggle + return */}
+  {/* Return to stories */}
   <div className="mt-8">
-    <PremiumDevToggle />
-    <div className="mt-4">
-      <Link href={`/${lng}/stories`}>
-        <Button variant="button1">← {t(lng, "premium", "returnToStories")}</Button>
-      </Link>
-    </div>
+    <Link href={`/${lng}/stories`}>
+      <Button variant="button1">← {t(lng, "premium", "returnToStories")}</Button>
+    </Link>
   </div>
 </div>
   );

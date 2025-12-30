@@ -30,8 +30,8 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/${lng || 'es'}/checkout/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/${lng || 'es'}/checkout/cancel`,
       client_reference_id: session.user.id,
       locale: ["es", "en"].includes(lng) ? lng : "auto"
     });

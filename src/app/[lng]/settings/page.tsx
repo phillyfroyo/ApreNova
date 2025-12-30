@@ -126,8 +126,11 @@ export default function SettingsPage() {
     setEditValue('')
   }
 
+  const [billingError, setBillingError] = useState<string | null>(null)
+
   const openBillingPortal = async () => {
     setLoadingPortal(true)
+    setBillingError(null)
     try {
       const res = await fetch('/api/stripe/billing-portal', {
         method: 'POST',
@@ -138,10 +141,18 @@ export default function SettingsPage() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        console.error('Failed to open billing portal:', data.error)
+        // Show user-friendly error for missing subscription
+        if (data.error === 'No subscription found') {
+          setBillingError(typedLang === 'es'
+            ? 'No se encontró una suscripción activa de Stripe.'
+            : 'No active Stripe subscription found.')
+        } else {
+          setBillingError(data.error)
+        }
       }
     } catch (err) {
       console.error('Failed to open billing portal:', err)
+      setBillingError(typedLang === 'es' ? 'Error al conectar' : 'Connection error')
     } finally {
       setLoadingPortal(false)
     }
@@ -458,21 +469,26 @@ export default function SettingsPage() {
             </div>
 
             {session.user.isPremium ? (
-              <button
-                onClick={openBillingPortal}
-                disabled={loadingPortal}
-                className="mt-4 w-full flex items-center justify-between py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  {loadingPortal ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <CreditCard className="w-5 h-5" />
-                  )}
-                  <span>{txt.manageSubscription}</span>
-                </div>
-                <ChevronRight className="w-5 h-5" />
-              </button>
+              <div className="mt-4">
+                <button
+                  onClick={openBillingPortal}
+                  disabled={loadingPortal}
+                  className="w-full flex items-center justify-between py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    {loadingPortal ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-5 h-5" />
+                    )}
+                    <span>{txt.manageSubscription}</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                {billingError && (
+                  <p className="mt-2 text-sm text-amber-600 text-center">{billingError}</p>
+                )}
+              </div>
             ) : (
               <Link
                 href={`/${typedLang}/premium`}

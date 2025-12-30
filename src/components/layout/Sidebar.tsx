@@ -116,7 +116,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
           border-r border-white/10
           bg-white/30 backdrop-blur-md shadow-md
           transition-[width] duration-300 ease-in-out
-          overflow-hidden
+          overflow-x-hidden
         `}
       >
       {/* Logo Area */}
@@ -168,7 +168,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
 
       {/* User Section */}
       {session?.user && (
-        <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm overflow-hidden h-[62px]">
+        <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm h-[62px]">
           {/* User Menu Dropdown - appears above the user section */}
           {userMenuOpen && !collapsed && (
             <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
