@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
+import { AppLayout } from '@/components/layout';
 
 type Message = {
   role: "user" | "assistant";
@@ -51,7 +52,7 @@ function renderMarkdown(text: string): React.ReactElement {
 
 export default function TutorPage() {
   const { lng } = useParams();
-  const typedLang = lng as Language;
+  const typedLang = (lng as Language) || 'es';
   const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -158,18 +159,18 @@ export default function TutorPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <AppLayout lang={typedLang}>
+    {/* Full-screen background that extends under sidebar */}
+    <div
+      className="fixed inset-0 bg-cover bg-center -z-10"
+      style={{ backgroundImage: "url('/images/background6.png')" }}
+    />
+    <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-800">
           {t(typedLang, "stories", "aiTutor")}
         </h1>
-        <Link
-          href={`/${typedLang}/stories`}
-          className="text-blue-600 hover:text-blue-800 text-sm"
-        >
-          {t(typedLang, "settings", "backToStories")}
-        </Link>
       </div>
 
       {/* Messages Container */}
@@ -222,7 +223,7 @@ export default function TutorPage() {
       </div>
 
       {/* Input Container */}
-      <div className="bg-white border-t border-gray-200 py-4 pl-2 pr-4 sm:pl-4 md:pl-8 lg:pl-16">
+      <div className="py-4 pl-2 pr-4 sm:pl-4 md:pl-8 lg:pl-16">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
@@ -231,7 +232,7 @@ export default function TutorPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t(typedLang, "aiTutor", "placeholder")}
-              className="flex-1 pl-4 pr-[72px] py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
+              className="flex-1 pl-4 pr-[72px] py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto shadow-md"
               style={{ minHeight: "52px", maxHeight: "200px" }}
               rows={1}
             />
@@ -246,5 +247,6 @@ export default function TutorPage() {
         </form>
       </div>
     </div>
+    </AppLayout>
   );
 }

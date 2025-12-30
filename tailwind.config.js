@@ -7,6 +7,7 @@ module.exports = {
         serif: ['Alice', 'serif'],
         times: ['"Times New Roman"', 'Times', 'serif'],
         sans: ["Inter", '"Open Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
+        crimson: ['var(--font-crimson)', 'serif'],
       },
       dropShadow: {
   aprenova: '1.5px 1.5px 1px #0cc0df',

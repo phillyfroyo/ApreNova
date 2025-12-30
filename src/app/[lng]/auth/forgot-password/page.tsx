@@ -177,7 +177,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[url('/images/background3.png')] bg-cover bg-center text-black">
       <div className="mb-6 text-center">
-        <Logo variant="auth" />
+        <Logo variant="storiesmain" />
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">

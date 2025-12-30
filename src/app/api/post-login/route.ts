@@ -40,6 +40,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/${lang}/home`, req.url));
   }
 
-  // Existing user with level - go directly to stories
-  return NextResponse.redirect(new URL(`/${lang}/stories`, req.url));
+  // Existing user with level - go to dashboard
+  return NextResponse.redirect(new URL(`/${lang}/dashboard`, req.url));
 }
