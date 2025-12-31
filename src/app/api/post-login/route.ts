@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
   });
 
   if (!userWithLevel?.quizLevel) {
-    // New user without level - send to onboarding
-    return NextResponse.redirect(new URL(`/${lang}/home`, req.url));
+    // New user without level - send to root for onboarding step 1
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   // Existing user with level - go to dashboard

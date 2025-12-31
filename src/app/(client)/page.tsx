@@ -36,15 +36,21 @@ export default function LanguageSelectPage() {
     setPreferredLang(detectBrowserLanguage());
   }, []);
 
-  // If logged in, send to dashboard
+  // If logged in AND has completed onboarding (has quizLevel), send to dashboard
+  // Otherwise, let them go through onboarding
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      const lng = session.user?.nativeLanguage;
-      if (lng === 'en' || lng === 'es') {
-        router.replace(`/${lng}/dashboard`);
-      } else {
-        router.replace('/es/dashboard');
+      const hasCompletedOnboarding = !!session.user?.quizLevel;
+
+      if (hasCompletedOnboarding) {
+        const lng = session.user?.nativeLanguage;
+        if (lng === 'en' || lng === 'es') {
+          router.replace(`/${lng}/dashboard`);
+        } else {
+          router.replace('/es/dashboard');
+        }
       }
+      // If not completed onboarding, stay on this page to select language
     }
   }, [session, status, router]);
 
@@ -210,21 +216,23 @@ export default function LanguageSelectPage() {
               )}
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-gray-300"></div>
-              <div className="flex-1 h-px bg-gray-300"></div>
-            </div>
-
-            {/* Login link */}
-            <div className="text-center">
-              <a
-                href={`/${preferredLang}/auth/login`}
-                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-              >
-                {t.loginText}
-              </a>
-            </div>
+            {/* Login link - only show for unauthenticated users */}
+            {status !== 'authenticated' && (
+              <>
+                <div className="flex items-center gap-4 my-6">
+                  <div className="flex-1 h-px bg-gray-300"></div>
+                  <div className="flex-1 h-px bg-gray-300"></div>
+                </div>
+                <div className="text-center">
+                  <a
+                    href={`/${preferredLang}/auth/login`}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                  >
+                    {t.loginText}
+                  </a>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
       </div>

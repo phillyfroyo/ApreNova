@@ -5,8 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
-import { useParams, useRouter } from "next/navigation";
-import type { Language } from "@/types/i18n";
+import { useRouter } from "next/navigation";
 import { useTypedLang } from "@/hooks/useTypedLang";
 import { t } from '@/lib/t';
 import Image from 'next/image';
@@ -17,8 +16,7 @@ type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
 const LEVELS: Level[] = ['l1', 'l2', 'l3', 'l4', 'l5'];
 
-export default function QuizWelcome() {
-  const { lng } = useParams();
+export default function OnboardingHome() {
   const typedLang = useTypedLang();
   const router = useRouter();
   const { data: session } = useSession();
@@ -42,6 +40,7 @@ export default function QuizWelcome() {
     };
   }, [menuOpen]);
 
+  // Handle level selection (Step 2)
   const handleLevelSelect = async (level: Level) => {
     setSelectedLevel(level);
 
@@ -70,6 +69,7 @@ export default function QuizWelcome() {
     router.push(`/${typedLang}/home/quiz/placement`);
   };
 
+  // Step 2: Level Selection
   return (
     <motion.section
       className="min-h-screen flex flex-col bg-[url('/images/background3.png')] bg-cover bg-center text-black"
@@ -245,7 +245,7 @@ export default function QuizWelcome() {
             className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-1 transition-colors"
           >
             <span>{t(typedLang, "home", "aboutPrefix")}</span>
-            <Logo variant="classic" size="text-[14px]" />
+            <Logo variant="classic" size="text-[14px]" plain />
           </Link>
         </motion.div>
       </div>

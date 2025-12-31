@@ -4,8 +4,11 @@
 export const AUTH_ERROR_CODES = {
   // Login errors
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  INVALID_PASSWORD: 'INVALID_PASSWORD',
+  INVALID_PASSWORD_HAS_OAUTH: 'INVALID_PASSWORD_HAS_OAUTH',
   USER_NOT_FOUND: 'USER_NOT_FOUND',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  OAUTH_ONLY_ACCOUNT: 'OAUTH_ONLY_ACCOUNT',
 
   // Signup errors
   EMAIL_EXISTS: 'EMAIL_EXISTS',
@@ -26,8 +29,11 @@ export type AuthErrorCode = typeof AUTH_ERROR_CODES[keyof typeof AUTH_ERROR_CODE
 export const AUTH_ERROR_MESSAGES: Record<string, Record<AuthErrorCode, string>> = {
   en: {
     INVALID_CREDENTIALS: 'Invalid email or password. Please try again.',
+    INVALID_PASSWORD: 'Invalid password. Please try again.',
+    INVALID_PASSWORD_HAS_OAUTH: 'Invalid password. You can also sign in with Google.',
     USER_NOT_FOUND: 'No account found with this email.',
     ACCOUNT_LOCKED: 'Account temporarily locked. Please try again later.',
+    OAUTH_ONLY_ACCOUNT: 'This account uses Google sign-in. Please use Google to log in.',
     EMAIL_EXISTS: 'This email is already registered. Try logging in instead.',
     INVALID_EMAIL: 'Please enter a valid email address.',
     MISSING_REQUIRED_FIELDS: 'Please fill in all required fields.',
@@ -37,8 +43,11 @@ export const AUTH_ERROR_MESSAGES: Record<string, Record<AuthErrorCode, string>> 
   },
   es: {
     INVALID_CREDENTIALS: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+    INVALID_PASSWORD: 'Contraseña incorrecta. Inténtalo de nuevo.',
+    INVALID_PASSWORD_HAS_OAUTH: 'Contraseña incorrecta. También puedes iniciar sesión con Google.',
     USER_NOT_FOUND: 'No se encontró una cuenta con este correo.',
     ACCOUNT_LOCKED: 'Cuenta bloqueada temporalmente. Inténtalo más tarde.',
+    OAUTH_ONLY_ACCOUNT: 'Esta cuenta usa Google. Por favor inicia sesión con Google.',
     EMAIL_EXISTS: 'Este correo ya está registrado. Intenta iniciar sesión.',
     INVALID_EMAIL: 'Por favor ingresa un correo electrónico válido.',
     MISSING_REQUIRED_FIELDS: 'Por favor completa todos los campos requeridos.',
