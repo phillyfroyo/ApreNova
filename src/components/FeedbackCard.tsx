@@ -12,10 +12,12 @@ export default function FeedbackCard({ title, subtitle, children, footer }: Feed
   const styles = cardPresets.feedback;
   return (
     <div className={styles.base}>
-      <div className={styles.header}>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {subtitle && <p className="text-sm opacity-90">{subtitle}</p>}
-      </div>
+      {(title || subtitle) && (
+        <div className={styles.header}>
+          {title && <h2 className="text-xl font-bold">{title}</h2>}
+          {subtitle && <p className="text-sm opacity-90 mt-1">{subtitle}</p>}
+        </div>
+      )}
       <div className={styles.body}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}
     </div>

@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     console.log("📦 FULL SESSION OBJECT:", session);
     const userId = session.client_reference_id;
+    const customerId = session.customer as string;
 
     if (!userId) {
       console.warn("⚠️ No client_reference_id found in session");
@@ -34,12 +35,33 @@ export async function POST(req: Request) {
     try {
       const result = await prisma.user.update({
         where: { id: userId },
-        data: { isPremium: true },
+        data: {
+          isPremium: true,
+          stripeCustomerId: customerId,
+        },
       });
 
       console.log(`✅ User ${userId} upgraded to Premium`, result);
     } catch (err) {
       console.error("❌ Failed to update user:", err);
+      return new NextResponse("DB error", { status: 500 });
+    }
+  }
+
+  // Handle subscription cancellation
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId = subscription.customer as string;
+
+    try {
+      const result = await prisma.user.update({
+        where: { stripeCustomerId: customerId },
+        data: { isPremium: false },
+      });
+
+      console.log(`✅ Subscription canceled for customer ${customerId}`, result);
+    } catch (err) {
+      console.error("❌ Failed to update user on subscription cancellation:", err);
       return new NextResponse("DB error", { status: 500 });
     }
   }

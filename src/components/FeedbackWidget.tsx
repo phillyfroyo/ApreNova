@@ -1,7 +1,7 @@
 // components/FeedbackWidget.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Button from "./ui/Button";
 import { Dialog } from "@headlessui/react";
 import FeedbackCard from "./FeedbackCard";
@@ -10,6 +10,7 @@ import { Send } from "lucide-react";
 import { motion } from "framer-motion";
 import Dropdown from "@/components/ui/Dropdown";
 
+type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 type FeedbackWidgetProps = {
   lng: "en" | "es";
@@ -22,6 +23,155 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
   const [selectedType, setSelectedType] = useState("");
   const [mood, setMood] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Draggable corner state
+  const [corner, setCorner] = useState<Corner>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("feedbackWidgetCorner") as Corner) || "bottom-right";
+    }
+    return "bottom-right";
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [wasDragged, setWasDragged] = useState(false); // Track if a drag actually happened
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dragStartRef = useRef<{ x: number; y: number; buttonX: number; buttonY: number } | null>(null);
+  const DRAG_THRESHOLD = 10; // Minimum pixels to move before considered a drag
+
+  // Track if we're on desktop (md breakpoint = 768px)
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  // Save corner preference
+  useEffect(() => {
+    localStorage.setItem("feedbackWidgetCorner", corner);
+  }, [corner]);
+
+  // Track screen size for responsive positioning
+  useEffect(() => {
+    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkIsDesktop();
+    window.addEventListener("resize", checkIsDesktop);
+    return () => window.removeEventListener("resize", checkIsDesktop);
+  }, []);
+
+  // Get corner position styles
+  const getCornerStyles = (c: Corner): React.CSSProperties => {
+    const offset = 16; // 4 in tailwind = 16px
+    // Desktop: nav is on the side, so we can sit closer to bottom
+    // Mobile: nav is at bottom, so we need more space
+    const bottomOffset = isDesktop ? 16 : 80;
+
+    switch (c) {
+      case "top-left":
+        return { top: offset, left: offset, bottom: "auto", right: "auto" };
+      case "top-right":
+        return { top: offset, right: offset, bottom: "auto", left: "auto" };
+      case "bottom-left":
+        return { bottom: bottomOffset, left: offset, top: "auto", right: "auto" };
+      case "bottom-right":
+      default:
+        return { bottom: bottomOffset, right: offset, top: "auto", left: "auto" };
+    }
+  };
+
+  // Calculate closest corner from position
+  const getClosestCorner = (x: number, y: number): Corner => {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const centerX = windowWidth / 2;
+    const centerY = windowHeight / 2;
+
+    const isLeft = x < centerX;
+    const isTop = y < centerY;
+
+    if (isTop && isLeft) return "top-left";
+    if (isTop && !isLeft) return "top-right";
+    if (!isTop && isLeft) return "bottom-left";
+    return "bottom-right";
+  };
+
+  // Handle drag start
+  const handleDragStart = useCallback((clientX: number, clientY: number) => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      dragStartRef.current = {
+        x: clientX,
+        y: clientY,
+        buttonX: rect.left + rect.width / 2,
+        buttonY: rect.top + rect.height / 2,
+      };
+      setIsDragging(true);
+    }
+  }, []);
+
+  // Handle drag move
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging || !dragStartRef.current) return;
+
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+
+    // Check if we've moved past the threshold
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (distance > DRAG_THRESHOLD) {
+      setWasDragged(true);
+    }
+
+    setDragPosition({
+      x: dragStartRef.current.buttonX + deltaX,
+      y: dragStartRef.current.buttonY + deltaY,
+    });
+  }, [isDragging]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    if (isDragging && dragPosition && wasDragged) {
+      const newCorner = getClosestCorner(dragPosition.x, dragPosition.y);
+      setCorner(newCorner);
+    }
+    setIsDragging(false);
+    setDragPosition(null);
+    dragStartRef.current = null;
+    // Reset wasDragged after a short delay to prevent click from firing
+    setTimeout(() => setWasDragged(false), 100);
+  }, [isDragging, dragPosition, wasDragged]);
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragStart(touch.clientX, touch.clientY);
+  };
+
+  // Global event listeners for drag
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      handleDragMove(touch.clientX, touch.clientY);
+    };
+    const handleMouseUp = () => handleDragEnd();
+    const handleTouchEnd = () => handleDragEnd();
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleTouchEnd);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
 
   const resetForm = () => {
   setSelectedType("");
@@ -58,23 +208,45 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
 };
 
 
+  // Compute position styles
+  const positionStyles: React.CSSProperties = isDragging && dragPosition
+    ? {
+        position: "fixed",
+        left: dragPosition.x,
+        top: dragPosition.y,
+        transform: "translate(-50%, -50%)",
+        transition: "none",
+      }
+    : {
+        position: "fixed",
+        ...getCornerStyles(corner),
+        transition: "all 0.3s ease-out",
+      };
+
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-50">
-
-{/* Open form button */}
-<Button
-  onClick={() => {
-    resetForm();
-    setFly(false);
-    setIsOpen(true);
-  }}
-  variant="muted"
-  className="!px-3 !py-2 text-xl rounded-full leading-none min-w-0"
-  aria-label={text.title1}
->
-  💬
-</Button>
+      {/* Draggable feedback button */}
+      <div
+        className="z-50"
+        style={positionStyles}
+      >
+        <button
+          ref={buttonRef}
+          onClick={() => {
+            // Only open if not dragged (to distinguish click from drag)
+            if (!wasDragged) {
+              resetForm();
+              setFly(false);
+              setIsOpen(true);
+            }
+          }}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          className={`px-3 py-2 text-xl rounded-full leading-none min-w-0 select-none touch-none cursor-grab active:cursor-grabbing bg-gray-300 hover:bg-gray-400 transition-all ${isDragging ? 'scale-110 shadow-lg opacity-80' : ''}`}
+          aria-label={text.title1}
+        >
+          💬
+        </button>
       </div>
 
       {isOpen && (

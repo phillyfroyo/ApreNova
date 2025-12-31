@@ -20,12 +20,12 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
       : 'Cuentana';
 
   const variants: Record<string, [string, string, string?]> = {
-    default: ['text-[#1000c8]', 'text-[#5100a2]', 'font-[Alice]'],
-    quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600'],
-    auth: ['text-[#70e0dc]', 'text-[#5100a2]'],
-    storiesmain: ['text-[#1000c8]', 'text-purple-800'],
+    default: ['text-[#1000c8]', 'text-[#5100a2]', 'font-crimson'],
+    quiz: ['text-blue-500 drop-shadow-xl', 'text-fuchsia-600', 'font-crimson'],
+    auth: ['text-[#70e0dc]', 'text-[#5100a2]', 'font-crimson'],
+    storiesmain: ['text-[#1000c8]', 'text-purple-800', 'font-crimson'],
     corporate: ['text-blue-800', 'text-indigo-900', 'font-sans'],
-    classic: ['text-indigo-600', 'text-purple-700', 'font-times'],
+    classic: ['text-indigo-600', 'text-purple-700', 'font-crimson'],
     coolgray: ['text-gray-800', 'text-blue-600', 'font-sans'],
     steel: ['text-slate-800', 'text-blue-900', 'font-sans'],
     vibrant: ['text-fuchsia-500', 'text-purple-700', 'font-[Fredoka]'],
@@ -54,7 +54,7 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
     electricice: ['text-sky-300', 'text-teal-300', 'font-[Raleway]'],
   };
 
-  const [aprendColor, oColor, font = 'font-[Alice]'] = variants[variant] || variants.default;
+  const [aprendColor, oColor, font = 'font-crimson'] = variants[variant] || variants.default;
 
   // Language logic
   const isLoggedIn = !!session?.user;

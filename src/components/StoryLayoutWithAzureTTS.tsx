@@ -293,7 +293,7 @@ export default function StoryLayoutWithAzureTTS({
     return () => clearTimeout(preloadTimer);
   }, [session, storySlug]);
 
-  // Save bookmark when page changes
+  // Save bookmark and record page visit when page changes
   useEffect(() => {
     if (!session?.user) return;
 
@@ -315,8 +315,34 @@ export default function StoryLayoutWithAzureTTS({
       }
     };
 
+    const recordPageVisit = async () => {
+      try {
+        // Count words on this page (from the target language sentences)
+        const wordCount = sentences.reduce((total, s) => {
+          const text = s[oppositeLang] || '';
+          return total + text.split(/\s+/).filter(w => w.length > 0).length;
+        }, 0);
+
+        await fetch('/api/page-visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storySlug,
+            level: currentLevel,
+            chapter: chapterNumber,
+            page: pageNumber,
+            wordCount,
+          }),
+        });
+        console.log(`📊 Page visit recorded: ${storySlug} - ${wordCount} words`);
+      } catch (error) {
+        console.error('Failed to record page visit:', error);
+      }
+    };
+
     saveBookmark();
-  }, [session, storySlug, currentLevel, chapterNumber, pageNumber]);
+    recordPageVisit();
+  }, [session, storySlug, currentLevel, chapterNumber, pageNumber, sentences, oppositeLang]);
 
   // Enhanced TTS play function
   const handlePlay = async (index: number, isSlow: boolean, text: string) => {

@@ -17,8 +17,17 @@ export async function POST(req: Request) {
 
   const { lng } = await req.json();
 
-  // ✅ Add this line right after the session check:
-  console.log("✅ Logged-in user ID at checkout:", session.user.id);
+  // Use native language for Stripe locale and currency selection
+  const nativeLanguage = session.user.nativeLanguage || 'es';
+  const stripeLocale = nativeLanguage === 'en' ? 'en' : 'es';
+
+  // Select price based on native language (es = MXN, en = USD)
+  // Falls back to MXN price if USD price not configured
+  const priceId = nativeLanguage === 'en' && process.env.STRIPE_PRICE_ID_USD
+    ? process.env.STRIPE_PRICE_ID_USD
+    : process.env.STRIPE_PRICE_ID!;
+
+  console.log("✅ Checkout for user:", session.user.id, "| Locale:", stripeLocale, "| Price:", priceId);
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -26,14 +35,14 @@ export async function POST(req: Request) {
       mode: 'subscription',
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID!,
+          price: priceId,
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/${lng || 'es'}/checkout/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/${lng || 'es'}/checkout/cancel`,
       client_reference_id: session.user.id,
-      locale: ["es", "en"].includes(lng) ? lng : "auto"
+      locale: stripeLocale,
     });
 
     return NextResponse.json({ url: checkoutSession.url });

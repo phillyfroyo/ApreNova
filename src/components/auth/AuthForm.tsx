@@ -164,9 +164,9 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         return;
       }
 
-      // Success - redirect to stories
+      // Success - redirect to dashboard
       const userLang = data.user?.nativeLanguage || lang;
-      window.location.href = `/${userLang}/stories`;
+      window.location.href = `/${userLang}/dashboard`;
     } catch (err) {
       setError(getAuthErrorMessage(AUTH_ERROR_CODES.NETWORK_ERROR, lang));
       setIsLoading(false);
@@ -216,7 +216,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
 
         if (result?.ok) {
           const userLang = validateData.user?.nativeLanguage || lang;
-          window.location.href = `/${userLang}/stories`;
+          window.location.href = `/${userLang}/dashboard`;
         } else {
           setError(getAuthErrorMessage(AUTH_ERROR_CODES.INTERNAL_ERROR, lang));
           setIsLoading(false);
@@ -327,7 +327,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[url('/images/background3.png')] bg-cover bg-center text-black">
       <div className="mb-6 text-center">
-        <Logo variant="auth" />
+        <Logo variant="storiesmain" />
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-md">
