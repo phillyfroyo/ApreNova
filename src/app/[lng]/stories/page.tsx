@@ -274,8 +274,23 @@ useEffect(() => {
     minHeight: "100vh",
   }}>
 
-{/* Top right controls: Upload button + My Stories */}
+{/* Top right controls: Filter, Upload button + My Stories */}
 <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
+  <button
+    onClick={() => setShowFilters(!showFilters)}
+    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+      activeFilterCount > 0
+        ? "bg-purple-600 text-white"
+        : "bg-white/80 text-gray-700 hover:bg-white"
+    }`}
+  >
+    <span>🏷️</span>
+    {activeFilterCount > 0 ? (
+      <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
+    ) : (
+      <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
+    )}
+  </button>
   <UploadStoryButton />
   <Link
     href={`/${typedLang}/my-stories`}
@@ -287,26 +302,9 @@ useEffect(() => {
 </div>
 
 <div className="mt-4 mb-4 px-4">
-  <div className="flex items-center justify-between">
-    <h2 className="text-xl font-semibold text-left">
-      {t(typedLang, "stories", "storiesAll")}
-    </h2>
-    <button
-      onClick={() => setShowFilters(!showFilters)}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-        activeFilterCount > 0
-          ? "bg-purple-600 text-white"
-          : "bg-white/80 text-gray-700 hover:bg-white"
-      }`}
-    >
-      <span>🏷️</span>
-      {activeFilterCount > 0 ? (
-        <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
-      ) : (
-        <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
-      )}
-    </button>
-  </div>
+  <h2 className="text-xl font-semibold text-left">
+    {t(typedLang, "stories", "storiesAll")}
+  </h2>
 
   {/* Filter Panel */}
   <AnimatePresence>
