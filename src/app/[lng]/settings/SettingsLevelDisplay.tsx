@@ -9,11 +9,11 @@ import type { Language } from "@/types/i18n";
 import { t } from '@/lib/t';
 
 const levelOptions = [
-  { value: 'l1', label: 'Level 1 - Brand New' },
-  { value: 'l2', label: 'Level 2 - Beginner' },
-  { value: 'l3', label: 'Level 3 - Intermediate' },
-  { value: 'l4', label: 'Level 4 - Advanced' },
-  { value: 'l5', label: 'Level 5 - Fluent' },
+  { value: 'A1', label: 'A1 - Brand New' },
+  { value: 'A2', label: 'A2 - Beginner' },
+  { value: 'B1', label: 'B1 - Intermediate' },
+  { value: 'B2', label: 'B2 - Advanced' },
+  { value: 'C1', label: 'C1 - Fluent' },
 ];
 
 export default function SettingsLevelDisplay() {

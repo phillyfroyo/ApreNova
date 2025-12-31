@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { t } from "@/lib/t";
+import { toCEFR } from "@/lib/stories";
 import type { Language } from "@/types/i18n";
 
 interface LevelUnavailablePageProps {
@@ -21,8 +22,8 @@ export default function LevelUnavailablePage({
   requestedLevel,
   lng,
 }: LevelUnavailablePageProps) {
-  // Get the numeric part of the level for display
-  const requestedLevelNum = requestedLevel.replace("l", "");
+  // Convert to CEFR for display
+  const requestedCEFR = toCEFR(requestedLevel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex items-center justify-center p-4">
@@ -57,7 +58,7 @@ export default function LevelUnavailablePage({
           <p className="text-sm text-gray-500 mb-2">
             {lng === "es" ? "Nivel solicitado:" : "Requested level:"}{" "}
             <span className="font-semibold text-gray-700">
-              {t(lng, "stories", "level")} {requestedLevelNum}
+              {requestedCEFR}
             </span>
           </p>
         </div>
@@ -76,15 +77,16 @@ export default function LevelUnavailablePage({
                 | "level3"
                 | "level4"
                 | "level5";
+              const cefrLevel = toCEFR(lvl);
 
               return (
                 <Link
                   key={lvl}
-                  href={`/${lng}/stories/${storySlug}/${lvl}/1/1`}
+                  href={`/${lng}/stories/${storySlug}/${cefrLevel}/1/1`}
                   className="transform hover:scale-105 transition-transform"
                 >
                   <Badge level={badgeLevel}>
-                    {t(lng, "stories", "level")} {levelNum}
+                    {cefrLevel}
                   </Badge>
                 </Link>
               );

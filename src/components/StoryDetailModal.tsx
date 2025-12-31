@@ -6,7 +6,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Badge, Button } from "@/components/ui";
-import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution, getAuthorName, getAuthorLifespan, getYearPublished, isPublicDomain, getPublicDomainNote } from "@/lib/stories";
+import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution, getAuthorName, getAuthorLifespan, getYearPublished, isPublicDomain, getPublicDomainNote, toCEFR } from "@/lib/stories";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
@@ -272,9 +272,9 @@ export default function StoryDetailModal({
     const storedLevel =
       typeof window !== "undefined" ? localStorage.getItem("level") : null;
     const level =
-      user?.quizLevel?.toLowerCase?.() ||
-      storedLevel?.toLowerCase?.() ||
-      "l2";
+      user?.quizLevel?.toUpperCase?.() ||
+      storedLevel?.toUpperCase?.() ||
+      "A2";
 
     const url = getStoryUrl(story.slug, level, 1, 1, typedLang);
     router.push(url);
@@ -404,7 +404,7 @@ export default function StoryDetailModal({
                         | "level5";
                       return (
                         <Badge key={idx} level={badgeLevel}>
-                          {t(typedLang, "stories", "level")} {lvl.replace("l", "")}
+                          {toCEFR(lvl)}
                         </Badge>
                       );
                     })}

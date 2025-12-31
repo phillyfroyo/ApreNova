@@ -18,10 +18,9 @@ import type { Language } from "@/types/i18n";
 import type { StoryTag, StoryType } from "@/types/story";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
-import { updateNativeLanguage } from '@/lib/updateLanguage'
 import { AppLayout } from '@/components/layout';
 
-type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
+type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
 // All theme tags combined into one list
 const ALL_THEME_TAGS: StoryTag[] = [
@@ -55,18 +54,17 @@ function getUniqueAuthors(): Array<{ id: string; name: string }> {
 function isLevel(value: unknown): value is Level {
   return (
     typeof value === 'string' &&
-    ['l1', 'l2', 'l3', 'l4', 'l5'].includes(value)
+    ['A1', 'A2', 'B1', 'B2', 'C1'].includes(value.toUpperCase())
   );
 }
 
 function StoriesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, nativeLanguage } = useUserSession();
-  const [selectedLevel, setSelectedLevel] = useState<Level>('l1');
+  const { user } = useUserSession();
+  const [selectedLevel, setSelectedLevel] = useState<Level>('A1');
   const { lng } = useParams();
   const typedLang = lng as Language;
-  const [showLangPrompt, setShowLangPrompt] = useState(false);
 
   // URL-based story detail modal
   const storyParam = searchParams.get("story");
@@ -162,23 +160,17 @@ function StoriesPageContent() {
 useEffect(() => {
   // Always prioritize the user's actual CEFR level from database
   if (isLevel(fallbackLevel)) {
-    setSelectedLevel(fallbackLevel);
+    setSelectedLevel(fallbackLevel.toUpperCase() as Level);
   } else {
     // Only use localStorage/sessionStorage if no database level exists
     const stored = localStorage.getItem('level') || sessionStorage.getItem('quizLevel');
     if (isLevel(stored)) {
-      setSelectedLevel(stored);
+      setSelectedLevel(stored.toUpperCase() as Level);
     }
   }
 }, [fallbackLevel]);
 
   // Body scroll is now handled by StoryDetailModal component
-
-  useEffect(() => {
-  if (user && !nativeLanguage) {
-    setShowLangPrompt(true)
-  }
-}, [user, nativeLanguage])
 
   return (
     <>
@@ -397,45 +389,6 @@ useEffect(() => {
         onClose={closeDetailModal}
         user={user}
       />
-{showLangPrompt && (
-  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl text-center space-y-6 max-w-sm w-full border border-white/50">
-      <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-        </svg>
-      </div>
-      <div>
-        <p className="text-xl font-bold text-gray-900 mb-1">
-          ¿Cuál es tu lengua materna?
-        </p>
-        <p className="text-gray-500">
-          What is your native language?
-        </p>
-      </div>
-      <div className="space-y-3">
-        <button
-          className="w-full bg-gradient-to-r from-red-500 to-yellow-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
-          onClick={async () => {
-            await updateNativeLanguage('es')
-            setShowLangPrompt(false)
-          }}
-        >
-          Español
-        </button>
-        <button
-          className="w-full bg-gradient-to-r from-blue-600 to-red-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
-          onClick={async () => {
-            await updateNativeLanguage('en')
-            router.replace('/en/stories')
-          }}
-        >
-          English
-        </button>
-      </div>
-    </div>
-  </div>
-)}
     </div>
     </>
   );

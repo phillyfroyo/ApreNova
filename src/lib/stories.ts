@@ -260,5 +260,82 @@ export function getStoryUrl({
   chapter?: number;
   page?: number;
 }) {
-  return `/${locale}/stories/${storySlug}/${level}/${chapter}/${page}`;
+  // Normalize level to CEFR format for URLs (A1, A2, B1, B2, C1)
+  const cefrLevel = toCEFR(level);
+  return `/${locale}/stories/${storySlug}/${cefrLevel}/${chapter}/${page}`;
 }
+
+// CEFR to L-level mapping (for content loading)
+const CEFR_TO_L: Record<string, string> = {
+  'a1': 'l1',
+  'a2': 'l2',
+  'b1': 'l3',
+  'b2': 'l4',
+  'c1': 'l5',
+};
+
+// L-level to CEFR mapping (for URLs and display)
+const L_TO_CEFR: Record<string, string> = {
+  'l1': 'A1',
+  'l2': 'A2',
+  'l3': 'B1',
+  'l4': 'B2',
+  'l5': 'C1',
+};
+
+/**
+ * Convert any level format to CEFR (A1, A2, B1, B2, C1)
+ * Used for URLs and display
+ */
+export function toCEFR(level: string | undefined | null): string {
+  if (!level) return 'A2'; // Default
+
+  const lowerLevel = level.toLowerCase().trim();
+
+  // Already CEFR format
+  if (/^[abc][12]$/i.test(level.trim())) {
+    return level.trim().toUpperCase();
+  }
+
+  // L-level format (l1, l2, etc.)
+  if (L_TO_CEFR[lowerLevel]) {
+    return L_TO_CEFR[lowerLevel];
+  }
+
+  // Numeric format (1, 2, 3, 4, 5)
+  if (/^[1-5]$/.test(lowerLevel)) {
+    return L_TO_CEFR[`l${lowerLevel}`] || 'A2';
+  }
+
+  return 'A2'; // Default fallback
+}
+
+/**
+ * Convert any level format to L-level (l1, l2, l3, l4, l5)
+ * Used internally for loading content from folders
+ */
+export function toLLevel(level: string | undefined | null): string {
+  if (!level) return 'l2'; // Default
+
+  const lowerLevel = level.toLowerCase().trim();
+
+  // Already in L format
+  if (/^l[1-5]$/.test(lowerLevel)) {
+    return lowerLevel;
+  }
+
+  // CEFR format (A1, A2, B1, B2, C1)
+  if (CEFR_TO_L[lowerLevel]) {
+    return CEFR_TO_L[lowerLevel];
+  }
+
+  // Numeric format (1, 2, 3, 4, 5)
+  if (/^[1-5]$/.test(lowerLevel)) {
+    return `l${lowerLevel}`;
+  }
+
+  return 'l2'; // Default fallback
+}
+
+// Backwards compatibility alias
+export const normalizeLevel = toLLevel;

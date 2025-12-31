@@ -5,7 +5,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { getTheme } from "@/components/storyThemes";
 import Link from "next/link";
-import { Menu, X, Volume2, Turtle, Loader2, AlertCircle } from "lucide-react";
+import { Menu, X, Volume2, Turtle, Loader2, AlertCircle, BookmarkPlus, Check } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import UnifiedTranslator from "@/components/UnifiedTranslator";
@@ -93,6 +93,9 @@ export default function StoryLayoutWithAzureTTS({
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
+  const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string } | null>>({});
+  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
+  const [savingWord, setSavingWord] = useState<number | null>(null);
   const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
@@ -114,7 +117,7 @@ export default function StoryLayoutWithAzureTTS({
   const router = useRouter();
 
   const pathParts = pathname ? pathname.split("/") : [];
-  const currentLevel = pathParts[4] || initialLevel || "l1";
+  const currentLevel = pathParts[4] || initialLevel || "A1";
   const currentChapter = pathParts[5] || "ch1";
   const currentPage = pathParts[6] || "page-1";
 
@@ -161,6 +164,101 @@ export default function StoryLayoutWithAzureTTS({
   const handleClearSelection = useCallback((index: number, clearFn: () => void) => {
     setClearSelectionFunctions(prev => ({ ...prev, [index]: clearFn }));
   }, []);
+
+  const handleTranslationData = useCallback((index: number, data: { word: string; translation: string } | null) => {
+    setTranslationData(prev => ({ ...prev, [index]: data }));
+  }, []);
+
+  const handleSaveWord = useCallback(async (lineIndex: number, sentence: string) => {
+    const selection = wordSelections[lineIndex];
+
+    // Must have a word selected
+    if (!selection) {
+      setSaveToast({ message: 'Select a word first', type: 'error' });
+      setTimeout(() => setSaveToast(null), 3000);
+      return;
+    }
+
+    setSavingWord(lineIndex);
+
+    try {
+      let word: string;
+      let translation: string;
+
+      const existingData = translationData[lineIndex];
+
+      if (existingData) {
+        // Use existing translation
+        word = existingData.word;
+        translation = existingData.translation;
+      } else {
+        // Extract selected word and auto-translate
+        const words = sentence.split(' ');
+        const selectedWords = words.slice(selection.start, selection.end + 1);
+        word = selectedWords.join(' ').replace(/[.,!?;:"""()]/g, '').trim();
+
+        if (!word) {
+          setSaveToast({ message: 'No word selected', type: 'error' });
+          setSavingWord(null);
+          setTimeout(() => setSaveToast(null), 3000);
+          return;
+        }
+
+        // Auto-translate the word
+        const isSingleWord = selectedWords.length === 1;
+        const endpoint = isSingleWord
+          ? `/api/translate-word?lang=es`
+          : `/api/translate-phrase?lang=es`;
+
+        const translateRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            isSingleWord
+              ? { word, sentence, level: currentLevel }
+              : { phrase: word, sentence, level: currentLevel }
+          ),
+        });
+
+        if (!translateRes.ok) {
+          throw new Error('Failed to translate');
+        }
+
+        const translateData = await translateRes.json();
+        translation = isSingleWord
+          ? translateData.translation
+          : translateData.translation;
+      }
+
+      // Save the word
+      const res = await fetch('/api/saved-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          word,
+          translation,
+          sourceSentence: sentence,
+          storySlug,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.status === 409) {
+        setSaveToast({ message: 'Already saved!', type: 'exists' });
+      } else if (!res.ok) {
+        throw new Error(result.error || 'Failed to save');
+      } else {
+        setSaveToast({ message: 'Word saved!', type: 'success' });
+      }
+    } catch (error) {
+      console.error('Error saving word:', error);
+      setSaveToast({ message: 'Failed to save word', type: 'error' });
+    } finally {
+      setSavingWord(null);
+      setTimeout(() => setSaveToast(null), 2500);
+    }
+  }, [translationData, wordSelections, storySlug, currentLevel]);
 
   // Helper function to check if any words are currently selected
   const hasSelectedWords = useCallback(() => {
@@ -504,52 +602,17 @@ export default function StoryLayoutWithAzureTTS({
         return;
       }
 
-      // Priority 1: If words are selected, deselect them first
+      // If words are selected, deselect them and hide emoji buttons
       if (hasSelectedWords()) {
         clearAllWordSelections();
+        setShowEmojiButtons({});
         return;
       }
 
-      // Priority 2: Find which line was clicked and toggle emoji visibility for that line
-      // Tapping between lines should activate the line ABOVE the tapped area
-      const allTextContents = document.querySelectorAll('[data-text-content]');
-      const clickY = e.clientY;
-
-      // Build array of line boundaries using the TEXT CONTENT position (not the container)
-      // This is more accurate because the container includes the emoji row above the text
-      const lineBounds = Array.from(allTextContents).map((el) => {
-        const rect = (el as HTMLElement).getBoundingClientRect();
-        const index = parseInt(el.getAttribute('data-text-content') || '-1');
-        return {
-          element: el as HTMLElement,
-          top: rect.top,      // Top of the actual text
-          bottom: rect.bottom, // Bottom of the actual text
-          index
-        };
-      });
-
-      // Line N owns: from its text TOP down to the next line's text TOP
-      // This ensures that clicking anywhere ABOVE a line's text activates the line ABOVE
-      // The dividing point is where each line's text begins
-      for (let i = 0; i < lineBounds.length; i++) {
-        const line = lineBounds[i];
-        const nextLine = lineBounds[i + 1];
-
-        // Top boundary: start from where this line's text begins
-        // This ensures tapping ABOVE the first line does NOT activate it
-        const effectiveTop = line.top;
-        // Bottom boundary: extends to where the next line's text begins
-        const effectiveBottom = nextLine ? nextLine.top : Infinity;
-
-        if (clickY >= effectiveTop && clickY < effectiveBottom) {
-          if (line.index >= 0) {
-            setShowEmojiButtons(prev => ({
-              ...prev,
-              [line.index]: !prev[line.index]
-            }));
-          }
-          return;
-        }
+      // Clicking anywhere else just hides any visible emoji buttons
+      const hasAnyVisible = Object.values(showEmojiButtons).some(Boolean);
+      if (hasAnyVisible) {
+        setShowEmojiButtons({});
       }
     };
 
@@ -638,14 +701,14 @@ export default function StoryLayoutWithAzureTTS({
               }}
             />
             <Dropdown
-              label={`${t(typedLang, "story", "levelSelect")} ▾ ${t(typedLang, "levels", currentLevel)}`}
+              label={`${t(typedLang, "story", "levelSelect")} ▾ ${currentLevel.toUpperCase()}`}
               variant="glass"
               options={[
-                { label: t(typedLang, "levels", "l1"), value: "l1" },
-                { label: t(typedLang, "levels", "l2"), value: "l2" },
-                { label: t(typedLang, "levels", "l3"), value: "l3" },
-                { label: t(typedLang, "levels", "l4"), value: "l4" },
-                { label: t(typedLang, "levels", "l5"), value: "l5" }
+                { label: `A1 - ${t(typedLang, "levels", "l1")}`, value: "A1" },
+                { label: `A2 - ${t(typedLang, "levels", "l2")}`, value: "A2" },
+                { label: `B1 - ${t(typedLang, "levels", "l3")}`, value: "B1" },
+                { label: `B2 - ${t(typedLang, "levels", "l4")}`, value: "B2" },
+                { label: `C1 - ${t(typedLang, "levels", "l5")}`, value: "C1" }
               ]}
               onSelect={(selectedValue) => {
                 router.push(`/${typedLang}/stories/${storySlug}/${selectedValue}/ch${chapterNumber}/page-${pageNumber}`);
@@ -870,6 +933,25 @@ export default function StoryLayoutWithAzureTTS({
                     >
                       <span className="text-lg">✍️</span>
                     </button>
+
+                    {/* Save word button - visible when word is selected */}
+                    {wordSelections[i] && (
+                      <button
+                        onClick={() => handleSaveWord(i, s[oppositeLang])}
+                        className={`hover:scale-110 transition p-0.5 rounded ${
+                          savingWord === i ? 'opacity-50' : ''
+                        } ${translationData[i] ? 'bg-green-100' : 'bg-blue-50'}`}
+                        data-translation-control="save"
+                        title={translationData[i] ? `Save "${translationData[i].word}" to vocabulary` : 'Save selected word to vocabulary'}
+                        disabled={savingWord === i}
+                      >
+                        {savingWord === i ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                        ) : (
+                          <BookmarkPlus className={`w-4 h-4 ${translationData[i] ? 'text-green-600' : 'text-blue-600'}`} />
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* Enhanced audio bar with word timing */}
@@ -905,6 +987,7 @@ export default function StoryLayoutWithAzureTTS({
                     onSelectionChange={(selection) => handleWordSelectionChange(i, selection)}
                     onManualTranslate={(translateFn) => handleManualTranslate(i, translateFn)}
                     onClearSelection={(clearFn) => handleClearSelection(i, clearFn)}
+                    onTranslationData={(data) => handleTranslationData(i, data)}
                     sentenceIndex={i}
                     contextSentences={sentences}
                   />
@@ -974,6 +1057,20 @@ export default function StoryLayoutWithAzureTTS({
             />
           )}
         </div>
+
+        {/* Save word toast notification */}
+        {saveToast && (
+          <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300 ${
+            saveToast.type === 'success' ? 'bg-green-500 text-white' :
+            saveToast.type === 'exists' ? 'bg-amber-500 text-white' :
+            'bg-red-500 text-white'
+          }`}>
+            {saveToast.type === 'success' && <Check className="w-4 h-4" />}
+            {saveToast.type === 'exists' && <BookmarkPlus className="w-4 h-4" />}
+            {saveToast.type === 'error' && <AlertCircle className="w-4 h-4" />}
+            <span className="text-sm font-medium">{saveToast.message}</span>
+          </div>
+        )}
       </div>
     </div>
   );

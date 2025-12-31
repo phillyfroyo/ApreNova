@@ -16,6 +16,7 @@ interface Props {
   onSelectionChange?: (selectedIndices: { start: number; end: number } | null) => void;
   onManualTranslate?: (translateFn: () => void) => void; // Provides manual translation function to parent
   onClearSelection?: (clearFn: () => void) => void; // Provides clear selection function to parent
+  onTranslationData?: (data: { word: string; translation: string } | null) => void; // Exposes current translation for saving
   // Context for better translations
   sentenceIndex?: number;
   contextSentences?: Array<{ es: string; en: string }>;
@@ -23,7 +24,7 @@ interface Props {
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences }: Props) {
   const words = sentence.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
@@ -53,6 +54,18 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
       onSelectionChange?.(null);
     }
   }, [startIdx, endIdx]); // Removed onSelectionChange from deps to prevent infinite loop
+
+  // Notify parent of translation data for saving vocabulary
+  useEffect(() => {
+    if (startIdx !== null && endIdx !== null && translations.length > 0) {
+      const selectedText = words.slice(startIdx, endIdx + 1).join(" ").replace(/[.,!?;:()"]+/g, "");
+      const translation = enhancedTranslation?.contextTranslation || translations[0];
+      onTranslationData?.({ word: selectedText, translation });
+    } else {
+      onTranslationData?.(null);
+    }
+  }, [startIdx, endIdx, translations, enhancedTranslation]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);

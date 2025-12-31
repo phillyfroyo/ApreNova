@@ -10,6 +10,7 @@ import {
   Home,
   BookOpen,
   MessageCircle,
+  BookMarked,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -74,6 +75,12 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
       icon: <MessageCircle className="w-5 h-5" />,
       label: 'AI Tutor',
       labelEs: 'Tutor IA',
+    },
+    {
+      href: `/${lang}/vocabulary`,
+      icon: <BookMarked className="w-5 h-5" />,
+      label: 'Vocabulary',
+      labelEs: 'Vocabulario',
     },
   ];
 
@@ -230,7 +237,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                     {/* Level badge with crown - orange */}
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
                       <Crown className="w-2.5 h-2.5" />
-                      {session.user.quizLevel || 'Level 2'}
+                      {session.user.quizLevel || 'A2'}
                     </span>
                     {/* Premium badge with gem - silver/gray */}
                     {session.user.isPremium && (

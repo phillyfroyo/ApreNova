@@ -1,19 +1,5 @@
 // lib/getStoryMap.ts
-
-/**
- * Try to load story content from either split-chapter format (index.ts) or single-file format (content.ts)
- */
-async function loadLevelContent(storySlug: string, level: string) {
-  // Try split-chapter format first (index.ts)
-  try {
-    const indexFile = await import(`@/content/${storySlug}/${level}/index.ts`);
-    return indexFile.default || indexFile.levelContent;
-  } catch {
-    // Fall back to single-file format (content.ts)
-    const consolidatedFile = await import(`@/content/${storySlug}/${level}/content.ts`);
-    return consolidatedFile.default || consolidatedFile.levelContent;
-  }
-}
+import { getContentFromRegistry } from "./contentRegistry";
 
 export async function getStoryMap(storySlug: string, level: string): Promise<{
   hasChapters: boolean;
@@ -23,7 +9,11 @@ export async function getStoryMap(storySlug: string, level: string): Promise<{
   }[];
 }> {
   try {
-    const levelContent = await loadLevelContent(storySlug, level);
+    const levelContent = getContentFromRegistry(storySlug, level);
+    if (!levelContent) {
+      throw new Error(`Content not found in registry: ${storySlug}/${level}`);
+    }
+
     const chapters = Object.keys(levelContent.chapters).map((chapterKey) => {
       const chapterNum = parseInt(chapterKey);
       const pages = Object.keys(levelContent.chapters[chapterNum].pages).map(pageKey => parseInt(pageKey));

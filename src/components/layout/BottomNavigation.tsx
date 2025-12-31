@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, BookOpen, MessageCircle, User } from 'lucide-react';
+import { Home, BookOpen, MessageCircle, BookMarked, User } from 'lucide-react';
 import type { Language } from '@/types/i18n';
 
 interface BottomNavigationProps {
@@ -42,6 +42,13 @@ export default function BottomNavigation({ lang }: BottomNavigationProps) {
       activeIcon: <MessageCircle className="w-6 h-6" strokeWidth={2} />,
       label: 'Tutor',
       labelEs: 'Tutor',
+    },
+    {
+      href: `/${lang}/vocabulary`,
+      icon: <BookMarked className="w-6 h-6" strokeWidth={1.5} />,
+      activeIcon: <BookMarked className="w-6 h-6" strokeWidth={2} />,
+      label: 'Vocab',
+      labelEs: 'Vocab',
     },
     {
       href: `/${lang}/settings`,
