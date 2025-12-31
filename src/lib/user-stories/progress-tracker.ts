@@ -46,8 +46,11 @@ export type StoryStep =
   | "detecting_level"
   | "cleaning_text"
   | "parsing_chapters"
+  | "rewriting_levels"    // New: starting rewrite phase for all levels
   | "rewriting_chapter"
+  | "translating_levels"  // New: starting translate phase for all levels
   | "translating_chapter"
+  | "building_levels"     // New: starting build phase for all levels
   | "building_structure"
   | "saving_content"
   | "complete";
@@ -79,8 +82,11 @@ export const STEP_LABELS: Record<StoryStep, string> = {
   detecting_level: "Detecting CEFR level",
   cleaning_text: "Cleaning text",
   parsing_chapters: "Parsing chapters",
+  rewriting_levels: "Adapting to reading levels",
   rewriting_chapter: "Rewriting chapter",
+  translating_levels: "Translating all levels",
   translating_chapter: "Translating chapter",
+  building_levels: "Building all levels",
   building_structure: "Building content structure",
   saving_content: "Saving level content",
   complete: "Complete",
@@ -100,8 +106,11 @@ export const STEP_PHASES: Record<StoryStep, StoryPhase> = {
   detecting_level: "detecting",
   cleaning_text: "adapting",
   parsing_chapters: "adapting",
+  rewriting_levels: "adapting",
   rewriting_chapter: "adapting",
+  translating_levels: "translating",
   translating_chapter: "translating",
+  building_levels: "finalizing",
   building_structure: "finalizing",
   saving_content: "finalizing",
   complete: "finalizing",

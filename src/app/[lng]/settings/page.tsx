@@ -102,6 +102,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field, value }),
+        credentials: 'include',
       })
       await update()
 
@@ -137,6 +138,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lng: typedLang }),
+        credentials: 'include',
       })
       const data = await res.json()
       if (data.url) {
@@ -165,6 +167,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/user/delete-account', {
         method: 'DELETE',
+        credentials: 'include',
       })
       if (res.ok) {
         await signOut({ callbackUrl: `/${typedLang}/auth/login`, redirect: true })

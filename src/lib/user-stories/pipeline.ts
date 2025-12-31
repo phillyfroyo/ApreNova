@@ -1,11 +1,17 @@
 // src/lib/user-stories/pipeline.ts
 // User story processing pipeline - orchestrates all processing steps
 //
-// Architecture:
+// Architecture (v2):
 // - metadata.ts: Title and description generation
-// - level-processor.ts: Single level processing (rewrite + translate)
+// - level-processor.ts: Separate functions for rewrite, translate, build
 // - progress-tracker.ts: Progress tracking utilities
 // - This file: Orchestration and coordination
+//
+// New processing order:
+// 1. Parse chapters (once, shared)
+// 2. Rewrite ALL levels that need it
+// 3. Translate ALL levels
+// 4. Build and save ALL levels
 
 import { prisma } from "@/lib/prisma";
 import { USER_STORY_LIMITS } from "./limits";
@@ -19,7 +25,14 @@ import {
   detectTargetAudience,
   extractTags,
 } from "./metadata";
-import { processLevel } from "./level-processor";
+import {
+  parseStoryContent,
+  rewriteLevelChapters,
+  translateLevelChapters,
+  buildAndSaveLevel,
+  processLevel, // Keep for retryLevel backward compatibility
+  type ProcessedChapter,
+} from "./level-processor";
 import { updateStoryStatus, determineFinalStatus, updateStoryProgress } from "./progress-tracker";
 
 // Shared library imports
@@ -255,7 +268,22 @@ async function determineLevelsToProcess(
 }
 
 /**
- * Step 6: Process all required levels
+ * Step 6: Process all required levels (PARALLEL APPROACH)
+ *
+ * Optimized order using different APIs in parallel:
+ * - Rewrite uses GPT (OpenAI)
+ * - Translate uses Claude (Anthropic)
+ *
+ * Timeline:
+ * 1. Parse chapters once (shared)
+ * 2. PARALLEL:
+ *    - Stream A: Translate detected level (Claude) - no rewrite needed
+ *    - Stream B: Rewrite other levels (GPT)
+ * 3. SEQUENTIAL: Translate rewritten levels (Claude) - after rewrites complete
+ * 4. Build and save ALL levels
+ *
+ * This maximizes throughput by running GPT and Claude simultaneously,
+ * while avoiding concurrent Claude calls (rate limit safety).
  */
 async function processAllLevels(
   story: {
@@ -269,35 +297,201 @@ async function processAllLevels(
   sourceLanguage: "en" | "es",
   detectedLevel: string
 ): Promise<{ allSucceeded: boolean; anySucceeded: boolean }> {
-  console.log(
-    `[Pipeline] Processing levels: ${Array.from(levelsToProcess).join(", ")}`
-  );
+  const levelsArray = Array.from(levelsToProcess);
+  console.log(`[Pipeline] Processing levels: ${levelsArray.join(", ")}`);
+  console.log(`[Pipeline] PARALLEL approach: Translate(detected) || Rewrite(others) → Translate(others) → Build`);
 
-  let allSucceeded = true;
-  let anySucceeded = false;
+  // =========================================================================
+  // PHASE 1: Parse chapters (once, shared across all levels)
+  // =========================================================================
+  await updateStoryProgress(story.id, "parsing_chapters");
+  const { hasChapters, chapters: originalChapters } = parseStoryContent(story.rawContent);
+  console.log(`[Pipeline] Parsed ${originalChapters.length} chapters (hasChapters: ${hasChapters})`);
 
-  for (const level of levelsToProcess) {
+  // Track chapters for each level (after rewriting)
+  const levelChapters: Map<string, string[]> = new Map();
+  // Track processed chapters for each level (after translation)
+  const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();
+  // Track which levels succeeded
+  const levelSuccess: Map<string, boolean> = new Map();
+
+  // Separate levels into detected (no rewrite) and others (need rewrite)
+  const detectedLevelRecord = story.levels.find((l) => l.level === detectedLevel);
+  const levelsNeedingRewrite = levelsArray.filter((l) => l !== detectedLevel);
+  const hasDetectedLevel = levelsArray.includes(detectedLevel);
+
+  console.log(`[Pipeline] Detected level: ${detectedLevel} (needs translate only: ${hasDetectedLevel})`);
+  console.log(`[Pipeline] Levels needing rewrite: ${levelsNeedingRewrite.join(", ") || "none"}`);
+
+  // =========================================================================
+  // PHASE 2: PARALLEL - Translate detected level (Claude) + Rewrite others (GPT)
+  // =========================================================================
+  console.log(`[Pipeline] === PHASE 2: PARALLEL PROCESSING ===`);
+  await updateStoryProgress(story.id, "rewriting_levels");
+
+  // Create parallel tasks
+  const parallelTasks: Promise<void>[] = [];
+
+  // Task A: Translate detected level (uses Claude)
+  if (hasDetectedLevel && detectedLevelRecord) {
+    console.log(`[Pipeline] Starting PARALLEL: Translate ${detectedLevel} (Claude)`);
+    levelChapters.set(detectedLevel, originalChapters);
+
+    const translateDetectedTask = (async () => {
+      const translateResult = await translateLevelChapters({
+        storyId: story.id,
+        userId: story.userId,
+        levelId: detectedLevelRecord.id,
+        level: detectedLevel,
+        chapters: originalChapters,
+        sourceLanguage,
+      });
+
+      if (translateResult.success) {
+        levelProcessedChapters.set(detectedLevel, translateResult.processedChapters);
+        levelSuccess.set(detectedLevel, true);
+        console.log(`[Pipeline] ✓ Detected level ${detectedLevel} translation complete`);
+      } else {
+        console.error(`[Pipeline] ✗ Translation failed for ${detectedLevel}:`, translateResult.error);
+        levelSuccess.set(detectedLevel, false);
+      }
+    })();
+
+    parallelTasks.push(translateDetectedTask);
+  }
+
+  // Task B: Rewrite all other levels (uses GPT)
+  if (levelsNeedingRewrite.length > 0) {
+    console.log(`[Pipeline] Starting PARALLEL: Rewrite ${levelsNeedingRewrite.join(", ")} (GPT)`);
+
+    const rewriteTask = (async () => {
+      for (const level of levelsNeedingRewrite) {
+        const levelRecord = story.levels.find((l) => l.level === level);
+        if (!levelRecord) {
+          console.warn(`[Pipeline] Level record not found for ${level}, skipping`);
+          levelSuccess.set(level, false);
+          continue;
+        }
+
+        console.log(`[Pipeline] Rewriting: ${detectedLevel} → ${level}`);
+        const rewriteResult = await rewriteLevelChapters({
+          storyId: story.id,
+          userId: story.userId,
+          levelId: levelRecord.id,
+          level,
+          chapters: originalChapters,
+          sourceLanguage,
+          detectedLevel,
+        });
+
+        if (rewriteResult.success) {
+          levelChapters.set(level, rewriteResult.chapters);
+          console.log(`[Pipeline] ✓ Rewrite complete for ${level}`);
+        } else {
+          console.error(`[Pipeline] ✗ Rewrite failed for ${level}:`, rewriteResult.error);
+          levelSuccess.set(level, false);
+        }
+      }
+    })();
+
+    parallelTasks.push(rewriteTask);
+  }
+
+  // Wait for both parallel tasks to complete
+  await Promise.all(parallelTasks);
+  console.log(`[Pipeline] === PARALLEL PHASE COMPLETE ===`);
+
+  // =========================================================================
+  // PHASE 3: Translate rewritten levels (Claude) - sequential
+  // =========================================================================
+  if (levelsNeedingRewrite.length > 0) {
+    console.log(`[Pipeline] === PHASE 3: TRANSLATING REWRITTEN LEVELS ===`);
+    await updateStoryProgress(story.id, "translating_levels");
+
+    for (const level of levelsNeedingRewrite) {
+      // Skip if rewrite failed
+      if (levelSuccess.get(level) === false) {
+        continue;
+      }
+
+      const levelRecord = story.levels.find((l) => l.level === level);
+      if (!levelRecord) continue;
+
+      const chapters = levelChapters.get(level);
+      if (!chapters) {
+        console.warn(`[Pipeline] No chapters found for level ${level}, skipping translation`);
+        levelSuccess.set(level, false);
+        continue;
+      }
+
+      console.log(`[Pipeline] Translating rewritten level ${level} (${chapters.length} chapters)`);
+      const translateResult = await translateLevelChapters({
+        storyId: story.id,
+        userId: story.userId,
+        levelId: levelRecord.id,
+        level,
+        chapters,
+        sourceLanguage,
+      });
+
+      if (translateResult.success) {
+        levelProcessedChapters.set(level, translateResult.processedChapters);
+        levelSuccess.set(level, true);
+        console.log(`[Pipeline] ✓ Translation complete for ${level}`);
+      } else {
+        console.error(`[Pipeline] ✗ Translation failed for ${level}:`, translateResult.error);
+        levelSuccess.set(level, false);
+      }
+    }
+  }
+
+  // =========================================================================
+  // PHASE 4: Build and save ALL levels
+  // =========================================================================
+  console.log(`[Pipeline] === PHASE 4: BUILDING & SAVING ===`);
+  await updateStoryProgress(story.id, "building_levels");
+
+  for (const level of levelsArray) {
+    // Skip if earlier phase failed
+    if (levelSuccess.get(level) === false) {
+      continue;
+    }
+
     const levelRecord = story.levels.find((l) => l.level === level);
     if (!levelRecord) continue;
 
-    const result = await processLevel({
+    const processedChapters = levelProcessedChapters.get(level);
+    if (!processedChapters) {
+      console.warn(`[Pipeline] No processed chapters for level ${level}, skipping build`);
+      levelSuccess.set(level, false);
+      continue;
+    }
+
+    console.log(`[Pipeline] Building level ${level}`);
+    const buildResult = await buildAndSaveLevel({
       storyId: story.id,
-      userId: story.userId,
       levelId: levelRecord.id,
       level,
-      rawContent: story.rawContent,
-      sourceLanguage,
-      detectedLevel,
       storySlug: story.slug,
+      hasChapters,
+      processedChapters,
+      sourceLanguage,
     });
 
-    if (result.success) {
-      anySucceeded = true;
-    } else {
-      allSucceeded = false;
-      console.error(`[Pipeline] Level ${level} error:`, result.error);
+    levelSuccess.set(level, buildResult.success);
+    if (!buildResult.success) {
+      console.error(`[Pipeline] Build failed for level ${level}:`, buildResult.error);
     }
   }
+
+  // =========================================================================
+  // Calculate final results
+  // =========================================================================
+  const successCount = Array.from(levelSuccess.values()).filter(Boolean).length;
+  const allSucceeded = successCount === levelsArray.length;
+  const anySucceeded = successCount > 0;
+
+  console.log(`[Pipeline] Results: ${successCount}/${levelsArray.length} levels succeeded`);
 
   return { allSucceeded, anySucceeded };
 }
@@ -319,7 +513,11 @@ async function processAllLevels(
  * 3.8. Extract tags
  * 4. Detect CEFR level
  * 5. Determine which levels to process (detected + user's level)
- * 6. Process each level (rewrite + translate + paginate)
+ * 6. Process all levels:
+ *    - Parse chapters (once)
+ *    - Rewrite ALL levels that need it
+ *    - Translate ALL levels
+ *    - Build and save ALL levels
  * 7. Update final status
  */
 export async function processUserStory(storyId: string): Promise<void> {
@@ -411,7 +609,7 @@ export async function processUserStory(storyId: string): Promise<void> {
       detectedLevel
     );
 
-    // Step 6: Process all levels (progress updates happen inside processAllLevels)
+    // Step 6: Process all levels (NEW PHASED APPROACH)
     const { allSucceeded, anySucceeded } = await processAllLevels(
       storyWithLevels,
       levelsToProcess,
@@ -438,6 +636,7 @@ export async function processUserStory(storyId: string): Promise<void> {
 /**
  * Retry processing a single failed level
  * Useful for error recovery without re-processing entire story
+ * Note: Uses legacy processLevel function for simplicity
  */
 export async function retryLevel(
   storyId: string,

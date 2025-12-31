@@ -74,6 +74,7 @@ export default function StoryReviewModal() {
       const response = await fetch("/api/upload/thumbnail", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {

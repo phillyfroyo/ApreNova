@@ -40,6 +40,21 @@ export interface RewriteChapterData {
   rewrittenLines: string[];
 }
 
+// Stream progress for parallel processing
+export type StreamStatus = "waiting" | "in-progress" | "complete";
+
+export interface StreamProgress {
+  id: string; // e.g., "translate-C1", "rewrite-A2", "translate-A2"
+  type: "rewriting" | "translating";
+  level: string; // Target CEFR level (e.g., "C1", "A2")
+  fromLevel?: string; // For rewrites, the source level (e.g., "C1")
+  status: StreamStatus;
+  currentChapter: number;
+  totalChapters: number;
+  chapters: ChapterData[] | RewriteChapterData[];
+  label: string; // Display label for UI
+}
+
 // Story-level progress from backend
 export interface StoryProcessingProgress {
   phase: ProgressPhase;
@@ -68,6 +83,8 @@ export interface UploadProgress {
   phase?: ProgressPhase; // Main phase: detecting, adapting, translating, finalizing
   stepLabel?: string; // Detailed step label (subtitle)
   phaseTitle?: string; // Display title for current phase
+  // Multi-stream progress for parallel processing
+  streams?: StreamProgress[];
 }
 
 export interface StoryUploadData {
@@ -112,6 +129,7 @@ interface StoryUploadContextType {
   showProgressViewer: boolean;
   showCancelConfirm: boolean;
   lastConfirmedAt: number | null; // Timestamp of last story confirmation
+  selectedStreamId: string | null; // Which stream to show in progress viewer
 
   // Actions
   startUpload: (options: StartUploadOptions) => Promise<void>;
@@ -122,6 +140,7 @@ interface StoryUploadContextType {
   setShowUploadModal: (show: boolean) => void;
   setShowReviewModal: (show: boolean) => void;
   setShowProgressViewer: (show: boolean) => void;
+  setSelectedStreamId: (id: string | null) => void;
   updateStoryData: (updates: Partial<StoryUploadData>) => void;
   confirmStory: () => Promise<void>;
 }
@@ -220,6 +239,92 @@ function calculateProgressForPhase(phase: string, step: string): number {
   return 50;
 }
 
+// Build streams array from level data for parallel progress tracking
+function buildStreamsFromLevels(
+  levels: Array<{
+    id: string;
+    level: string;
+    status: string;
+    processingProgress: any;
+  }>,
+  detectedLevel: string | null
+): StreamProgress[] {
+  const streams: StreamProgress[] = [];
+
+  for (const level of levels) {
+    const levelProgress = level.processingProgress as {
+      stage?: 'rewriting' | 'translating' | 'complete';
+      currentChapter?: number;
+      totalChapters?: number;
+      chaptersCompleted?: number[];
+      completedData?: { sourceLines: string[]; translatedLines: string[] }[];
+      rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
+    } | null;
+
+    if (!levelProgress) continue;
+
+    const isDetectedLevel = level.level === detectedLevel;
+    const needsRewrite = !isDetectedLevel;
+
+    // Add rewrite stream if this level needs rewriting
+    if (needsRewrite && (levelProgress.stage === 'rewriting' || levelProgress.rewriteData?.length)) {
+      const rewriteStatus: StreamStatus =
+        levelProgress.stage === 'rewriting' ? 'in-progress' :
+        (levelProgress.rewriteData?.length || 0) > 0 ? 'complete' : 'waiting';
+
+      streams.push({
+        id: `rewrite-${level.level}`,
+        type: 'rewriting',
+        level: level.level,
+        fromLevel: detectedLevel || undefined,
+        status: rewriteStatus,
+        currentChapter: levelProgress.currentChapter || 0,
+        totalChapters: levelProgress.totalChapters || 0,
+        chapters: levelProgress.rewriteData || [],
+        label: `Rewrite ${detectedLevel || '?'} → ${level.level}`,
+      });
+    }
+
+    // Add translate stream for this level
+    const hasTranslationData = (levelProgress.completedData?.length || 0) > 0;
+    const isTranslating = levelProgress.stage === 'translating';
+    const isComplete = levelProgress.stage === 'complete' || level.status === 'READY';
+
+    // Check if rewrite is complete (for non-detected levels)
+    const rewriteComplete = needsRewrite &&
+      (levelProgress.rewriteData?.length || 0) > 0 &&
+      levelProgress.stage !== 'rewriting';
+
+    // Show translate stream if:
+    // 1. Currently translating or has translation data or is complete
+    // 2. OR for detected level (original) - show when any processing has started
+    // 3. OR for rewritten levels - show as "waiting" once rewrite is complete
+    const shouldShowTranslateStream =
+      isTranslating || hasTranslationData || isComplete ||
+      (isDetectedLevel && levelProgress.stage) ||  // Detected level: show once processing starts
+      rewriteComplete;  // Rewritten level: show once rewrite is complete
+
+    if (shouldShowTranslateStream) {
+      const translateStatus: StreamStatus =
+        isTranslating ? 'in-progress' :
+        isComplete || hasTranslationData ? 'complete' : 'waiting';
+
+      streams.push({
+        id: `translate-${level.level}`,
+        type: 'translating',
+        level: level.level,
+        status: translateStatus,
+        currentChapter: levelProgress.currentChapter || 0,
+        totalChapters: levelProgress.totalChapters || 0,
+        chapters: levelProgress.completedData || [],
+        label: isDetectedLevel ? `Translate ${level.level} (original)` : `Translate ${level.level} (rewritten)`,
+      });
+    }
+  }
+
+  return streams;
+}
+
 // Generate stage message based on context
 function getStageMessage(
   stage: UploadStage,
@@ -273,6 +378,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showProgressViewer, setShowProgressViewer] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [storyData, setStoryData] = useState<StoryUploadData | null>(null);
   const [progress, setProgress] = useState<UploadProgress>({
     stage: "idle",
@@ -457,6 +563,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           // We only process 1-2 levels (detected + user's level if different)
           const totalLevelsToProcess = userLevel && userLevel !== detectedLevel ? 2 : 1;
 
+          // Build streams for parallel progress tracking
+          const streams = buildStreamsFromLevels(levels, detectedLevel);
+
           // Use story-level progress if available for detailed step info
           const phase = storyProgress?.phase;
           const stepLabel = storyProgress?.stepLabel;
@@ -488,6 +597,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 phase,
                 stepLabel,
                 phaseTitle,
+                streams,
               }));
             } else if (detectedLevel) {
               updateProgress("generating-description", 50, { detectedLevel, userLevel: userLevel || undefined });
@@ -545,6 +655,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 phase,
                 stepLabel,
                 phaseTitle,
+                streams,
               }));
             } else if (progress.stage === 'translating') {
               // Translating stage - use calculated overall progress
@@ -567,6 +678,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 phase,
                 stepLabel,
                 phaseTitle,
+                streams,
               }));
             }
           } else {
@@ -588,6 +700,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
               phase,
               stepLabel,
               phaseTitle,
+              streams,
             }));
           }
         } else if (storyStatus.status === "READY" || storyStatus.status === "PARTIAL") {
@@ -763,6 +876,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     showProgressViewer,
     showCancelConfirm,
     lastConfirmedAt,
+    selectedStreamId,
     startUpload,
     cancelUpload,
     requestCancel,
@@ -771,13 +885,53 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     setShowUploadModal,
     setShowReviewModal,
     setShowProgressViewer,
+    setSelectedStreamId,
     updateStoryData,
     confirmStory,
   };
 
-  // Determine modal stage
-  const isRewriting = progress.stage === "rewriting-levels";
-  const modalStage = isRewriting ? "rewriting" : progress.stage === "translating" ? "translating" : "complete";
+  // Get selected stream for modal, or fall back to legacy behavior
+  const selectedStream = selectedStreamId
+    ? progress.streams?.find(s => s.id === selectedStreamId)
+    : null;
+
+  // Determine modal props based on selected stream or legacy progress
+  const getModalProps = () => {
+    if (selectedStream) {
+      // Use selected stream data
+      const isRewriting = selectedStream.type === "rewriting";
+      const modalStage: "rewriting" | "translating" | "complete" =
+        selectedStream.status === "complete" ? "complete" :
+        isRewriting ? "rewriting" : "translating";
+
+      return {
+        chapters: isRewriting ? [] : selectedStream.chapters as ChapterData[],
+        rewriteChapters: isRewriting ? selectedStream.chapters as RewriteChapterData[] : [],
+        currentChapter: selectedStream.currentChapter,
+        totalChapters: selectedStream.totalChapters,
+        stage: modalStage,
+        detectedLevel: selectedStream.fromLevel || progress.detectedLevel,
+        targetLevel: selectedStream.level,
+      };
+    }
+
+    // Legacy fallback: use overall progress data
+    const isRewriting = progress.stage === "rewriting-levels";
+    const modalStage: "rewriting" | "translating" | "complete" =
+      isRewriting ? "rewriting" : progress.stage === "translating" ? "translating" : "complete";
+
+    return {
+      chapters: progress.completedChapters || [],
+      rewriteChapters: progress.rewriteChapters || [],
+      currentChapter: progress.currentChapter || 0,
+      totalChapters: progress.totalChapters || 0,
+      stage: modalStage,
+      detectedLevel: progress.detectedLevel,
+      targetLevel: progress.currentLevel,
+    };
+  };
+
+  const modalProps = getModalProps();
 
   return (
     <StoryUploadContext.Provider value={value}>
@@ -786,15 +940,18 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       {/* Progress Viewer Modal - rendered at provider level for full-screen capability */}
       <ProgressViewerModal
         isOpen={showProgressViewer}
-        onClose={() => setShowProgressViewer(false)}
-        chapters={progress.completedChapters || []}
-        rewriteChapters={progress.rewriteChapters || []}
+        onClose={() => {
+          setShowProgressViewer(false);
+          setSelectedStreamId(null); // Clear selection when closing
+        }}
+        chapters={modalProps.chapters}
+        rewriteChapters={modalProps.rewriteChapters}
         sourceLanguage={storyData?.sourceLanguage || "es"}
-        currentChapter={progress.currentChapter || 0}
-        totalChapters={progress.totalChapters || 0}
-        stage={modalStage}
-        detectedLevel={progress.detectedLevel}
-        targetLevel={progress.currentLevel}
+        currentChapter={modalProps.currentChapter}
+        totalChapters={modalProps.totalChapters}
+        stage={modalProps.stage}
+        detectedLevel={modalProps.detectedLevel}
+        targetLevel={modalProps.targetLevel}
       />
 
       {/* Cancel Confirmation Dialog */}

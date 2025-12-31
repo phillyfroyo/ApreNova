@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useStoryUpload } from "@/contexts/StoryUploadContext";
+import { useStoryUpload, StreamProgress } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
@@ -10,6 +10,187 @@ import { toCEFR } from "@/lib/cefr";
 const MIN_STEP_DURATION = 800;
 // Animation time (must match CSS animation duration)
 const ANIMATION_DURATION = 350;
+
+// Stream selector dropdown component
+function StreamSelector({
+  streams,
+  lng,
+  setShowProgressViewer,
+}: {
+  streams: StreamProgress[];
+  lng: string;
+  setShowProgressViewer: (show: boolean) => void;
+}) {
+  const { setSelectedStreamId } = useStoryUpload();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter to only show streams that have started or have data
+  const visibleStreams = streams.filter(
+    (s) => s.status !== "waiting" || (Array.isArray(s.chapters) && s.chapters.length > 0)
+  );
+
+  // Count streams with viewable data
+  const activeStreams = streams.filter(
+    (s) => s.status === "in-progress" || s.status === "complete"
+  );
+  const streamsWithData = streams.filter(
+    (s) => Array.isArray(s.chapters) && s.chapters.length > 0
+  );
+
+  // Don't show if no streams have data yet
+  if (streamsWithData.length === 0) {
+    return null;
+  }
+
+  const handleStreamClick = (stream: StreamProgress) => {
+    if (stream.status === "waiting" || (Array.isArray(stream.chapters) && stream.chapters.length === 0)) {
+      return; // Can't view streams that haven't started
+    }
+    setSelectedStreamId(stream.id);
+    setShowProgressViewer(true);
+    setIsOpen(false);
+  };
+
+  const getStatusIcon = (status: StreamProgress["status"]) => {
+    switch (status) {
+      case "in-progress":
+        return (
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        );
+      case "complete":
+        return (
+          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      default:
+        return (
+          <div className="w-2 h-2 rounded-full bg-gray-300" />
+        );
+    }
+  };
+
+  const getStreamTypeIcon = (type: StreamProgress["type"]) => {
+    if (type === "rewriting") {
+      return (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+      </svg>
+    );
+  };
+
+  // Single stream - show simple button
+  if (streamsWithData.length === 1) {
+    const stream = streamsWithData[0];
+    return (
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => handleStreamClick(stream)}
+          className="w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+        >
+          {getStreamTypeIcon(stream.type)}
+          <span className="flex-1 text-left">
+            {lng === "es" ? "Ver progreso" : "View Progress"}
+            <span className="text-xs text-gray-400 ml-2">({stream.label})</span>
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  // Multiple streams - show dropdown
+  return (
+    <div className="px-4 pb-4" ref={dropdownRef}>
+      <div className="relative">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+        >
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          <span className="flex-1 text-left">
+            {lng === "es" ? "Ver progreso" : "View Progress"}
+          </span>
+          <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
+            {streamsWithData.length}
+          </span>
+          <svg
+            className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Dropdown menu - expands downward */}
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-10">
+            {streams.map((stream) => {
+              const hasData = Array.isArray(stream.chapters) && stream.chapters.length > 0;
+              const isDisabled = stream.status === "waiting" && !hasData;
+
+              return (
+                <button
+                  key={stream.id}
+                  onClick={() => handleStreamClick(stream)}
+                  disabled={isDisabled}
+                  className={`w-full px-3 py-2 flex items-center gap-3 text-left transition-colors ${
+                    isDisabled
+                      ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                      : "hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  <span className="flex-shrink-0">
+                    {getStreamTypeIcon(stream.type)}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">
+                      {stream.label}
+                    </span>
+                    {hasData ? (
+                      <span className="block text-xs text-gray-400">
+                        {stream.chapters.length} / {stream.totalChapters} chapters completed
+                      </span>
+                    ) : stream.status === "waiting" ? (
+                      <span className="block text-xs text-gray-400">
+                        Waiting to start...
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="flex-shrink-0">
+                    {getStatusIcon(stream.status)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
@@ -25,6 +206,7 @@ export default function FloatingProgressWidget() {
     requestCancel,
     setShowReviewModal,
     setShowProgressViewer,
+    setSelectedStreamId,
   } = useStoryUpload();
 
   const [isNavigating, setIsNavigating] = useState(false);
@@ -306,10 +488,24 @@ export default function FloatingProgressWidget() {
   }
 
   // Compute values needed for minimized state
-  const hasTranslationToView = progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0;
-  const hasRewriteToView = progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0;
-  const hasChaptersToView = hasTranslationToView || hasRewriteToView;
+  const streamsWithData = (progress.streams || []).filter(
+    (s) => Array.isArray(s.chapters) && s.chapters.length > 0
+  );
+  const hasChaptersToView = streamsWithData.length > 0;
   const isRewriting = progress.stage === "rewriting-levels";
+
+  // Handle view click in minimized state
+  const handleMinimizedViewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (streamsWithData.length === 1) {
+      // Single stream - open it directly
+      setSelectedStreamId(streamsWithData[0].id);
+      setShowProgressViewer(true);
+    } else if (streamsWithData.length > 1) {
+      // Multiple streams - expand widget so user can choose
+      toggleMinimized();
+    }
+  };
 
   // Render both states with opacity transitions for smooth minimize/maximize
   return (
@@ -336,13 +532,15 @@ export default function FloatingProgressWidget() {
             <>
               <span className="text-gray-400">|</span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowProgressViewer(true);
-                }}
-                className={`font-medium ${isRewriting ? "text-amber-500 hover:text-amber-600" : "text-blue-500 hover:text-blue-600"}`}
+                onClick={handleMinimizedViewClick}
+                className={`font-medium flex items-center gap-1 ${isRewriting ? "text-amber-500 hover:text-amber-600" : "text-blue-500 hover:text-blue-600"}`}
               >
                 {lng === "es" ? "Ver" : "View"}
+                {streamsWithData.length > 1 && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-1 rounded-full">
+                    {streamsWithData.length}
+                  </span>
+                )}
               </button>
             </>
           )}
@@ -500,22 +698,12 @@ export default function FloatingProgressWidget() {
           </div>
         </div>
 
-        {/* View Progress button during rewriting or translation */}
-        {((progress.stage === "translating" && (progress.completedChapters?.length ?? 0) > 0) ||
-          (progress.stage === "rewriting-levels" && (progress.rewriteChapters?.length ?? 0) > 0)) && (
-          <div className="px-4 pb-4">
-            <button
-              onClick={() => setShowProgressViewer(true)}
-              className={`w-full py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              {lng === "es" ? "Ver progreso" : "View Progress"}
-            </button>
-          </div>
-        )}
+        {/* Stream selector for viewing progress */}
+        <StreamSelector
+          streams={progress.streams || []}
+          lng={lng as string}
+          setShowProgressViewer={setShowProgressViewer}
+        />
 
         {/* Review prompt */}
         {progress.stage === "review" && (

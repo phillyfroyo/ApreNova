@@ -32,6 +32,15 @@ interface NavItem {
   labelEs: string;
 }
 
+// Convert quizLevel to CEFR label
+const getCefrLabel = (level: string | null | undefined): string => {
+  const cefrMap: Record<string, string> = {
+    l1: 'A1', l2: 'A2', l3: 'B1', l4: 'B2', l5: 'C1', l6: 'C2',
+    'Level 1': 'A1', 'Level 2': 'A2', 'Level 3': 'B1', 'Level 4': 'B2', 'Level 5': 'C1',
+  };
+  return cefrMap[level || ''] || 'A2';
+};
+
 export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -230,7 +239,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                     {/* Level badge with crown - orange */}
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
                       <Crown className="w-2.5 h-2.5" />
-                      {session.user.quizLevel || 'Level 2'}
+                      {getCefrLabel(session.user.quizLevel)}
                     </span>
                     {/* Premium badge with gem - silver/gray */}
                     {session.user.isPremium && (
