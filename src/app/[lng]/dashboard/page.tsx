@@ -40,12 +40,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/user-bookmarks').then(res => res.json()),
-      fetch('/api/user-stats').then(res => res.json()),
+      fetch('/api/user-bookmarks').then(res => res.ok ? res.json() : null),
+      fetch('/api/user-stats').then(res => res.ok ? res.json() : null),
     ])
       .then(([bookmarkData, statsData]) => {
-        setBookmarks(bookmarkData.bookmarks || []);
-        setStats(statsData);
+        setBookmarks(bookmarkData?.bookmarks || []);
+        setStats(statsData?.wordsRead !== undefined ? statsData : null);
       })
       .catch(console.error)
       .finally(() => setLoading(false));

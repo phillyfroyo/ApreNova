@@ -274,7 +274,17 @@ useEffect(() => {
     minHeight: "100vh",
   }}>
 
-{/* // TODO: Add "My Stories" section here for user-upload-story branch */}
+{/* Top right controls: Upload button + My Stories */}
+<div className="absolute top-4 right-4 flex items-center gap-3 z-10">
+  <UploadStoryButton />
+  <Link
+    href={`/${typedLang}/my-stories`}
+    className="px-3 py-1.5 bg-white/80 hover:bg-white text-purple-600 rounded-full text-sm font-medium transition-all flex items-center gap-1.5"
+  >
+    <span>📚</span>
+    {typedLang === "es" ? "Mis Historias" : "My Stories"}
+  </Link>
+</div>
 
 <div className="mt-4 mb-4 px-4">
   <div className="flex items-center justify-between">
