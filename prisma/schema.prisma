@@ -33,7 +33,7 @@ model CompletedStory {
   completedAt DateTime @default(now())
   chapter     Int      @default(1)
   page        Int      @default(1)
-  User        User     @relation(fields: [userId], references: [id])
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storySlug, level, chapter, page])
 }
@@ -65,7 +65,7 @@ model SessionLog {
   ms        Int
   type      String
   createdAt DateTime @default(now())
-  User      User     @relation(fields: [userId], references: [id])
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model StoryBookmark {
