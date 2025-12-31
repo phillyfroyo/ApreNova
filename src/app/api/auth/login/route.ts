@@ -50,9 +50,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Check if user exists
+    // Check if user exists and get their OAuth accounts
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      include: { Account: { select: { provider: true } } },
     });
 
     if (!user) {
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
     // Check if user has a password (might be OAuth-only account)
     if (!user.password) {
       return NextResponse.json(
-        { error: "Please use Google to sign in", code: AUTH_ERROR_CODES.INVALID_CREDENTIALS },
+        { error: "OAuth only account", code: AUTH_ERROR_CODES.OAUTH_ONLY_ACCOUNT },
         { status: 401 }
       );
     }
@@ -74,8 +75,14 @@ export async function POST(req: Request) {
     const isValid = await compare(password, user.password);
 
     if (!isValid) {
+      // Check if user has OAuth accounts linked (e.g., Google)
+      const hasOAuth = user.Account && user.Account.length > 0;
+      const errorCode = hasOAuth
+        ? AUTH_ERROR_CODES.INVALID_PASSWORD_HAS_OAUTH
+        : AUTH_ERROR_CODES.INVALID_PASSWORD;
+
       return NextResponse.json(
-        { error: "Invalid password", code: AUTH_ERROR_CODES.INVALID_CREDENTIALS },
+        { error: "Invalid password", code: errorCode },
         { status: 401 }
       );
     }
