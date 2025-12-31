@@ -30,10 +30,15 @@ export async function POST(req: Request) {
 
     const { lng } = await req.json();
 
+    // Use native language for billing portal locale
+    const nativeLanguage = session.user.nativeLanguage || 'es';
+    const stripeLocale = nativeLanguage === 'en' ? 'en' : 'es';
+
     // Create a billing portal session
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/${lng || 'es'}/settings`,
+      locale: stripeLocale,
     });
 
     return NextResponse.json({ url: portalSession.url });
