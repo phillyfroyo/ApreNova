@@ -245,7 +245,8 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         });
 
         if (result?.ok) {
-          window.location.href = `/${lang}/home`;
+          // Redirect to root for onboarding step 1 (language selection)
+          window.location.href = '/';
         } else {
           setError(getAuthErrorMessage(AUTH_ERROR_CODES.INTERNAL_ERROR, lang));
           setIsLoading(false);

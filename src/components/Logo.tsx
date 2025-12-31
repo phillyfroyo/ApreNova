@@ -7,9 +7,10 @@ interface LogoProps {
   variant?: string;
   size?: string;
   className?: string;
+  plain?: boolean; // Force "Cuentana" without my/mi prefix
 }
 
-export default function Logo({ variant = 'default', size = 'text-[32px]', className = '' }: LogoProps) {
+export default function Logo({ variant = 'default', size = 'text-[32px]', className = '', plain = false }: LogoProps) {
   const { data: session } = useSession();
 
   const label =
@@ -59,7 +60,7 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
   // Language logic
   const isLoggedIn = !!session?.user;
   const lng = session?.user?.nativeLanguage || 'es'; // default to Spanish
-  const brand = !isLoggedIn
+  const brand = plain || !isLoggedIn
     ? ['Cuent', 'ana']
     : lng === 'es'
       ? ['miCuent', 'ana']

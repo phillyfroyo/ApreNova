@@ -131,6 +131,8 @@ onboarding: {
   stepStart: "Empezar",
   welcomeTitle: "Bienvenido a Cuentana",
   welcomeSubtitle: "Personalicemos tu experiencia de aprendizaje",
+  languageTitle: "¿Cuál es tu idioma nativo?",
+  languageSubtitle: "Esto nos ayuda a personalizar tu experiencia",
   findYourLevel: "Encuentra tu Nivel",
   findYourLevelDesc: "Responde unas preguntas para encontrar tu punto de partida.",
   quizDuration: "5 preguntas",
@@ -149,6 +151,20 @@ onboarding: {
   createAccountBenefit3: "Crea tu lista de vocabulario personal",
   createAccountCta: "Crear Cuenta",
   skipForNow: "Omitir por ahora",
+},
+
+about: {
+  tagline: "Aprende español a través de historias",
+  whatIs: "¿Qué es Cuentana?",
+  description: "Cuentana es una aplicación de aprendizaje de idiomas que te ayuda a mejorar tu español a través de historias interesantes. Ya seas principiante o avanzado, nuestra colección de historias se adapta a tu nivel, haciendo que el aprendizaje sea natural y agradable.",
+  aboutFeature1Title: "Lectura por Niveles",
+  aboutFeature1Desc: "Historias adaptadas a 5 niveles de competencia, desde principiante hasta avanzado",
+  aboutFeature2Title: "Aprende Leyendo",
+  aboutFeature2Desc: "Mejora tu vocabulario y comprensión a través del contexto",
+  aboutFeature3Title: "Sigue tu Progreso",
+  aboutFeature3Desc: "Observa tu mejora mientras lees más historias",
+  getStarted: "Comenzar",
+  backToHome: "Volver al Inicio",
 },
 
 settings: {

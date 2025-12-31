@@ -131,6 +131,8 @@ onboarding: {
   stepStart: "Start",
   welcomeTitle: "Welcome to Cuentana",
   welcomeSubtitle: "Let's personalize your learning experience",
+  languageTitle: "What's your native language?",
+  languageSubtitle: "This helps us customize your experience",
   findYourLevel: "Find Your Level",
   findYourLevelDesc: "Take a quick quiz to find the perfect starting point.",
   quizDuration: "5 questions",
@@ -149,6 +151,20 @@ onboarding: {
   createAccountBenefit3: "Build your personal vocabulary list",
   createAccountCta: "Create Account",
   skipForNow: "Skip for now",
+},
+
+about: {
+  tagline: "Learn Spanish through stories",
+  whatIs: "What is Cuentana?",
+  description: "Cuentana is a language learning app that helps you improve your Spanish through engaging stories. Whether you're a beginner or advanced learner, our curated collection of stories adapts to your level, making learning natural and enjoyable.",
+  aboutFeature1Title: "Leveled Reading",
+  aboutFeature1Desc: "Stories adapted to 5 proficiency levels from beginner to advanced",
+  aboutFeature2Title: "Learn by Reading",
+  aboutFeature2Desc: "Improve vocabulary and comprehension through context",
+  aboutFeature3Title: "Track Progress",
+  aboutFeature3Desc: "See your improvement as you read more stories",
+  getStarted: "Get Started",
+  backToHome: "Back to Home",
 },
 
 settings: {
