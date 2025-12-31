@@ -19,6 +19,7 @@ import {
 
 export interface LevelProcessingParams {
   storyId: string;
+  userId: string;
   levelId: string;
   level: string;
   rawContent: string;
@@ -56,6 +57,7 @@ export async function processLevel(
 ): Promise<LevelProcessingResult> {
   const {
     storyId,
+    userId,
     levelId,
     level,
     rawContent,
@@ -80,7 +82,7 @@ export async function processLevel(
 
     // Step 1: Rewrite if needed
     const chapters = await rewriteChaptersIfNeeded(
-      storyId,
+      { storyId, userId },
       rawChapters,
       level,
       detectedLevel,
@@ -90,7 +92,7 @@ export async function processLevel(
 
     // Step 2: Translate all chapters
     const processedChapters = await translateChapters(
-      storyId,
+      { storyId, userId },
       chapters,
       sourceLanguage,
       level,
@@ -124,11 +126,17 @@ export async function processLevel(
 // REWRITING STAGE
 // ============================================================================
 
+/** Context for cost tracking */
+interface CostContext {
+  storyId: string;
+  userId: string;
+}
+
 /**
  * Rewrite chapters to target level if different from detected level
  */
 async function rewriteChaptersIfNeeded(
-  storyId: string,
+  ctx: CostContext,
   rawChapters: string[],
   targetLevel: string,
   detectedLevel: string,
@@ -148,7 +156,7 @@ async function rewriteChaptersIfNeeded(
     const chapterText = rawChapters[i];
 
     // Update story-level progress with chapter info
-    await updateStoryProgress(storyId, "rewriting_chapter", {
+    await updateStoryProgress(ctx.storyId, "rewriting_chapter", {
       chapterCurrent: i + 1,
       chapterTotal: rawChapters.length,
       currentLevel: targetLevel,
@@ -162,7 +170,8 @@ async function rewriteChaptersIfNeeded(
       chapterText,
       detectedLevel,
       targetLevel,
-      sourceLanguage
+      sourceLanguage,
+      { storyId: ctx.storyId, userId: ctx.userId }
     );
     rewrittenChapters.push(result.rewrittenText);
 
@@ -191,7 +200,7 @@ interface ProcessedChapter {
  * Translate all chapters to the opposite language
  */
 async function translateChapters(
-  storyId: string,
+  ctx: CostContext,
   chapters: string[],
   sourceLanguage: "en" | "es",
   level: string,
@@ -204,7 +213,7 @@ async function translateChapters(
     const chapterText = chapters[i];
 
     // Update story-level progress with chapter info
-    await updateStoryProgress(storyId, "translating_chapter", {
+    await updateStoryProgress(ctx.storyId, "translating_chapter", {
       chapterCurrent: i + 1,
       chapterTotal: chapters.length,
       currentLevel: level,
@@ -214,7 +223,7 @@ async function translateChapters(
     await tracker.updateTranslationProgress(i + 1);
 
     // Translate chapter
-    const result = await translateText(chapterText, sourceLanguage, level);
+    const result = await translateText(chapterText, sourceLanguage, level, { storyId: ctx.storyId, userId: ctx.userId });
 
     // Split into lines
     const sourceLines = chapterText.split("\n").filter((l) => l.trim());

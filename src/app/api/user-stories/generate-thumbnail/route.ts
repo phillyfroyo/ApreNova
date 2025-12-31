@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import OpenAI from "openai";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { logOpenAICost, logDalleCost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -83,6 +84,13 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
       max_tokens: 200,
     });
 
+    // Log cost for prompt generation (fire-and-forget)
+    logOpenAICost("thumbnail", "gpt-4o-mini", promptResponse.usage, {
+      userId: session.user.id,
+      userStoryId: storyId,
+      metadata: { type: "prompt-generation" },
+    });
+
     const imagePrompt = promptResponse.choices[0]?.message?.content?.trim();
 
     if (!imagePrompt) {
@@ -109,6 +117,12 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
         });
 
         if (result.data && result.data[0]?.url) {
+          // Log DALL-E cost (fire-and-forget)
+          logDalleCost("thumbnail", 1, "1024x1792", {
+            userId: session.user.id,
+            userStoryId: storyId,
+          });
+
           return {
             url: result.data[0].url,
             revisedPrompt: result.data[0].revised_prompt,

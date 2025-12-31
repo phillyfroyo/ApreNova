@@ -4,7 +4,7 @@ import { OpenAI } from "openai";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getExamplePrompt } from "@/lib/getExamplePrompt";
 import { getExamplePromptToEnglish } from "@/lib/getExamplePromptToEnglish";
-
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -35,6 +35,9 @@ try {
       messages,
       temperature: 0.3,
     });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("example-sentence", "gpt-4o", completion.usage);
 
     const reply = completion.choices[0]?.message?.content || "";
     const cleanReply = reply.replace(/```json|```/g, "").trim();

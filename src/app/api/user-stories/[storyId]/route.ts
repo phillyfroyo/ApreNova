@@ -106,7 +106,26 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
+    // Calculate total API cost for this story before deletion
+    const storyCost = await prisma.apiCost.aggregate({
+      where: { userStoryId: storyId },
+      _sum: { costCents: true },
+    });
+    const costCents = storyCost._sum.costCents || 0;
+
+    // Create deleted story record to preserve cost data for analytics
+    if (costCents > 0) {
+      await prisma.deletedUserStory.create({
+        data: {
+          userId: session.user.id,
+          originalStoryId: storyId,
+          costCents,
+        },
+      });
+    }
+
     // Delete story (cascades to levels and bookmarks)
+    // Note: ApiCost records are preserved with userStoryId set to null (onDelete: SetNull)
     await prisma.userStory.delete({
       where: { id: storyId },
     });

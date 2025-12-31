@@ -4,8 +4,18 @@
 
 import { OpenAI } from "openai";
 import { generateDetectionPrompt, levelNumberToString, toNumericLevel, fromNumericLevel } from "./cefr-prompts";
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface DetectionContext {
+  storyId?: string;
+  userId?: string;
+}
 
 // ============================================================================
 // LANGUAGE DETECTION
@@ -16,9 +26,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
  * Uses heuristic pattern matching first, falls back to AI if scores are close.
  *
  * @param text - The text to analyze
+ * @param context - Optional context with storyId and userId for cost tracking
  * @returns "en" for English, "es" for Spanish
  */
-export async function detectLanguage(text: string): Promise<"en" | "es"> {
+export async function detectLanguage(
+  text: string,
+  context: DetectionContext = {}
+): Promise<"en" | "es"> {
+  const { storyId, userId } = context;
   // Use a simple heuristic first - look for common Spanish indicators
   const spanishIndicators = [
     /\b(el|la|los|las|un|una|unos|unas)\b/gi,
@@ -72,6 +87,13 @@ ${text.substring(0, 500)}`,
       max_tokens: 5,
     });
 
+    // Log cost (fire-and-forget)
+    logOpenAICost("detection", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "language" },
+    });
+
     const response = completion.choices[0]?.message?.content?.toLowerCase().trim();
     return response === "en" ? "en" : "es";
   } catch {
@@ -98,12 +120,15 @@ export interface CEFRDetectionResult {
  *
  * @param text - The text to analyze
  * @param language - The language of the text ("en" or "es")
+ * @param context - Optional context with storyId and userId for cost tracking
  * @returns Detection result with level, CEFR label, confidence, and reasoning
  */
 export async function detectCEFRLevel(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: DetectionContext = {}
 ): Promise<CEFRDetectionResult> {
+  const { storyId, userId } = context;
   // Sample from multiple parts of the text for better detection
   const textLength = text.length;
   let sampleText = "";
@@ -135,6 +160,13 @@ export async function detectCEFRLevel(
       ],
       temperature: 0.3,
       max_tokens: 200,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("detection", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "cefr-level" },
     });
 
     const response = completion.choices[0]?.message?.content || "";

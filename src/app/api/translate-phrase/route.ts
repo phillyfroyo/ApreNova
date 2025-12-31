@@ -4,7 +4,7 @@ import { OpenAI } from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getPhrasePrompt } from '@/lib/getPhrasePrompt';
 import { getPhrasePromptToEnglish } from '@/lib/getPhrasePromptToEnglish';
-
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -31,6 +31,9 @@ const prompt = isSpanishToEnglish
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
     });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("translate-phrase", "gpt-4o", completion.usage);
 
     const result = completion.choices[0]?.message?.content;
     console.log("🧠 Raw GPT response:", result);

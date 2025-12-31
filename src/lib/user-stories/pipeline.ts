@@ -60,16 +60,22 @@ const apiDelay = () => delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
 // PIPELINE STEPS
 // ============================================================================
 
+/** Context for cost tracking */
+interface CostContext {
+  storyId: string;
+  userId: string;
+}
+
 /**
  * Step 1: Detect the source language (English or Spanish)
  */
 async function detectAndSaveLanguage(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string
 ): Promise<"en" | "es"> {
-  const sourceLanguage = await detectLanguage(rawContent);
+  const sourceLanguage = await detectLanguage(rawContent, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: { sourceLanguage },
   });
   await apiDelay();
@@ -80,7 +86,7 @@ async function detectAndSaveLanguage(
  * Step 2: Generate title if not provided
  */
 async function generateTitleIfNeeded(
-  storyId: string,
+  ctx: CostContext,
   currentTitle: string,
   rawContent: string,
   sourceLanguage: "en" | "es"
@@ -90,9 +96,9 @@ async function generateTitleIfNeeded(
 
   if (!isDefaultTitle) return;
 
-  const titles = await extractOrGenerateTitle(rawContent, sourceLanguage);
+  const titles = await extractOrGenerateTitle(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: {
       title: titles.title,
       titleEs: titles.titleEs,
@@ -106,16 +112,16 @@ async function generateTitleIfNeeded(
  * Step 3: Generate description if not provided
  */
 async function generateDescriptionIfNeeded(
-  storyId: string,
+  ctx: CostContext,
   currentDescription: string | null,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<void> {
   if (currentDescription) return;
 
-  const descriptions = await generateDescription(rawContent, sourceLanguage);
+  const descriptions = await generateDescription(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: {
       description: descriptions.description,
       descriptionEs: descriptions.descriptionEs,
@@ -129,13 +135,13 @@ async function generateDescriptionIfNeeded(
  * Step 3.5: Generate hook/teaser
  */
 async function generateAndSaveHook(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<void> {
-  const hookResult = await generateHook(rawContent, sourceLanguage);
+  const hookResult = await generateHook(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: {
       hook: hookResult.hook,
       hookEs: hookResult.hookEs,
@@ -149,13 +155,13 @@ async function generateAndSaveHook(
  * Step 3.6: Detect story type
  */
 async function detectAndSaveStoryType(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<void> {
-  const storyType = await detectStoryType(rawContent, sourceLanguage);
+  const storyType = await detectStoryType(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: { storyType },
   });
   await apiDelay();
@@ -165,13 +171,13 @@ async function detectAndSaveStoryType(
  * Step 3.7: Detect target audience
  */
 async function detectAndSaveTargetAudience(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<void> {
-  const targetAudience = await detectTargetAudience(rawContent, sourceLanguage);
+  const targetAudience = await detectTargetAudience(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: { targetAudience },
   });
   await apiDelay();
@@ -181,13 +187,13 @@ async function detectAndSaveTargetAudience(
  * Step 3.8: Extract tags
  */
 async function extractAndSaveTags(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<void> {
-  const tags = await extractTags(rawContent, sourceLanguage);
+  const tags = await extractTags(rawContent, sourceLanguage, ctx);
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: { tags },
   });
   await apiDelay();
@@ -197,11 +203,11 @@ async function extractAndSaveTags(
  * Step 4: Detect and save CEFR level
  */
 async function detectAndSaveLevel(
-  storyId: string,
+  ctx: CostContext,
   rawContent: string,
   sourceLanguage: "en" | "es"
 ): Promise<string> {
-  const detectionResult = await detectCEFRLevel(rawContent, sourceLanguage);
+  const detectionResult = await detectCEFRLevel(rawContent, sourceLanguage, ctx);
   const detectedLevel = detectionResult.levelString;
 
   console.log(
@@ -209,7 +215,7 @@ async function detectAndSaveLevel(
   );
 
   await prisma.userStory.update({
-    where: { id: storyId },
+    where: { id: ctx.storyId },
     data: { detectedLevel },
   });
   await apiDelay();
@@ -256,6 +262,7 @@ async function processAllLevels(
     id: string;
     slug: string;
     rawContent: string;
+    userId: string;
     levels: { id: string; level: string }[];
   },
   levelsToProcess: Set<string>,
@@ -275,6 +282,7 @@ async function processAllLevels(
 
     const result = await processLevel({
       storyId: story.id,
+      userId: story.userId,
       levelId: levelRecord.id,
       level,
       rawContent: story.rawContent,
@@ -341,6 +349,9 @@ export async function processUserStory(storyId: string): Promise<void> {
     throw new Error("Story not found");
   }
 
+  // Create cost tracking context
+  const ctx: CostContext = { storyId: story.id, userId: story.userId };
+
   // Map UserStoryLevel to levels for internal use
   const storyWithLevels = {
     ...story,
@@ -350,12 +361,12 @@ export async function processUserStory(storyId: string): Promise<void> {
   try {
     // Step 1: Detect language
     await updateStoryProgress(storyId, "detecting_language");
-    const sourceLanguage = await detectAndSaveLanguage(storyId, story.rawContent);
+    const sourceLanguage = await detectAndSaveLanguage(ctx, story.rawContent);
 
     // Step 2: Generate title if needed
     await updateStoryProgress(storyId, "generating_title");
     await generateTitleIfNeeded(
-      storyId,
+      ctx,
       story.title,
       story.rawContent,
       sourceLanguage
@@ -364,7 +375,7 @@ export async function processUserStory(storyId: string): Promise<void> {
     // Step 3: Generate description if needed
     await updateStoryProgress(storyId, "generating_description");
     await generateDescriptionIfNeeded(
-      storyId,
+      ctx,
       story.description,
       story.rawContent,
       sourceLanguage
@@ -372,24 +383,24 @@ export async function processUserStory(storyId: string): Promise<void> {
 
     // Step 3.5: Generate hook/teaser
     await updateStoryProgress(storyId, "generating_hook");
-    await generateAndSaveHook(storyId, story.rawContent, sourceLanguage);
+    await generateAndSaveHook(ctx, story.rawContent, sourceLanguage);
 
     // Step 3.6: Detect story type
     await updateStoryProgress(storyId, "detecting_story_type");
-    await detectAndSaveStoryType(storyId, story.rawContent, sourceLanguage);
+    await detectAndSaveStoryType(ctx, story.rawContent, sourceLanguage);
 
     // Step 3.7: Detect target audience
     await updateStoryProgress(storyId, "detecting_audience");
-    await detectAndSaveTargetAudience(storyId, story.rawContent, sourceLanguage);
+    await detectAndSaveTargetAudience(ctx, story.rawContent, sourceLanguage);
 
     // Step 3.8: Extract tags
     await updateStoryProgress(storyId, "extracting_tags");
-    await extractAndSaveTags(storyId, story.rawContent, sourceLanguage);
+    await extractAndSaveTags(ctx, story.rawContent, sourceLanguage);
 
     // Step 4: Detect CEFR level
     await updateStoryProgress(storyId, "detecting_level");
     const detectedLevel = await detectAndSaveLevel(
-      storyId,
+      ctx,
       story.rawContent,
       sourceLanguage
     );
@@ -439,6 +450,7 @@ export async function retryLevel(
       id: true,
       slug: true,
       rawContent: true,
+      userId: true,
       sourceLanguage: true,
       detectedLevel: true,
       UserStoryLevel: {
@@ -461,6 +473,7 @@ export async function retryLevel(
 
   const result = await processLevel({
     storyId: story.id,
+    userId: story.userId,
     levelId: levelRecord.id,
     level,
     rawContent: story.rawContent,

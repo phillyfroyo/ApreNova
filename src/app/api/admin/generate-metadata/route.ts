@@ -1,6 +1,7 @@
 // src/app/api/admin/generate-metadata/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { logOpenAICost, logDalleCost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -103,6 +104,11 @@ Return ONLY the JSON, no other text.`;
     max_tokens: 1000,
   });
 
+  // Log cost (fire-and-forget) - admin operations don't have userId
+  logOpenAICost("metadata", "gpt-4o", response.usage, {
+    metadata: { type, admin: true },
+  });
+
   const content = response.choices[0]?.message?.content?.trim();
 
   if (!content) {
@@ -187,6 +193,11 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
     max_tokens: 200,
   });
 
+  // Log cost (fire-and-forget)
+  logOpenAICost("thumbnail", "gpt-4o", promptResponse.usage, {
+    metadata: { type: "prompt-generation", imageType, admin: true },
+  });
+
   let imagePrompt = promptResponse.choices[0]?.message?.content?.trim();
 
   if (!imagePrompt) {
@@ -211,6 +222,11 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
       });
 
       if (result.data && result.data[0]?.url) {
+        // Log DALL-E cost (fire-and-forget)
+        logDalleCost("thumbnail", 1, imageSize, {
+          metadata: { imageType, admin: true },
+        });
+
         return {
           url: result.data[0].url,
           revisedPrompt: result.data[0].revised_prompt,
@@ -301,6 +317,11 @@ Return the translations as a JSON array of strings, one for each input item.`;
     ],
     temperature: 0.3,
     max_tokens: 4000,
+  });
+
+  // Log cost (fire-and-forget)
+  logOpenAICost("translation", "gpt-4o", response.usage, {
+    metadata: { targetLanguage, admin: true },
   });
 
   const content = response.choices[0]?.message?.content?.trim();

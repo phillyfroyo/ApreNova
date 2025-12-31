@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import AdminLogin from "./AdminLogin";
 import StoryUploadForm from "./StoryUploadForm";
 import StoryManager from "./StoryManager";
+import CostsManager from "./CostsManager";
+import UsersManager from "./UsersManager";
 
 const ADMIN_SESSION_KEY = "admin_authenticated";
 
-type AdminTab = "upload" | "manage";
+type AdminTab = "upload" | "manage" | "costs" | "users";
 
 // Warm up serverless functions in the background
 function warmupServerless() {
@@ -98,16 +100,37 @@ export default function UploadStoryPage() {
             >
               Manage Stories
             </button>
+            <button
+              onClick={() => setActiveTab("costs")}
+              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === "costs"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              API Costs
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === "users"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Users
+            </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      {activeTab === "upload" ? (
+      {activeTab === "upload" && (
         <StoryUploadForm onLogout={handleLogout} hideHeader />
-      ) : (
-        <StoryManager />
       )}
+      {activeTab === "manage" && <StoryManager />}
+      {activeTab === "costs" && <CostsManager />}
+      {activeTab === "users" && <UsersManager />}
     </div>
   );
 }

@@ -4,6 +4,7 @@
 
 import { OpenAI } from "openai";
 import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -71,6 +72,13 @@ export interface RewriteResult {
   attempts: number;
 }
 
+export interface RewriteOptions {
+  isPoetry?: boolean;
+  maxRetries?: number;
+  storyId?: string;
+  userId?: string;
+}
+
 /**
  * Rewrite text to a specific CEFR level.
  * Uses GPT-4 for quality rewrites with retry logic.
@@ -79,17 +87,16 @@ export interface RewriteResult {
  * @param sourceLevel - The detected source level (string like "l4" or number like 4)
  * @param targetLevel - The target level to rewrite to
  * @param language - The language of the text ("en" or "es")
- * @param isPoetry - Whether the text is poetry (preserves line breaks)
- * @param maxRetries - Maximum retry attempts (default: 2)
+ * @param options - Optional settings: isPoetry, maxRetries, storyId, userId
  */
 export async function rewriteToLevel(
   text: string,
   sourceLevel: string | number,
   targetLevel: string | number,
   language: "en" | "es",
-  isPoetry: boolean = false,
-  maxRetries: number = 2
+  options: RewriteOptions = {}
 ): Promise<RewriteResult> {
+  const { isPoetry = false, maxRetries = 2, storyId, userId } = options;
   const sourceLevelNum =
     typeof sourceLevel === "string" ? levelStringToNumber(sourceLevel) : sourceLevel;
   const targetLevelNum =
@@ -127,6 +134,13 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
         ],
         temperature: 0.5,
         max_tokens: 16000,
+      });
+
+      // Log cost (fire-and-forget)
+      logOpenAICost("rewriting", "gpt-4o", completion.usage, {
+        userId,
+        userStoryId: storyId,
+        metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt },
       });
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";

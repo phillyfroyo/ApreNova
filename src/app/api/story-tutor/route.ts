@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -280,6 +281,12 @@ export async function POST(req: NextRequest) {
       ],
       temperature: 0.7,
       max_tokens: 300,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("story-tutor", "gpt-4o-mini", completion.usage, {
+      userId: session.user.id,
+      metadata: { storySlug },
     });
 
     const reply = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response.";

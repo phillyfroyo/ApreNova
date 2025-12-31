@@ -3,6 +3,7 @@
 
 import { OpenAI } from "openai";
 import type { StoryType, StoryTag } from "@/types/story";
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -29,6 +30,11 @@ export interface HookResult {
 }
 
 export type TargetAudience = "all" | "children" | "teen" | "adult";
+
+export interface MetadataContext {
+  storyId?: string;
+  userId?: string;
+}
 
 // Valid story types for detection
 const STORY_TYPES: StoryType[] = [
@@ -57,8 +63,10 @@ const STORY_TAGS: StoryTag[] = [
  */
 export async function extractOrGenerateTitle(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<TitleResult> {
+  const { storyId, userId } = context;
   const prompt =
     language === "es"
       ? `Analiza el siguiente texto en español. Si hay un título obvio al principio, extráelo. Si no, genera un título apropiado y conciso (máximo 5 palabras).
@@ -82,6 +90,13 @@ ${text.substring(0, 1000)}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.5,
       max_tokens: 100,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "title", language },
     });
 
     const response = completion.choices[0]?.message?.content || "";
@@ -117,8 +132,10 @@ ${text.substring(0, 1000)}`;
  */
 export async function generateDescription(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<DescriptionResult> {
+  const { storyId, userId } = context;
   const prompt =
     language === "es"
       ? `Lee el siguiente texto en español y escribe una descripción atractiva de 1-2 oraciones que capture la esencia de la historia. La descripción debe intrigar al lector sin revelar demasiado.
@@ -142,6 +159,13 @@ ${text.substring(0, 2000)}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 200,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "description", language },
     });
 
     const response = completion.choices[0]?.message?.content || "";
@@ -172,8 +196,10 @@ ${text.substring(0, 2000)}`;
  */
 export async function generateHook(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<HookResult> {
+  const { storyId, userId } = context;
   const prompt =
     language === "es"
       ? `Lee el siguiente texto en español y escribe un gancho corto y atractivo (máximo 15 palabras) que capture la esencia y atraiga a los lectores. Debe ser intrigante y conciso.
@@ -197,6 +223,13 @@ ${text.substring(0, 1500)}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 100,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "hook", language },
     });
 
     const response = completion.choices[0]?.message?.content || "";
@@ -227,8 +260,10 @@ ${text.substring(0, 1500)}`;
  */
 export async function detectStoryType(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<StoryType> {
+  const { storyId, userId } = context;
   const typeList = STORY_TYPES.join(", ");
 
   const prompt =
@@ -258,6 +293,13 @@ ${text.substring(0, 2000)}`;
       max_tokens: 30,
     });
 
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "storyType", language },
+    });
+
     const response = completion.choices[0]?.message?.content?.trim().toLowerCase() || "";
 
     // Validate the response is a valid story type
@@ -282,8 +324,10 @@ ${text.substring(0, 2000)}`;
  */
 export async function detectTargetAudience(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<TargetAudience> {
+  const { storyId, userId } = context;
   const prompt =
     language === "es"
       ? `Analiza el siguiente texto y determina la audiencia objetivo más apropiada.
@@ -319,6 +363,13 @@ ${text.substring(0, 2000)}`;
       max_tokens: 10,
     });
 
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "targetAudience", language },
+    });
+
     const response = completion.choices[0]?.message?.content?.trim().toLowerCase() || "";
 
     if (["children", "teen", "adult", "all"].includes(response)) {
@@ -341,8 +392,10 @@ ${text.substring(0, 2000)}`;
  */
 export async function extractTags(
   text: string,
-  language: "en" | "es"
+  language: "en" | "es",
+  context: MetadataContext = {}
 ): Promise<StoryTag[]> {
+  const { storyId, userId } = context;
   const tagList = STORY_TAGS.join(", ");
 
   const prompt =
@@ -372,6 +425,13 @@ ${text.substring(0, 2000)}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.5,
       max_tokens: 100,
+    });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: "tags", language },
     });
 
     const response = completion.choices[0]?.message?.content || "";

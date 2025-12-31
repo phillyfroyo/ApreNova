@@ -4,6 +4,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { generateTranslationPrompt, levelStringToNumber } from "./cefr-prompts";
+import { logAnthropicCost } from "@/lib/cost-tracker";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -218,6 +219,12 @@ export interface TranslationResult {
   truncationInfo?: TruncationResult;
 }
 
+export interface TranslationOptions {
+  maxRetries?: number;
+  storyId?: string;
+  userId?: string;
+}
+
 /**
  * Translate text to the other language using Claude Haiku.
  * Uses line-by-line alignment with [N] prefixes.
@@ -226,14 +233,15 @@ export interface TranslationResult {
  * @param text - The text to translate
  * @param sourceLanguage - The source language ("en" or "es")
  * @param level - The CEFR level (as string like "l3" or number like 3)
- * @param maxRetries - Maximum retry attempts (default: 3)
+ * @param options - Optional settings: maxRetries, storyId, userId
  */
 export async function translateText(
   text: string,
   sourceLanguage: "en" | "es",
   level: string | number,
-  maxRetries: number = 3
+  options: TranslationOptions = {}
 ): Promise<TranslationResult> {
+  const { maxRetries = 3, storyId, userId } = options;
   const levelNum = typeof level === "string" ? levelStringToNumber(level) : level;
   const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
   const sourceLines = text.split("\n");
@@ -285,6 +293,13 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
             content: prompt,
           },
         ],
+      });
+
+      // Log cost (fire-and-forget)
+      logAnthropicCost("translation", "claude-haiku-4-5-20251001", response.usage, {
+        userId,
+        userStoryId: storyId,
+        metadata: { level: levelNum, lineCount, attempt },
       });
 
       const rawResponse =

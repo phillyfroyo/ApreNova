@@ -4,7 +4,7 @@ import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getWordPrompt } from "@/lib/getWordPrompt";
 import { getWordPromptToEnglish } from "@/lib/getWordPromptToEnglish";
 import { NextRequest, NextResponse } from 'next/server';
-
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
       messages,
       temperature: 0.3,
     });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("translate-word", "gpt-4o", completion.usage);
 
     const reply = completion.choices[0]?.message?.content || "";
     console.log("🧠 GPT raw reply:", reply);

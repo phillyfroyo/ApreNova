@@ -34,8 +34,8 @@ export default function FloatingProgressWidget() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
 
-  // Handle drag start
-  const handleDragStart = (e: React.MouseEvent) => {
+  // Handle drag start (mouse)
+  const handleMouseDragStart = (e: React.MouseEvent) => {
     // Only start drag on left click
     if (e.button !== 0) return;
 
@@ -50,6 +50,23 @@ export default function FloatingProgressWidget() {
     };
     setIsDragging(true);
     e.preventDefault();
+  };
+
+  // Handle drag start (touch)
+  const handleTouchDragStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const currentX = dragPosition?.x ?? 0;
+    const currentY = dragPosition?.y ?? 0;
+
+    dragStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      posX: currentX,
+      posY: currentY,
+    };
+    setIsDragging(true);
   };
 
   // Handle drag move and end
@@ -68,17 +85,39 @@ export default function FloatingProgressWidget() {
       });
     };
 
-    const handleMouseUp = () => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragStartRef.current || e.touches.length !== 1) return;
+
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - dragStartRef.current.x;
+      const deltaY = touch.clientY - dragStartRef.current.y;
+
+      setDragPosition({
+        x: dragStartRef.current.posX + deltaX,
+        y: dragStartRef.current.posY + deltaY,
+      });
+
+      // Prevent scrolling while dragging
+      e.preventDefault();
+    };
+
+    const handleDragEnd = () => {
       setIsDragging(false);
       dragStartRef.current = null;
     };
 
     document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mouseup", handleDragEnd);
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleDragEnd);
+    document.addEventListener("touchcancel", handleDragEnd);
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mouseup", handleDragEnd);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleDragEnd);
+      document.removeEventListener("touchcancel", handleDragEnd);
     };
   }, [isDragging]);
 
@@ -98,7 +137,7 @@ export default function FloatingProgressWidget() {
   const [previousStepLabel, setPreviousStepLabel] = useState<string | undefined>();
   const [isAnimating, setIsAnimating] = useState(false);
   const lastStepChangeRef = useRef<number>(Date.now());
-  const pendingStepRef = useRef<string | undefined>();
+  const pendingStepRef = useRef<string | undefined>(undefined);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -330,7 +369,8 @@ export default function FloatingProgressWidget() {
           className={`px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between ${
             isDragging ? "cursor-grabbing" : "cursor-grab"
           }`}
-          onMouseDown={handleDragStart}
+          onMouseDown={handleMouseDragStart}
+          onTouchStart={handleTouchDragStart}
         >
           <div className="flex items-center gap-2 select-none">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
