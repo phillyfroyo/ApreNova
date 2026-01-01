@@ -23,3 +23,22 @@ export const USER_STORY_LIMITS = {
 } as const;
 
 export type UserStoryLimits = typeof USER_STORY_LIMITS;
+
+/**
+ * Streaming pipeline limits for producer-consumer pattern.
+ * Used when GPT rewrites and Claude translations run in parallel.
+ */
+export const STREAMING_LIMITS = {
+  // Maximum chapters that can be queued awaiting translation.
+  // Prevents unbounded memory growth with huge books.
+  MAX_QUEUE_SIZE: 20,
+
+  // If queue reaches this size, producer (GPT) slows down.
+  // Gives Claude time to catch up.
+  QUEUE_BACKPRESSURE_THRESHOLD: 15,
+
+  // Producer waits this long (ms) when queue is full.
+  QUEUE_FULL_WAIT_MS: 5000,
+} as const;
+
+export type StreamingLimits = typeof STREAMING_LIMITS;

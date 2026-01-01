@@ -6,7 +6,7 @@
 // - Pipeline calls rewrite for ALL levels first, then translate for ALL levels
 // - This is more logical and allows for potential parallelization
 
-import { USER_STORY_LIMITS } from "./limits";
+import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
 import { LevelProgressTracker, updateStoryProgress } from "./progress-tracker";
 import {
   rewriteToLevel,
@@ -17,6 +17,7 @@ import {
   cleanText,
   levelStringToNumber,
 } from "@/lib/story-processing";
+import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 
 // ============================================================================
 // TYPES
@@ -303,6 +304,268 @@ export async function buildAndSaveLevel(
     await tracker.markFailed();
     return { success: false, error: error.message };
   }
+}
+
+// ============================================================================
+// STREAMING PIPELINE: Producer-Consumer for parallel rewrite→translate
+// ============================================================================
+
+export interface StreamingLevelParams {
+  storyId: string;
+  userId: string;
+  levelId: string;
+  level: string;
+  chapters: string[];
+  sourceLanguage: "en" | "es";
+  detectedLevel: string;
+}
+
+export interface StreamingLevelResult {
+  success: boolean;
+  processedChapters: ProcessedChapter[];
+  error?: string;
+}
+
+/**
+ * PRODUCER: Rewrite chapters using GPT and enqueue for translation.
+ * Runs as an async generator, yielding after each chapter completes.
+ */
+async function* rewriteChaptersProducer(
+  params: StreamingLevelParams,
+  queue: StreamingChapterQueue
+): AsyncGenerator<{ chapterIndex: number; content: string }, void, unknown> {
+  const {
+    storyId,
+    userId,
+    levelId,
+    level,
+    chapters,
+    sourceLanguage,
+    detectedLevel,
+  } = params;
+
+  const ctx: CostContext = { storyId, userId };
+  const needsRewrite = level !== detectedLevel;
+  const tracker = new LevelProgressTracker(levelId, chapters.length);
+
+  await tracker.startRewriting();
+
+  for (let i = 0; i < chapters.length; i++) {
+    const chapterText = chapters[i];
+
+    // Update story-level progress
+    await updateStoryProgress(storyId, "rewriting_chapter", {
+      chapterCurrent: i + 1,
+      chapterTotal: chapters.length,
+      currentLevel: level,
+    });
+
+    // Update level-specific progress
+    await tracker.updateRewriteProgress(i + 1);
+
+    let rewrittenContent: string;
+
+    if (needsRewrite) {
+      try {
+        // Call GPT to rewrite
+        const result = await rewriteToLevel(
+          chapterText,
+          detectedLevel,
+          level,
+          sourceLanguage,
+          ctx
+        );
+        rewrittenContent = result.rewrittenText;
+
+        // Update progress with chapter data
+        await tracker.updateRewriteProgress(i + 1, {
+          originalLines: chapterText.split("\n").filter((l) => l.trim()),
+          rewrittenLines: rewrittenContent.split("\n").filter((l) => l.trim()),
+        });
+      } catch (error: any) {
+        console.error(`[StreamingProducer] Rewrite failed for chapter ${i + 1}:`, error.message);
+        // Graceful degradation: use original content
+        queue.markRewriteError(i, error);
+        rewrittenContent = chapterText;
+      }
+    } else {
+      // No rewrite needed, use original
+      rewrittenContent = chapterText;
+    }
+
+    // Enqueue for translation immediately
+    const queuedChapter: QueuedChapter = {
+      chapterIndex: i,
+      content: rewrittenContent,
+      queuedAt: Date.now(),
+    };
+    queue.enqueue(queuedChapter);
+
+    // Yield for progress tracking
+    yield { chapterIndex: i, content: rewrittenContent };
+
+    // Apply backpressure if queue is getting too large
+    if (queue.shouldApplyBackpressure(STREAMING_LIMITS.QUEUE_BACKPRESSURE_THRESHOLD)) {
+      console.log(`[StreamingProducer] Backpressure: queue at ${queue.getQueueSize()}, waiting...`);
+      await delay(STREAMING_LIMITS.QUEUE_FULL_WAIT_MS);
+    }
+
+    // Rate limit between GPT calls (only if we actually made a call)
+    if (needsRewrite && i < chapters.length - 1) {
+      await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
+    }
+  }
+
+  // Signal producer is done
+  queue.markProducerComplete();
+  console.log(`[StreamingProducer] All ${chapters.length} chapters enqueued`);
+}
+
+/**
+ * CONSUMER: Translate chapters from queue using Claude.
+ * Runs concurrently with producer, processing chapters as they arrive.
+ */
+async function translateChaptersConsumer(
+  params: StreamingLevelParams,
+  queue: StreamingChapterQueue
+): Promise<TranslateResult> {
+  const { storyId, userId, levelId, level, chapters, sourceLanguage } = params;
+
+  const ctx: CostContext = { storyId, userId };
+  const totalChapters = chapters.length;
+  const tracker = new LevelProgressTracker(levelId, totalChapters);
+  const processedChapters: (ProcessedChapter | null)[] = new Array(totalChapters).fill(null);
+
+  await tracker.startTranslating();
+
+  let chaptersProcessed = 0;
+
+  while (chaptersProcessed < totalChapters) {
+    // Wait for next chapter from queue (blocks if producer is behind)
+    const queuedChapter = await queue.dequeue();
+
+    if (!queuedChapter) {
+      // Producer finished but we haven't processed all chapters
+      // This means some chapters failed in producer
+      console.warn(`[StreamingConsumer] Queue empty before all chapters processed`);
+      break;
+    }
+
+    const { chapterIndex, content } = queuedChapter;
+
+    // Update story-level progress
+    await updateStoryProgress(storyId, "translating_chapter", {
+      chapterCurrent: chaptersProcessed + 1,
+      chapterTotal: totalChapters,
+      currentLevel: level,
+    });
+
+    // Update level-specific progress
+    await tracker.updateTranslationProgress(chaptersProcessed + 1);
+
+    try {
+      // Call Claude to translate
+      const result = await translateText(content, sourceLanguage, level, ctx);
+
+      const sourceLines = content.split("\n").filter((l) => l.trim());
+      const translatedLines = result.translatedLines.filter((l) => l.trim());
+
+      const processedChapter: ProcessedChapter = {
+        sourceLines,
+        translatedLines,
+      };
+
+      // Store in correct order (by original chapter index)
+      processedChapters[chapterIndex] = processedChapter;
+      queue.markTranslateComplete(chapterIndex, processedChapter);
+
+      // Update progress with completed data
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, processedChapter);
+
+    } catch (error: any) {
+      console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);
+      queue.markTranslateError(chapterIndex, error);
+      // Continue processing other chapters
+    }
+
+    chaptersProcessed++;
+
+    // Rate limit between Claude calls
+    if (chaptersProcessed < totalChapters) {
+      await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
+    }
+  }
+
+  // Filter out any nulls (failed chapters)
+  const validChapters = processedChapters.filter((ch): ch is ProcessedChapter => ch !== null);
+
+  console.log(`[StreamingConsumer] Translated ${validChapters.length}/${totalChapters} chapters`);
+
+  return {
+    success: validChapters.length > 0,
+    processedChapters: validChapters,
+    error: validChapters.length === 0 ? "All chapters failed to translate" : undefined,
+  };
+}
+
+/**
+ * Process a level with streaming pipeline:
+ * GPT rewriting → Queue → Claude translation (running in parallel)
+ *
+ * This cuts processing time by ~50% compared to sequential processing.
+ */
+export async function processLevelStreaming(
+  params: StreamingLevelParams
+): Promise<StreamingLevelResult> {
+  const { level, chapters, detectedLevel } = params;
+
+  console.log(`[StreamingPipeline] Starting streaming pipeline for level ${level}`);
+  console.log(`[StreamingPipeline] ${chapters.length} chapters, needsRewrite: ${level !== detectedLevel}`);
+
+  // Create the queue
+  const queue = new StreamingChapterQueue(chapters.length);
+
+  // Set up progress logging
+  queue.setProgressCallback((progress) => {
+    console.log(
+      `[StreamingPipeline] Progress: rewrite ${progress.rewriteCompleted}/${progress.totalChapters}, ` +
+      `translate ${progress.translateCompleted}/${progress.totalChapters}`
+    );
+  });
+
+  // Start producer (GPT rewriting) - runs independently
+  const producerPromise = (async () => {
+    const generator = rewriteChaptersProducer(params, queue);
+    // Consume the generator to drive the rewriting
+    for await (const _chapter of generator) {
+      // Each yielded chapter has already been enqueued
+    }
+  })();
+
+  // Start consumer (Claude translation) - runs in parallel
+  const consumerPromise = translateChaptersConsumer(params, queue);
+
+  // Wait for both to complete
+  const [, translateResult] = await Promise.all([
+    producerPromise,
+    consumerPromise,
+  ]);
+
+  // Log any errors
+  const errors = queue.getErrors();
+  if (errors.length > 0) {
+    console.warn(`[StreamingPipeline] ${errors.length} chapters had errors:`,
+      errors.map(e => `ch${e.chapterIndex + 1}(${e.phase})`).join(", ")
+    );
+  }
+
+  console.log(`[StreamingPipeline] Complete: ${translateResult.processedChapters.length}/${chapters.length} chapters`);
+
+  return {
+    success: translateResult.success,
+    processedChapters: translateResult.processedChapters,
+    error: translateResult.error,
+  };
 }
 
 // ============================================================================

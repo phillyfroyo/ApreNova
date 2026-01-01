@@ -119,10 +119,10 @@ function StreamSelector({
   // Multiple streams - show dropdown
   return (
     <div className="px-4 pb-4" ref={dropdownRef}>
-      <div className="relative">
+      <div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          className={`w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`}
         >
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -144,9 +144,9 @@ function StreamSelector({
           </svg>
         </button>
 
-        {/* Dropdown menu - expands downward */}
+        {/* Dropdown menu - expands inline to grow the card */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-10">
+          <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white overflow-hidden">
             {streams.map((stream) => {
               const hasData = Array.isArray(stream.chapters) && stream.chapters.length > 0;
               const isDisabled = stream.status === "waiting" && !hasData;
@@ -561,10 +561,10 @@ export default function FloatingProgressWidget() {
           transform: "translateX(-50%)",
         }}
       >
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
         {/* Header - drag handle */}
         <div
-          className={`px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between ${
+          className={`px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between rounded-t-2xl ${
             isDragging ? "cursor-grabbing" : "cursor-grab"
           }`}
           onMouseDown={handleMouseDragStart}

@@ -50,3 +50,6 @@ src/dev/InfraPage.txt
 /cache/
 /public/cache/
 .env
+
+# Claude Code local settings (may contain sensitive info from conversations)
+.claude/settings.local.json

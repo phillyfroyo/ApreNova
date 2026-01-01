@@ -18,6 +18,7 @@ export interface ChapterRewriteData {
 }
 
 // Level-specific progress (for rewriting/translating chapters)
+// Supports both sequential and streaming (parallel) pipelines
 export interface ProcessingProgress {
   stage: "rewriting" | "translating" | "complete";
   currentChapter: number;
@@ -27,6 +28,16 @@ export interface ProcessingProgress {
   rewriteData?: ChapterRewriteData[];
   // Extended fields for detailed UI
   stepLabel?: string;
+  // Streaming pipeline: track rewrite progress separately from stage
+  // (since stage bounces between rewriting/translating in parallel)
+  rewriteProgress?: {
+    currentChapter: number;
+    chaptersCompleted: number;
+  };
+  translateProgress?: {
+    currentChapter: number;
+    chaptersCompleted: number;
+  };
 }
 
 // Story-level progress phases
@@ -166,6 +177,10 @@ export async function updateStoryProgress(
 /**
  * Encapsulates all progress tracking logic for a single level
  * Reduces boilerplate and ensures consistent progress updates
+ *
+ * Supports both sequential and streaming (parallel) pipelines.
+ * In streaming mode, rewrite and translate progress are tracked separately
+ * and merged to avoid race conditions.
  */
 export class LevelProgressTracker {
   private levelId: string;
@@ -192,12 +207,12 @@ export class LevelProgressTracker {
    * Initialize rewriting stage
    */
   async startRewriting(): Promise<void> {
-    await this.updateProgress({
+    // Merge with existing progress to support streaming pipeline
+    await this.mergeProgress({
       stage: "rewriting",
       currentChapter: 0,
-      totalChapters: this.totalChapters,
-      chaptersCompleted: [],
       rewriteData: [],
+      rewriteProgress: { currentChapter: 0, chaptersCompleted: 0 },
     });
   }
 
@@ -212,12 +227,15 @@ export class LevelProgressTracker {
       this.rewriteData.push(chapterData);
     }
 
-    await this.updateProgress({
+    // Merge to preserve translation progress in streaming mode
+    await this.mergeProgress({
       stage: "rewriting",
       currentChapter,
-      totalChapters: this.totalChapters,
-      chaptersCompleted: this.rewriteData.map((_, idx) => idx),
       rewriteData: this.rewriteData,
+      rewriteProgress: {
+        currentChapter,
+        chaptersCompleted: this.rewriteData.length,
+      },
     });
   }
 
@@ -226,12 +244,12 @@ export class LevelProgressTracker {
    */
   async startTranslating(): Promise<void> {
     this.translationData = [];
-    await this.updateProgress({
+    // Merge with existing progress to preserve rewrite data in streaming mode
+    await this.mergeProgress({
       stage: "translating",
       currentChapter: 0,
-      totalChapters: this.totalChapters,
-      chaptersCompleted: [],
       completedData: [],
+      translateProgress: { currentChapter: 0, chaptersCompleted: 0 },
     });
   }
 
@@ -246,12 +264,16 @@ export class LevelProgressTracker {
       this.translationData.push(chapterData);
     }
 
-    await this.updateProgress({
+    // Merge to preserve rewrite data in streaming mode
+    await this.mergeProgress({
       stage: "translating",
       currentChapter,
-      totalChapters: this.totalChapters,
-      chaptersCompleted: this.translationData.map((_, idx) => idx),
       completedData: this.translationData,
+      chaptersCompleted: this.translationData.map((_, idx) => idx),
+      translateProgress: {
+        currentChapter,
+        chaptersCompleted: this.translationData.length,
+      },
     });
   }
 
@@ -285,12 +307,36 @@ export class LevelProgressTracker {
   }
 
   /**
-   * Internal helper to update progress JSON field
+   * Merge progress update with existing progress.
+   * This is critical for streaming pipeline where rewrite and translate
+   * run in parallel and must not overwrite each other's data.
    */
-  private async updateProgress(progress: ProcessingProgress): Promise<void> {
+  private async mergeProgress(updates: Partial<ProcessingProgress>): Promise<void> {
+    // Read current progress
+    const level = await prisma.userStoryLevel.findUnique({
+      where: { id: this.levelId },
+      select: { processingProgress: true },
+    });
+
+    const existing = (level?.processingProgress as unknown as ProcessingProgress) || {};
+
+    // Merge: new values override, but preserve fields not in updates
+    const merged: ProcessingProgress = {
+      stage: updates.stage || existing.stage || "rewriting",
+      currentChapter: updates.currentChapter ?? existing.currentChapter ?? 0,
+      totalChapters: this.totalChapters,
+      chaptersCompleted: updates.chaptersCompleted || existing.chaptersCompleted || [],
+      // Preserve rewrite data if not being updated
+      rewriteData: updates.rewriteData ?? existing.rewriteData,
+      rewriteProgress: updates.rewriteProgress ?? existing.rewriteProgress,
+      // Preserve translation data if not being updated
+      completedData: updates.completedData ?? existing.completedData,
+      translateProgress: updates.translateProgress ?? existing.translateProgress,
+    };
+
     await prisma.userStoryLevel.update({
       where: { id: this.levelId },
-      data: { processingProgress: progress as any },
+      data: { processingProgress: merged as any },
     });
   }
 }

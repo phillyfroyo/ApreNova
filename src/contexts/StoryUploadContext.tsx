@@ -240,6 +240,7 @@ function calculateProgressForPhase(phase: string, step: string): number {
 }
 
 // Build streams array from level data for parallel progress tracking
+// Handles both sequential and streaming (parallel) pipelines
 function buildStreamsFromLevels(
   levels: Array<{
     id: string;
@@ -259,18 +260,39 @@ function buildStreamsFromLevels(
       chaptersCompleted?: number[];
       completedData?: { sourceLines: string[]; translatedLines: string[] }[];
       rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
+      // Streaming pipeline progress tracking
+      rewriteProgress?: { currentChapter: number; chaptersCompleted: number };
+      translateProgress?: { currentChapter: number; chaptersCompleted: number };
     } | null;
 
     if (!levelProgress) continue;
 
     const isDetectedLevel = level.level === detectedLevel;
     const needsRewrite = !isDetectedLevel;
+    const totalChapters = levelProgress.totalChapters || 0;
 
-    // Add rewrite stream if this level needs rewriting
-    if (needsRewrite && (levelProgress.stage === 'rewriting' || levelProgress.rewriteData?.length)) {
+    // Use streaming progress fields if available, fall back to data array length
+    const rewriteChaptersCount = levelProgress.rewriteProgress?.chaptersCompleted
+      ?? levelProgress.rewriteData?.length
+      ?? 0;
+    const translateChaptersCount = levelProgress.translateProgress?.chaptersCompleted
+      ?? levelProgress.completedData?.length
+      ?? 0;
+    const hasRewriteData = rewriteChaptersCount > 0 || levelProgress.rewriteData?.length;
+    const hasTranslateData = translateChaptersCount > 0 || levelProgress.completedData?.length;
+    const isComplete = levelProgress.stage === 'complete' || level.status === 'READY';
+
+    // Add rewrite stream if this level needs rewriting and has data or progress
+    if (needsRewrite && (levelProgress.rewriteProgress || levelProgress.rewriteData?.length || levelProgress.stage === 'rewriting')) {
+      // Use rewriteProgress for reliable status in streaming mode
+      const rewriteAllDone = rewriteChaptersCount >= totalChapters && totalChapters > 0;
+
+      // Determine status based on progress, not stage (which bounces in streaming mode)
       const rewriteStatus: StreamStatus =
-        levelProgress.stage === 'rewriting' ? 'in-progress' :
-        (levelProgress.rewriteData?.length || 0) > 0 ? 'complete' : 'waiting';
+        isComplete ? 'complete' :
+        rewriteAllDone ? 'complete' :
+        rewriteChaptersCount > 0 ? 'in-progress' :
+        levelProgress.stage === 'rewriting' ? 'in-progress' : 'waiting';
 
       streams.push({
         id: `rewrite-${level.level}`,
@@ -278,44 +300,45 @@ function buildStreamsFromLevels(
         level: level.level,
         fromLevel: detectedLevel || undefined,
         status: rewriteStatus,
-        currentChapter: levelProgress.currentChapter || 0,
-        totalChapters: levelProgress.totalChapters || 0,
+        currentChapter: rewriteChaptersCount,
+        totalChapters: totalChapters,
         chapters: levelProgress.rewriteData || [],
         label: `Rewrite ${detectedLevel || '?'} → ${level.level}`,
       });
     }
 
     // Add translate stream for this level
-    const hasTranslationData = (levelProgress.completedData?.length || 0) > 0;
-    const isTranslating = levelProgress.stage === 'translating';
-    const isComplete = levelProgress.stage === 'complete' || level.status === 'READY';
-
-    // Check if rewrite is complete (for non-detected levels)
-    const rewriteComplete = needsRewrite &&
-      (levelProgress.rewriteData?.length || 0) > 0 &&
-      levelProgress.stage !== 'rewriting';
-
     // Show translate stream if:
-    // 1. Currently translating or has translation data or is complete
-    // 2. OR for detected level (original) - show when any processing has started
-    // 3. OR for rewritten levels - show as "waiting" once rewrite is complete
+    // 1. Has translateProgress (streaming mode started)
+    // 2. Has translation data
+    // 3. Is complete
+    // 4. For detected level - show when processing starts
+    // 5. For rewritten levels - show when rewrite has started (streaming mode)
     const shouldShowTranslateStream =
-      isTranslating || hasTranslationData || isComplete ||
-      (isDetectedLevel && levelProgress.stage) ||  // Detected level: show once processing starts
-      rewriteComplete;  // Rewritten level: show once rewrite is complete
+      levelProgress.translateProgress ||
+      hasTranslateData ||
+      isComplete ||
+      (isDetectedLevel && levelProgress.stage) ||
+      (needsRewrite && hasRewriteData);
 
     if (shouldShowTranslateStream) {
+      const translateAllDone = translateChaptersCount >= totalChapters && totalChapters > 0;
+
+      // Determine status based on progress counts, not stage
       const translateStatus: StreamStatus =
-        isTranslating ? 'in-progress' :
-        isComplete || hasTranslationData ? 'complete' : 'waiting';
+        isComplete || translateAllDone ? 'complete' :
+        translateChaptersCount > 0 ? 'in-progress' :
+        levelProgress.stage === 'translating' ? 'in-progress' :
+        (needsRewrite && rewriteChaptersCount > 0) ? 'waiting' :  // Streaming: waiting for rewrite
+        'waiting';
 
       streams.push({
         id: `translate-${level.level}`,
         type: 'translating',
         level: level.level,
         status: translateStatus,
-        currentChapter: levelProgress.currentChapter || 0,
-        totalChapters: levelProgress.totalChapters || 0,
+        currentChapter: translateChaptersCount,
+        totalChapters: totalChapters,
         chapters: levelProgress.completedData || [],
         label: isDetectedLevel ? `Translate ${level.level} (original)` : `Translate ${level.level} (rewritten)`,
       });
