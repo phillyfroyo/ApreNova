@@ -47,6 +47,9 @@ export {
   type PageContent,
   type ChapterContent,
   type LevelContent,
+  type ChapterMetadata,
+  type ParsedChapter,
+  type ProcessedChapterData,
   // Functions
   isPageMarker,
   paginateLines,

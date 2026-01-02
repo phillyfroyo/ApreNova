@@ -27,8 +27,24 @@ export interface PageContent {
   lines: StoryLine[];
 }
 
+// ============================================================================
+// CHAPTER METADATA TYPES
+// ============================================================================
+
+export interface ChapterMetadata {
+  number: number;
+  title: string;
+  subtitle?: string;
+}
+
+export interface ParsedChapter {
+  text: string;
+  metadata: ChapterMetadata;
+}
+
 export interface ChapterContent {
   pages: Record<number, PageContent>;
+  metadata?: ChapterMetadata; // Optional for backward compatibility with existing stories
 }
 
 export interface LevelContent {
@@ -141,13 +157,23 @@ export function paginateLines(
 // ============================================================================
 
 /**
+ * Input type for buildContentStructure - each chapter with content and optional metadata
+ */
+export interface ProcessedChapterData {
+  sourceLines: string[];
+  translatedLines: string[];
+  metadata?: ChapterMetadata;
+}
+
+/**
  * Build the content structure matching existing content.ts format.
  * Creates a LevelContent object ready for database storage.
+ * Now includes chapter metadata (title, subtitle) for UI display.
  *
  * @param storySlug - The story's slug identifier
  * @param levelNum - The CEFR level number (1-6)
  * @param hasChapters - Whether the story has multiple chapters
- * @param chaptersData - Array of chapter data with source and translated lines
+ * @param chaptersData - Array of chapter data with source and translated lines, plus optional metadata
  * @param sourceLanguage - The source language ("en" or "es")
  * @returns LevelContent object matching the story content format
  */
@@ -155,7 +181,7 @@ export function buildContentStructure(
   storySlug: string,
   levelNum: number,
   hasChapters: boolean,
-  chaptersData: { sourceLines: string[]; translatedLines: string[] }[],
+  chaptersData: ProcessedChapterData[],
   sourceLanguage: "en" | "es"
 ): LevelContent {
   const chapters: Record<number, ChapterContent> = {};
@@ -190,7 +216,12 @@ export function buildContentStructure(
       pages[pIdx + 1] = { lines };
     }
 
-    chapters[chapterIndex + 1] = { pages };
+    // Store chapter with pages and metadata (if available)
+    const chapterContent: ChapterContent = { pages };
+    if (chapter.metadata) {
+      chapterContent.metadata = chapter.metadata;
+    }
+    chapters[chapterIndex + 1] = chapterContent;
   });
 
   return {
@@ -210,23 +241,36 @@ import { cleanText as adminCleanText, parseChaptersFromText } from "@/lib/admin/
 
 /**
  * Parse text into chapters using the admin pipeline's robust preprocessing.
- * Provides a simpler interface for common use cases.
+ * Preserves chapter metadata (title, subtitle, number) for display in UI.
  *
  * @param text - Raw text to parse
- * @returns Object with hasChapters flag and array of chapter texts
+ * @returns Object with hasChapters flag and array of ParsedChapter objects with metadata
  */
 export function parseChapters(text: string): {
   hasChapters: boolean;
-  chapters: string[];
+  chapters: ParsedChapter[];
 } {
   // Use the full admin preprocessing pipeline for robust text cleaning and chapter detection
   const preprocessed = preprocessText(text);
 
-  // If preprocessing found chapters, use those
+  // DEBUG: Log chapter detection results
+  console.log(`[parseChapters] preprocessText found ${preprocessed.chapters.length} chapters:`);
+  preprocessed.chapters.forEach((ch, idx) => {
+    console.log(`  [${idx}] number=${ch.number}, title="${ch.title}", rawText length=${ch.rawText.length}`);
+  });
+
+  // If preprocessing found chapters, use those with full metadata
   if (preprocessed.chapters.length > 1) {
     return {
       hasChapters: true,
-      chapters: preprocessed.chapters.map((ch) => ch.rawText),
+      chapters: preprocessed.chapters.map((ch) => ({
+        text: ch.rawText,
+        metadata: {
+          number: ch.number,
+          title: ch.title || `Chapter ${ch.number}`,
+          subtitle: ch.subtitle,
+        },
+      })),
     };
   }
 
@@ -236,15 +280,28 @@ export function parseChapters(text: string): {
   const parsedChapters = parseChaptersFromText(cleanedText);
 
   if (parsedChapters.length > 1) {
+    // Fallback parser doesn't extract titles, use default
     return {
       hasChapters: true,
-      chapters: parsedChapters,
+      chapters: parsedChapters.map((chText, idx) => ({
+        text: chText,
+        metadata: {
+          number: idx + 1,
+          title: `Chapter ${idx + 1}`,
+        },
+      })),
     };
   }
 
   // No chapters detected - return as single chapter
   return {
     hasChapters: false,
-    chapters: [cleanedText],
+    chapters: [{
+      text: cleanedText,
+      metadata: {
+        number: 1,
+        title: "Full Text",
+      },
+    }],
   };
 }

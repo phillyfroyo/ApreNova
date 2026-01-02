@@ -10,6 +10,7 @@
 // translates chapter N-1, cutting total processing time by ~50%.
 
 import { ProcessedChapter } from "./level-processor";
+import { ChapterMetadata } from "@/lib/story-processing";
 
 // ============================================================================
 // TYPES
@@ -19,6 +20,7 @@ export interface QueuedChapter {
   chapterIndex: number;
   content: string;
   queuedAt: number; // timestamp for debugging
+  metadata?: ChapterMetadata; // Chapter title and number for UI display
 }
 
 export interface QueueProgress {

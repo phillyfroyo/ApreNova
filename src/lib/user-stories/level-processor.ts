@@ -16,6 +16,9 @@ import {
   quickClean,
   cleanText,
   levelStringToNumber,
+  ParsedChapter,
+  ChapterMetadata,
+  ProcessedChapterData,
 } from "@/lib/story-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 
@@ -41,13 +44,14 @@ export interface LevelProcessingResult {
 
 export interface ParsedChapters {
   hasChapters: boolean;
-  chapters: string[];
+  chapters: ParsedChapter[];
   cleanedContent: string;
 }
 
 export interface ProcessedChapter {
   sourceLines: string[];
   translatedLines: string[];
+  metadata?: ChapterMetadata;
 }
 
 /** Context for cost tracking */
@@ -85,20 +89,21 @@ export interface RewriteParams {
   userId: string;
   levelId: string;
   level: string;
-  chapters: string[];
+  chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   detectedLevel: string;
 }
 
 export interface RewriteResult {
   success: boolean;
-  chapters: string[];
+  chapters: ParsedChapter[];
   error?: string;
 }
 
 /**
  * Rewrite chapters to target level if different from detected level
  * Returns the rewritten chapters (or original if no rewrite needed)
+ * Preserves chapter metadata through the rewrite process.
  */
 export async function rewriteLevelChapters(
   params: RewriteParams
@@ -123,17 +128,18 @@ export async function rewriteLevelChapters(
     await tracker.startProcessing();
 
     if (!needsRewrite) {
-      // No rewrite needed, return original chapters
+      // No rewrite needed, return original chapters with metadata preserved
       console.log(`[LevelProcessor] Level ${level} = detected level, skipping rewrite`);
       return { success: true, chapters };
     }
 
     console.log(`[LevelProcessor] Rewriting ${chapters.length} chapters: ${detectedLevel} → ${level}`);
     await tracker.startRewriting();
-    const rewrittenChapters: string[] = [];
+    const rewrittenChapters: ParsedChapter[] = [];
 
     for (let i = 0; i < chapters.length; i++) {
-      const chapterText = chapters[i];
+      const chapter = chapters[i];
+      const chapterText = chapter.text;
 
       // Update story-level progress with chapter info
       await updateStoryProgress(storyId, "rewriting_chapter", {
@@ -153,7 +159,12 @@ export async function rewriteLevelChapters(
         sourceLanguage,
         ctx
       );
-      rewrittenChapters.push(result.rewrittenText);
+
+      // Preserve metadata from original chapter
+      rewrittenChapters.push({
+        text: result.rewrittenText,
+        metadata: chapter.metadata,
+      });
 
       // Update progress with completed chapter data
       await tracker.updateRewriteProgress(i + 1, {
@@ -181,7 +192,7 @@ export interface TranslateParams {
   userId: string;
   levelId: string;
   level: string;
-  chapters: string[];
+  chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
 }
 
@@ -193,6 +204,7 @@ export interface TranslateResult {
 
 /**
  * Translate all chapters to the opposite language
+ * Preserves chapter metadata through the translation process.
  */
 export async function translateLevelChapters(
   params: TranslateParams
@@ -208,7 +220,8 @@ export async function translateLevelChapters(
     const processedChapters: ProcessedChapter[] = [];
 
     for (let i = 0; i < chapters.length; i++) {
-      const chapterText = chapters[i];
+      const chapter = chapters[i];
+      const chapterText = chapter.text;
 
       // Update story-level progress with chapter info
       await updateStoryProgress(storyId, "translating_chapter", {
@@ -227,11 +240,16 @@ export async function translateLevelChapters(
       const sourceLines = chapterText.split("\n").filter((l) => l.trim());
       const translatedLines = result.translatedLines.filter((l) => l.trim());
 
-      const chapterData = { sourceLines, translatedLines };
+      // Preserve metadata from original chapter
+      const chapterData: ProcessedChapter = {
+        sourceLines,
+        translatedLines,
+        metadata: chapter.metadata,
+      };
       processedChapters.push(chapterData);
 
       // Update progress with completed chapter data
-      await tracker.updateTranslationProgress(i + 1, chapterData);
+      await tracker.updateTranslationProgress(i + 1, { sourceLines, translatedLines });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -315,7 +333,7 @@ export interface StreamingLevelParams {
   userId: string;
   levelId: string;
   level: string;
-  chapters: string[];
+  chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   detectedLevel: string;
 }
@@ -329,6 +347,7 @@ export interface StreamingLevelResult {
 /**
  * PRODUCER: Rewrite chapters using GPT and enqueue for translation.
  * Runs as an async generator, yielding after each chapter completes.
+ * Preserves chapter metadata through the rewrite process.
  */
 async function* rewriteChaptersProducer(
   params: StreamingLevelParams,
@@ -351,7 +370,8 @@ async function* rewriteChaptersProducer(
   await tracker.startRewriting();
 
   for (let i = 0; i < chapters.length; i++) {
-    const chapterText = chapters[i];
+    const chapter = chapters[i];
+    const chapterText = chapter.text;
 
     // Update story-level progress
     await updateStoryProgress(storyId, "rewriting_chapter", {
@@ -393,11 +413,12 @@ async function* rewriteChaptersProducer(
       rewrittenContent = chapterText;
     }
 
-    // Enqueue for translation immediately
+    // Enqueue for translation immediately, preserving metadata
     const queuedChapter: QueuedChapter = {
       chapterIndex: i,
       content: rewrittenContent,
       queuedAt: Date.now(),
+      metadata: chapter.metadata,
     };
     queue.enqueue(queuedChapter);
 
@@ -424,6 +445,7 @@ async function* rewriteChaptersProducer(
 /**
  * CONSUMER: Translate chapters from queue using Claude.
  * Runs concurrently with producer, processing chapters as they arrive.
+ * Preserves chapter metadata through the translation process.
  */
 async function translateChaptersConsumer(
   params: StreamingLevelParams,
@@ -451,7 +473,7 @@ async function translateChaptersConsumer(
       break;
     }
 
-    const { chapterIndex, content } = queuedChapter;
+    const { chapterIndex, content, metadata } = queuedChapter;
 
     // Update story-level progress
     await updateStoryProgress(storyId, "translating_chapter", {
@@ -470,17 +492,19 @@ async function translateChaptersConsumer(
       const sourceLines = content.split("\n").filter((l) => l.trim());
       const translatedLines = result.translatedLines.filter((l) => l.trim());
 
+      // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {
         sourceLines,
         translatedLines,
+        metadata,
       };
 
       // Store in correct order (by original chapter index)
       processedChapters[chapterIndex] = processedChapter;
       queue.markTranslateComplete(chapterIndex, processedChapter);
 
-      // Update progress with completed data
-      await tracker.updateTranslationProgress(chaptersProcessed + 1, processedChapter);
+      // Update progress with completed data (without metadata for tracker)
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines, translatedLines });
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);

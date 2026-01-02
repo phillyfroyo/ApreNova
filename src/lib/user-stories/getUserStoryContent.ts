@@ -9,6 +9,12 @@ interface StoryLine {
   en: string;
 }
 
+interface ChapterMetadata {
+  number: number;
+  title: string;
+  subtitle?: string;
+}
+
 interface LevelContent {
   storySlug: string;
   level: number;
@@ -22,6 +28,7 @@ interface LevelContent {
           lines: StoryLine[];
         }
       >;
+      metadata?: ChapterMetadata; // Optional for backward compatibility
     }
   >;
 }
@@ -108,6 +115,7 @@ export async function getUserStoryContent(
 
 /**
  * Get story structure (chapters and pages) for a user story
+ * Now includes chapter titles for display in UI navigation
  */
 export async function getUserStoryMap(
   userStoryId: string,
@@ -118,6 +126,8 @@ export async function getUserStoryMap(
   chapters: {
     chapter: number;
     pages: number[];
+    title?: string;    // Chapter title (e.g., "Down the Rabbit-Hole")
+    subtitle?: string; // Optional subtitle
   }[];
 }> {
   try {
@@ -152,10 +162,16 @@ export async function getUserStoryMap(
     const chapters = Object.keys(levelContent.chapters || {}).map(
       (chapterKey) => {
         const chapterNum = parseInt(chapterKey);
-        const pages = Object.keys(
-          levelContent.chapters[chapterNum]?.pages || {}
-        ).map((pageKey) => parseInt(pageKey));
-        return { chapter: chapterNum, pages: pages.sort((a, b) => a - b) };
+        const chapterData = levelContent.chapters[chapterNum];
+        const pages = Object.keys(chapterData?.pages || {}).map((pageKey) =>
+          parseInt(pageKey)
+        );
+        return {
+          chapter: chapterNum,
+          pages: pages.sort((a, b) => a - b),
+          title: chapterData?.metadata?.title,
+          subtitle: chapterData?.metadata?.subtitle,
+        };
       }
     );
 

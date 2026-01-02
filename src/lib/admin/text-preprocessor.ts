@@ -488,93 +488,115 @@ function detectChapterMarkers(lines: string[]): ChapterMarker[] {
 
 /**
  * Filter out Table of Contents markers
- * TOC entries appear in rapid succession (consecutive or near-consecutive lines)
- * Actual chapters have substantial content between them
  *
- * Strategy: Find the FIRST cluster of 3+ markers within 3 lines of each other.
- * This is the TOC. The next marker after a significant gap (>10 lines) starts
- * the actual chapter content.
+ * Improved strategy: Instead of relying on line gaps alone (which can be unreliable),
+ * we check if there's SUBSTANTIAL CONTENT between markers.
+ *
+ * TOC entries have minimal content between them (0-50 chars of text).
+ * Real chapter markers have substantial content (1000+ chars) between them.
+ *
+ * Algorithm:
+ * 1. Find the first "cluster" where consecutive markers have minimal content between them
+ * 2. The first marker AFTER this cluster (with substantial content following it) is the first real chapter
  */
-function filterOutTOCMarkers(markers: ChapterMarker[]): ChapterMarker[] {
+function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): ChapterMarker[] {
   if (markers.length < 3) return markers;
 
-  // Find clusters of markers that are very close together (within 3 lines)
-  // These are almost certainly TOC entries
-  const TOC_LINE_THRESHOLD = 3;
-  const MIN_CLUSTER_SIZE = 3;
-  const MIN_GAP_AFTER_TOC = 10; // Require at least 10 lines gap after TOC
+  // Calculate content between each marker and the next
+  const contentBetween: number[] = [];
+  for (let i = 0; i < markers.length - 1; i++) {
+    const startLine = markers[i].lineIndex + 1;
+    const endLine = markers[i + 1].lineIndex;
+    let charCount = 0;
+    for (let j = startLine; j < endLine && j < lines.length; j++) {
+      charCount += lines[j].trim().length;
+    }
+    contentBetween.push(charCount);
+  }
+  // Last marker - count to end of file (or next 500 lines)
+  const lastMarkerLine = markers[markers.length - 1].lineIndex;
+  let lastContent = 0;
+  for (let j = lastMarkerLine + 1; j < Math.min(lastMarkerLine + 500, lines.length); j++) {
+    lastContent += lines[j].trim().length;
+  }
+  contentBetween.push(lastContent);
 
-  // Find the first cluster (the TOC)
-  let tocEndIndex = -1;
-  let clusterStart = 0;
-  let clusterSize = 1;
+  // DEBUG: Log markers with content between them
+  console.log(`[filterOutTOCMarkers] Total markers: ${markers.length}`);
+  markers.slice(0, 25).forEach((m, i) => {
+    const content = contentBetween[i];
+    console.log(`  [${i}] line ${m.lineIndex}: "${m.fullMatch.substring(0, 40).padEnd(40)}" | content after: ${content} chars`);
+  });
 
-  for (let i = 1; i < markers.length; i++) {
-    const lineGap = markers[i].lineIndex - markers[i - 1].lineIndex;
+  // Threshold: TOC entries have < 100 chars between them
+  // Real chapters have 1000+ chars between them
+  const TOC_CONTENT_THRESHOLD = 100;
+  const CHAPTER_CONTENT_THRESHOLD = 500;
 
-    if (lineGap <= TOC_LINE_THRESHOLD) {
-      // This marker is close to the previous one - extend cluster
-      clusterSize++;
-    } else if (lineGap >= MIN_GAP_AFTER_TOC) {
-      // Large gap - if we have a valid cluster, this marks the end of TOC
-      if (clusterSize >= MIN_CLUSTER_SIZE) {
-        tocEndIndex = i - 1; // Last marker in the TOC cluster
+  // Find the first marker with substantial content after it
+  // This is likely the first real chapter (not a TOC entry)
+  let firstRealChapterIndex = -1;
+  let inTocCluster = false;
+  let tocClusterStarted = false;
+
+  for (let i = 0; i < markers.length; i++) {
+    const contentAfter = contentBetween[i];
+
+    if (contentAfter < TOC_CONTENT_THRESHOLD) {
+      // This looks like a TOC entry (minimal content after it)
+      if (!tocClusterStarted) {
+        tocClusterStarted = true;
+      }
+      inTocCluster = true;
+    } else if (contentAfter >= CHAPTER_CONTENT_THRESHOLD && tocClusterStarted) {
+      // Substantial content after this marker, and we've seen TOC entries before
+      // This is the first real chapter
+      firstRealChapterIndex = i;
+      console.log(`  -> First real chapter at index ${i} (${contentAfter} chars after)`);
+      break;
+    } else {
+      // Medium content - could be either. If we haven't started a TOC cluster,
+      // this might just be a book without a TOC.
+      if (!tocClusterStarted) {
+        // No TOC detected - return all markers
+        console.log(`  -> No TOC detected (first marker has ${contentAfter} chars after)`);
+        return markers;
+      }
+    }
+  }
+
+  // If no clear transition found, check if we have a classic TOC pattern:
+  // First N markers clustered together, then a gap
+  if (firstRealChapterIndex === -1) {
+    // Look for where the line gaps get large
+    for (let i = 1; i < markers.length; i++) {
+      const lineGap = markers[i].lineIndex - markers[i - 1].lineIndex;
+      const contentAfter = contentBetween[i];
+
+      // If there's a big line gap AND substantial content after this marker
+      if (lineGap > 50 && contentAfter >= CHAPTER_CONTENT_THRESHOLD) {
+        firstRealChapterIndex = i;
+        console.log(`  -> First real chapter at index ${i} (line gap: ${lineGap}, content: ${contentAfter})`);
         break;
       }
-      // Not a valid cluster, reset
-      clusterStart = i;
-      clusterSize = 1;
-    } else {
-      // Medium gap (between 4-9 lines) - could be end of TOC or just spacing
-      // If we already have a cluster, check if next marker continues the pattern
-      if (clusterSize >= MIN_CLUSTER_SIZE) {
-        // We have a TOC cluster, but next marker is in a gray zone
-        // Look ahead to see if there's another cluster forming
-        let nextClusterSize = 1;
-        for (let j = i + 1; j < markers.length; j++) {
-          const nextGap = markers[j].lineIndex - markers[j - 1].lineIndex;
-          if (nextGap <= TOC_LINE_THRESHOLD) {
-            nextClusterSize++;
-          } else {
-            break;
-          }
-        }
-        // If next markers don't form a cluster, this is probably the first real chapter
-        if (nextClusterSize < MIN_CLUSTER_SIZE) {
-          tocEndIndex = i - 1;
-          break;
-        }
-      }
-      clusterStart = i;
-      clusterSize = 1;
     }
   }
 
-  // If we ended in a cluster but never found a large gap, check if it's the whole file
-  if (tocEndIndex === -1 && clusterSize >= MIN_CLUSTER_SIZE) {
-    // All markers are in one cluster - this might be all TOC or all chapters
-    // If they span < 50 lines total, it's probably TOC
-    const firstLine = markers[clusterStart].lineIndex;
-    const lastLine = markers[markers.length - 1].lineIndex;
-    if (lastLine - firstLine < 50) {
-      tocEndIndex = markers.length - 1;
-    }
+  // If still no clear break found, assume no TOC
+  if (firstRealChapterIndex === -1) {
+    console.log(`  -> Could not identify TOC boundary, keeping all markers`);
+    return markers;
   }
 
-  // If no TOC cluster found, return all markers
-  if (tocEndIndex === -1) return markers;
+  // Filter out TOC markers (indices 0 through firstRealChapterIndex - 1)
+  const filtered = markers.slice(firstRealChapterIndex);
 
-  // Filter out TOC markers (indices 0 through tocEndIndex)
-  const filtered = markers.slice(tocEndIndex + 1);
+  console.log(`[preprocessText] Filtered out ${firstRealChapterIndex} TOC markers, keeping ${filtered.length} real chapters`);
 
-  if (filtered.length < markers.length) {
-    console.log(`[preprocessText] Filtered out ${markers.length - filtered.length} TOC markers`);
-  }
-
-  // If all markers were filtered, that's wrong - return at least the last few
+  // Safety check: if we filtered everything, that's wrong
   if (filtered.length === 0) {
-    console.log(`[preprocessText] WARNING: All markers filtered as TOC, keeping last ${Math.min(12, markers.length)} markers`);
-    return markers.slice(-Math.min(12, markers.length));
+    console.log(`[preprocessText] WARNING: All markers filtered as TOC, keeping all markers`);
+    return markers;
   }
 
   return filtered;
@@ -838,7 +860,7 @@ export function preprocessText(rawText: string): PreprocessedText {
   const rawMarkers = detectChapterMarkers(lines);
 
   // Step 8b: Filter out Table of Contents markers (clusters of markers close together)
-  const markers = filterOutTOCMarkers(rawMarkers);
+  const markers = filterOutTOCMarkers(rawMarkers, lines);
 
   // Step 9: Extract front matter
   const firstChapterLine = markers.length > 0 ? markers[0].lineIndex : lines.length;

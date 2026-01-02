@@ -34,7 +34,12 @@ interface StoryLayoutWithAzureTTSProps {
   title: string;
   storyMap: {
     hasChapters: boolean;
-    chapters: { chapter: number; pages: number[] }[];
+    chapters: {
+      chapter: number;
+      pages: number[];
+      title?: string;    // Chapter title (e.g., "Down the Rabbit-Hole")
+      subtitle?: string; // Optional subtitle
+    }[];
   };
   isUserStory?: boolean;
   userStoryId?: string;
@@ -234,7 +239,7 @@ export default function StoryLayoutWithAzureTTS({
     currentPage: number,
     storyMap: {
       hasChapters: boolean;
-      chapters: { chapter: number; pages: number[] }[];
+      chapters: { chapter: number; pages: number[]; title?: string; subtitle?: string }[];
     }
   ): {
     prev: { ch: number; pg: number } | null;
@@ -688,7 +693,10 @@ export default function StoryLayoutWithAzureTTS({
                 label={`${t(typedLang, "story", "chapter")} ▾ ${chapterNumber}`}
                 variant="glass"
                 options={storyMap.chapters.map((ch) => ({
-                  label: `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
+                  // Show chapter title if available (e.g., "Chapter 1: Down the Rabbit-Hole")
+                  label: ch.title && ch.title !== `Chapter ${ch.chapter}`
+                    ? `${t(typedLang, "story", "chapter")} ${ch.chapter}: ${ch.title}`
+                    : `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
                   value: ch.chapter.toString(),
                 }))}
                 onSelect={(selectedValue) => {

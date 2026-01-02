@@ -87,6 +87,10 @@ export function cleanText(text: string): string {
 /**
  * Parse text into chapters based on common chapter markers.
  * Handles both English and Spanish chapter formats.
+ *
+ * IMPORTANT: This is a fallback parser. The primary parser is in text-preprocessor.ts.
+ * This function discards front matter (text before first chapter marker) unless
+ * it looks like substantial content (e.g., a prologue without a marker).
  */
 export function parseChaptersFromText(text: string): string[] {
   // Split on common chapter patterns
@@ -99,15 +103,32 @@ export function parseChaptersFromText(text: string): string[] {
   }
 
   // Split by chapter markers
+  // parts[0] = text BEFORE first chapter marker (front matter)
+  // parts[1] = content after first marker, before second marker
+  // parts[2] = content after second marker, etc.
   const parts = text.split(chapterRegex);
   const chapters: string[] = [];
 
-  // First part might be front matter or first chapter
-  if (parts[0]?.trim()) {
-    chapters.push(parts[0].trim());
+  // FIX: Don't automatically include parts[0] as a chapter
+  // parts[0] is typically front matter (title, author, copyright, table of contents)
+  // Only include it if it looks like substantial prose content (rare case: prologue without marker)
+  const frontMatter = parts[0]?.trim() || '';
+  if (frontMatter) {
+    // Heuristic: front matter that looks like actual chapter content
+    // - Has substantial length (>500 chars)
+    // - Has multiple lines of prose (>5 lines with >50 chars each)
+    const proseLines = frontMatter.split('\n').filter(l => l.trim().length > 50);
+    const looksLikeChapterContent = frontMatter.length > 500 && proseLines.length > 5;
+
+    if (looksLikeChapterContent) {
+      // Rare case: content exists before first chapter marker (e.g., unmarked prologue)
+      chapters.push(frontMatter);
+    }
+    // Otherwise: discard front matter (typical case - title, TOC, etc.)
   }
 
-  // Add remaining chapters with their headers
+  // Add chapters with their headers
+  // matches[i-1] is the header for parts[i]
   for (let i = 1; i < parts.length; i++) {
     if (parts[i]?.trim()) {
       const header = matches[i - 1]?.trim() || '';
