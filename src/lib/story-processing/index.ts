@@ -2,7 +2,67 @@
 // Shared story processing library
 // Used by both admin and user story pipelines
 
-// CEFR prompts and level utilities
+// ============================================================================
+// PROCESSING CONFIGURATION (shared constants, chunking, error handling)
+// ============================================================================
+
+export {
+  // Chunking
+  MAX_CHUNK_CHARS,
+  DEFAULT_LINES_PER_PAGE,
+  splitIntoSubChunks,
+  reassembleChunks,
+  // Retry configuration
+  RETRY_CONFIG,
+  BATCH_CONFIG,
+  // Error handling
+  type ProcessingErrorType,
+  type ChunkError,
+  categorizeError,
+  isRetryableError,
+  getRetryDelay,
+  // File validation
+  SUPPORTED_FILE_TYPES,
+  ACCEPTED_EXTENSIONS,
+  isAcceptedFile,
+  detectFileType,
+  type SupportedFileType,
+  type DetectedFileType,
+} from "./processing-config";
+
+// ============================================================================
+// COST ESTIMATION
+// ============================================================================
+
+export {
+  // Pricing constants
+  PRICING,
+  GPT4O_PRICING,
+  GPT4O_MINI_PRICING,
+  CLAUDE_HAIKU_PRICING,
+  DALLE3_PRICING,
+  // Token estimation
+  estimateTokens,
+  estimateTokensWithOverhead,
+  // Cost estimation
+  estimateCosts,
+  estimateUserStoryCost,
+  // Formatting
+  formatCost,
+  formatTokens,
+  getCostSummary,
+  // Types
+  type LevelCostEstimate,
+  type ImageCostEstimate,
+  type CostEstimate,
+  type CostEstimateOptions,
+  type SimpleCostEstimateOptions,
+} from "./cost-estimation";
+
+// ============================================================================
+// CEFR PROMPTS AND LEVEL UTILITIES
+// ============================================================================
+
 export {
   CEFR_LEVELS,
   type CEFRLevel,
@@ -13,7 +73,10 @@ export {
   generateDetectionPrompt,
 } from "./cefr-prompts";
 
-// Translation utilities (uses Claude Haiku)
+// ============================================================================
+// TRANSLATION (uses Claude Haiku)
+// ============================================================================
+
 export {
   addLineNumbers,
   parseNumberedLines,
@@ -25,7 +88,10 @@ export {
   type TranslationResult,
 } from "./translation";
 
-// Rewriting utilities (uses GPT-4)
+// ============================================================================
+// REWRITING (uses GPT-4)
+// ============================================================================
+
 export {
   isErrorResponse,
   stripPreamble,
@@ -33,14 +99,20 @@ export {
   type RewriteResult,
 } from "./rewriting";
 
-// Detection utilities
+// ============================================================================
+// DETECTION (language and CEFR level)
+// ============================================================================
+
 export {
   detectLanguage,
   detectCEFRLevel,
   type CEFRDetectionResult,
 } from "./detection";
 
-// Text processing utilities
+// ============================================================================
+// TEXT PROCESSING
+// ============================================================================
+
 export {
   // Types
   type StoryLine,

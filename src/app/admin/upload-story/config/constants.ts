@@ -1,37 +1,44 @@
 // src/app/admin/upload-story/config/constants.ts
 // Centralized configuration constants for the story upload pipeline
+//
+// NOTE: Core processing constants (chunking, retries, error handling) are now
+// defined in the shared library at @/lib/story-processing/processing-config.ts
+// We re-export them here for backward compatibility.
+
+import {
+  MAX_CHUNK_CHARS as SHARED_MAX_CHUNK_CHARS,
+  RETRY_CONFIG,
+  BATCH_CONFIG,
+  DEFAULT_LINES_PER_PAGE as SHARED_LINES_PER_PAGE,
+} from "@/lib/story-processing";
 
 // ============================================
-// Processing Batch Sizes
+// Re-exports from shared library
 // ============================================
-
-/** Number of chapters to process in parallel during rewriting */
-export const REWRITE_BATCH_SIZE = 8;
-
-/** Number of chapters to process in parallel during translation */
-export const TRANSLATION_BATCH_SIZE = 8;
 
 /** Maximum characters per chunk for API calls */
-export const MAX_CHUNK_CHARS = 12000;
+export const MAX_CHUNK_CHARS = SHARED_MAX_CHUNK_CHARS;
 
-// ============================================
-// Retry Configuration
-// ============================================
+/** Number of chapters to process in parallel during rewriting */
+export const REWRITE_BATCH_SIZE = BATCH_CONFIG.REWRITE_BATCH_SIZE;
+
+/** Number of chapters to process in parallel during translation */
+export const TRANSLATION_BATCH_SIZE = BATCH_CONFIG.TRANSLATION_BATCH_SIZE;
 
 /** Maximum retries for translation API calls */
-export const MAX_TRANSLATION_RETRIES = 3;
+export const MAX_TRANSLATION_RETRIES = RETRY_CONFIG.MAX_TRANSLATION_RETRIES;
 
 /** Delay between retries in milliseconds */
-export const RETRY_DELAY_MS = 500;
+export const RETRY_DELAY_MS = RETRY_CONFIG.RETRY_DELAY_MS;
 
 /** Maximum retries for truncation issues */
-export const MAX_TRUNCATION_RETRIES = 2;
+export const MAX_TRUNCATION_RETRIES = RETRY_CONFIG.MAX_TRUNCATION_RETRIES;
 
 /** Maximum retries for rewrite API calls */
-export const MAX_REWRITE_RETRIES = 3;
+export const MAX_REWRITE_RETRIES = RETRY_CONFIG.MAX_REWRITE_RETRIES;
 
 /** Base delay for exponential backoff (ms) */
-export const REWRITE_BACKOFF_BASE_MS = 1000;
+export const REWRITE_BACKOFF_BASE_MS = RETRY_CONFIG.BACKOFF_BASE_MS;
 
 // ============================================
 // File Generation

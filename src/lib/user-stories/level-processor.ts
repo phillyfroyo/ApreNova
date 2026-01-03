@@ -19,6 +19,15 @@ import {
   ParsedChapter,
   ChapterMetadata,
   ProcessedChapterData,
+  // Chunking for large chapters
+  splitIntoSubChunks,
+  reassembleChunks,
+  MAX_CHUNK_CHARS,
+  // Error handling
+  categorizeError,
+  isRetryableError,
+  getRetryDelay,
+  RETRY_CONFIG,
 } from "@/lib/story-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 
@@ -65,6 +74,145 @@ interface CostContext {
 // ============================================================================
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ============================================================================
+// CHUNKED PROCESSING HELPERS
+// ============================================================================
+
+/**
+ * Rewrite a single chapter, chunking if necessary for large content.
+ * Returns the rewritten text (reassembled from chunks if chunked).
+ */
+async function rewriteChapterWithChunking(
+  chapterText: string,
+  detectedLevel: string,
+  targetLevel: string,
+  sourceLanguage: "en" | "es",
+  ctx: CostContext
+): Promise<string> {
+  // Check if chapter needs chunking
+  if (chapterText.length <= MAX_CHUNK_CHARS) {
+    // Small chapter - process directly
+    const result = await rewriteToLevel(
+      chapterText,
+      detectedLevel,
+      targetLevel,
+      sourceLanguage,
+      ctx
+    );
+    return result.rewrittenText;
+  }
+
+  // Large chapter - split into chunks
+  const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
+  console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks`);
+
+  const rewrittenChunks: string[] = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    let lastError: Error | null = null;
+
+    // Retry loop for each chunk
+    for (let attempt = 1; attempt <= RETRY_CONFIG.MAX_REWRITE_RETRIES; attempt++) {
+      try {
+        const result = await rewriteToLevel(
+          chunk,
+          detectedLevel,
+          targetLevel,
+          sourceLanguage,
+          ctx
+        );
+        rewrittenChunks.push(result.rewrittenText);
+        lastError = null;
+        break;
+      } catch (error: any) {
+        lastError = error;
+        const errorType = categorizeError(error);
+
+        if (!isRetryableError(errorType) || attempt === RETRY_CONFIG.MAX_REWRITE_RETRIES) {
+          console.error(`[Chunking] Chunk ${i + 1}/${chunks.length} failed (${errorType}): ${error.message}`);
+          // Use original chunk as fallback
+          rewrittenChunks.push(chunk);
+          break;
+        }
+
+        const retryDelay = getRetryDelay(errorType, attempt);
+        console.warn(`[Chunking] Chunk ${i + 1} retry ${attempt}/${RETRY_CONFIG.MAX_REWRITE_RETRIES} after ${retryDelay}ms`);
+        await delay(retryDelay);
+      }
+    }
+
+    // Rate limit between chunks
+    if (i < chunks.length - 1) {
+      await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
+    }
+  }
+
+  // Reassemble chunks
+  return reassembleChunks(rewrittenChunks);
+}
+
+/**
+ * Translate a single chapter, chunking if necessary for large content.
+ * Returns the translated lines.
+ */
+async function translateChapterWithChunking(
+  chapterText: string,
+  sourceLanguage: "en" | "es",
+  level: string,
+  ctx: CostContext
+): Promise<string[]> {
+  // Check if chapter needs chunking
+  if (chapterText.length <= MAX_CHUNK_CHARS) {
+    // Small chapter - process directly
+    const result = await translateText(chapterText, sourceLanguage, level, ctx);
+    return result.translatedLines;
+  }
+
+  // Large chapter - split into chunks
+  const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
+  console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks for translation`);
+
+  const allTranslatedLines: string[] = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    let lastError: Error | null = null;
+
+    // Retry loop for each chunk
+    for (let attempt = 1; attempt <= RETRY_CONFIG.MAX_TRANSLATION_RETRIES; attempt++) {
+      try {
+        const result = await translateText(chunk, sourceLanguage, level, ctx);
+        allTranslatedLines.push(...result.translatedLines);
+        lastError = null;
+        break;
+      } catch (error: any) {
+        lastError = error;
+        const errorType = categorizeError(error);
+
+        if (!isRetryableError(errorType) || attempt === RETRY_CONFIG.MAX_TRANSLATION_RETRIES) {
+          console.error(`[Chunking] Translation chunk ${i + 1}/${chunks.length} failed (${errorType}): ${error.message}`);
+          // Use placeholder as fallback
+          const chunkLines = chunk.split("\n").filter((l) => l.trim());
+          allTranslatedLines.push(...chunkLines.map(() => "[Translation failed]"));
+          break;
+        }
+
+        const retryDelay = getRetryDelay(errorType, attempt);
+        console.warn(`[Chunking] Translation chunk ${i + 1} retry ${attempt}/${RETRY_CONFIG.MAX_TRANSLATION_RETRIES} after ${retryDelay}ms`);
+        await delay(retryDelay);
+      }
+    }
+
+    // Rate limit between chunks
+    if (i < chunks.length - 1) {
+      await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
+    }
+  }
+
+  return allTranslatedLines;
+}
 
 // ============================================================================
 // PHASE 1: PARSING (shared across all levels)
@@ -151,8 +299,8 @@ export async function rewriteLevelChapters(
       // Update level-specific progress
       await tracker.updateRewriteProgress(i + 1);
 
-      // Rewrite this chapter
-      const result = await rewriteToLevel(
+      // Rewrite this chapter (with chunking for large chapters)
+      const rewrittenText = await rewriteChapterWithChunking(
         chapterText,
         detectedLevel,
         level,
@@ -162,14 +310,14 @@ export async function rewriteLevelChapters(
 
       // Preserve metadata from original chapter
       rewrittenChapters.push({
-        text: result.rewrittenText,
+        text: rewrittenText,
         metadata: chapter.metadata,
       });
 
       // Update progress with completed chapter data
       await tracker.updateRewriteProgress(i + 1, {
         originalLines: chapterText.split("\n").filter((l) => l.trim()),
-        rewrittenLines: result.rewrittenText.split("\n").filter((l) => l.trim()),
+        rewrittenLines: rewrittenText.split("\n").filter((l) => l.trim()),
       });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
@@ -233,23 +381,28 @@ export async function translateLevelChapters(
       // Update level-specific progress
       await tracker.updateTranslationProgress(i + 1);
 
-      // Translate chapter
-      const result = await translateText(chapterText, sourceLanguage, level, ctx);
+      // Translate chapter (with chunking for large chapters)
+      const translatedLines = await translateChapterWithChunking(
+        chapterText,
+        sourceLanguage,
+        level,
+        ctx
+      );
 
-      // Split into lines
+      // Split source into lines
       const sourceLines = chapterText.split("\n").filter((l) => l.trim());
-      const translatedLines = result.translatedLines.filter((l) => l.trim());
+      const filteredTranslatedLines = translatedLines.filter((l) => l.trim());
 
       // Preserve metadata from original chapter
       const chapterData: ProcessedChapter = {
         sourceLines,
-        translatedLines,
+        translatedLines: filteredTranslatedLines,
         metadata: chapter.metadata,
       };
       processedChapters.push(chapterData);
 
       // Update progress with completed chapter data
-      await tracker.updateTranslationProgress(i + 1, { sourceLines, translatedLines });
+      await tracker.updateTranslationProgress(i + 1, { sourceLines, translatedLines: filteredTranslatedLines });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -387,15 +540,14 @@ async function* rewriteChaptersProducer(
 
     if (needsRewrite) {
       try {
-        // Call GPT to rewrite
-        const result = await rewriteToLevel(
+        // Call GPT to rewrite (with chunking for large chapters)
+        rewrittenContent = await rewriteChapterWithChunking(
           chapterText,
           detectedLevel,
           level,
           sourceLanguage,
           ctx
         );
-        rewrittenContent = result.rewrittenText;
 
         // Update progress with chapter data
         await tracker.updateRewriteProgress(i + 1, {
@@ -486,16 +638,21 @@ async function translateChaptersConsumer(
     await tracker.updateTranslationProgress(chaptersProcessed + 1);
 
     try {
-      // Call Claude to translate
-      const result = await translateText(content, sourceLanguage, level, ctx);
+      // Call Claude to translate (with chunking for large chapters)
+      const translatedLines = await translateChapterWithChunking(
+        content,
+        sourceLanguage,
+        level,
+        ctx
+      );
 
       const sourceLines = content.split("\n").filter((l) => l.trim());
-      const translatedLines = result.translatedLines.filter((l) => l.trim());
+      const filteredTranslatedLines = translatedLines.filter((l) => l.trim());
 
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {
         sourceLines,
-        translatedLines,
+        translatedLines: filteredTranslatedLines,
         metadata,
       };
 
@@ -504,7 +661,7 @@ async function translateChaptersConsumer(
       queue.markTranslateComplete(chapterIndex, processedChapter);
 
       // Update progress with completed data (without metadata for tracker)
-      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines, translatedLines });
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines, translatedLines: filteredTranslatedLines });
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);

@@ -1,7 +1,17 @@
 // src/lib/admin/text-utils.ts
 // Consolidated text processing utilities for the admin upload pipeline
+//
+// NOTE: Core utilities (splitIntoSubChunks, file validation) are now in
+// the shared library at @/lib/story-processing/processing-config.ts
+// We re-export them here for backward compatibility.
 
-import { MAX_CHUNK_CHARS } from "@/app/admin/upload-story/config/constants";
+import {
+  MAX_CHUNK_CHARS,
+  splitIntoSubChunks as sharedSplitIntoSubChunks,
+  isAcceptedFile as sharedIsAcceptedFile,
+  detectFileType as sharedDetectFileType,
+  SUPPORTED_FILE_TYPES as SHARED_SUPPORTED_FILE_TYPES,
+} from "@/lib/story-processing";
 
 // ============================================
 // Types
@@ -143,47 +153,10 @@ export function parseChaptersFromText(text: string): string[] {
  * Split text into sub-chunks for API calls, respecting paragraph and sentence boundaries.
  * @param text The text to split
  * @param maxChars Maximum characters per chunk (defaults to MAX_CHUNK_CHARS)
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function splitIntoSubChunks(text: string, maxChars: number = MAX_CHUNK_CHARS): string[] {
-  if (text.length <= maxChars) return [text];
-
-  const paragraphs = text.split(/\n\n+/);
-  const chunks: string[] = [];
-  let currentChunk = "";
-
-  for (const para of paragraphs) {
-    if (currentChunk.length + para.length + 2 > maxChars) {
-      if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = para;
-    } else {
-      currentChunk += (currentChunk ? "\n\n" : "") + para;
-    }
-  }
-
-  if (currentChunk) chunks.push(currentChunk.trim());
-
-  // If any chunk is still too large, split by sentences
-  const result: string[] = [];
-  for (const chunk of chunks) {
-    if (chunk.length <= maxChars) {
-      result.push(chunk);
-    } else {
-      // Split by sentence
-      const sentences = chunk.split(/(?<=[.!?])\s+/);
-      let sentenceChunk = "";
-      for (const sentence of sentences) {
-        if (sentenceChunk.length + sentence.length + 1 > maxChars) {
-          if (sentenceChunk) result.push(sentenceChunk.trim());
-          sentenceChunk = sentence;
-        } else {
-          sentenceChunk += (sentenceChunk ? " " : "") + sentence;
-        }
-      }
-      if (sentenceChunk) result.push(sentenceChunk.trim());
-    }
-  }
-
-  return result;
+  return sharedSplitIntoSubChunks(text, maxChars);
 }
 
 // ============================================
@@ -347,45 +320,24 @@ export function stripRTF(text: string): string {
 
 // ============================================
 // File Validation
+// Re-exports from shared library for backward compatibility
 // ============================================
 
 /** Supported file types for story upload */
-export const SUPPORTED_FILE_TYPES = [
-  { ext: ".txt", mime: "text/plain", label: "Plain Text" },
-  { ext: ".html", mime: "text/html", label: "HTML" },
-  { ext: ".htm", mime: "text/html", label: "HTML" },
-  { ext: ".md", mime: "text/markdown", label: "Markdown" },
-  { ext: ".rtf", mime: "application/rtf", label: "Rich Text" },
-] as const;
+export const SUPPORTED_FILE_TYPES = SHARED_SUPPORTED_FILE_TYPES;
 
 /**
  * Check if a file is an accepted type for story upload.
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function isAcceptedFile(file: File): boolean {
-  const fileName = file.name.toLowerCase();
-  return SUPPORTED_FILE_TYPES.some(
-    type => fileName.endsWith(type.ext) || file.type === type.mime
-  );
+  return sharedIsAcceptedFile(file);
 }
 
 /**
  * Detect file type from filename or MIME type.
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function detectFileType(file: File): "text" | "html" | "rtf" | "markdown" | "unknown" {
-  const fileName = file.name.toLowerCase();
-
-  if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
-    return "html";
-  }
-  if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
-    return "rtf";
-  }
-  if (fileName.endsWith(".md") || file.type === "text/markdown") {
-    return "markdown";
-  }
-  if (fileName.endsWith(".txt") || file.type === "text/plain") {
-    return "text";
-  }
-
-  return "unknown";
+  return sharedDetectFileType(file);
 }
