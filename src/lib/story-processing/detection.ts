@@ -1,6 +1,8 @@
 // src/lib/story-processing/detection.ts
-// Shared detection utilities for language and CEFR level
-// Used by both admin and user story pipelines
+// Server-only detection utilities for language and CEFR level
+// Used by both admin and user story pipelines (API routes only)
+
+import "server-only";
 
 import { OpenAI } from "openai";
 import { generateDetectionPrompt, levelNumberToString, toNumericLevel, fromNumericLevel } from "./cefr-prompts";
@@ -18,12 +20,128 @@ export interface DetectionContext {
 }
 
 // ============================================================================
-// LANGUAGE DETECTION
+// LANGUAGE DETECTION (Algorithmic with AI fallback for edge cases)
 // ============================================================================
 
 /**
+ * Result of algorithmic language detection with confidence score
+ */
+export interface LanguageDetectionResult {
+  language: "en" | "es";
+  confidence: number; // 0-1, where 1 is highly confident
+  method: "algorithmic" | "ai";
+  scores: { en: number; es: number };
+}
+
+/**
+ * Algorithmic language detection for English vs Spanish.
+ * Returns confidence score based on pattern matching.
+ *
+ * @param text - The text to analyze
+ * @returns Detection result with language, confidence, and scores
+ */
+export function detectLanguageAlgorithmic(text: string): Omit<LanguageDetectionResult, "method"> {
+  // Sample text for analysis (first 5000 chars is plenty)
+  const sampleText = text.substring(0, 5000);
+
+  // Spanish-specific indicators (weighted by distinctiveness)
+  const spanishPatterns: Array<{ pattern: RegExp; weight: number }> = [
+    // Articles - very common and distinctive
+    { pattern: /\b(el|la|los|las)\b/gi, weight: 1.5 },
+    { pattern: /\b(un|una|unos|unas)\b/gi, weight: 1.2 },
+    // Common prepositions/conjunctions
+    { pattern: /\b(de|del|en|con|por|para|sin|sobre)\b/gi, weight: 1.0 },
+    { pattern: /\b(que|qué|pero|porque|aunque|cuando|donde)\b/gi, weight: 1.0 },
+    // Verbs (ser/estar distinction is unique to Spanish)
+    { pattern: /\b(es|está|son|están|era|estaba|fue|estuvo)\b/gi, weight: 1.3 },
+    { pattern: /\b(ser|estar|siendo|sido|estado)\b/gi, weight: 1.2 },
+    { pattern: /\b(tiene|tienen|tenía|tengo|hay)\b/gi, weight: 1.0 },
+    // Spanish-specific characters (very high weight - definitive)
+    { pattern: /[áéíóúüñ¿¡]/gi, weight: 3.0 },
+    // Common Spanish words
+    { pattern: /\b(muy|más|también|ahora|siempre|nunca|todo|nada)\b/gi, weight: 1.0 },
+    { pattern: /\b(yo|tú|él|ella|nosotros|ellos|usted)\b/gi, weight: 1.2 },
+  ];
+
+  // English-specific indicators (weighted by distinctiveness)
+  const englishPatterns: Array<{ pattern: RegExp; weight: number }> = [
+    // Articles - "the" is extremely common in English
+    { pattern: /\b(the)\b/gi, weight: 2.0 },
+    { pattern: /\b(a|an)\b/gi, weight: 1.2 },
+    // Common prepositions/conjunctions
+    { pattern: /\b(of|to|in|for|on|with|at|by|from)\b/gi, weight: 1.0 },
+    { pattern: /\b(and|or|but|if|when|while|because|although)\b/gi, weight: 1.0 },
+    // Verbs - English auxiliary verbs
+    { pattern: /\b(is|are|was|were|be|been|being)\b/gi, weight: 1.3 },
+    { pattern: /\b(have|has|had|do|does|did|will|would|could|should)\b/gi, weight: 1.2 },
+    // Pronouns
+    { pattern: /\b(I|you|he|she|it|we|they)\b/gi, weight: 1.0 },
+    { pattern: /\b(my|your|his|her|its|our|their)\b/gi, weight: 1.0 },
+    // Common English words
+    { pattern: /\b(this|that|these|those|here|there)\b/gi, weight: 1.0 },
+    { pattern: /\b(not|no|yes|very|just|only|also)\b/gi, weight: 0.8 },
+    // English-specific patterns (contractions)
+    { pattern: /\b(I'm|you're|he's|she's|it's|we're|they're|isn't|aren't|wasn't|weren't|don't|doesn't|didn't|won't|wouldn't|couldn't|shouldn't)\b/gi, weight: 2.5 },
+  ];
+
+  let spanishScore = 0;
+  let englishScore = 0;
+
+  spanishPatterns.forEach(({ pattern, weight }) => {
+    const matches = sampleText.match(pattern);
+    spanishScore += (matches ? matches.length : 0) * weight;
+  });
+
+  englishPatterns.forEach(({ pattern, weight }) => {
+    const matches = sampleText.match(pattern);
+    englishScore += (matches ? matches.length : 0) * weight;
+  });
+
+  // Calculate confidence based on the ratio of scores
+  const totalScore = spanishScore + englishScore;
+  const maxScore = Math.max(spanishScore, englishScore);
+  const minScore = Math.min(spanishScore, englishScore);
+
+  // Confidence formula:
+  // - If total is very low, we're uncertain (might be neither language)
+  // - If scores are close, we're uncertain
+  // - High ratio of max/total = high confidence
+  let confidence = 0;
+  if (totalScore > 0) {
+    const dominanceRatio = maxScore / totalScore; // 0.5 to 1.0
+    const absoluteStrength = Math.min(totalScore / 50, 1); // Need enough matches
+    confidence = (dominanceRatio - 0.5) * 2 * absoluteStrength; // Scale to 0-1
+  }
+
+  return {
+    language: spanishScore > englishScore ? "es" : "en",
+    confidence: Math.max(0, Math.min(1, confidence)),
+    scores: { en: englishScore, es: spanishScore },
+  };
+}
+
+/**
+ * Minimum confidence threshold for algorithmic detection.
+ * Below this, we fall back to AI to verify (handles edge cases like
+ * mixed language text, very short text, or non-EN/ES languages).
+ */
+const LANGUAGE_CONFIDENCE_THRESHOLD = 0.6;
+
+/**
+ * Minimum total score to trust algorithmic detection.
+ * Very short texts or texts with few indicator words need AI verification.
+ */
+const LANGUAGE_MIN_SCORE_THRESHOLD = 10;
+
+/**
  * Detect the language of the source text.
- * Uses heuristic pattern matching first, falls back to AI if scores are close.
+ * Uses algorithmic pattern matching with AI fallback for low-confidence cases.
+ *
+ * This handles:
+ * - Clear English text (algorithmic, no API cost)
+ * - Clear Spanish text (algorithmic, no API cost)
+ * - Mixed/ambiguous text (AI fallback)
+ * - Non-EN/ES languages (AI fallback, returns closest match with warning)
  *
  * @param text - The text to analyze
  * @param context - Optional context with storyId and userId for cost tracking
@@ -34,42 +152,29 @@ export async function detectLanguage(
   context: DetectionContext = {}
 ): Promise<"en" | "es"> {
   const { storyId, userId } = context;
-  // Use a simple heuristic first - look for common Spanish indicators
-  const spanishIndicators = [
-    /\b(el|la|los|las|un|una|unos|unas)\b/gi,
-    /\b(que|qué|y|de|en|con|por|para)\b/gi,
-    /\b(es|está|son|están|ser|estar)\b/gi,
-    /[áéíóúñü]/gi,
-    /\b(muy|más|también|pero|porque|cuando)\b/gi,
-  ];
 
-  const englishIndicators = [
-    /\b(the|a|an)\b/gi,
-    /\b(is|are|was|were|be|been|being)\b/gi,
-    /\b(and|or|but|if|when|while)\b/gi,
-    /\b(have|has|had|do|does|did)\b/gi,
-    /\b(this|that|these|those)\b/gi,
-  ];
+  // Run algorithmic detection first
+  const algorithmicResult = detectLanguageAlgorithmic(text);
+  const totalScore = algorithmicResult.scores.en + algorithmicResult.scores.es;
 
-  let spanishScore = 0;
-  let englishScore = 0;
-
-  spanishIndicators.forEach((pattern) => {
-    const matches = text.match(pattern);
-    spanishScore += matches ? matches.length : 0;
-  });
-
-  englishIndicators.forEach((pattern) => {
-    const matches = text.match(pattern);
-    englishScore += matches ? matches.length : 0;
-  });
-
-  // If heuristic is clear (difference > 10), use it
-  if (Math.abs(spanishScore - englishScore) >= 10) {
-    return spanishScore > englishScore ? "es" : "en";
+  // If confidence is high enough and we have enough signal, use algorithmic result
+  if (
+    algorithmicResult.confidence >= LANGUAGE_CONFIDENCE_THRESHOLD &&
+    totalScore >= LANGUAGE_MIN_SCORE_THRESHOLD
+  ) {
+    console.log(
+      `[Language Detection] Algorithmic: ${algorithmicResult.language.toUpperCase()} ` +
+      `(confidence: ${(algorithmicResult.confidence * 100).toFixed(1)}%, ` +
+      `scores: EN=${algorithmicResult.scores.en.toFixed(1)}, ES=${algorithmicResult.scores.es.toFixed(1)})`
+    );
+    return algorithmicResult.language;
   }
 
-  // Heuristic unclear, use AI
+  // Low confidence or insufficient signal - fall back to AI
+  console.log(
+    `[Language Detection] Low confidence (${(algorithmicResult.confidence * 100).toFixed(1)}%), ` +
+    `using AI fallback. Scores: EN=${algorithmicResult.scores.en.toFixed(1)}, ES=${algorithmicResult.scores.es.toFixed(1)}`
+  );
 
   try {
     const completion = await openai.chat.completions.create({
@@ -77,7 +182,10 @@ export async function detectLanguage(
       messages: [
         {
           role: "user",
-          content: `Analyze the following text and determine if it is written in English or Spanish. Respond with only "en" or "es".
+          content: `Analyze the following text and determine if it is written primarily in English or Spanish.
+If the text is in a different language entirely, indicate which of English or Spanish it is CLOSEST to.
+
+Respond with ONLY "en" or "es".
 
 Text:
 ${text.substring(0, 500)}`,
@@ -91,14 +199,17 @@ ${text.substring(0, 500)}`,
     logOpenAICost("detection", "gpt-4o-mini", completion.usage, {
       userId,
       userStoryId: storyId,
-      metadata: { type: "language" },
+      metadata: { type: "language", reason: "low_confidence_fallback" },
     });
 
     const response = completion.choices[0]?.message?.content?.toLowerCase().trim();
-    return response === "en" ? "en" : "es";
-  } catch {
-    // Fallback to heuristic
-    return spanishScore > englishScore ? "es" : "en";
+    const result = response === "es" ? "es" : "en";
+    console.log(`[Language Detection] AI result: ${result.toUpperCase()}`);
+    return result;
+  } catch (error) {
+    // If AI fails, use algorithmic result as fallback
+    console.error(`[Language Detection] AI failed, using algorithmic fallback: ${algorithmicResult.language}`);
+    return algorithmicResult.language;
   }
 }
 

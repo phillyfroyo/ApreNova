@@ -5,12 +5,14 @@
 // defined in the shared library at @/lib/story-processing/processing-config.ts
 // We re-export them here for backward compatibility.
 
+// Import from client module to avoid server-only issues
+// (this file is imported by client components like Step2Detect.tsx)
 import {
   MAX_CHUNK_CHARS as SHARED_MAX_CHUNK_CHARS,
   RETRY_CONFIG,
   BATCH_CONFIG,
   DEFAULT_LINES_PER_PAGE as SHARED_LINES_PER_PAGE,
-} from "@/lib/story-processing";
+} from "@/lib/story-processing/client";
 
 // ============================================
 // Re-exports from shared library

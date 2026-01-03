@@ -58,8 +58,9 @@ const STORY_TAGS: StoryTag[] = [
 // ============================================================================
 
 /**
- * Extract or generate a title from the text
- * Uses GPT-4o-mini for fast, cost-effective title extraction
+ * Extract or generate a title from the text.
+ *
+ * @deprecated Use generateAllMetadata() for batched API calls
  */
 export async function extractOrGenerateTitle(
   text: string,
@@ -67,6 +68,9 @@ export async function extractOrGenerateTitle(
   context: MetadataContext = {}
 ): Promise<TitleResult> {
   const { storyId, userId } = context;
+
+  // Use AI to extract or generate title
+  // (Algorithmic extraction was removed - doesn't work for complex formats like Project Gutenberg)
   const prompt =
     language === "es"
       ? `Analiza el siguiente texto en español. Si hay un título obvio al principio, extráelo. Si no, genera un título apropiado y conciso (máximo 5 palabras).
@@ -447,5 +451,269 @@ ${text.substring(0, 2000)}`;
     return validTags.length > 0 ? validTags : ["adventure"];
   } catch {
     return ["adventure"];
+  }
+}
+
+// ============================================================================
+// BATCHED METADATA GENERATION (Single API call for all metadata)
+// ============================================================================
+
+/**
+ * Complete metadata result from batched generation
+ */
+export interface BatchedMetadataResult {
+  title: TitleResult;
+  description: DescriptionResult;
+  hook: HookResult;
+  storyType: StoryType;
+  targetAudience: TargetAudience;
+  tags: StoryTag[];
+}
+
+/**
+ * Options for what metadata to include in the batched call
+ */
+export interface BatchedMetadataOptions {
+  /** If provided, use this title instead of finding/generating */
+  existingTitle?: string;
+  /** If provided, use this description instead of finding/generating */
+  existingDescription?: string;
+  /**
+   * If true, only generate essential metadata (title and description).
+   * Skip hook, story type, audience, and tags - user can set these manually.
+   * Recommended for user-uploaded stories to minimize cost.
+   */
+  essentialOnly?: boolean;
+}
+
+/**
+ * Generate metadata in a single API call.
+ *
+ * Two modes:
+ * - essentialOnly=true (user stories): Just title + description
+ * - essentialOnly=false (admin stories): Full metadata including hook, type, audience, tags
+ *
+ * The AI will look for existing title/description in the text first,
+ * and only generate if not found.
+ *
+ * @param text - The story text to analyze
+ * @param language - Source language ("en" or "es")
+ * @param context - Optional context for cost tracking
+ * @param options - Options for what to include
+ * @returns Metadata fields (advanced fields will have defaults if essentialOnly=true)
+ */
+export async function generateAllMetadata(
+  text: string,
+  language: "en" | "es",
+  context: MetadataContext = {},
+  options: BatchedMetadataOptions = {}
+): Promise<BatchedMetadataResult> {
+  const { storyId, userId } = context;
+  const { existingTitle, existingDescription, essentialOnly = false } = options;
+
+  const needsTitle = !existingTitle;
+  const needsDescription = !existingDescription;
+
+  // Sample text - first 2500 chars should contain title and enough for description
+  const textSample = text.substring(0, 2500);
+
+  // Build prompt based on what we need
+  let prompt: string;
+
+  if (essentialOnly) {
+    // Minimal prompt for user stories - just title and description
+    prompt = language === "es"
+      ? `Analiza el siguiente texto en español y extrae/genera los metadatos esenciales.
+
+${needsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor como "Project Gutenberg", etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras) que capture la esencia de la historia.` : ""}
+${needsDescription ? `2. DESCRIPCIÓN: Busca si hay una descripción o resumen existente en el texto. Si no, escribe una descripción atractiva de 1-2 oraciones que capture la esencia sin revelar demasiado.` : ""}
+
+Responde en JSON con este formato exacto:
+{
+  ${needsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${needsTitle && needsDescription ? "," : ""}
+  ${needsDescription ? '"descriptionEs": "descripción en español",\n  "descriptionEn": "description in English"' : ""}
+}
+
+Texto:
+${textSample}`
+      : `Analyze the following English text and extract/generate essential metadata.
+
+${needsTitle ? `1. TITLE: Look for the title in the text (it may be at the beginning, after publisher information like "Project Gutenberg", etc.). If no clear title is found, generate a concise one (max 5 words) that captures the story's essence.` : ""}
+${needsDescription ? `2. DESCRIPTION: Look for an existing description or summary in the text. If none, write an engaging 1-2 sentence description that captures the essence without revealing too much.` : ""}
+
+Respond in JSON with this exact format:
+{
+  ${needsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${needsTitle && needsDescription ? "," : ""}
+  ${needsDescription ? '"descriptionEs": "descripción en español",\n  "descriptionEn": "description in English"' : ""}
+}
+
+Text:
+${textSample}`;
+  } else {
+    // Full prompt for admin stories - includes hook, type, audience, tags
+    const tagList = STORY_TAGS.join(", ");
+    const typeList = STORY_TYPES.join(", ");
+
+    prompt = language === "es"
+      ? `Analiza el siguiente texto en español y extrae/genera los siguientes metadatos.
+
+${needsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor, etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras).` : ""}
+${needsDescription ? `2. DESCRIPCIÓN: Busca si hay una descripción existente. Si no, escribe una descripción atractiva de 1-2 oraciones.` : ""}
+3. GANCHO: Escribe un gancho corto (máximo 15 palabras) que atraiga a los lectores.
+4. TIPO: Determina el tipo de contenido. Opciones válidas: ${typeList}
+5. AUDIENCIA: Determina la audiencia objetivo. Opciones: children, teen, adult, all
+6. ETIQUETAS: Selecciona 2-5 etiquetas que describan el contenido. Opciones válidas: ${tagList}
+
+Responde en JSON:
+{
+  ${needsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
+  ${needsDescription ? '"descriptionEs": "descripción",\n  "descriptionEn": "description",' : ""}
+  "hookEs": "gancho",
+  "hookEn": "hook",
+  "storyType": "tipo",
+  "targetAudience": "audiencia",
+  "tags": ["tag1", "tag2"]
+}
+
+Texto:
+${textSample}`
+      : `Analyze the following English text and extract/generate metadata.
+
+${needsTitle ? `1. TITLE: Look for the title in the text (may be after publisher info, etc.). If not found, generate a concise one (max 5 words).` : ""}
+${needsDescription ? `2. DESCRIPTION: Look for an existing description. If none, write an engaging 1-2 sentence description.` : ""}
+3. HOOK: Write a short hook (max 15 words) that draws readers in.
+4. TYPE: Determine content type. Valid options: ${typeList}
+5. AUDIENCE: Determine target audience. Options: children, teen, adult, all
+6. TAGS: Select 2-5 tags. Valid options: ${tagList}
+
+Respond in JSON:
+{
+  ${needsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
+  ${needsDescription ? '"descriptionEs": "descripción",\n  "descriptionEn": "description",' : ""}
+  "hookEs": "gancho",
+  "hookEn": "hook",
+  "storyType": "type",
+  "targetAudience": "audience",
+  "tags": ["tag1", "tag2"]
+}
+
+Text:
+${textSample}`;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a literary analyst. Always respond with valid JSON. For titles, prefer extracting existing titles from the text over generating new ones.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.5,
+      max_tokens: essentialOnly ? 200 : 500,
+    });
+
+    // Log cost
+    logOpenAICost("metadata", "gpt-4o-mini", completion.usage, {
+      userId,
+      userStoryId: storyId,
+      metadata: { type: essentialOnly ? "essential" : "full", language },
+    });
+
+    const response = completion.choices[0]?.message?.content || "";
+    const cleaned = response.replace(/```json|```/g, "").trim();
+    const result = JSON.parse(cleaned);
+
+    // Build title result
+    const titleResult: TitleResult = needsTitle
+      ? {
+          title: language === "es" ? result.titleEs : result.titleEn,
+          titleEs: result.titleEs || "Sin título",
+          titleEn: result.titleEn || "Untitled",
+        }
+      : {
+          title: existingTitle!,
+          titleEs: existingTitle!,
+          titleEn: existingTitle!,
+        };
+
+    // Build description result
+    const descriptionResult: DescriptionResult = needsDescription
+      ? {
+          description: language === "es" ? result.descriptionEs : result.descriptionEn,
+          descriptionEs: result.descriptionEs || "",
+          descriptionEn: result.descriptionEn || "",
+        }
+      : {
+          description: existingDescription!,
+          descriptionEs: existingDescription!,
+          descriptionEn: existingDescription!,
+        };
+
+    // For essential-only mode, use empty defaults for advanced fields
+    let hookResult: HookResult = { hook: "", hookEs: "", hookEn: "" };
+    let storyType: StoryType = "short-story";
+    let targetAudience: TargetAudience = "all";
+    let tags: StoryTag[] = [];
+
+    if (!essentialOnly) {
+      // Build hook result
+      hookResult = {
+        hook: language === "es" ? result.hookEs : result.hookEn,
+        hookEs: result.hookEs || "",
+        hookEn: result.hookEn || "",
+      };
+
+      // Validate story type
+      storyType = STORY_TYPES.includes(result.storyType as StoryType)
+        ? (result.storyType as StoryType)
+        : "short-story";
+
+      // Validate target audience
+      targetAudience = ["children", "teen", "adult", "all"].includes(result.targetAudience)
+        ? (result.targetAudience as TargetAudience)
+        : "all";
+
+      // Validate tags
+      tags = (result.tags || [])
+        .filter((tag: string) => STORY_TAGS.includes(tag as StoryTag))
+        .slice(0, 5) as StoryTag[];
+    }
+
+    console.log(
+      `[Metadata] Generation complete (${essentialOnly ? "essential" : "full"}): ` +
+      `title="${titleResult.title.substring(0, 40)}..."`
+    );
+
+    return {
+      title: titleResult,
+      description: descriptionResult,
+      hook: hookResult,
+      storyType,
+      targetAudience,
+      tags,
+    };
+  } catch (error) {
+    console.error("[Metadata] Generation failed:", error);
+
+    // Return defaults
+    return {
+      title: {
+        title: existingTitle || (language === "es" ? "Mi Historia" : "My Story"),
+        titleEs: existingTitle || "Mi Historia",
+        titleEn: existingTitle || "My Story",
+      },
+      description: {
+        description: existingDescription || "",
+        descriptionEs: existingDescription || "",
+        descriptionEn: existingDescription || "",
+      },
+      hook: { hook: "", hookEs: "", hookEn: "" },
+      storyType: "short-story",
+      targetAudience: "all",
+      tags: [],
+    };
   }
 }

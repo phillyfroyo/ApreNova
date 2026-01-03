@@ -24,6 +24,8 @@ import {
   detectStoryType,
   detectTargetAudience,
   extractTags,
+  generateAllMetadata,
+  type BatchedMetadataResult,
 } from "./metadata";
 import {
   parseStoryContent,
@@ -199,6 +201,7 @@ async function detectAndSaveTargetAudience(
 
 /**
  * Step 3.8: Extract tags
+ * @deprecated Use generateAndSaveAllMetadata for batched API calls
  */
 async function extractAndSaveTags(
   ctx: CostContext,
@@ -211,6 +214,72 @@ async function extractAndSaveTags(
     data: { tags },
   });
   await apiDelay();
+}
+
+/**
+ * Step 2-3 BATCHED: Generate essential metadata in a single API call
+ *
+ * For user stories, we only auto-generate:
+ * - Title (found in text or generated)
+ * - Description (found in text or generated)
+ *
+ * Advanced options (hook, story type, audience, tags) are left empty
+ * for the user to optionally fill in manually.
+ *
+ * Cost savings: ~6 API calls → 1 minimal API call
+ */
+async function generateAndSaveAllMetadata(
+  ctx: CostContext,
+  story: { title: string; description: string | null; rawContent: string },
+  sourceLanguage: "en" | "es"
+): Promise<void> {
+  const isDefaultTitle =
+    story.title === "Untitled Story" || story.title === "Historia sin título";
+  const needsDescription = !story.description;
+
+  console.log(
+    `[Pipeline] Generating metadata (essential only): needsTitle=${isDefaultTitle}, needsDescription=${needsDescription}`
+  );
+
+  const metadata = await generateAllMetadata(
+    story.rawContent,
+    sourceLanguage,
+    ctx,
+    {
+      existingTitle: isDefaultTitle ? undefined : story.title,
+      existingDescription: needsDescription ? undefined : (story.description ?? undefined),
+      essentialOnly: true, // Only generate title + description for user stories
+    }
+  );
+
+  // Build update data - only title and description
+  const updateData: Record<string, unknown> = {};
+
+  // Only update title if it was generated
+  if (isDefaultTitle) {
+    updateData.title = metadata.title.title;
+    updateData.titleEs = metadata.title.titleEs;
+    updateData.titleEn = metadata.title.titleEn;
+  }
+
+  // Only update description if it was generated
+  if (needsDescription) {
+    updateData.description = metadata.description.description;
+    updateData.descriptionEs = metadata.description.descriptionEs;
+    updateData.descriptionEn = metadata.description.descriptionEn;
+  }
+
+  // Only update if we have something to update
+  if (Object.keys(updateData).length > 0) {
+    await prisma.userStory.update({
+      where: { id: ctx.storyId },
+      data: updateData,
+    });
+  }
+
+  console.log(
+    `[Pipeline] Metadata saved: title="${metadata.title.title}"`
+  );
 }
 
 /**
@@ -517,45 +586,20 @@ export async function processUserStory(storyId: string): Promise<void> {
   };
 
   try {
-    // Step 1: Detect language
+    // Step 1: Detect language (now mostly algorithmic, AI fallback for edge cases)
     await updateStoryProgress(storyId, "detecting_language");
     const sourceLanguage = await detectAndSaveLanguage(ctx, story.rawContent);
 
-    // Step 2: Generate title if needed
-    await updateStoryProgress(storyId, "generating_title");
-    await generateTitleIfNeeded(
+    // Step 2-3: Generate all metadata in a single batched API call
+    // This replaces 6 separate API calls with 1, saving ~80% on metadata costs
+    await updateStoryProgress(storyId, "generating_metadata");
+    await generateAndSaveAllMetadata(
       ctx,
-      story.title,
-      story.rawContent,
+      { title: story.title, description: story.description, rawContent: story.rawContent },
       sourceLanguage
     );
 
-    // Step 3: Generate description if needed
-    await updateStoryProgress(storyId, "generating_description");
-    await generateDescriptionIfNeeded(
-      ctx,
-      story.description,
-      story.rawContent,
-      sourceLanguage
-    );
-
-    // Step 3.5: Generate hook/teaser
-    await updateStoryProgress(storyId, "generating_hook");
-    await generateAndSaveHook(ctx, story.rawContent, sourceLanguage);
-
-    // Step 3.6: Detect story type
-    await updateStoryProgress(storyId, "detecting_story_type");
-    await detectAndSaveStoryType(ctx, story.rawContent, sourceLanguage);
-
-    // Step 3.7: Detect target audience
-    await updateStoryProgress(storyId, "detecting_audience");
-    await detectAndSaveTargetAudience(ctx, story.rawContent, sourceLanguage);
-
-    // Step 3.8: Extract tags
-    await updateStoryProgress(storyId, "extracting_tags");
-    await extractAndSaveTags(ctx, story.rawContent, sourceLanguage);
-
-    // Step 4: Detect CEFR level
+    // Step 4: Detect CEFR level (still separate - needs dedicated analysis)
     await updateStoryProgress(storyId, "detecting_level");
     const detectedLevel = await detectAndSaveLevel(
       ctx,

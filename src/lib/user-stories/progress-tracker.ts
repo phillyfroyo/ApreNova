@@ -48,12 +48,13 @@ export type StoryStep =
   | "creating_record"
   | "creating_levels"
   | "detecting_language"
-  | "generating_title"
-  | "generating_description"
-  | "generating_hook"
-  | "detecting_story_type"
-  | "detecting_audience"
-  | "extracting_tags"
+  | "generating_metadata"  // NEW: batched metadata generation (replaces individual steps)
+  | "generating_title"     // @deprecated - use generating_metadata
+  | "generating_description" // @deprecated - use generating_metadata
+  | "generating_hook"      // @deprecated - use generating_metadata
+  | "detecting_story_type" // @deprecated - use generating_metadata
+  | "detecting_audience"   // @deprecated - use generating_metadata
+  | "extracting_tags"      // @deprecated - use generating_metadata
   | "detecting_level"
   | "cleaning_text"
   | "parsing_chapters"
@@ -84,12 +85,13 @@ export const STEP_LABELS: Record<StoryStep, string> = {
   creating_record: "Creating story record",
   creating_levels: "Preparing reading levels",
   detecting_language: "Detecting language",
-  generating_title: "Generating title",
-  generating_description: "Generating description",
-  generating_hook: "Generating hook",
-  detecting_story_type: "Detecting story type",
-  detecting_audience: "Detecting target audience",
-  extracting_tags: "Extracting tags",
+  generating_metadata: "Analyzing story metadata",  // NEW: batched
+  generating_title: "Generating title",             // @deprecated
+  generating_description: "Generating description", // @deprecated
+  generating_hook: "Generating hook",               // @deprecated
+  detecting_story_type: "Detecting story type",     // @deprecated
+  detecting_audience: "Detecting target audience",  // @deprecated
+  extracting_tags: "Extracting tags",               // @deprecated
   detecting_level: "Detecting CEFR level",
   cleaning_text: "Cleaning text",
   parsing_chapters: "Parsing chapters",
@@ -108,12 +110,13 @@ export const STEP_PHASES: Record<StoryStep, StoryPhase> = {
   creating_record: "detecting",
   creating_levels: "detecting",
   detecting_language: "detecting",
-  generating_title: "detecting",
-  generating_description: "detecting",
-  generating_hook: "detecting",
-  detecting_story_type: "detecting",
-  detecting_audience: "detecting",
-  extracting_tags: "detecting",
+  generating_metadata: "detecting",  // NEW: batched
+  generating_title: "detecting",     // @deprecated
+  generating_description: "detecting", // @deprecated
+  generating_hook: "detecting",      // @deprecated
+  detecting_story_type: "detecting", // @deprecated
+  detecting_audience: "detecting",   // @deprecated
+  extracting_tags: "detecting",      // @deprecated
   detecting_level: "detecting",
   cleaning_text: "adapting",
   parsing_chapters: "adapting",

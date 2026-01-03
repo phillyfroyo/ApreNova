@@ -5,13 +5,15 @@
 // the shared library at @/lib/story-processing/processing-config.ts
 // We re-export them here for backward compatibility.
 
+// Import directly from processing-config to avoid circular dependency with client.ts
+// (client.ts → text-processing.ts → text-utils.ts → client.ts)
 import {
   MAX_CHUNK_CHARS,
   splitIntoSubChunks as sharedSplitIntoSubChunks,
   isAcceptedFile as sharedIsAcceptedFile,
   detectFileType as sharedDetectFileType,
   SUPPORTED_FILE_TYPES as SHARED_SUPPORTED_FILE_TYPES,
-} from "@/lib/story-processing";
+} from "@/lib/story-processing/processing-config";
 
 // ============================================
 // Types
