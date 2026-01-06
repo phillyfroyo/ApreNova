@@ -2,10 +2,12 @@
 
 export const USER_STORY_LIMITS = {
   // Story count limits
-  FREE_MAX_STORIES: 3,
+  FREE_MAX_STORIES: -1, // -1 means unlimited
   PREMIUM_MAX_STORIES: -1, // -1 means unlimited (Infinity doesn't serialize to JSON)
 
   // Character limits per story
+  // Free tier: One large upload (2M chars) per month, then 5K limit
+  FREE_FIRST_MONTHLY_STORY_LENGTH: 2000000,
   FREE_MAX_STORY_LENGTH: 5000,
   PREMIUM_MAX_STORY_LENGTH: 2000000,
 

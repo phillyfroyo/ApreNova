@@ -24,6 +24,7 @@ interface StoryStats {
   maxStoryLength: number;
   dailyLimit: number;
   storiesProcessedToday: number;
+  isFirstStoryThisMonth: boolean;
   isPremium: boolean;
 }
 
@@ -167,9 +168,8 @@ export default function UploadStoryModal() {
   if (!showUploadModal) return null;
 
   const isPremium = stats?.isPremium ?? false;
-  const maxLength = isPremium
-    ? USER_STORY_LIMITS.PREMIUM_MAX_STORY_LENGTH
-    : USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
+  // maxStoryLength from stats already accounts for first-of-month bonus
+  const maxLength = stats?.maxStoryLength ?? USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
 
   const charCount = content.length;
   const isOverLimit = charCount > maxLength;
@@ -432,15 +432,23 @@ export default function UploadStoryModal() {
                   </div>
                 )}
 
-                {/* Premium upsell - only show when not in file mode */}
+                {/* Tier info - only show when not in file mode */}
                 {!isPremium && inputMode !== "file" && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {lng === "es"
-                      ? `Límite gratuito: ${USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH.toLocaleString()} caracteres.`
-                      : `Free tier: ${USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH.toLocaleString()} characters.`}{" "}
-                    <a href={`/${lng}/premium`} className="text-blue-600 hover:underline">
-                      {lng === "es" ? "Mejora para más" : "Upgrade for more"}
-                    </a>
+                    {stats?.isFirstStoryThisMonth ? (
+                      lng === "es"
+                        ? `Primera historia del mes: hasta ${maxLength.toLocaleString()} caracteres gratis.`
+                        : `First story this month: up to ${maxLength.toLocaleString()} characters free.`
+                    ) : (
+                      <>
+                        {lng === "es"
+                          ? `Límite gratuito: ${maxLength.toLocaleString()} caracteres.`
+                          : `Free tier: ${maxLength.toLocaleString()} characters.`}{" "}
+                        <a href={`/${lng}/premium`} className="text-blue-600 hover:underline">
+                          {lng === "es" ? "Mejora para más" : "Upgrade for more"}
+                        </a>
+                      </>
+                    )}
                   </p>
                 )}
               </div>

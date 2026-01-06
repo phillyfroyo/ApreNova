@@ -130,7 +130,7 @@ model User {
   nativeLanguage    String?
   quizLevel         String?
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   isPremium         Boolean             @default(false)
   stripeCustomerId  String?             @unique
   Account           Account[]

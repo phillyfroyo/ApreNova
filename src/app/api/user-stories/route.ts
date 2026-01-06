@@ -9,6 +9,7 @@ import {
   canCreateStory,
   canProcessToday,
   validateContentLength,
+  isFirstStoryThisMonth,
 } from "@/lib/user-stories/access-control";
 import { ALL_CEFR_LEVELS } from "@/lib/cefr";
 
@@ -144,8 +145,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if this is the user's first story this month (for free tier bonus)
+    const firstStoryThisMonth = await isFirstStoryThisMonth(session.user.id);
+
     // Validate content length
-    const contentValid = validateContentLength(content, isPremium);
+    const contentValid = validateContentLength(content, isPremium, firstStoryThisMonth);
     if (!contentValid.allowed) {
       console.log("[API/user-stories] POST: Content too long", contentValid);
       return NextResponse.json(

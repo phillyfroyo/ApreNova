@@ -85,23 +85,46 @@ export async function canProcessToday(
 
 /**
  * Check if content length is within limits
+ *
+ * Free tier logic:
+ * - First story of the month: up to 2M characters (one free large upload)
+ * - Subsequent stories: up to 5K characters
+ *
+ * @param content - The story content
+ * @param isPremium - Whether user has premium subscription
+ * @param isFirstStoryThisMonth - Whether this is the user's first story this calendar month
  */
 export function validateContentLength(
   content: string,
-  isPremium: boolean
+  isPremium: boolean,
+  isFirstStoryThisMonth: boolean = false
 ): AccessCheckResult {
-  const maxLength = isPremium
-    ? USER_STORY_LIMITS.PREMIUM_MAX_STORY_LENGTH
-    : USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
+  let maxLength: number;
+
+  if (isPremium) {
+    maxLength = USER_STORY_LIMITS.PREMIUM_MAX_STORY_LENGTH;
+  } else if (isFirstStoryThisMonth) {
+    // Free tier: first story of the month gets large upload allowance
+    maxLength = USER_STORY_LIMITS.FREE_FIRST_MONTHLY_STORY_LENGTH;
+  } else {
+    maxLength = USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
+  }
 
   const currentLength = content.length;
 
   if (currentLength > maxLength) {
+    let reason: string;
+    if (isPremium) {
+      reason = `Story exceeds maximum length of ${maxLength.toLocaleString()} characters.`;
+    } else if (isFirstStoryThisMonth) {
+      reason = `Story exceeds the maximum length of ${maxLength.toLocaleString()} characters.`;
+    } else {
+      reason = `Free users can upload one large story per month. Additional stories are limited to ${maxLength.toLocaleString()} characters. Upgrade to Premium for unlimited large uploads.`;
+    }
+
     return {
       allowed: false,
-      reason: isPremium
-        ? `Story exceeds maximum length of ${maxLength.toLocaleString()} characters.`
-        : `Free users can upload stories up to ${maxLength.toLocaleString()} characters. Upgrade to Premium for longer stories.`,
+      reason,
       currentCount: currentLength,
       maxCount: maxLength,
     };
@@ -124,18 +147,57 @@ export function validateContentLength(
 }
 
 /**
+ * Check if this is the user's first story this calendar month
+ */
+export async function isFirstStoryThisMonth(userId: string): Promise<boolean> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const storiesThisMonth = await prisma.userStory.count({
+    where: {
+      userId,
+      createdAt: { gte: startOfMonth },
+    },
+  });
+
+  return storiesThisMonth === 0;
+}
+
+/**
  * Get user's story usage statistics
  */
 export async function getUserStoryStats(userId: string, isPremium: boolean) {
-  const [totalStories, storiesProcessedToday] = await Promise.all([
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+
+  const [totalStories, storiesProcessedToday, storiesThisMonth] = await Promise.all([
     prisma.userStory.count({ where: { userId } }),
     prisma.userStory.count({
       where: {
         userId,
-        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        createdAt: { gte: startOfDay },
+      },
+    }),
+    prisma.userStory.count({
+      where: {
+        userId,
+        createdAt: { gte: startOfMonth },
       },
     }),
   ]);
+
+  const firstStoryThisMonth = storiesThisMonth === 0;
+
+  // Determine max story length based on tier and monthly usage
+  let maxStoryLength: number;
+  if (isPremium) {
+    maxStoryLength = USER_STORY_LIMITS.PREMIUM_MAX_STORY_LENGTH;
+  } else if (firstStoryThisMonth) {
+    maxStoryLength = USER_STORY_LIMITS.FREE_FIRST_MONTHLY_STORY_LENGTH;
+  } else {
+    maxStoryLength = USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
+  }
 
   return {
     totalStories,
@@ -146,9 +208,8 @@ export async function getUserStoryStats(userId: string, isPremium: boolean) {
     dailyLimit: isPremium
       ? USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_PREMIUM
       : USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_FREE,
-    maxStoryLength: isPremium
-      ? USER_STORY_LIMITS.PREMIUM_MAX_STORY_LENGTH
-      : USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH,
+    maxStoryLength,
+    isFirstStoryThisMonth: firstStoryThisMonth,
     isPremium,
   };
 }

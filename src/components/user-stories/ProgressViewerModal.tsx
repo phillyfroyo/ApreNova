@@ -157,7 +157,30 @@ export function ProgressViewerModal({
   const rightHeaderText = isRewriting ? "text-orange-700" : "text-indigo-700";
   const rightHeaderSubtext = isRewriting ? "text-orange-400" : "text-indigo-400";
 
-  const stageTitle = isRewriting ? "Rewriting Progress" : "Translation Progress";
+  // Build a more descriptive title
+  // For rewriting: "Rewriting C1 → A2"
+  // For translating: "Translating C1 (Original)" or "Translating A2 (Rewritten)"
+  const getStageTitle = () => {
+    if (isRewriting) {
+      const fromLevel = detectedLevel ? toCEFR(detectedLevel) : "";
+      const toLevel = targetLevel ? toCEFR(targetLevel) : "";
+      if (fromLevel && toLevel) {
+        return `Rewriting ${fromLevel} → ${toLevel}`;
+      }
+      return "Rewriting Progress";
+    } else {
+      // Translation - indicate if this is original or rewritten text
+      const level = targetLevel ? toCEFR(targetLevel) : "";
+      const isOriginalLevel = targetLevel === detectedLevel;
+      if (level) {
+        return isOriginalLevel
+          ? `Translating ${level} (Original)`
+          : `Translating ${level} (Rewritten)`;
+      }
+      return "Translation Progress";
+    }
+  };
+  const stageTitle = getStageTitle();
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

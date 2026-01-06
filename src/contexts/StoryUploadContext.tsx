@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { ProgressViewerModal } from "@/components/user-stories/ProgressViewerModal";
 import { toCEFR } from "@/lib/cefr";
@@ -17,7 +17,8 @@ export type UploadStage =
   | "finalizing"
   | "review"
   | "complete"
-  | "error";
+  | "error"
+  | "connection-lost"; // Network connectivity issue - can retry
 
 // Progress phases from backend (main titles)
 export type ProgressPhase = "detecting" | "adapting" | "translating" | "finalizing";
@@ -143,6 +144,7 @@ interface StoryUploadContextType {
   setSelectedStreamId: (id: string | null) => void;
   updateStoryData: (updates: Partial<StoryUploadData>) => void;
   confirmStory: () => Promise<void>;
+  retryConnection: () => void; // Retry after connection lost
 }
 
 const StoryUploadContext = createContext<StoryUploadContextType | null>(null);
@@ -170,6 +172,7 @@ const STAGE_WEIGHTS: Record<UploadStage, { start: number; end: number }> = {
   review: { start: 95, end: 95 },
   complete: { start: 100, end: 100 },
   error: { start: 0, end: 0 },
+  "connection-lost": { start: 0, end: 0 }, // Preserves last progress visually
 };
 
 // Helper to calculate overall progress accounting for multi-level processing
@@ -416,6 +419,11 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   // Timestamp for when a story was last confirmed (for triggering refetch in UI)
   const [lastConfirmedAt, setLastConfirmedAt] = useState<number | null>(null);
 
+  // For retry after connection lost
+  const [retryTrigger, setRetryTrigger] = useState(0);
+  const pollingStoryIdRef = useRef<string | null>(null);
+  const pollingAttemptsRef = useRef(0);
+
   const updateProgress = useCallback((stage: UploadStage, stageProgress: number = 0, extra?: Partial<UploadProgress>) => {
     const weights = STAGE_WEIGHTS[stage];
     const overallProgress = weights.start + ((weights.end - weights.start) * stageProgress) / 100;
@@ -529,13 +537,18 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       console.log("[StoryUpload] Processing started, beginning poll loop...");
 
+      // Store story ID for potential retry
+      pollingStoryIdRef.current = story.id;
+
       // Poll for status updates
       // Large books like Dracula (27 chapters) can take 30-60 minutes
       // Each chapter takes ~30-90 seconds to translate
       // Poll every 5 seconds to reduce database transfer costs
-      let attempts = 0;
+      let attempts = pollingAttemptsRef.current; // Resume from last position on retry
       const maxAttempts = 720; // 1 hour max (720 * 5s = 3600 seconds)
       const pollIntervalMs = 5000;
+      let consecutiveFailures = 0;
+      const maxConsecutiveFailures = 3; // Show connection-lost after 3 failures (15 seconds)
 
       while (attempts < maxAttempts) {
         if (controller.signal.aborted) {
@@ -546,15 +559,55 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
 
         // Use lightweight status endpoint to minimize data transfer
-        const statusResponse = await fetch(`/api/user-stories/${story.id}/status`, {
-          signal: controller.signal,
-        });
+        let statusResponse: Response;
+        try {
+          statusResponse = await fetch(`/api/user-stories/${story.id}/status`, {
+            signal: controller.signal,
+          });
+        } catch (fetchError: any) {
+          // Network error (not HTTP error)
+          if (fetchError.name === "AbortError") {
+            throw fetchError;
+          }
+          consecutiveFailures++;
+          console.warn("[StoryUpload] Network error during poll", {
+            attempt: attempts + 1,
+            consecutiveFailures,
+            error: fetchError.message
+          });
 
-        if (!statusResponse.ok) {
-          console.warn("[StoryUpload] Poll attempt failed, retrying...", { attempt: attempts + 1 });
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            pollingAttemptsRef.current = attempts; // Save position for retry
+            updateProgress("connection-lost", 0, {
+              error: "Connection lost. Check your internet connection.",
+            });
+            return; // Exit polling - user can retry
+          }
           attempts++;
           continue;
         }
+
+        if (!statusResponse.ok) {
+          consecutiveFailures++;
+          console.warn("[StoryUpload] Poll attempt failed", {
+            attempt: attempts + 1,
+            consecutiveFailures,
+            status: statusResponse.status
+          });
+
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            pollingAttemptsRef.current = attempts; // Save position for retry
+            updateProgress("connection-lost", 0, {
+              error: "Connection lost. Check your internet connection.",
+            });
+            return; // Exit polling - user can retry
+          }
+          attempts++;
+          continue;
+        }
+
+        // Success - reset consecutive failures
+        consecutiveFailures = 0;
 
         const statusData = await statusResponse.json();
         const storyStatus = statusData.story;
@@ -889,6 +942,109 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     }
   }, [storyData, updateProgress]);
 
+  // Retry connection after connection-lost - triggers effect to resume polling
+  const retryConnection = useCallback(() => {
+    if (progress.stage === "connection-lost" && pollingStoryIdRef.current) {
+      console.log("[StoryUpload] Retrying connection...");
+      setRetryTrigger(prev => prev + 1);
+    }
+  }, [progress.stage]);
+
+  // Effect to resume polling when retry is triggered
+  useEffect(() => {
+    if (retryTrigger === 0) return; // Skip initial render
+    if (progress.stage !== "connection-lost") return;
+    if (!pollingStoryIdRef.current || !storyData?.id) return;
+
+    console.log("[StoryUpload] Resuming polling after retry...");
+
+    // Resume polling with a fresh controller
+    const resumePolling = async () => {
+      const controller = new AbortController();
+      setAbortController(controller);
+
+      // Reset to previous stage (we'll update based on actual status)
+      setProgress(prev => ({
+        ...prev,
+        stage: "translating", // Assume we were translating
+        error: undefined,
+      }));
+
+      const storyId = pollingStoryIdRef.current!;
+      let attempts = pollingAttemptsRef.current;
+      const maxAttempts = 720;
+      const pollIntervalMs = 5000;
+      let consecutiveFailures = 0;
+      const maxConsecutiveFailures = 3;
+
+      while (attempts < maxAttempts) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+
+        let statusResponse: Response;
+        try {
+          statusResponse = await fetch(`/api/user-stories/${storyId}/status`, {
+            signal: controller.signal,
+          });
+        } catch (fetchError: any) {
+          if (fetchError.name === "AbortError") return;
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            pollingAttemptsRef.current = attempts;
+            updateProgress("connection-lost", 0, {
+              error: "Connection lost. Check your internet connection.",
+            });
+            return;
+          }
+          attempts++;
+          continue;
+        }
+
+        if (!statusResponse.ok) {
+          consecutiveFailures++;
+          if (consecutiveFailures >= maxConsecutiveFailures) {
+            pollingAttemptsRef.current = attempts;
+            updateProgress("connection-lost", 0, {
+              error: "Connection lost. Check your internet connection.",
+            });
+            return;
+          }
+          attempts++;
+          continue;
+        }
+
+        // Success!
+        consecutiveFailures = 0;
+        const statusData = await statusResponse.json();
+        const storyStatus = statusData.story;
+
+        if (storyStatus.status === "READY" || storyStatus.status === "PARTIAL") {
+          // Complete - update story data and show review
+          setStoryData(prev => prev ? {
+            ...prev,
+            title: storyStatus.title || prev.title,
+            description: storyStatus.description || prev.description,
+            detectedLevel: storyStatus.detectedLevel || prev.detectedLevel,
+          } : null);
+          updateProgress("review", 100);
+          setShowReviewModal(true);
+          return;
+        } else if (storyStatus.status === "FAILED") {
+          updateProgress("error", 0, { error: "Story processing failed" });
+          return;
+        }
+
+        // Still processing - update progress and continue
+        attempts++;
+      }
+    };
+
+    resumePolling();
+  }, [retryTrigger, progress.stage, storyData?.id, updateProgress]);
+
   const value: StoryUploadContextType = {
     isUploading,
     isMinimized,
@@ -911,6 +1067,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     setSelectedStreamId,
     updateStoryData,
     confirmStory,
+    retryConnection,
   };
 
   // Get selected stream for modal, or fall back to legacy behavior
