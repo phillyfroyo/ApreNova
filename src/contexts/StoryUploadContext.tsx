@@ -827,10 +827,16 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             hookDetected: !!storyStatus.hook || !!storyStatus.hookEs || !!storyStatus.hookEn,
           } : null);
 
+          // Build final streams from completed levels for preview
+          const finalLevels = storyStatus.levels || [];
+          const finalStreams = buildStreamsFromLevels(finalLevels, storyStatus.detectedLevel);
+
           updateProgress("review", 100, {
             phase: "finalizing",
             phaseTitle: PHASE_TITLES.finalizing,
             stepLabel: "Ready for review",
+            streams: finalStreams,
+            detectedLevel: storyStatus.detectedLevel,
           });
           setShowReviewModal(true);
           setIsMinimized(false);
