@@ -52,97 +52,269 @@ export function getCEFRLabel(level: CEFRCode, lang: "en" | "es" = "en"): string 
 
 /**
  * CEFR level details for AI prompts and processing
+ *
+ * Structure:
+ * - officialDescription: From the official CEFR framework
+ * - forbidden: Grammar/vocabulary constraints (what NOT to use)
+ * - allowed: Grammar/vocabulary that IS appropriate (often overlooked)
+ * - connectors: Transitional words appropriate for this level
+ * - styleGuidance: How to write well at this level (preserve narrative quality)
+ * - pitfalls: Common mistakes to avoid when adapting to this level
  */
 export interface CEFRLevelDetails {
   code: CEFRCode;
   numericLevel: number; // 1-6 for backwards compatibility with AI prompts
   name: string;
+  officialDescription: string; // From official CEFR framework
   sentenceLength: string;
   vocabulary: string;
   forbidden: string[]; // Constraints for AI - what NOT to use
+  allowed: string[]; // What IS appropriate - often underused
+  connectors: string[]; // Transitional words for this level
+  styleGuidance: string[]; // How to preserve narrative quality
+  pitfalls: string[]; // Common mistakes when adapting to this level
 }
 
 /**
  * Full CEFR level specifications for AI processing
+ *
+ * These definitions balance:
+ * 1. Official CEFR descriptors (communicative competence)
+ * 2. Grammar constraints (technical guardrails)
+ * 3. Style guidance (narrative quality preservation)
  */
 export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
   A1: {
     code: "A1",
     numericLevel: 1,
     name: "Foundations",
+    officialDescription: "Can understand and use familiar everyday expressions and very basic phrases aimed at the satisfaction of needs of a concrete type. Can interact in a simple way provided the other person talks slowly and clearly.",
     sentenceLength: "3-7 words",
-    vocabulary: "500 most common words",
+    vocabulary: "500 most common words, concrete nouns, simple verbs (go, see, say, want, like)",
     forbidden: [
-      "NO past tense",
+      "NO past tense (use present tense narration)",
       "NO future tense",
       "NO perfect tenses",
       "NO conditionals",
-      "NO relative clauses",
-      "NO abstract nouns",
+      "NO relative clauses (who, which, that)",
+      "NO abstract nouns (consideration, disappointment, curiosity)",
+      "NO passive voice",
+    ],
+    allowed: [
+      "Simple present tense",
+      "Basic compound sentences with 'and', 'but'",
+      "Simple dialogue (breaks up narration naturally)",
+      "Pronouns (she, he, it) after subject is clearly established",
+      "Basic emotions: happy, sad, scared, surprised, angry",
+    ],
+    connectors: ["and", "but", "then", "so"],
+    styleGuidance: [
+      "Write connected prose, not isolated sentences",
+      "Keep cause-and-effect clear: 'She is hungry. So she eats.'",
+      "Use simple connectors to maintain narrative flow",
+      "Repeat character names for clarity, but not every sentence",
+      "After 2-3 sentences about the same subject, pronouns are fine",
+      "Preserve basic character emotions and reactions",
+      "Simple dialogue adds variety and feels natural",
+    ],
+    pitfalls: [
+      "Creating choppy 'note-taking' style prose (list of disconnected facts)",
+      "Removing all personality from characters",
+      "Eliminating cause-effect relationships",
+      "Over-repeating names in every single sentence",
+      "Making text feel like a vocabulary list instead of a story",
     ],
   },
   A2: {
     code: "A2",
     numericLevel: 2,
     name: "Developing",
-    sentenceLength: "6-10 words",
-    vocabulary: "1,000 most common words",
+    officialDescription: "Can understand sentences and frequently used expressions related to areas of most immediate relevance. Can communicate in simple and routine tasks requiring a simple and direct exchange of information. Can describe in simple terms aspects of his/her background and immediate environment.",
+    sentenceLength: "6-10 words (occasional 12 for flow)",
+    vocabulary: "1,000 most common words, common abstract nouns okay (idea, problem, time), common phrasal verbs",
     forbidden: [
-      "NO present perfect",
-      "NO past perfect",
-      "NO 'will' future (use 'going to')",
+      "NO present perfect (has seen, have gone)",
+      "NO past perfect (had seen, had gone)",
+      "NO 'will' future (use 'going to' instead)",
       "NO passive voice",
-      "NO conditionals",
-      "NO subjunctive",
+      "NO conditionals (if...would)",
+      "NO subjunctive mood",
+    ],
+    allowed: [
+      "Simple past tense (walked, saw, said)",
+      "Simple present tense",
+      "'Going to' future",
+      "Compound sentences with and, but, or, so",
+      "Basic subordinate clauses with because, when, before, after",
+      "Common phrasal verbs (look at, pick up, get up)",
+    ],
+    connectors: ["and", "but", "so", "because", "then", "after", "before", "when", "while", "also", "too", "first", "next", "finally"],
+    styleGuidance: [
+      "Write CONNECTED prose - the key CEFR phrase is 'simple and direct', not fragmented",
+      "Preserve the author's voice and humor through simple patterns",
+      "Use 'She thought X, but Y happened' for irony",
+      "Use 'He wanted to X, so he did Y' to show motivation",
+      "Mix simple and compound sentences for natural rhythm",
+      "Dialogue conveys personality - use it",
+      "Pronouns are natural after the subject is established",
+      "Vary sentence length slightly to avoid monotony",
+      "Emotional reactions should remain: curious, worried, excited, confused",
+    ],
+    pitfalls: [
+      "Over-fragmenting into tiny disconnected sentences (the #1 problem)",
+      "Removing all humor and personality",
+      "Eliminating transitional words and connectors",
+      "Treating A2 like A1 (A2 readers can handle more complexity)",
+      "Using only periods, never commas",
+      "Flattening character voice into neutral narration",
     ],
   },
   B1: {
     code: "B1",
     numericLevel: 3,
     name: "Independent",
+    officialDescription: "Can understand the main points of clear standard input on familiar matters. Can produce simple connected text on topics which are familiar or of personal interest. Can describe experiences and events, dreams, hopes and ambitions and briefly give reasons and explanations for opinions and plans.",
     sentenceLength: "8-15 words",
-    vocabulary: "2,500 words",
+    vocabulary: "2,500 words, common idioms and expressions, abstract vocabulary acceptable (decision, possibility, relationship)",
     forbidden: [
-      "NO past perfect",
-      "NO third conditional",
-      "NO complex passive",
-      "NO literary language",
-      "NO rare vocabulary",
+      "NO past perfect (had done) - unless essential for clarity",
+      "NO third conditional (if had done, would have)",
+      "NO complex passive constructions",
+      "NO literary/archaic language",
+      "NO rare or specialized vocabulary",
+    ],
+    allowed: [
+      "All simple tenses (present, past, future)",
+      "Present perfect (has done, have been)",
+      "First conditional (if...will)",
+      "Second conditional (if...would) - sparingly",
+      "Relative clauses (who, which, that)",
+      "Basic passive voice (was seen, is called)",
+      "Reported speech",
+    ],
+    connectors: ["and", "but", "so", "because", "however", "although", "even though", "despite", "therefore", "as a result", "then", "after", "before", "when", "while", "as soon as", "until", "if", "unless", "meanwhile", "finally"],
+    styleGuidance: [
+      "The key CEFR phrase is 'simple CONNECTED text' - maintain full narrative flow",
+      "The story should read naturally, not feel 'adapted'",
+      "Preserve the author's voice, humor, and style",
+      "Keep irony and subtle humor where possible",
+      "Complex emotions and internal monologue are appropriate",
+      "Character development should remain intact",
+      "Subplots and secondary details can be preserved",
+      "Descriptive passages add richness - don't eliminate them",
+      "Mix simple, compound, and complex sentences naturally",
+      "Internal thoughts and reactions add depth",
+      "Dialogue should sound natural, not stilted",
+    ],
+    pitfalls: [
+      "Over-simplifying to A2 level (B1 readers can handle much more)",
+      "Flattening character voice and personality",
+      "Removing descriptive richness",
+      "Eliminating internal monologue and character thoughts",
+      "Making all sentences the same length (kills rhythm)",
+      "Removing narrative tension and foreshadowing",
     ],
   },
   B2: {
     code: "B2",
     numericLevel: 4,
     name: "Upper-Intermediate",
-    sentenceLength: "10-20 words",
-    vocabulary: "5,000 words",
+    officialDescription: "Can understand the main ideas of complex text on both concrete and abstract topics. Can interact with a degree of fluency and spontaneity that makes regular interaction with native speakers quite possible without strain. Can produce clear, detailed text on a wide range of subjects.",
+    sentenceLength: "10-20 words (flexible)",
+    vocabulary: "5,000 words, idioms, expressions, figurative language, abstract and nuanced vocabulary",
     forbidden: [
-      "NO third conditional (save for C1)",
-      "NO obscure vocabulary",
-      "NO archaic constructions",
+      "NO third conditional - use sparingly if at all",
+      "NO obscure or archaic vocabulary",
+      "NO archaic grammatical constructions",
+      "NO overly complex embedded clauses (3+ levels deep)",
+    ],
+    allowed: [
+      "All tenses including past perfect",
+      "All conditionals (first, second, limited third)",
+      "Complex passive constructions",
+      "Sophisticated relative clauses",
+      "Subjunctive in common expressions",
+      "All standard discourse markers",
+      "Metaphor, simile, and figurative language",
+    ],
+    connectors: ["All standard connectors", "moreover", "furthermore", "nevertheless", "consequently", "hence", "thus", "whereas", "in contrast", "on the other hand", "in addition", "as a matter of fact"],
+    styleGuidance: [
+      "Simplification should be minimal at this level",
+      "Preserve the author's full literary voice",
+      "Maintain sophisticated narrative techniques",
+      "Keep complex character psychology",
+      "Preserve stylistic flourishes and word choices",
+      "Metaphor, irony, and literary devices should remain",
+      "Only simplify what would genuinely confuse a B2 reader",
+      "Full literary experience should be maintained",
+    ],
+    pitfalls: [
+      "Over-simplifying (B2 readers are near-fluent)",
+      "Removing literary devices and figurative language",
+      "Flattening sophisticated prose into basic sentences",
+      "Eliminating nuance and subtlety",
     ],
   },
   C1: {
     code: "C1",
     numericLevel: 5,
     name: "Advanced",
+    officialDescription: "Can understand a wide range of demanding, longer texts, and recognise implicit meaning. Can express him/herself fluently and spontaneously without much obvious searching for expressions. Can produce clear, well-structured, detailed text on complex subjects, showing controlled use of organisational patterns, connectors and cohesive devices.",
     sentenceLength: "No limit",
-    vocabulary: "10,000+ common modern words",
+    vocabulary: "10,000+ words, full modern vocabulary, literary and sophisticated vocabulary welcome",
     forbidden: [
-      "NO archaic vocabulary (thane, hither, wherefore, etc.)",
-      "NO obsolete grammar (thee, thou, hast, doth, etc.)",
-      "NO literary/poetic inversions",
-      "NO specialized academic jargon",
-      "Use modern equivalents for dated expressions",
+      "NO archaic pronouns (thee, thou, ye)",
+      "NO archaic verb forms (hath, doth, art, wilt)",
+      "NO obsolete grammatical structures",
+      "NO archaic vocabulary (forsooth, hither, thither, wherefore)",
+      "NO poetic inversions that feel dated",
+    ],
+    allowed: [
+      "All modern English grammar without restriction",
+      "Full complexity of native expression",
+      "Literary and sophisticated constructions",
+      "All tenses, moods, and aspects",
+      "Complex embedded clauses",
+      "Sophisticated vocabulary and register",
+    ],
+    connectors: ["All connectors without restriction"],
+    styleGuidance: [
+      "Only modernize archaic elements - preserve everything else",
+      "Maintain the author's complete voice and style",
+      "Keep all literary devices and techniques",
+      "Sophistication should not be reduced",
+      "If the original is complex, the C1 version should be complex",
+      "Replace archaic forms with modern equivalents: thee→you, hath→has, wherefore→why",
+    ],
+    pitfalls: [
+      "Over-simplifying (C1 is near-native)",
+      "Modernizing too aggressively (only change truly archaic elements)",
+      "Reducing literary quality",
     ],
   },
   C2: {
     code: "C2",
     numericLevel: 6,
     name: "Near-Native",
+    officialDescription: "Can understand with ease virtually everything heard or read. Can summarise information from different spoken and written sources, reconstructing arguments and accounts in a coherent presentation. Can express him/herself spontaneously, very fluently and precisely, differentiating finer shades of meaning even in more complex situations.",
     sentenceLength: "No limit",
     vocabulary: "Unrestricted (including archaic, literary, specialized)",
     forbidden: [], // No restrictions - original literary texts
+    allowed: [
+      "Everything - this is the original or near-original text",
+      "All archaic forms preserved",
+      "All literary devices preserved",
+      "Full original complexity",
+    ],
+    connectors: ["All - no restrictions"],
+    styleGuidance: [
+      "No adaptation needed",
+      "Preserve the original text as-is",
+      "This level is for readers who want the authentic original experience",
+    ],
+    pitfalls: [
+      "Making any unnecessary changes",
+    ],
   },
 };
 

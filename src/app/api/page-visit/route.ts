@@ -26,28 +26,39 @@ export async function POST(req: NextRequest) {
     }
 
     // Upsert to avoid duplicates - only records first visit
-    const pageVisit = await prisma.pageVisit.upsert({
-      where: {
-        userId_storySlug_level_chapter_page: {
+    // Wrapped in try-catch to handle race conditions where two requests
+    // arrive simultaneously and both pass the WHERE check before insert
+    try {
+      const pageVisit = await prisma.pageVisit.upsert({
+        where: {
+          userId_storySlug_level_chapter_page: {
+            userId: session.user.id,
+            storySlug,
+            level,
+            chapter,
+            page,
+          },
+        },
+        update: {}, // Don't update anything on subsequent visits
+        create: {
           userId: session.user.id,
           storySlug,
           level,
           chapter,
           page,
+          wordCount: wordCount || 0,
         },
-      },
-      update: {}, // Don't update anything on subsequent visits
-      create: {
-        userId: session.user.id,
-        storySlug,
-        level,
-        chapter,
-        page,
-        wordCount: wordCount || 0,
-      },
-    });
+      });
 
-    return NextResponse.json({ success: true, isNew: pageVisit.createdAt.getTime() > Date.now() - 1000 });
+      return NextResponse.json({ success: true, isNew: pageVisit.createdAt.getTime() > Date.now() - 1000 });
+    } catch (upsertError: any) {
+      // P2002 = Unique constraint violation (race condition - another request won)
+      // This is fine - the visit was recorded by the other request
+      if (upsertError?.code === "P2002") {
+        return NextResponse.json({ success: true, isNew: false });
+      }
+      throw upsertError; // Re-throw other errors
+    }
   } catch (error) {
     console.error("Error recording page visit:", error);
     return NextResponse.json(

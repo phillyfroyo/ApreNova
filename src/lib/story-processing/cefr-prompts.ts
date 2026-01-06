@@ -25,6 +25,14 @@ export const CEFR_LEVELS = CEFR_LEVEL_DETAILS;
 
 /**
  * Generate a prompt for rewriting text at a specific CEFR level
+ *
+ * The prompt includes:
+ * - Official CEFR context (what learners at this level can do)
+ * - Grammar constraints (what to avoid)
+ * - Allowed structures (what IS appropriate - often underused)
+ * - Connectors to use (for cohesion)
+ * - Style guidance (how to preserve narrative quality)
+ * - Common pitfalls to avoid
  */
 export function generateRewritePrompt(
   targetLevel: CEFRCode | number | string,
@@ -35,9 +43,34 @@ export function generateRewritePrompt(
   const level = getLevelDetails(targetLevel);
   const langName = sourceLanguage === "es" ? "Spanish" : "English";
 
-  const forbiddenRules =
+  // Build forbidden rules section
+  const forbiddenSection =
     level.forbidden.length > 0
-      ? `\nFORBIDDEN:\n${level.forbidden.join("\n")}`
+      ? `GRAMMAR CONSTRAINTS (AVOID):\n${level.forbidden.map(r => `- ${r}`).join("\n")}`
+      : "";
+
+  // Build allowed structures section
+  const allowedSection =
+    level.allowed.length > 0
+      ? `ALLOWED STRUCTURES (USE THESE):\n${level.allowed.map(r => `- ${r}`).join("\n")}`
+      : "";
+
+  // Build connectors section
+  const connectorsSection =
+    level.connectors.length > 0
+      ? `CONNECTORS FOR COHESION:\nUse these to maintain flow: ${level.connectors.join(", ")}`
+      : "";
+
+  // Build style guidance section
+  const styleSection =
+    level.styleGuidance.length > 0
+      ? `STYLE GUIDANCE (CRITICAL FOR QUALITY):\n${level.styleGuidance.map(r => `- ${r}`).join("\n")}`
+      : "";
+
+  // Build pitfalls section
+  const pitfallsSection =
+    level.pitfalls.length > 0
+      ? `COMMON MISTAKES TO AVOID:\n${level.pitfalls.map(r => `- ${r}`).join("\n")}`
       : "";
 
   // Different structure rules for poetry vs prose
@@ -53,23 +86,35 @@ export function generateRewritePrompt(
 - Preserve PARAGRAPH breaks (empty lines between paragraphs)
 - Within paragraphs, text should flow naturally as prose
 - Do NOT break sentences into separate lines
-- Do NOT add line breaks within paragraphs
-- Keep the narrative flowing and readable`;
+- Do NOT add line breaks within paragraphs`;
 
   return `Rewrite this ${langName} ${isPoetry ? "poem" : "story"} for CEFR ${level.code} (${level.name}).
 
-RULES:
-- Sentences: ${level.sentenceLength}
-- Vocabulary: ${level.vocabulary}${forbiddenRules}
+TARGET READER PROFILE:
+${level.officialDescription}
+
+LANGUAGE PARAMETERS:
+- Sentence length: ${level.sentenceLength}
+- Vocabulary: ${level.vocabulary}
+
+${forbiddenSection}
+
+${allowedSection}
+
+${connectorsSection}
+
+${styleSection}
+
+${pitfallsSection}
 
 ${structureRules}
 
-TEXT:
+TEXT TO REWRITE:
 """
 ${sourceText}
 """
 
-Return ONLY the rewritten text.`;
+Return ONLY the rewritten text. Preserve the story's voice and flow while adapting the language level.`;
 }
 
 /**
