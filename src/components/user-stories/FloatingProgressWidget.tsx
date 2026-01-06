@@ -192,46 +192,27 @@ function StreamSelector({
   );
 }
 
-// Success banner with Preview dropdown for viewing completed work
+// Success banner - simple notification after story is confirmed
 function SuccessBanner({
   lng,
   storyData,
-  streams,
   detectedLevel,
   session,
   isNavigating,
   setIsNavigating,
-  setSelectedStreamId,
-  setShowProgressViewer,
 }: {
   lng: string;
   storyData: StoryUploadData | null;
-  streams: StreamProgress[];
   detectedLevel?: string;
   session: any;
   isNavigating: boolean;
   setIsNavigating: (v: boolean) => void;
-  setSelectedStreamId: (id: string | null) => void;
-  setShowProgressViewer: (show: boolean) => void;
 }) {
   const router = useRouter();
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Track if we've started navigation to keep button in loading state
   const hasStartedNavigation = useRef(false);
   const isActuallyNavigating = isNavigating || hasStartedNavigation.current;
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsPreviewOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Get the best level for reading
   const userQuizLevel = session?.user?.quizLevel;
@@ -246,47 +227,9 @@ function SuccessBanner({
     }
   };
 
-  const handlePreviewClick = (stream: StreamProgress) => {
-    setSelectedStreamId(stream.id);
-    setShowProgressViewer(true);
-    setIsPreviewOpen(false);
-  };
-
-  // Filter streams that have completed data
-  const completedStreams = streams.filter(
-    (s) => s.status === "complete" && Array.isArray(s.chapters) && s.chapters.length > 0
-  );
-
-  // Build descriptive labels for each stream
-  const getStreamLabel = (stream: StreamProgress) => {
-    const level = toCEFR(stream.level);
-    if (stream.type === "rewriting") {
-      const fromLevel = stream.fromLevel ? toCEFR(stream.fromLevel) : "?";
-      return `Rewrite ${fromLevel} → ${level}`;
-    } else {
-      const isOriginal = stream.level === detectedLevel;
-      return isOriginal ? `Translation ${level} (Original)` : `Translation ${level} (Rewritten)`;
-    }
-  };
-
-  const getStreamIcon = (type: StreamProgress["type"]) => {
-    if (type === "rewriting") {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      );
-    }
-    return (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-      </svg>
-    );
-  };
-
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-green-600 text-white pl-6 pr-4 py-3 rounded-2xl shadow-lg flex items-center gap-4">
+      <div className="bg-green-600 text-white pl-6 pr-4 py-3 rounded-full shadow-lg flex items-center gap-4">
         {/* Title with checkmark */}
         <div className="flex items-center gap-3 min-w-0">
           <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,55 +241,6 @@ function SuccessBanner({
               : lng === "es" ? "¡Historia lista!" : "Story ready!"}
           </span>
         </div>
-
-        {/* Preview dropdown - only show if there are completed streams */}
-        {completedStreams.length > 0 && (
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-              className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              {lng === "es" ? "Vista previa" : "Preview"}
-              <svg
-                className={`w-3 h-3 transition-transform ${isPreviewOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Dropdown menu */}
-            {isPreviewOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-10">
-                <div className="py-1">
-                  {completedStreams.map((stream) => (
-                    <button
-                      key={stream.id}
-                      onClick={() => handlePreviewClick(stream)}
-                      className="w-full px-4 py-2.5 flex items-center gap-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <span className={stream.type === "rewriting" ? "text-amber-500" : "text-blue-500"}>
-                        {getStreamIcon(stream.type)}
-                      </span>
-                      <span className="flex-1 text-sm font-medium">
-                        {getStreamLabel(stream)}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {stream.chapters.length} ch
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Start Reading button */}
         <button
@@ -601,13 +495,10 @@ export default function FloatingProgressWidget() {
       <SuccessBanner
         lng={lng as string}
         storyData={storyData}
-        streams={progress.streams || []}
         detectedLevel={progress.detectedLevel}
         session={session}
         isNavigating={isNavigating}
         setIsNavigating={setIsNavigating}
-        setSelectedStreamId={setSelectedStreamId}
-        setShowProgressViewer={setShowProgressViewer}
       />
     );
   }
