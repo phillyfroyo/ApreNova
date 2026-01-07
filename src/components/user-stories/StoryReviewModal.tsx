@@ -453,10 +453,24 @@ export default function StoryReviewModal() {
             const detectedCEFR = toCEFR(storyData.detectedLevel);
             const wasRewritten = userCEFR && userCEFR !== detectedCEFR;
 
-            // Get completed streams for preview
-            const completedStreams = (progress.streams || []).filter(
-              (s) => s.status === "complete" && Array.isArray(s.chapters) && s.chapters.length > 0
+            // Get streams for preview - include all complete streams, even if chapters array is empty
+            // (the data might be in the database but not loaded into the stream object)
+            const allStreams = progress.streams || [];
+            const completedStreams = allStreams.filter(
+              (s) => s.status === "complete"
             );
+
+            // Debug log
+            console.log("[StoryReviewModal] Streams:", {
+              allStreams: allStreams.length,
+              completedStreams: completedStreams.length,
+              streams: allStreams.map(s => ({
+                id: s.id,
+                type: s.type,
+                status: s.status,
+                chaptersCount: s.chapters?.length || 0
+              }))
+            });
 
             const handlePreviewClick = (streamId: string) => {
               setSelectedStreamId(streamId);
@@ -481,64 +495,13 @@ export default function StoryReviewModal() {
 
             return (
               <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-green-800 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {lng === "es" ? "Lo que se creó" : "What was created"}
-                  </h4>
-                  {completedStreams.length > 0 && (
-                    <div className="relative" ref={previewDropdownRef}>
-                      <button
-                        onClick={() => setShowPreviewDropdown(!showPreviewDropdown)}
-                        className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        {lng === "es" ? "Vista previa" : "Preview"}
-                        <svg className={`w-3 h-3 transition-transform ${showPreviewDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {/* Dropdown - click to toggle */}
-                      {showPreviewDropdown && (
-                        <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-10">
-                          <div className="py-1">
-                            {completedStreams.map((stream) => (
-                              <button
-                                key={stream.id}
-                                onClick={() => handlePreviewClick(stream.id)}
-                                className="w-full px-4 py-2.5 flex items-center gap-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
-                              >
-                                <span className={stream.type === "rewriting" ? "text-amber-500" : "text-blue-500"}>
-                                  {stream.type === "rewriting" ? (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                                    </svg>
-                                  )}
-                                </span>
-                                <span className="flex-1 text-sm font-medium">
-                                  {getStreamLabel(stream)}
-                                </span>
-                                <span className="text-xs text-gray-400">
-                                  {stream.chapters.length} ch
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <ul className="space-y-1 text-sm text-green-700">
+                <h4 className="font-medium text-green-800 flex items-center gap-2 mb-3">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {lng === "es" ? "Lo que se creó" : "What was created"}
+                </h4>
+                <ul className="space-y-1 text-sm text-green-700 mb-4">
                   <li className="flex items-start gap-2">
                     <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -568,6 +531,60 @@ export default function StoryReviewModal() {
                     {lng === "es" ? "Paginación interactiva" : "Interactive pagination"}
                   </li>
                 </ul>
+
+                {/* Preview button - prominent placement */}
+                {completedStreams.length > 0 && (
+                  <div className="relative" ref={previewDropdownRef}>
+                    <button
+                      onClick={() => setShowPreviewDropdown(!showPreviewDropdown)}
+                      className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      {lng === "es" ? "Vista previa de historia completada" : "Preview completed story"}
+                      <svg className={`w-4 h-4 transition-transform ${showPreviewDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {/* Dropdown menu */}
+                    {showPreviewDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-10">
+                        <div className="py-1">
+                          {completedStreams.map((stream) => (
+                            <button
+                              key={stream.id}
+                              onClick={() => handlePreviewClick(stream.id)}
+                              className="w-full px-4 py-3 flex items-center gap-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              <span className={stream.type === "rewriting" ? "text-amber-500" : "text-blue-500"}>
+                                {stream.type === "rewriting" ? (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="flex-1 font-medium">
+                                {getStreamLabel(stream)}
+                              </span>
+                              <span className="text-sm text-gray-400">
+                                {stream.chapters?.length || 0} {lng === "es" ? "cap" : "ch"}
+                              </span>
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}
