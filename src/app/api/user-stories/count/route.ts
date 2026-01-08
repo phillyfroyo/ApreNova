@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     const stats = await getUserStoryStats(session.user.id, isPremium);
 
     return NextResponse.json(stats);
-  } catch (error) {
-    console.error("Error fetching story count:", error);
+  } catch (error: any) {
+    console.error("[API/user-stories/count] Error:", error?.message || error);
     return NextResponse.json(
       { error: "Failed to fetch story count" },
       { status: 500 }

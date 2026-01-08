@@ -282,8 +282,17 @@ export class LevelProgressTracker {
 
   /**
    * Mark level as complete with final content
+   * Preserves rewriteData and completedData for preview functionality
    */
   async markComplete(content: unknown): Promise<void> {
+    // Read existing progress to preserve rewriteData and completedData for preview
+    const level = await prisma.userStoryLevel.findUnique({
+      where: { id: this.levelId },
+      select: { processingProgress: true },
+    });
+
+    const existing = (level?.processingProgress as unknown as ProcessingProgress) || {};
+
     await prisma.userStoryLevel.update({
       where: { id: this.levelId },
       data: {
@@ -294,6 +303,11 @@ export class LevelProgressTracker {
           currentChapter: this.totalChapters,
           totalChapters: this.totalChapters,
           chaptersCompleted: Array.from({ length: this.totalChapters }, (_, i) => i),
+          // Preserve chapter data for preview modal
+          rewriteData: existing.rewriteData,
+          completedData: existing.completedData,
+          rewriteProgress: existing.rewriteProgress,
+          translateProgress: existing.translateProgress,
         } as any,
       },
     });

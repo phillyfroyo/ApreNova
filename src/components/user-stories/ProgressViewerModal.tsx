@@ -19,6 +19,10 @@ export interface ProgressViewerModalProps {
   stage: "rewriting" | "translating" | "complete";
   detectedLevel?: string;
   targetLevel?: string;
+  // For on-demand data fetching when chapters are empty
+  storyId?: string;
+  // If true, this is a preview of completed work (no loading animations)
+  isPreview?: boolean;
 }
 
 export function ProgressViewerModal({
@@ -32,6 +36,8 @@ export function ProgressViewerModal({
   stage,
   detectedLevel,
   targetLevel,
+  storyId,
+  isPreview = false,
 }: ProgressViewerModalProps) {
   const [selectedChapter, setSelectedChapter] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -42,15 +48,72 @@ export function ProgressViewerModal({
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
+  // On-demand fetched data
+  const [fetchedChapters, setFetchedChapters] = useState<ChapterData[]>([]);
+  const [fetchedRewriteChapters, setFetchedRewriteChapters] = useState<RewriteChapterData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   // Determine which data to show based on stage
   const isRewriting = stage === "rewriting";
-  const displayChapters = isRewriting ? rewriteChapters : chapters;
 
-  // Reset to first chapter and position when opening
+  // Use fetched data if original is empty
+  const effectiveChapters = chapters.length > 0 ? chapters : fetchedChapters;
+  const effectiveRewriteChapters = rewriteChapters.length > 0 ? rewriteChapters : fetchedRewriteChapters;
+  const displayChapters = isRewriting ? effectiveRewriteChapters : effectiveChapters;
+
+  // Fetch data on-demand when modal opens with empty chapters
+  useEffect(() => {
+    if (!isOpen || !storyId || !targetLevel) return;
+
+    const shouldFetch = isRewriting
+      ? rewriteChapters.length === 0
+      : chapters.length === 0;
+
+    if (!shouldFetch) return;
+
+    const fetchPreviewData = async () => {
+      setIsLoading(true);
+      setFetchError(null);
+
+      try {
+        const type = isRewriting ? "rewriting" : "translating";
+        const response = await fetch(
+          `/api/user-stories/${storyId}/preview?level=${encodeURIComponent(targetLevel)}&type=${type}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch preview data");
+        }
+
+        const data = await response.json();
+
+        if (isRewriting) {
+          setFetchedRewriteChapters(data.chapters || []);
+        } else {
+          setFetchedChapters(data.chapters || []);
+        }
+      } catch (error: any) {
+        console.error("[ProgressViewerModal] Fetch error:", error);
+        setFetchError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPreviewData();
+  }, [isOpen, storyId, targetLevel, isRewriting, chapters.length, rewriteChapters.length]);
+
+  // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setSelectedChapter(0);
       setPosition({ x: 0, y: 0 });
+    } else {
+      // Clear fetched data when closing to prevent stale data on next open
+      setFetchedChapters([]);
+      setFetchedRewriteChapters([]);
+      setFetchError(null);
     }
   }, [isOpen]);
 
@@ -157,27 +220,28 @@ export function ProgressViewerModal({
   const rightHeaderText = isRewriting ? "text-orange-700" : "text-indigo-700";
   const rightHeaderSubtext = isRewriting ? "text-orange-400" : "text-indigo-400";
 
-  // Build a more descriptive title
-  // For rewriting: "Rewriting C1 → A2"
-  // For translating: "Translating C1 (Original)" or "Translating A2 (Rewritten)"
+  // Build a descriptive title
+  // Use simple noun form that works for both live processing and preview
+  // For rewriting: "Rewrite C1 → A2"
+  // For translating: "Translate C1 (Original)" or "Translate A2 (Rewritten)"
   const getStageTitle = () => {
     if (isRewriting) {
       const fromLevel = detectedLevel ? toCEFR(detectedLevel) : "";
       const toLevel = targetLevel ? toCEFR(targetLevel) : "";
       if (fromLevel && toLevel) {
-        return `Rewriting ${fromLevel} → ${toLevel}`;
+        return `Rewrite ${fromLevel} → ${toLevel}`;
       }
-      return "Rewriting Progress";
+      return "Rewrite";
     } else {
       // Translation - indicate if this is original or rewritten text
       const level = targetLevel ? toCEFR(targetLevel) : "";
       const isOriginalLevel = targetLevel === detectedLevel;
       if (level) {
         return isOriginalLevel
-          ? `Translating ${level} (Original)`
-          : `Translating ${level} (Rewritten)`;
+          ? `Translate ${level} (Original)`
+          : `Translate ${level} (Rewritten)`;
       }
-      return "Translation Progress";
+      return "Translate";
     }
   };
   const stageTitle = getStageTitle();
@@ -213,18 +277,11 @@ export function ProgressViewerModal({
               <span className="text-xs md:text-sm bg-white/20 px-2 md:px-3 py-1 rounded-full">
                 {completedChapters} of {totalChapters} chapters
               </span>
-              {stage !== "complete" && (
+              {/* Only show live processing badge when not in preview mode */}
+              {!isPreview && stage !== "complete" && (
                 <span className="text-xs md:text-sm bg-yellow-500/80 px-2 md:px-3 py-1 rounded-full animate-pulse flex items-center gap-2">
                   <span className="w-2 h-2 bg-white rounded-full animate-ping" />
                   {isRewriting ? "Rewriting" : "Translating"} chapter {currentChapter}...
-                </span>
-              )}
-              {stage === "complete" && (
-                <span className="text-xs md:text-sm bg-green-500/80 px-2 md:px-3 py-1 rounded-full flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Complete
                 </span>
               )}
             </div>
@@ -280,7 +337,24 @@ export function ProgressViewerModal({
           )}
 
           {/* Content */}
-          {displayChapters.length === 0 ? (
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className={`w-16 h-16 border-4 ${isRewriting ? "border-amber-500" : "border-blue-500"} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
+                <p className="text-gray-600">Loading preview data...</p>
+              </div>
+            </div>
+          ) : fetchError ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <div className="text-center">
+                <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-gray-600">Failed to load preview</p>
+                <p className="text-sm text-gray-400 mt-2">{fetchError}</p>
+              </div>
+            </div>
+          ) : displayChapters.length === 0 ? (
             <div className="flex-1 flex items-center justify-center py-16">
               <div className="text-center">
                 <div className={`w-16 h-16 border-4 ${isRewriting ? "border-amber-500" : "border-blue-500"} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />

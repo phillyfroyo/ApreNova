@@ -28,14 +28,22 @@ export default async function UserStoryReaderPage({
 }) {
   const { lng, storyId, level, chapter, page } = await params;
 
-  if (lng !== "en" && lng !== "es") return notFound();
+  console.log(`[UserStoryReaderPage] Rendering: storyId=${storyId}, level=${level}, chapter=${chapter}, page=${page}`);
+
+  if (lng !== "en" && lng !== "es") {
+    console.log(`[UserStoryReaderPage] Invalid language: ${lng}`);
+    return notFound();
+  }
 
   const session = await getServerSession(authOptions);
 
   // Require authentication for user stories
   if (!session?.user?.id) {
+    console.log(`[UserStoryReaderPage] No session, redirecting to login`);
     redirect(`/${lng}/auth/login`);
   }
+
+  console.log(`[UserStoryReaderPage] Session OK, fetching content...`);
 
   // Get story map for navigation
   const storyMap = await getUserStoryMap(storyId, session.user.id, level);
@@ -53,7 +61,10 @@ export default async function UserStoryReaderPage({
     lng as Language
   );
 
+  console.log(`[UserStoryReaderPage] Story result: hasStory=${!!story}, hasLines=${!!story?.lines}, linesCount=${story?.lines?.length}`);
+
   if (!story || !story.lines || story.lines.length === 0) {
+    console.log(`[UserStoryReaderPage] No story content, returning notFound`);
     return notFound();
   }
 

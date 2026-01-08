@@ -177,7 +177,8 @@ export default function UploadStoryModal() {
 
   // Check if user can upload (-1 means unlimited)
   const canUpload = stats
-    ? (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && stats.storiesProcessedToday < stats.dailyLimit
+    ? (stats.maxStories === -1 || stats.totalStories < stats.maxStories) &&
+      (stats.dailyLimit === -1 || stats.storiesProcessedToday < stats.dailyLimit)
     : true;
 
   const handleSubmit = async () => {
@@ -262,7 +263,8 @@ export default function UploadStoryModal() {
                 {lng === "es" ? "Historias:" : "Stories:"}{" "}
                 <span className="font-medium">{stats.totalStories} / {stats.maxStories === -1 ? "∞" : stats.maxStories}</span>
               </span>
-              {!isPremium && (
+              {/* Only show daily limit if there is one (not -1 unlimited) */}
+              {!isPremium && stats.dailyLimit !== -1 && (
                 <span className="text-gray-500">
                   {lng === "es" ? "Hoy:" : "Today:"}{" "}
                   <span className="font-medium">{stats.storiesProcessedToday} / {stats.dailyLimit}</span>

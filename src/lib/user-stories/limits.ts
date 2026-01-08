@@ -12,8 +12,10 @@ export const USER_STORY_LIMITS = {
   PREMIUM_MAX_STORY_LENGTH: 2000000,
 
   // Daily processing limits
-  DAILY_PROCESSING_LIMIT_FREE: 1,
-  DAILY_PROCESSING_LIMIT_PREMIUM: 10,
+  // Note: Free tier has unlimited small uploads (< 5K chars), so this only applies to large uploads
+  // which are already limited to 1/month. Setting to -1 (unlimited) for free tier.
+  DAILY_PROCESSING_LIMIT_FREE: -1, // -1 means unlimited (free tier has monthly large story limit instead)
+  DAILY_PROCESSING_LIMIT_PREMIUM: -1, // -1 means unlimited
 
   // Rate limits for AI calls (milliseconds)
   MIN_DELAY_BETWEEN_AI_CALLS_MS: 2000,

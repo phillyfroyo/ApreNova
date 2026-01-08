@@ -145,6 +145,7 @@ interface StoryUploadContextType {
   updateStoryData: (updates: Partial<StoryUploadData>) => void;
   confirmStory: () => Promise<void>;
   retryConnection: () => void; // Retry after connection lost
+  resetProgress: () => void; // Reset progress state (after navigation completes)
 }
 
 const StoryUploadContext = createContext<StoryUploadContextType | null>(null);
@@ -285,8 +286,13 @@ function buildStreamsFromLevels(
     const hasTranslateData = translateChaptersCount > 0 || levelProgress.completedData?.length;
     const isComplete = levelProgress.stage === 'complete' || level.status === 'READY';
 
-    // Add rewrite stream if this level needs rewriting and has data or progress
-    if (needsRewrite && (levelProgress.rewriteProgress || levelProgress.rewriteData?.length || levelProgress.stage === 'rewriting')) {
+    // Add rewrite stream if this level needs rewriting
+    // Show rewrite stream if:
+    // 1. Has rewriteProgress (streaming mode started)
+    // 2. Has rewrite data
+    // 3. Currently rewriting
+    // 4. Level is complete (means it was rewritten successfully)
+    if (needsRewrite && (levelProgress.rewriteProgress || levelProgress.rewriteData?.length || levelProgress.stage === 'rewriting' || isComplete)) {
       // Use rewriteProgress for reliable status in streaming mode
       const rewriteAllDone = rewriteChaptersCount >= totalChapters && totalChapters > 0;
 
@@ -932,16 +938,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       setIsUploading(false);
       setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
-      // Reset after 5 seconds (giving user time to click "Start reading")
-      setTimeout(() => {
-        setProgress({
-          stage: "idle",
-          stageProgress: 0,
-          overallProgress: 0,
-          message: "",
-        });
-        setStoryData(null);
-      }, 5000);
+      // Note: Don't auto-reset the progress state here.
+      // The banner will stay visible until the user clicks "Start reading"
+      // and navigation completes (handled by FloatingProgressWidget unmounting)
+      // or until a new upload starts.
 
     } catch (error: any) {
       updateProgress("error", 0, { error: error.message });
@@ -955,6 +955,18 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       setRetryTrigger(prev => prev + 1);
     }
   }, [progress.stage]);
+
+  // Reset progress state (called after navigation completes)
+  const resetProgress = useCallback(() => {
+    console.log("[StoryUpload] Resetting progress state after navigation");
+    setProgress({
+      stage: "idle",
+      stageProgress: 0,
+      overallProgress: 0,
+      message: "",
+    });
+    setStoryData(null);
+  }, []);
 
   // Effect to resume polling when retry is triggered
   useEffect(() => {
@@ -1074,6 +1086,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     updateStoryData,
     confirmStory,
     retryConnection,
+    resetProgress,
   };
 
   // Get selected stream for modal, or fall back to legacy behavior
@@ -1086,8 +1099,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     if (selectedStream) {
       // Use selected stream data
       const isRewriting = selectedStream.type === "rewriting";
+      // Keep stage as "rewriting" or "translating" to properly display the data
+      // Only use "complete" for legacy fallback mode
       const modalStage: "rewriting" | "translating" | "complete" =
-        selectedStream.status === "complete" ? "complete" :
         isRewriting ? "rewriting" : "translating";
 
       return {
@@ -1138,6 +1152,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         stage={modalProps.stage}
         detectedLevel={modalProps.detectedLevel}
         targetLevel={modalProps.targetLevel}
+        storyId={storyData?.id}
+        // Preview mode: when opened from review modal (selectedStreamId) or stage is review/complete
+        isPreview={!!selectedStreamId || progress.stage === "review" || progress.stage === "complete"}
       />
 
       {/* Cancel Confirmation Dialog */}

@@ -2,195 +2,16 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useStoryUpload, StreamProgress, StoryUploadData } from "@/contexts/StoryUploadContext";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
+import { StreamSelector } from "./StreamSelector";
 
 // Minimum duration for displaying each step label (ms)
 const MIN_STEP_DURATION = 800;
 // Animation time (must match CSS animation duration)
 const ANIMATION_DURATION = 350;
 
-// Stream selector dropdown component
-function StreamSelector({
-  streams,
-  lng,
-  setShowProgressViewer,
-}: {
-  streams: StreamProgress[];
-  lng: string;
-  setShowProgressViewer: (show: boolean) => void;
-}) {
-  const { setSelectedStreamId } = useStoryUpload();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Filter to only show streams that have started or have data
-  const visibleStreams = streams.filter(
-    (s) => s.status !== "waiting" || (Array.isArray(s.chapters) && s.chapters.length > 0)
-  );
-
-  // Count streams with viewable data
-  const activeStreams = streams.filter(
-    (s) => s.status === "in-progress" || s.status === "complete"
-  );
-  const streamsWithData = streams.filter(
-    (s) => Array.isArray(s.chapters) && s.chapters.length > 0
-  );
-
-  // Don't show if no streams have data yet
-  if (streamsWithData.length === 0) {
-    return null;
-  }
-
-  const handleStreamClick = (stream: StreamProgress) => {
-    if (stream.status === "waiting" || (Array.isArray(stream.chapters) && stream.chapters.length === 0)) {
-      return; // Can't view streams that haven't started
-    }
-    setSelectedStreamId(stream.id);
-    setShowProgressViewer(true);
-    setIsOpen(false);
-  };
-
-  const getStatusIcon = (status: StreamProgress["status"]) => {
-    switch (status) {
-      case "in-progress":
-        return (
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-        );
-      case "complete":
-        return (
-          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        );
-      default:
-        return (
-          <div className="w-2 h-2 rounded-full bg-gray-300" />
-        );
-    }
-  };
-
-  const getStreamTypeIcon = (type: StreamProgress["type"]) => {
-    if (type === "rewriting") {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      );
-    }
-    return (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-      </svg>
-    );
-  };
-
-  // Single stream - show simple button
-  if (streamsWithData.length === 1) {
-    const stream = streamsWithData[0];
-    return (
-      <div className="px-4 pb-4">
-        <button
-          onClick={() => handleStreamClick(stream)}
-          className="w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-        >
-          {getStreamTypeIcon(stream.type)}
-          <span className="flex-1 text-left">
-            {lng === "es" ? "Ver progreso" : "View Progress"}
-            <span className="text-xs text-gray-400 ml-2">({stream.label})</span>
-          </span>
-        </button>
-      </div>
-    );
-  }
-
-  // Multiple streams - show dropdown
-  return (
-    <div className="px-4 pb-4" ref={dropdownRef}>
-      <div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`}
-        >
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          <span className="flex-1 text-left">
-            {lng === "es" ? "Ver progreso" : "View Progress"}
-          </span>
-          <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
-            {streamsWithData.length}
-          </span>
-          <svg
-            className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {/* Dropdown menu - expands inline to grow the card */}
-        {isOpen && (
-          <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white overflow-hidden">
-            {streams.map((stream) => {
-              const hasData = Array.isArray(stream.chapters) && stream.chapters.length > 0;
-              const isDisabled = stream.status === "waiting" && !hasData;
-
-              return (
-                <button
-                  key={stream.id}
-                  onClick={() => handleStreamClick(stream)}
-                  disabled={isDisabled}
-                  className={`w-full px-3 py-2 flex items-center gap-3 text-left transition-colors ${
-                    isDisabled
-                      ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                      : "hover:bg-gray-50 text-gray-700"
-                  }`}
-                >
-                  <span className="flex-shrink-0">
-                    {getStreamTypeIcon(stream.type)}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium truncate">
-                      {stream.label}
-                    </span>
-                    {hasData ? (
-                      <span className="block text-xs text-gray-400">
-                        {stream.chapters.length} / {stream.totalChapters} chapters completed
-                      </span>
-                    ) : stream.status === "waiting" ? (
-                      <span className="block text-xs text-gray-400">
-                        Waiting to start...
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="flex-shrink-0">
-                    {getStatusIcon(stream.status)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // Success banner - simple notification after story is confirmed
 function SuccessBanner({
@@ -200,6 +21,7 @@ function SuccessBanner({
   session,
   isNavigating,
   setIsNavigating,
+  onNavigationComplete,
 }: {
   lng: string;
   storyData: StoryUploadData | null;
@@ -207,11 +29,15 @@ function SuccessBanner({
   session: any;
   isNavigating: boolean;
   setIsNavigating: (v: boolean) => void;
+  onNavigationComplete: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // Track if we've started navigation to keep button in loading state
   const hasStartedNavigation = useRef(false);
+  // Store the path when user clicks "Start reading", not when component mounts
+  const navigationStartPathRef = useRef<string | null>(null);
   const isActuallyNavigating = isNavigating || hasStartedNavigation.current;
 
   // Get the best level for reading
@@ -219,8 +45,33 @@ function SuccessBanner({
   const userLevel = userQuizLevel ? toCEFR(userQuizLevel) : null;
   const readingLevel = userLevel || detectedLevel || "B1";
 
+  // Detect when navigation completes (pathname changes after we started navigating)
+  useEffect(() => {
+    // Only trigger if:
+    // 1. User has clicked "Start reading" (hasStartedNavigation is true)
+    // 2. We have a reference path from when they clicked
+    // 3. The pathname has actually changed from that reference
+    if (
+      hasStartedNavigation.current &&
+      navigationStartPathRef.current !== null &&
+      pathname !== navigationStartPathRef.current
+    ) {
+      // Navigation completed - hide the banner
+      onNavigationComplete();
+    }
+  }, [pathname, onNavigationComplete]);
+
+  // Prefetch the story page when banner appears (in case review modal prefetch didn't happen)
+  useEffect(() => {
+    if (!storyData?.id) return;
+    const prefetchUrl = `/${lng}/my-stories/${storyData.id}/${readingLevel}/1/1`;
+    router.prefetch(prefetchUrl);
+  }, [storyData?.id, lng, readingLevel, router]);
+
   const handleStartReading = () => {
     if (storyData?.id && !isActuallyNavigating) {
+      // Store the current path BEFORE navigation starts
+      navigationStartPathRef.current = pathname;
       hasStartedNavigation.current = true;
       setIsNavigating(true);
       router.push(`/${lng}/my-stories/${storyData.id}/${readingLevel}/1/1`);
@@ -229,7 +80,7 @@ function SuccessBanner({
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-green-600 text-white pl-6 pr-4 py-3 rounded-full shadow-lg flex items-center gap-4">
+      <div className="bg-green-600 text-white pl-6 pr-2 py-3 rounded-full shadow-lg flex items-center gap-3">
         {/* Title with checkmark */}
         <div className="flex items-center gap-3 min-w-0">
           <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,6 +111,17 @@ function SuccessBanner({
             lng === "es" ? "Empezar a leer" : "Start reading"
           )}
         </button>
+
+        {/* Close button */}
+        <button
+          onClick={onNavigationComplete}
+          className="p-1.5 hover:bg-green-500 rounded-full transition-colors"
+          aria-label={lng === "es" ? "Cerrar" : "Close"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -281,17 +143,20 @@ export default function FloatingProgressWidget() {
     setShowReviewModal,
     setShowProgressViewer,
     setSelectedStreamId,
+    resetProgress,
   } = useStoryUpload();
 
   const [isNavigating, setIsNavigating] = useState(false);
-  const navigationRef = useRef(false); // Track navigation to prevent state resets
+  const previousStoryIdRef = useRef<string | null>(null);
 
-  // Keep navigation state stable - once started, don't allow resets until unmount
+  // Reset navigation state when a new story starts (different storyData.id)
   useEffect(() => {
-    if (isNavigating) {
-      navigationRef.current = true;
+    if (storyData?.id && storyData.id !== previousStoryIdRef.current) {
+      // New story - reset navigation state
+      setIsNavigating(false);
+      previousStoryIdRef.current = storyData.id;
     }
-  }, [isNavigating]);
+  }, [storyData?.id]);
 
   // Drag state for movable card
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
@@ -499,6 +364,7 @@ export default function FloatingProgressWidget() {
         session={session}
         isNavigating={isNavigating}
         setIsNavigating={setIsNavigating}
+        onNavigationComplete={resetProgress}
       />
     );
   }
@@ -780,11 +646,13 @@ export default function FloatingProgressWidget() {
         </div>
 
         {/* Stream selector for viewing progress */}
-        <StreamSelector
-          streams={progress.streams || []}
-          lng={lng as string}
-          setShowProgressViewer={setShowProgressViewer}
-        />
+        <div className="px-4 pb-4">
+          <StreamSelector
+            streams={progress.streams || []}
+            lng={lng as string}
+            setShowProgressViewer={setShowProgressViewer}
+          />
+        </div>
 
         {/* Review prompt */}
         {progress.stage === "review" && (

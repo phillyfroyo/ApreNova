@@ -46,11 +46,25 @@ export async function canCreateStory(
 
 /**
  * Check if user can process a story today based on daily limits
+ * Note: -1 means unlimited (no daily limit)
  */
 export async function canProcessToday(
   userId: string,
   isPremium: boolean
 ): Promise<AccessCheckResult> {
+  const limit = isPremium
+    ? USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_PREMIUM
+    : USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_FREE;
+
+  // -1 means unlimited
+  if (limit === -1) {
+    return {
+      allowed: true,
+      currentCount: 0,
+      maxCount: -1,
+    };
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -60,10 +74,6 @@ export async function canProcessToday(
       createdAt: { gte: today },
     },
   });
-
-  const limit = isPremium
-    ? USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_PREMIUM
-    : USER_STORY_LIMITS.DAILY_PROCESSING_LIMIT_FREE;
 
   if (processedToday >= limit) {
     return {
