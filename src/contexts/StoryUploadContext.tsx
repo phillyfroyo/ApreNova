@@ -131,6 +131,7 @@ interface StoryUploadContextType {
   showCancelConfirm: boolean;
   lastConfirmedAt: number | null; // Timestamp of last story confirmation
   selectedStreamId: string | null; // Which stream to show in progress viewer
+  isReadingCurrentStory: boolean; // Track if user started reading before processing completed
 
   // Actions
   startUpload: (options: StartUploadOptions) => Promise<void>;
@@ -146,6 +147,7 @@ interface StoryUploadContextType {
   confirmStory: () => Promise<void>;
   retryConnection: () => void; // Retry after connection lost
   resetProgress: () => void; // Reset progress state (after navigation completes)
+  setIsReadingCurrentStory: (reading: boolean) => void; // Set reading state
 }
 
 const StoryUploadContext = createContext<StoryUploadContextType | null>(null);
@@ -412,6 +414,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [storyData, setStoryData] = useState<StoryUploadData | null>(null);
+  const [isReadingCurrentStory, setIsReadingCurrentStory] = useState(false);
   const [progress, setProgress] = useState<UploadProgress>({
     stage: "idle",
     stageProgress: 0,
@@ -929,24 +932,39 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         }),
       });
 
-      updateProgress("complete", 100, {
-        phase: "finalizing",
-        phaseTitle: PHASE_TITLES.finalizing,
-        stepLabel: "All done!",
-      });
       setShowReviewModal(false);
       setIsUploading(false);
       setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
-      // Note: Don't auto-reset the progress state here.
-      // The banner will stay visible until the user clicks "Start reading"
-      // and navigation completes (handled by FloatingProgressWidget unmounting)
-      // or until a new upload starts.
+      // If user is already reading the story (via "Start Reading Now" button),
+      // skip the success banner and just reset progress
+      if (isReadingCurrentStory) {
+        console.log("[StoryUpload] User is already reading - skipping success banner");
+        setProgress({
+          stage: "idle",
+          stageProgress: 0,
+          overallProgress: 0,
+          message: "",
+        });
+        setStoryData(null);
+        setIsReadingCurrentStory(false);
+      } else {
+        // Show success banner with "Start reading" button
+        updateProgress("complete", 100, {
+          phase: "finalizing",
+          phaseTitle: PHASE_TITLES.finalizing,
+          stepLabel: "All done!",
+        });
+        // Note: Don't auto-reset the progress state here.
+        // The banner will stay visible until the user clicks "Start reading"
+        // and navigation completes (handled by FloatingProgressWidget)
+        // or until a new upload starts.
+      }
 
     } catch (error: any) {
       updateProgress("error", 0, { error: error.message });
     }
-  }, [storyData, updateProgress]);
+  }, [storyData, updateProgress, isReadingCurrentStory]);
 
   // Retry connection after connection-lost - triggers effect to resume polling
   const retryConnection = useCallback(() => {
@@ -966,6 +984,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       message: "",
     });
     setStoryData(null);
+    setIsReadingCurrentStory(false);
   }, []);
 
   // Effect to resume polling when retry is triggered
@@ -1074,6 +1093,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     showCancelConfirm,
     lastConfirmedAt,
     selectedStreamId,
+    isReadingCurrentStory,
     startUpload,
     cancelUpload,
     requestCancel,
@@ -1087,6 +1107,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     confirmStory,
     retryConnection,
     resetProgress,
+    setIsReadingCurrentStory,
   };
 
   // Get selected stream for modal, or fall back to legacy behavior

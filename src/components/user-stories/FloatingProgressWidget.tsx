@@ -127,6 +127,82 @@ function SuccessBanner({
   );
 }
 
+// Start Reading Now button - appears when first chapter is ready during processing
+function StartReadingNowButton({
+  lng,
+  storyData,
+  progress,
+  session,
+  onStartReading,
+}: {
+  lng: string;
+  storyData: StoryUploadData | null;
+  progress: {
+    totalChapters?: number;
+    streams?: StreamProgress[];
+    detectedLevel?: string;
+  };
+  session: any;
+  onStartReading: () => void;
+}) {
+  const router = useRouter();
+
+  // Check if we can show the button
+  // Requirements: totalChapters > 1 and at least 1 chapter completed
+  const totalChapters = progress.totalChapters || 0;
+
+  // Find completed chapters from translation streams
+  const translationStreams = (progress.streams || []).filter(
+    (s) => s.type === "translating" && s.status !== "waiting"
+  );
+
+  // Get the user's preferred level or detected level
+  const userQuizLevel = session?.user?.quizLevel;
+  const userLevel = userQuizLevel ? toCEFR(userQuizLevel) : null;
+  const preferredLevel = userLevel || progress.detectedLevel || "B1";
+
+  // Find stream for user's level (or first available)
+  const userStream = translationStreams.find(
+    (s) => s.level === preferredLevel
+  ) || translationStreams[0];
+
+  // Count completed chapters in user's preferred stream
+  const completedChapters = userStream
+    ? (Array.isArray(userStream.chapters) ? userStream.chapters.length : 0)
+    : 0;
+
+  // Don't show if single chapter or no chapters ready
+  if (totalChapters <= 1 || completedChapters < 1 || !storyData?.id) {
+    return null;
+  }
+
+  // Determine the level to use for the streaming route
+  const readingLevel = userStream?.level || preferredLevel;
+
+  const handleStartReading = () => {
+    // Mark that user is reading the current story
+    onStartReading();
+    // Navigate to streaming reader
+    router.push(`/${lng}/my-stories/${storyData.id}/${readingLevel}/stream/1/1`);
+  };
+
+  return (
+    <div className="px-4 pb-4">
+      <button
+        onClick={handleStartReading}
+        className="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+        {lng === "es"
+          ? `Empezar a leer ahora (${completedChapters}/${totalChapters} capítulos)`
+          : `Start reading now (${completedChapters}/${totalChapters} chapters)`}
+      </button>
+    </div>
+  );
+}
+
 export default function FloatingProgressWidget() {
   const { lng } = useParams();
   const router = useRouter();
@@ -144,6 +220,7 @@ export default function FloatingProgressWidget() {
     setShowProgressViewer,
     setSelectedStreamId,
     resetProgress,
+    setIsReadingCurrentStory,
   } = useStoryUpload();
 
   const [isNavigating, setIsNavigating] = useState(false);
@@ -653,6 +730,15 @@ export default function FloatingProgressWidget() {
             setShowProgressViewer={setShowProgressViewer}
           />
         </div>
+
+        {/* Start Reading Now button - shown when first chapter is ready */}
+        <StartReadingNowButton
+          lng={lng as string}
+          storyData={storyData}
+          progress={progress}
+          session={session}
+          onStartReading={() => setIsReadingCurrentStory(true)}
+        />
 
         {/* Review prompt */}
         {progress.stage === "review" && (
