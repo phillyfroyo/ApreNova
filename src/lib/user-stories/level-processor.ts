@@ -364,6 +364,8 @@ export async function translateLevelChapters(
 
   try {
     console.log(`[LevelProcessor] Translating ${chapters.length} chapters for level ${level}`);
+    // Mark level as PROCESSING in database so streaming reader can work
+    await tracker.startProcessing();
     await tracker.startTranslating();
     const processedChapters: ProcessedChapter[] = [];
 
@@ -520,6 +522,8 @@ async function* rewriteChaptersProducer(
   const needsRewrite = level !== detectedLevel;
   const tracker = new LevelProgressTracker(levelId, chapters.length);
 
+  // Mark level as PROCESSING in database so streaming reader can work
+  await tracker.startProcessing();
   await tracker.startRewriting();
 
   for (let i = 0; i < chapters.length; i++) {
@@ -610,6 +614,8 @@ async function translateChaptersConsumer(
   const tracker = new LevelProgressTracker(levelId, totalChapters);
   const processedChapters: (ProcessedChapter | null)[] = new Array(totalChapters).fill(null);
 
+  // Mark level as PROCESSING in database so streaming reader can work
+  await tracker.startProcessing();
   await tracker.startTranslating();
 
   let chaptersProcessed = 0;

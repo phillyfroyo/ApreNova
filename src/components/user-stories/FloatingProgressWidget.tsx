@@ -51,12 +51,18 @@ function SuccessBanner({
     // 1. User has clicked "Start reading" (hasStartedNavigation is true)
     // 2. We have a reference path from when they clicked
     // 3. The pathname has actually changed from that reference
+    console.log("[SuccessBanner] pathname effect:", {
+      hasStartedNavigation: hasStartedNavigation.current,
+      navigationStartPath: navigationStartPathRef.current,
+      currentPathname: pathname,
+    });
     if (
       hasStartedNavigation.current &&
       navigationStartPathRef.current !== null &&
       pathname !== navigationStartPathRef.current
     ) {
       // Navigation completed - hide the banner
+      console.log("[SuccessBanner] Triggering onNavigationComplete due to pathname change");
       onNavigationComplete();
     }
   }, [pathname, onNavigationComplete]);
@@ -127,13 +133,15 @@ function SuccessBanner({
   );
 }
 
-// Start Reading Now button - appears when first chapter is ready during processing
-function StartReadingNowButton({
+// Start Reading Buttons - appear when chapters are ready during processing
+// Shows separate buttons for Original and Rewritten stories
+function StartReadingButtons({
   lng,
   storyData,
   progress,
   session,
   onStartReading,
+  onMinimize,
 }: {
   lng: string;
   storyData: StoryUploadData | null;
@@ -144,61 +152,175 @@ function StartReadingNowButton({
   };
   session: any;
   onStartReading: () => void;
+  onMinimize: () => void;
 }) {
   const router = useRouter();
+  const [loadingLevel, setLoadingLevel] = useState<string | null>(null);
 
-  // Check if we can show the button
-  // Requirements: totalChapters > 1 and at least 1 chapter completed
-  const totalChapters = progress.totalChapters || 0;
-
-  // Find completed chapters from translation streams
+  // Find all translation streams
   const translationStreams = (progress.streams || []).filter(
-    (s) => s.type === "translating" && s.status !== "waiting"
+    (s) => s.type === "translating"
   );
 
-  // Get the user's preferred level or detected level
+  // Get the user's preferred level and detected level
   const userQuizLevel = session?.user?.quizLevel;
   const userLevel = userQuizLevel ? toCEFR(userQuizLevel) : null;
-  const preferredLevel = userLevel || progress.detectedLevel || "B1";
+  const detectedLevel = progress.detectedLevel;
 
-  // Find stream for user's level (or first available)
-  const userStream = translationStreams.find(
-    (s) => s.level === preferredLevel
-  ) || translationStreams[0];
+  // Find the original (detected level) and rewritten (user level) streams
+  const originalStream = translationStreams.find(
+    (s) => s.level === detectedLevel
+  );
+  const rewrittenStream = userLevel && userLevel !== detectedLevel
+    ? translationStreams.find((s) => s.level === userLevel)
+    : null;
 
-  // Count completed chapters in user's preferred stream
-  const completedChapters = userStream
-    ? (Array.isArray(userStream.chapters) ? userStream.chapters.length : 0)
-    : 0;
+  // Check if each stream is ready for reading
+  // Ready = has levelStatus "PROCESSING" AND at least 1 completed chapter
+  const originalReady = originalStream?.levelStatus === "PROCESSING" &&
+    Array.isArray(originalStream.chapters) && originalStream.chapters.length > 0;
+  const rewrittenReady = rewrittenStream?.levelStatus === "PROCESSING" &&
+    Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0;
 
-  // Don't show if single chapter or no chapters ready
-  if (totalChapters <= 1 || completedChapters < 1 || !storyData?.id) {
+  // Get total chapters for display
+  const totalChapters = originalStream?.totalChapters || progress.totalChapters || 0;
+
+  // Get completed chapters for each stream
+  const originalCompletedChapters = originalStream && Array.isArray(originalStream.chapters)
+    ? originalStream.chapters.length : 0;
+  const rewrittenCompletedChapters = rewrittenStream && Array.isArray(rewrittenStream.chapters)
+    ? rewrittenStream.chapters.length : 0;
+
+  // DEBUG: Log stream info - TODO: Remove after debugging
+  console.log('[StartReadingButtons] Debug:', {
+    storyId: storyData?.id,
+    totalChapters,
+    userLevel,
+    detectedLevel,
+    hasRewritten: !!rewrittenStream,
+    originalStream: originalStream ? {
+      level: originalStream.level,
+      levelStatus: originalStream.levelStatus,
+      chaptersCount: originalStream.chapters?.length
+    } : null,
+    rewrittenStream: rewrittenStream ? {
+      level: rewrittenStream.level,
+      levelStatus: rewrittenStream.levelStatus,
+      chaptersCount: rewrittenStream.chapters?.length
+    } : null,
+    originalReady,
+    rewrittenReady,
+  });
+
+  // Don't show if:
+  // - Single chapter story (no point in "read while uploading")
+  // - No story ID
+  // - Neither stream has any completed chapters yet
+  const anyStreamHasChapters = originalCompletedChapters > 0 || rewrittenCompletedChapters > 0;
+  if (totalChapters <= 1 || !storyData?.id || !anyStreamHasChapters) {
     return null;
   }
 
-  // Determine the level to use for the streaming route
-  const readingLevel = userStream?.level || preferredLevel;
-
-  const handleStartReading = () => {
-    // Mark that user is reading the current story
+  const handleStartReading = (level: string) => {
+    if (loadingLevel) return; // Prevent double-clicks
+    setLoadingLevel(level);
     onStartReading();
-    // Navigate to streaming reader
-    router.push(`/${lng}/my-stories/${storyData.id}/${readingLevel}/stream/1/1`);
+    // Show loading state briefly, then minimize and navigate
+    setTimeout(() => {
+      onMinimize();
+      router.push(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
+    }, 300);
   };
 
+  // Button styles - smaller, with color
+  const baseButtonClass = "w-full py-1.5 px-3 rounded-lg text-sm font-medium transition-all flex items-center gap-2";
+  const enabledClass = "bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:opacity-90";
+  const disabledClass = "bg-gray-100 text-gray-400 border border-gray-200";
+  const loadingClass = "bg-gradient-to-r from-cyan-400 to-blue-400 text-white opacity-80";
+
   return (
-    <div className="px-4 pb-4">
-      <button
-        onClick={handleStartReading}
-        className="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-        {lng === "es"
-          ? `Empezar a leer ahora (${completedChapters}/${totalChapters} capítulos)`
-          : `Start reading now (${completedChapters}/${totalChapters} chapters)`}
-      </button>
+    <div className="px-4 pb-3 space-y-1.5">
+      {/* Rewritten story button - only show if user level != detected level */}
+      {rewrittenStream && userLevel && (
+        <button
+          onClick={() => rewrittenReady && handleStartReading(userLevel)}
+          disabled={!rewrittenReady || loadingLevel !== null}
+          className={`${baseButtonClass} ${
+            loadingLevel === userLevel ? loadingClass :
+            rewrittenReady ? enabledClass : disabledClass
+          }`}
+        >
+          {loadingLevel === userLevel ? (
+            <>
+              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>{lng === "es" ? "Cargando..." : "Loading..."}</span>
+            </>
+          ) : rewrittenReady ? (
+            <>
+              <span className="flex-1 text-left">
+                {lng === "es"
+                  ? `Reescrita ${userLevel} - Empezar a leer`
+                  : `Rewritten ${userLevel} - Start reading`}
+              </span>
+              <span className="text-xs opacity-75">({rewrittenCompletedChapters}/{totalChapters})</span>
+            </>
+          ) : (
+            <>
+              <div className="w-2 h-2 rounded-full bg-gray-300 animate-pulse flex-shrink-0" />
+              <span className="flex-1 text-left">
+                {lng === "es"
+                  ? `Reescrita ${userLevel}`
+                  : `Rewritten ${userLevel}`}
+              </span>
+              <span className="text-xs">{lng === "es" ? "Preparando..." : "Preparing..."}</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Original story button */}
+      {detectedLevel && (
+        <button
+          onClick={() => originalReady && handleStartReading(detectedLevel)}
+          disabled={!originalReady || loadingLevel !== null}
+          className={`${baseButtonClass} ${
+            loadingLevel === detectedLevel ? loadingClass :
+            originalReady ? enabledClass : disabledClass
+          }`}
+        >
+          {loadingLevel === detectedLevel ? (
+            <>
+              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>{lng === "es" ? "Cargando..." : "Loading..."}</span>
+            </>
+          ) : originalReady ? (
+            <>
+              <span className="flex-1 text-left">
+                {lng === "es"
+                  ? `Original ${detectedLevel} - Empezar a leer`
+                  : `Original ${detectedLevel} - Start reading`}
+              </span>
+              <span className="text-xs opacity-75">({originalCompletedChapters}/{totalChapters})</span>
+            </>
+          ) : (
+            <>
+              <div className="w-2 h-2 rounded-full bg-gray-300 animate-pulse flex-shrink-0" />
+              <span className="flex-1 text-left">
+                {lng === "es"
+                  ? `Original ${detectedLevel}`
+                  : `Original ${detectedLevel}`}
+              </span>
+              <span className="text-xs">{lng === "es" ? "Preparando..." : "Preparing..."}</span>
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -213,6 +335,7 @@ export default function FloatingProgressWidget() {
     progress,
     storyData,
     toggleMinimized,
+    minimize,
     cancelUpload,
     requestCancel,
     retryConnection,
@@ -426,8 +549,17 @@ export default function FloatingProgressWidget() {
     };
   }, [progress.stepLabel, displayedStepLabel, isAnimating]);
 
+  // Debug logging for render decisions
+  console.log("[FloatingProgressWidget] Render check:", {
+    isUploading,
+    progressStage: progress.stage,
+    willReturnNull: !isUploading && progress.stage === "idle",
+    willShowSuccessBanner: progress.stage === "complete",
+  });
+
   // Don't render if not uploading
   if (!isUploading && progress.stage === "idle") {
+    console.log("[FloatingProgressWidget] Returning null - not uploading and idle");
     return null;
   }
 
@@ -722,6 +854,16 @@ export default function FloatingProgressWidget() {
           </div>
         </div>
 
+        {/* Start Reading buttons - shown when chapters are ready */}
+        <StartReadingButtons
+          lng={lng as string}
+          storyData={storyData}
+          progress={progress}
+          session={session}
+          onStartReading={() => setIsReadingCurrentStory(true)}
+          onMinimize={minimize}
+        />
+
         {/* Stream selector for viewing progress */}
         <div className="px-4 pb-4">
           <StreamSelector
@@ -730,15 +872,6 @@ export default function FloatingProgressWidget() {
             setShowProgressViewer={setShowProgressViewer}
           />
         </div>
-
-        {/* Start Reading Now button - shown when first chapter is ready */}
-        <StartReadingNowButton
-          lng={lng as string}
-          storyData={storyData}
-          progress={progress}
-          session={session}
-          onStartReading={() => setIsReadingCurrentStory(true)}
-        />
 
         {/* Review prompt */}
         {progress.stage === "review" && (

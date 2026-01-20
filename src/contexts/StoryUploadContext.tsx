@@ -50,6 +50,7 @@ export interface StreamProgress {
   level: string; // Target CEFR level (e.g., "C1", "A2")
   fromLevel?: string; // For rewrites, the source level (e.g., "C1")
   status: StreamStatus;
+  levelStatus?: string; // Database level status: "PENDING" | "PROCESSING" | "READY"
   currentChapter: number;
   totalChapters: number;
   chapters: ChapterData[] | RewriteChapterData[];
@@ -139,6 +140,7 @@ interface StoryUploadContextType {
   requestCancel: () => void;
   dismissCancelConfirm: () => void;
   toggleMinimized: () => void;
+  minimize: () => void; // Minimize the progress widget (for auto-minimize on navigation)
   setShowUploadModal: (show: boolean) => void;
   setShowReviewModal: (show: boolean) => void;
   setShowProgressViewer: (show: boolean) => void;
@@ -258,6 +260,13 @@ function buildStreamsFromLevels(
 ): StreamProgress[] {
   const streams: StreamProgress[] = [];
 
+  // DEBUG: Log what levels we receive - TODO: Remove after debugging
+  console.log('[buildStreamsFromLevels] Input:', {
+    levelsCount: levels.length,
+    levels: levels.map(l => ({ level: l.level, status: l.status, hasProgress: !!l.processingProgress })),
+    detectedLevel,
+  });
+
   for (const level of levels) {
     const levelProgress = level.processingProgress as {
       stage?: 'rewriting' | 'translating' | 'complete';
@@ -311,6 +320,7 @@ function buildStreamsFromLevels(
         level: level.level,
         fromLevel: detectedLevel || undefined,
         status: rewriteStatus,
+        levelStatus: level.status,
         currentChapter: rewriteChaptersCount,
         totalChapters: totalChapters,
         chapters: levelProgress.rewriteData || [],
@@ -348,6 +358,7 @@ function buildStreamsFromLevels(
         type: 'translating',
         level: level.level,
         status: translateStatus,
+        levelStatus: level.status,
         currentChapter: translateChaptersCount,
         totalChapters: totalChapters,
         chapters: levelProgress.completedData || [],
@@ -355,6 +366,12 @@ function buildStreamsFromLevels(
       });
     }
   }
+
+  // DEBUG: Log what streams we built - TODO: Remove after debugging
+  console.log('[buildStreamsFromLevels] Output:', {
+    streamsCount: streams.length,
+    streams: streams.map(s => ({ id: s.id, type: s.type, level: s.level, status: s.status, levelStatus: s.levelStatus, chaptersCount: s.chapters?.length })),
+  });
 
   return streams;
 }
@@ -878,6 +895,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   }, [updateProgress, session?.user?.quizLevel]);
 
   const cancelUpload = useCallback(() => {
+    console.log("[StoryUpload] cancelUpload called - stack trace:", new Error().stack);
     if (abortController) {
       abortController.abort();
     }
@@ -905,6 +923,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
   const toggleMinimized = useCallback(() => {
     setIsMinimized(prev => !prev);
+  }, []);
+
+  const minimize = useCallback(() => {
+    setIsMinimized(true);
   }, []);
 
   const updateStoryData = useCallback((updates: Partial<StoryUploadData>) => {
@@ -936,35 +958,23 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       setIsUploading(false);
       setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
-      // If user is already reading the story (via "Start Reading Now" button),
-      // skip the success banner and just reset progress
-      if (isReadingCurrentStory) {
-        console.log("[StoryUpload] User is already reading - skipping success banner");
-        setProgress({
-          stage: "idle",
-          stageProgress: 0,
-          overallProgress: 0,
-          message: "",
-        });
-        setStoryData(null);
-        setIsReadingCurrentStory(false);
-      } else {
-        // Show success banner with "Start reading" button
-        updateProgress("complete", 100, {
-          phase: "finalizing",
-          phaseTitle: PHASE_TITLES.finalizing,
-          stepLabel: "All done!",
-        });
-        // Note: Don't auto-reset the progress state here.
-        // The banner will stay visible until the user clicks "Start reading"
-        // and navigation completes (handled by FloatingProgressWidget)
-        // or until a new upload starts.
-      }
+      // Show success state - the banner will appear whether user is reading or not
+      // This ensures users always know when processing completes
+      console.log("[StoryUpload] Processing complete, showing success state", { isReadingCurrentStory });
+      updateProgress("complete", 100, {
+        phase: "finalizing",
+        phaseTitle: PHASE_TITLES.finalizing,
+        stepLabel: "All done!",
+      });
+      // Note: Don't auto-reset the progress state here.
+      // The banner will stay visible until the user dismisses it
+      // or until a new upload starts.
+      // If user is already reading, the banner shows completion status.
 
     } catch (error: any) {
       updateProgress("error", 0, { error: error.message });
     }
-  }, [storyData, updateProgress, isReadingCurrentStory]);
+  }, [storyData, updateProgress]);
 
   // Retry connection after connection-lost - triggers effect to resume polling
   const retryConnection = useCallback(() => {
@@ -976,7 +986,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
   // Reset progress state (called after navigation completes)
   const resetProgress = useCallback(() => {
-    console.log("[StoryUpload] Resetting progress state after navigation");
+    console.log("[StoryUpload] resetProgress called - stack trace:", new Error().stack);
     setProgress({
       stage: "idle",
       stageProgress: 0,
@@ -1099,6 +1109,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     requestCancel,
     dismissCancelConfirm,
     toggleMinimized,
+    minimize,
     setShowUploadModal,
     setShowReviewModal,
     setShowProgressViewer,

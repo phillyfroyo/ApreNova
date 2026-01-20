@@ -127,15 +127,33 @@ export default function StoryLayoutWithAzureTTS({
 
   const pathParts = pathname ? pathname.split("/") : [];
   const currentLevel = pathParts[4] || initialLevel || "l1";
-  const currentChapter = pathParts[5] || "ch1";
-  const currentPage = pathParts[6] || "page-1";
 
-  const chapterNumber = parseInt(currentChapter.replace("ch", ""));
-  const pageNumber = parseInt(currentPage.replace("page-", ""));
+  // Handle different URL structures:
+  // System stories: /lng/stories/{slug}/{level}/ch1/page-1
+  // User stories:   /lng/my-stories/{id}/{level}/{chapter}/{page}
+  // Streaming:      /lng/my-stories/{id}/{level}/stream/{chapter}/{page}
+  const isStreamingRoute = pathParts[5] === "stream";
+  const rawChapter = isStreamingRoute ? pathParts[6] : pathParts[5];
+  const rawPage = isStreamingRoute ? pathParts[7] : pathParts[6];
+
+  // Parse chapter number (handles both "ch1" format and plain "1" format)
+  const currentChapter = rawChapter || "ch1";
+  const currentPage = rawPage || "page-1";
+
+  const chapterNumber = currentChapter.startsWith("ch")
+    ? parseInt(currentChapter.replace("ch", ""))
+    : parseInt(currentChapter) || 1;
+  const pageNumber = currentPage.startsWith("page-")
+    ? parseInt(currentPage.replace("page-", ""))
+    : parseInt(currentPage) || 1;
 
   // Helper function to generate navigation URLs
+  // Preserves /stream/ segment when on streaming reader route
   const getNavigationUrl = (level: string, chapter: number, page: number) => {
     if (isUserStory && userStoryId) {
+      if (isStreamingRoute) {
+        return `/${typedLang}/my-stories/${userStoryId}/${level}/stream/${chapter}/${page}`;
+      }
       return `/${typedLang}/my-stories/${userStoryId}/${level}/${chapter}/${page}`;
     }
     return `/${typedLang}/stories/${storySlug}/${level}/ch${chapter}/page-${page}`;
@@ -746,28 +764,26 @@ export default function StoryLayoutWithAzureTTS({
           return (
             <div className="flex flex-col items-center space-y-4 mt-8">
               <div className="flex space-x-4">
-                <a
-                  className={buttonClass(!prev, "bg-green-600")}
-                  href={
-                    prev
-                      ? getNavigationUrl(currentLevel, prev.ch, prev.pg)
-                      : undefined
-                  }
-                  onClick={(e) => !prev && e.preventDefault()}
-                >
-                  ⬅
-                </a>
-                <a
-                  className={buttonClass(!next, "bg-green-700")}
-                  href={
-                    next
-                      ? getNavigationUrl(currentLevel, next.ch, next.pg)
-                      : undefined
-                  }
-                  onClick={(e) => !next && e.preventDefault()}
-                >
-                  ➡
-                </a>
+                {prev ? (
+                  <Link
+                    className={buttonClass(false, "bg-green-600")}
+                    href={getNavigationUrl(currentLevel, prev.ch, prev.pg)}
+                  >
+                    ⬅
+                  </Link>
+                ) : (
+                  <span className={buttonClass(true, "bg-green-600")}>⬅</span>
+                )}
+                {next ? (
+                  <Link
+                    className={buttonClass(false, "bg-green-700")}
+                    href={getNavigationUrl(currentLevel, next.ch, next.pg)}
+                  >
+                    ➡
+                  </Link>
+                ) : (
+                  <span className={buttonClass(true, "bg-green-700")}>➡</span>
+                )}
               </div>
 
               {isFinalPage && (

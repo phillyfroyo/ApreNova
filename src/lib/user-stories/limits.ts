@@ -8,7 +8,7 @@ export const USER_STORY_LIMITS = {
   // Character limits per story
   // Free tier: One large upload (2M chars) per month, then 5K limit
   FREE_FIRST_MONTHLY_STORY_LENGTH: 2000000,
-  FREE_MAX_STORY_LENGTH: 5000,
+  FREE_MAX_STORY_LENGTH: 2000000, // Was: 5000 - TODO: REVERT FOR PRODUCTION
   PREMIUM_MAX_STORY_LENGTH: 2000000,
 
   // Daily processing limits

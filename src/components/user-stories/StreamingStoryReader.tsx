@@ -7,8 +7,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
+import StoryLoadingSkeleton from "@/components/StoryLoadingSkeleton";
 import ChapterPendingOverlay from "./ChapterPendingOverlay";
-import ProcessingIndicator from "./ProcessingIndicator";
 import type { Language } from "@/types/i18n";
 import type { CEFRCode } from "@/lib/cefr";
 
@@ -256,33 +256,28 @@ export default function StreamingStoryReader({
     );
   }
 
-  // Loading state
+  // Loading state - uses shared StoryLoadingSkeleton component
   if (loading && !content) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">
-            {lng === "es" ? "Cargando historia..." : "Loading story..."}
-          </p>
-        </div>
-      </div>
+      <StoryLoadingSkeleton
+        message={lng === "es" ? "Cargando historia..." : "Loading story..."}
+      />
     );
   }
 
-  // Error state
+  // Error state - also uses emerald theme for consistency
   if (error && !content) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="text-center max-w-md bg-white/90 rounded-2xl p-8 shadow-lg">
           <div className="text-red-500 text-6xl mb-4">!</div>
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
             {lng === "es" ? "Error al cargar" : "Failed to load"}
           </h2>
-          <p className="text-gray-400 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => fetchContent(initialChapter, initialPage)}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
           >
             {lng === "es" ? "Reintentar" : "Try again"}
           </button>
@@ -302,16 +297,6 @@ export default function StreamingStoryReader({
 
   return (
     <>
-      {/* Processing indicator when story is still being processed */}
-      {streamMap?.isProcessing && (
-        <ProcessingIndicator
-          completedChapters={streamMap.completedChapters}
-          totalChapters={streamMap.totalChapters}
-          currentStage={streamMap.currentStage}
-          lng={lng}
-        />
-      )}
-
       <StoryLayoutWithAzureTTS
         title={displayTitle || "My Story"}
         storySlug={content.storySlug}

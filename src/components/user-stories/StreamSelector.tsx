@@ -130,28 +130,7 @@ export function StreamSelector({
     }
   };
 
-  // Single stream - show simple button
-  if (streamsWithData.length === 1) {
-    const stream = streamsWithData[0];
-    return (
-      <div ref={dropdownRef}>
-        <button
-          onClick={() => handleStreamClick(stream)}
-          className="w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-        >
-          <span className={stream.type === "rewriting" ? "text-amber-500" : "text-blue-500"}>
-            {getStreamTypeIcon(stream.type)}
-          </span>
-          <span className="flex-1 text-left">
-            {lng === "es" ? "Ver progreso" : "View Progress"}
-            <span className="text-xs text-gray-400 ml-2">({getStreamLabel(stream)})</span>
-          </span>
-        </button>
-      </div>
-    );
-  }
-
-  // Multiple streams - show dropdown
+  // Always show dropdown (even for single stream)
   return (
     <div ref={dropdownRef}>
       <div>
