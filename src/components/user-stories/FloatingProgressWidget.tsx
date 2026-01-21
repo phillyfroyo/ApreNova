@@ -142,6 +142,7 @@ function StartReadingButtons({
   session,
   onStartReading,
   onMinimize,
+  isMinimized,
 }: {
   lng: string;
   storyData: StoryUploadData | null;
@@ -153,9 +154,24 @@ function StartReadingButtons({
   session: any;
   onStartReading: () => void;
   onMinimize: () => void;
+  isMinimized: boolean;
 }) {
   const router = useRouter();
   const [loadingLevel, setLoadingLevel] = useState<string | null>(null);
+  const wasMinimizedRef = useRef(isMinimized);
+
+  // Reset loading state only when transitioning from minimized → visible
+  // (i.e., user re-maximized the widget after navigating away)
+  useEffect(() => {
+    const wasMinimized = wasMinimizedRef.current;
+    wasMinimizedRef.current = isMinimized;
+
+    // Only reset if we're going from minimized (true) to visible (false)
+    // This prevents resetting during the initial click flow
+    if (wasMinimized && !isMinimized) {
+      setLoadingLevel(null);
+    }
+  }, [isMinimized]);
 
   // Find all translation streams
   const translationStreams = (progress.streams || []).filter(
@@ -168,12 +184,34 @@ function StartReadingButtons({
   const detectedLevel = progress.detectedLevel;
 
   // Find the original (detected level) and rewritten (user level) streams
-  const originalStream = translationStreams.find(
+  // First try exact match, then fall back to any stream with matching characteristics
+  let originalStream = translationStreams.find(
     (s) => s.level === detectedLevel
   );
-  const rewrittenStream = userLevel && userLevel !== detectedLevel
+  let rewrittenStream = userLevel && userLevel !== detectedLevel
     ? translationStreams.find((s) => s.level === userLevel)
     : null;
+
+  // Fallback: if no exact match, find streams by checking rewrite relationship
+  // A stream is "original" if there's no rewrite stream for its level
+  // A stream is "rewritten" if there IS a rewrite stream for its level
+  if (!originalStream || !rewrittenStream) {
+    const rewriteStreams = (progress.streams || []).filter(
+      (s) => s.type === "rewriting"
+    );
+    const rewrittenLevels = new Set(rewriteStreams.map((s) => s.level));
+
+    for (const stream of translationStreams) {
+      const wasRewritten = rewrittenLevels.has(stream.level);
+      if (!originalStream && !wasRewritten) {
+        // This is an original (non-rewritten) level
+        originalStream = stream;
+      } else if (!rewrittenStream && wasRewritten) {
+        // This is a rewritten level
+        rewrittenStream = stream;
+      }
+    }
+  }
 
   // Check if each stream is ready for reading
   // Ready = has levelStatus "PROCESSING" AND at least 1 completed chapter
@@ -182,8 +220,8 @@ function StartReadingButtons({
   const rewrittenReady = rewrittenStream?.levelStatus === "PROCESSING" &&
     Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0;
 
-  // Get total chapters for display
-  const totalChapters = originalStream?.totalChapters || progress.totalChapters || 0;
+  // Get total chapters for display (prefer originalStream, fall back to rewrittenStream, then progress)
+  const totalChapters = originalStream?.totalChapters || rewrittenStream?.totalChapters || progress.totalChapters || 0;
 
   // Get completed chapters for each stream
   const originalCompletedChapters = originalStream && Array.isArray(originalStream.chapters)
@@ -225,11 +263,11 @@ function StartReadingButtons({
     if (loadingLevel) return; // Prevent double-clicks
     setLoadingLevel(level);
     onStartReading();
-    // Show loading state briefly, then minimize and navigate
-    setTimeout(() => {
-      onMinimize();
-      router.push(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
-    }, 300);
+    onMinimize();
+    // Navigate - loading state persists until:
+    // 1. Page navigates away (component unmounts or re-renders)
+    // 2. User re-maximizes widget (useEffect resets loadingLevel)
+    router.push(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
   };
 
   // Button styles - smaller, with color
@@ -238,19 +276,23 @@ function StartReadingButtons({
   const disabledClass = "bg-gray-100 text-gray-400 border border-gray-200";
   const loadingClass = "bg-gradient-to-r from-cyan-400 to-blue-400 text-white opacity-80";
 
+  // Get actual levels from streams (may differ from expected userLevel/detectedLevel)
+  const rewrittenLevel = rewrittenStream?.level;
+  const originalLevel = originalStream?.level;
+
   return (
     <div className="px-4 pb-3 space-y-1.5">
-      {/* Rewritten story button - only show if user level != detected level */}
-      {rewrittenStream && userLevel && (
+      {/* Rewritten story button - show if we have a rewritten stream */}
+      {rewrittenStream && rewrittenLevel && (
         <button
-          onClick={() => rewrittenReady && handleStartReading(userLevel)}
+          onClick={() => rewrittenReady && handleStartReading(rewrittenLevel)}
           disabled={!rewrittenReady || loadingLevel !== null}
           className={`${baseButtonClass} ${
-            loadingLevel === userLevel ? loadingClass :
+            loadingLevel === rewrittenLevel ? loadingClass :
             rewrittenReady ? enabledClass : disabledClass
           }`}
         >
-          {loadingLevel === userLevel ? (
+          {loadingLevel === rewrittenLevel ? (
             <>
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -262,8 +304,8 @@ function StartReadingButtons({
             <>
               <span className="flex-1 text-left">
                 {lng === "es"
-                  ? `Reescrita ${userLevel} - Empezar a leer`
-                  : `Rewritten ${userLevel} - Start reading`}
+                  ? `Reescrita ${rewrittenLevel} - Empezar a leer`
+                  : `Rewritten ${rewrittenLevel} - Start reading`}
               </span>
               <span className="text-xs opacity-75">({rewrittenCompletedChapters}/{totalChapters})</span>
             </>
@@ -272,8 +314,8 @@ function StartReadingButtons({
               <div className="w-2 h-2 rounded-full bg-gray-300 animate-pulse flex-shrink-0" />
               <span className="flex-1 text-left">
                 {lng === "es"
-                  ? `Reescrita ${userLevel}`
-                  : `Rewritten ${userLevel}`}
+                  ? `Reescrita ${rewrittenLevel}`
+                  : `Rewritten ${rewrittenLevel}`}
               </span>
               <span className="text-xs">{lng === "es" ? "Preparando..." : "Preparing..."}</span>
             </>
@@ -281,17 +323,17 @@ function StartReadingButtons({
         </button>
       )}
 
-      {/* Original story button */}
-      {detectedLevel && (
+      {/* Original story button - show if we have an original stream */}
+      {originalStream && originalLevel && (
         <button
-          onClick={() => originalReady && handleStartReading(detectedLevel)}
+          onClick={() => originalReady && handleStartReading(originalLevel)}
           disabled={!originalReady || loadingLevel !== null}
           className={`${baseButtonClass} ${
-            loadingLevel === detectedLevel ? loadingClass :
+            loadingLevel === originalLevel ? loadingClass :
             originalReady ? enabledClass : disabledClass
           }`}
         >
-          {loadingLevel === detectedLevel ? (
+          {loadingLevel === originalLevel ? (
             <>
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -303,8 +345,8 @@ function StartReadingButtons({
             <>
               <span className="flex-1 text-left">
                 {lng === "es"
-                  ? `Original ${detectedLevel} - Empezar a leer`
-                  : `Original ${detectedLevel} - Start reading`}
+                  ? `Original ${originalLevel} - Empezar a leer`
+                  : `Original ${originalLevel} - Start reading`}
               </span>
               <span className="text-xs opacity-75">({originalCompletedChapters}/{totalChapters})</span>
             </>
@@ -313,8 +355,8 @@ function StartReadingButtons({
               <div className="w-2 h-2 rounded-full bg-gray-300 animate-pulse flex-shrink-0" />
               <span className="flex-1 text-left">
                 {lng === "es"
-                  ? `Original ${detectedLevel}`
-                  : `Original ${detectedLevel}`}
+                  ? `Original ${originalLevel}`
+                  : `Original ${originalLevel}`}
               </span>
               <span className="text-xs">{lng === "es" ? "Preparando..." : "Preparing..."}</span>
             </>
@@ -862,6 +904,7 @@ export default function FloatingProgressWidget() {
           session={session}
           onStartReading={() => setIsReadingCurrentStory(true)}
           onMinimize={minimize}
+          isMinimized={isMinimized}
         />
 
         {/* Stream selector for viewing progress */}

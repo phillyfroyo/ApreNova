@@ -32,8 +32,12 @@ export {
 
 export {
   rewriteToLevel,
+  rewritePoemByStanza,
+  splitIntoStanzas,
+  joinStanzasToText,
   type RewriteResult,
   type RewriteOptions,
+  type StanzaRewriteResult,
 } from "./rewriting";
 
 // ============================================================================

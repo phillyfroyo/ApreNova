@@ -15,6 +15,8 @@ import type { CEFRCode } from "@/lib/cefr";
 interface StoryLine {
   es: string;
   en: string;
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
 }
 
 interface ChapterInfo {
@@ -37,6 +39,8 @@ interface StreamMapResponse {
 
 interface ReadStreamResponse {
   lines: StoryLine[];
+  /** Nested stanzas for poems (takes priority over lines for rendering) */
+  stanzas?: StoryLine[][];
   storySlug: string;
   title: string;
   titleEs?: string;
@@ -53,6 +57,7 @@ interface ReadStreamResponse {
   };
   isProcessing: boolean;
   hasChapters: boolean;
+  storyType?: string | null;
   // Error case
   error?: string;
   chapterPending?: boolean;
@@ -96,6 +101,19 @@ export default function StreamingStoryReader({
         credentials: "include",
       });
 
+      // Handle deleted story (404) - stop polling and redirect
+      if (res.status === 404) {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        // Story was deleted, redirect to my-stories page
+        if (isMountedRef.current) {
+          router.push(`/${lng}/my-stories`);
+        }
+        return null;
+      }
+
       if (!res.ok) {
         throw new Error("Failed to fetch stream map");
       }
@@ -117,7 +135,7 @@ export default function StreamingStoryReader({
       console.error("[StreamingStoryReader] fetchStreamMap error:", err);
       return null;
     }
-  }, [storyId, level]);
+  }, [storyId, level, router, lng]);
 
   // Fetch page content
   const fetchContent = useCallback(async (chapter: number, page: number) => {
@@ -301,11 +319,13 @@ export default function StreamingStoryReader({
         title={displayTitle || "My Story"}
         storySlug={content.storySlug}
         sentences={content.lines}
+        stanzas={content.stanzas}
         initialLevel={level}
         storyMap={buildStoryMap()}
         isUserStory={true}
         userStoryId={storyId}
         availableLevels={availableLevels}
+        storyType={content.storyType}
       />
     </>
   );

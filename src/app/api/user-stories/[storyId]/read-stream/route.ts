@@ -14,7 +14,8 @@ interface RouteParams {
 }
 
 interface PageContent {
-  lines: StoryLine[];
+  lines?: StoryLine[];
+  stanzas?: StoryLine[][];  // Nested stanzas for poems
 }
 
 interface LevelContent {
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         slug: true,
         sourceLanguage: true,
         status: true,
+        storyType: true,
         UserStoryLevel: {
           where: { level },
           select: {
@@ -110,8 +112,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const totalPages = Object.keys(chapterData.pages).length;
       const availableChapters = Object.keys(content.chapters).map(Number).sort((a, b) => a - b);
 
-      return NextResponse.json({
-        lines: pageData.lines,
+      // Build response - include stanzas for poems, lines for prose
+      const response: Record<string, unknown> = {
         storySlug: story.slug,
         title: story.title,
         titleEs: story.titleEs,
@@ -124,7 +126,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         chapterMetadata: chapterData.metadata,
         isProcessing: false,
         hasChapters: content.hasChapters,
-      });
+        storyType: story.storyType,
+      };
+
+      // Return stanzas if available (poem content), otherwise lines
+      if (pageData.stanzas && pageData.stanzas.length > 0) {
+        response.stanzas = pageData.stanzas;
+        // Also flatten to lines for backward compatibility
+        response.lines = pageData.stanzas.flat();
+      } else {
+        response.lines = pageData.lines || [];
+      }
+
+      return NextResponse.json(response);
     }
 
     // Story is still processing - serve from completedData
@@ -165,15 +179,31 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const translatedPage = translatedPages[page - 1] || [];
     const maxLines = Math.max(sourcePage.length, translatedPage.length);
 
+    // Check if this is a poem type for stanza break detection
+    const isPoemType = story.storyType === 'poem' || story.storyType === 'song-lyrics' || story.storyType === 'epic';
+
     const lines: StoryLine[] = [];
     for (let i = 0; i < maxLines; i++) {
-      const source = sourcePage[i]?.trim() || "";
-      const translated = translatedPage[i]?.trim() || "";
+      const sourceRaw = sourcePage[i] ?? "";
+      const translatedRaw = translatedPage[i] ?? "";
+      const source = sourceRaw.trim();
+      const translated = translatedRaw.trim();
+
+      // For poems, detect stanza breaks (empty lines)
+      const isStanzaBreak = isPoemType && !source && !translated;
 
       if (sourceLanguage === "es") {
-        lines.push({ es: source, en: translated });
+        lines.push({
+          es: source,
+          en: translated,
+          ...(isStanzaBreak && { isStanzaBreak: true })
+        });
       } else {
-        lines.push({ en: source, es: translated });
+        lines.push({
+          en: source,
+          es: translated,
+          ...(isStanzaBreak && { isStanzaBreak: true })
+        });
       }
     }
 
@@ -191,6 +221,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       chapterMetadata: undefined, // Metadata only available after full processing
       isProcessing,
       hasChapters: totalChapters > 1,
+      storyType: story.storyType,
     });
 
   } catch (error: any) {

@@ -41,6 +41,7 @@ import { updateStoryStatus, determineFinalStatus, updateStoryProgress } from "./
 // Shared library imports
 import { detectLanguage, detectCEFRLevel } from "@/lib/story-processing";
 import { toCEFR } from "@/lib/cefr";
+import type { StoryType } from "@/types/story";
 
 // Re-export types for consumers
 export type { ProcessingProgress } from "./progress-tracker";
@@ -309,27 +310,36 @@ async function detectAndSaveLevel(
 /**
  * Step 5: Determine which levels need processing
  * Returns: Set of level strings in CEFR format (e.g., "A2", "B1")
+ *
+ * Processing strategy:
+ * - Always process the detected level (preserves original text)
+ * - Also process user's level if different (creates adapted version)
+ * - C2 is valid as detected level (for complex texts) but not as user level
  */
 async function determineLevelsToProcess(
   userId: string,
   detectedLevel: string
 ): Promise<Set<string>> {
-  // Supported levels for user stories (A1-C1)
-  const SUPPORTED_LEVELS = ["A1", "A2", "B1", "B2", "C1"];
+  // Valid detected levels (includes C2 for complex texts)
+  const VALID_DETECTED_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+  // User-selectable levels (excludes C2 - too advanced for target audience)
+  const SUPPORTED_USER_LEVELS = ["A1", "A2", "B1", "B2", "C1"];
 
-  // Map detected level to supported level (C2 -> C1, anything outside range -> B1)
-  let effectiveLevel = detectedLevel;
-  if (!SUPPORTED_LEVELS.includes(detectedLevel)) {
-    effectiveLevel = detectedLevel === "C2" ? "C1" : "B1";
-    console.log(`[Pipeline] Mapping unsupported level ${detectedLevel} to ${effectiveLevel}`);
+  // Always include the detected level (preserves original)
+  // Fall back to B1 only if detection returned something unexpected
+  let effectiveDetectedLevel = detectedLevel;
+  if (!VALID_DETECTED_LEVELS.includes(detectedLevel)) {
+    effectiveDetectedLevel = "B1";
+    console.log(`[Pipeline] Unknown detected level ${detectedLevel}, falling back to B1`);
   }
 
-  const levelsToProcess = new Set<string>([effectiveLevel]);
+  const levelsToProcess = new Set<string>([effectiveDetectedLevel]);
 
+  // Add user's level if different from detected (creates adapted version)
   const userLevel = await getUserLevel(userId);
-  if (userLevel && userLevel !== effectiveLevel) {
-    // Also ensure user level is supported
-    if (SUPPORTED_LEVELS.includes(userLevel)) {
+  if (userLevel && userLevel !== effectiveDetectedLevel) {
+    // User level must be in supported range (no C2)
+    if (SUPPORTED_USER_LEVELS.includes(userLevel)) {
       levelsToProcess.add(userLevel);
     }
   }
@@ -362,6 +372,7 @@ async function processAllLevels(
     rawContent: string;
     userId: string;
     levels: { id: string; level: string }[];
+    storyType?: string | null;
   },
   levelsToProcess: Set<string>,
   sourceLanguage: "en" | "es",
@@ -454,6 +465,7 @@ async function processAllLevels(
           chapters: originalChapters,
           sourceLanguage,
           detectedLevel,
+          storyType: story.storyType as StoryType | null, // For poetry-specific rewrite handling
         });
 
         if (streamingResult.success) {
@@ -563,6 +575,7 @@ export async function processUserStory(storyId: string): Promise<void> {
       rawContent: true,
       userId: true,
       sourceLanguage: true,
+      storyType: true, // Needed for poetry-specific rewrite handling
       UserStoryLevel: {
         select: {
           id: true,
@@ -613,9 +626,48 @@ export async function processUserStory(storyId: string): Promise<void> {
       detectedLevel
     );
 
+    // Step 5.1: Ensure level records exist for all levels to process
+    // (handles case where story was created before C2 support was added)
+    const existingLevels = new Set(storyWithLevels.levels.map(l => l.level));
+    const missingLevels = Array.from(levelsToProcess).filter(l => !existingLevels.has(l));
+
+    if (missingLevels.length > 0) {
+      console.log(`[Pipeline] Creating missing level records: ${missingLevels.join(", ")}`);
+      const { randomUUID } = await import("crypto");
+
+      await prisma.userStoryLevel.createMany({
+        data: missingLevels.map((level) => ({
+          id: randomUUID(),
+          userStoryId: story.id,
+          level,
+          content: {},
+          status: "PENDING",
+          updatedAt: new Date(),
+        })),
+      });
+
+      // Refresh the levels list
+      const newLevels = await prisma.userStoryLevel.findMany({
+        where: { userStoryId: story.id },
+        select: { id: true, level: true },
+      });
+      storyWithLevels.levels = newLevels;
+    }
+
+    // Step 5.5: Detect story type if not already set (needed for poetry-specific rewriting)
+    let storyType = story.storyType;
+    if (!storyType) {
+      storyType = await detectStoryType(story.rawContent, sourceLanguage, ctx);
+      await prisma.userStory.update({
+        where: { id: story.id },
+        data: { storyType },
+      });
+      console.log(`[Pipeline] Detected story type: ${storyType}`);
+    }
+
     // Step 6: Process all levels (NEW PHASED APPROACH)
     const { allSucceeded, anySucceeded } = await processAllLevels(
-      storyWithLevels,
+      { ...storyWithLevels, storyType },
       levelsToProcess,
       sourceLanguage,
       detectedLevel

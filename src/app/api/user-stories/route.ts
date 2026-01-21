@@ -204,8 +204,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create placeholder level records for all CEFR levels (A1-C1)
-    const levels = ALL_CEFR_LEVELS.slice(0, 5); // A1, A2, B1, B2, C1
+    // Create placeholder level records for all CEFR levels (A1-C2)
+    // C2 is included so complex texts can preserve their original form
+    const levels = ALL_CEFR_LEVELS; // A1, A2, B1, B2, C1, C2
     await prisma.userStoryLevel.createMany({
       data: levels.map((level) => ({
         id: randomUUID(),

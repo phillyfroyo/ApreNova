@@ -10,6 +10,8 @@ import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
 import { LevelProgressTracker, updateStoryProgress } from "./progress-tracker";
 import {
   rewriteToLevel,
+  rewritePoemByStanza,
+  joinStanzasToText,
   translateText,
   parseChapters,
   buildContentStructure,
@@ -195,9 +197,36 @@ async function rewriteChapterWithChunking(
   detectedLevel: string,
   targetLevel: string,
   sourceLanguage: "en" | "es",
-  ctx: CostContext
+  ctx: CostContext,
+  isPoetry: boolean = false
 ): Promise<string> {
-  // Check if chapter needs chunking
+  const rewriteOptions = {
+    isPoetry,
+    storyId: ctx.storyId,
+    userId: ctx.userId,
+  };
+
+  // For poetry: use stanza-by-stanza rewriting to guarantee stanza structure preservation
+  if (isPoetry) {
+    console.log(`[RewriteChapter] Using stanza-by-stanza rewriting for poetry`);
+    const stanzaResult = await rewritePoemByStanza(
+      chapterText,
+      detectedLevel,
+      targetLevel,
+      sourceLanguage,
+      rewriteOptions
+    );
+
+    // Log validation results
+    if (!stanzaResult.allStanzasValid) {
+      console.warn(`[RewriteChapter] Per-stanza validation issues:`, stanzaResult.stanzaValidation);
+    }
+
+    // Join stanzas back together with empty lines between them
+    return joinStanzasToText(stanzaResult.rewrittenStanzas);
+  }
+
+  // For prose: check if chapter needs chunking
   if (chapterText.length <= MAX_CHUNK_CHARS) {
     // Small chapter - process directly
     const result = await rewriteToLevel(
@@ -205,12 +234,12 @@ async function rewriteChapterWithChunking(
       detectedLevel,
       targetLevel,
       sourceLanguage,
-      ctx
+      rewriteOptions
     );
     return result.rewrittenText;
   }
 
-  // Large chapter - split into chunks
+  // Large prose chapter - split into chunks
   const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
   console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks`);
 
@@ -228,7 +257,7 @@ async function rewriteChapterWithChunking(
           detectedLevel,
           targetLevel,
           sourceLanguage,
-          ctx
+          rewriteOptions
         );
         rewrittenChunks.push(result.rewrittenText);
         lastError = null;
@@ -268,16 +297,24 @@ async function translateChapterWithChunking(
   chapterText: string,
   sourceLanguage: "en" | "es",
   level: string,
-  ctx: CostContext
+  ctx: CostContext,
+  isPoetry: boolean = false
 ): Promise<string[]> {
+  const translateOptions = {
+    storyId: ctx.storyId,
+    userId: ctx.userId,
+    isPoetry,
+  };
+
   // Check if chapter needs chunking
-  if (chapterText.length <= MAX_CHUNK_CHARS) {
-    // Small chapter - process directly
-    const result = await translateText(chapterText, sourceLanguage, level, ctx);
+  // Note: For poetry, we avoid chunking as it can break stanza/verse structure
+  if (chapterText.length <= MAX_CHUNK_CHARS || isPoetry) {
+    // Small chapter or poetry - process directly (don't chunk poetry)
+    const result = await translateText(chapterText, sourceLanguage, level, translateOptions);
     return result.translatedLines;
   }
 
-  // Large chapter - split into chunks
+  // Large chapter - split into chunks (prose only)
   const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
   console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks for translation`);
 
@@ -290,7 +327,7 @@ async function translateChapterWithChunking(
     // Retry loop for each chunk
     for (let attempt = 1; attempt <= RETRY_CONFIG.MAX_TRANSLATION_RETRIES; attempt++) {
       try {
-        const result = await translateText(chunk, sourceLanguage, level, ctx);
+        const result = await translateText(chunk, sourceLanguage, level, translateOptions);
         allTranslatedLines.push(...result.translatedLines);
         lastError = null;
         break;
@@ -347,6 +384,7 @@ export interface RewriteParams {
   chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   detectedLevel: string;
+  storyType?: string | null; // For poetry-specific rewrite handling
 }
 
 export interface RewriteResult {
@@ -371,10 +409,14 @@ export async function rewriteLevelChapters(
     chapters,
     sourceLanguage,
     detectedLevel,
+    storyType,
   } = params;
 
   const ctx: CostContext = { storyId, userId };
   const needsRewrite = level !== detectedLevel;
+
+  // Determine if this is poetry (requires strict line count preservation)
+  const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
 
   // Initialize progress tracker
   const tracker = new LevelProgressTracker(levelId, chapters.length);
@@ -406,13 +448,14 @@ export async function rewriteLevelChapters(
       // Update level-specific progress
       await tracker.updateRewriteProgress(i + 1);
 
-      // Rewrite this chapter (with chunking for large chapters)
+      // Rewrite this chapter (with chunking for large chapters, strict line count for poetry)
       const rewrittenText = await rewriteChapterWithChunking(
         chapterText,
         detectedLevel,
         level,
         sourceLanguage,
-        ctx
+        ctx,
+        isPoetry
       );
 
       // Preserve metadata from original chapter
@@ -474,6 +517,9 @@ export async function translateLevelChapters(
   const ctx: CostContext = { storyId, userId };
   const tracker = new LevelProgressTracker(levelId, chapters.length);
 
+  // Determine if this is poetry (for artistic translation handling)
+  const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
+
   // Check if we need special preprocessing for this story type
   const needsMetadata = storyType && (
     storyType === 'poem' ||
@@ -517,21 +563,29 @@ export async function translateLevelChapters(
         console.log(`[LevelProcessor] Chapter ${i + 1} speakers: ${speakerNames.join(', ')}`);
       }
 
-      // Translate the processed lines (with chunking for large chapters)
+      // Translate the processed lines (with chunking for large chapters, artistic handling for poetry)
       const textToTranslate = processedLines.join('\n');
       const translatedLines = await translateChapterWithChunking(
         textToTranslate,
         sourceLanguage,
         level,
-        ctx
+        ctx,
+        isPoetry
       );
 
-      // Filter translated lines
-      const filteredTranslatedLines = translatedLines.filter((l) => l.trim());
+      // Filter translated lines - but preserve blank lines for poetry (they mark stanza breaks)
+      const filteredTranslatedLines = isPoetry
+        ? translatedLines
+        : translatedLines.filter((l) => l.trim());
+
+      // For poetry, also preserve blank lines in source
+      const filteredSourceLines = isPoetry
+        ? processedLines
+        : processedLines.filter((l) => l.trim());
 
       // Build processed chapter (basic version for backward compatibility)
       const chapterData: ProcessedChapter = {
-        sourceLines: processedLines,
+        sourceLines: filteredSourceLines,
         translatedLines: filteredTranslatedLines,
         metadata: chapter.metadata,
       };
@@ -550,7 +604,7 @@ export async function translateLevelChapters(
           }
         });
 
-        // Batch translate stage directions if any exist
+        // Batch translate stage directions if any exist (stage directions are prose, not poetry)
         if (stageDirectionsToTranslate.length > 0) {
           const directionsText = stageDirectionsToTranslate.map(d => d.direction).join('\n');
           try {
@@ -558,7 +612,8 @@ export async function translateLevelChapters(
               directionsText,
               sourceLanguage,
               level,
-              ctx
+              ctx,
+              false // Stage directions are prose, not poetry
             );
             // Map back to line indices
             stageDirectionsToTranslate.forEach((d, translateIdx) => {
@@ -572,7 +627,7 @@ export async function translateLevelChapters(
         }
 
         const chapterDataWithMeta: ProcessedChapterDataWithMetadata = {
-          sourceLines: processedLines,
+          sourceLines: filteredSourceLines,
           translatedLines: filteredTranslatedLines,
           metadata: chapter.metadata,
           lineMetadata,
@@ -582,14 +637,14 @@ export async function translateLevelChapters(
       } else {
         // No special metadata - just copy basic data
         processedChaptersWithMetadata.push({
-          sourceLines: processedLines,
+          sourceLines: filteredSourceLines,
           translatedLines: filteredTranslatedLines,
           metadata: chapter.metadata,
         });
       }
 
       // Update progress with completed chapter data
-      await tracker.updateTranslationProgress(i + 1, { sourceLines: processedLines, translatedLines: filteredTranslatedLines });
+      await tracker.updateTranslationProgress(i + 1, { sourceLines: filteredSourceLines, translatedLines: filteredTranslatedLines });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -721,11 +776,15 @@ async function* rewriteChaptersProducer(
     chapters,
     sourceLanguage,
     detectedLevel,
+    storyType,
   } = params;
 
   const ctx: CostContext = { storyId, userId };
   const needsRewrite = level !== detectedLevel;
   const tracker = new LevelProgressTracker(levelId, chapters.length);
+
+  // Determine if this is poetry (requires strict line count preservation)
+  const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
 
   // Mark level as PROCESSING in database so streaming reader can work
   await tracker.startProcessing();
@@ -749,13 +808,14 @@ async function* rewriteChaptersProducer(
 
     if (needsRewrite) {
       try {
-        // Call GPT to rewrite (with chunking for large chapters)
+        // Call GPT to rewrite (with chunking for large chapters, strict line count for poetry)
         rewrittenContent = await rewriteChapterWithChunking(
           chapterText,
           detectedLevel,
           level,
           sourceLanguage,
-          ctx
+          ctx,
+          isPoetry
         );
 
         // Update progress with chapter data
@@ -812,12 +872,15 @@ async function translateChaptersConsumer(
   params: StreamingLevelParams,
   queue: StreamingChapterQueue
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage } = params;
+  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType } = params;
 
   const ctx: CostContext = { storyId, userId };
   const totalChapters = chapters.length;
   const tracker = new LevelProgressTracker(levelId, totalChapters);
   const processedChapters: (ProcessedChapter | null)[] = new Array(totalChapters).fill(null);
+
+  // Determine if this is poetry (for artistic translation handling)
+  const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
 
   // Mark level as PROCESSING in database so streaming reader can work
   await tracker.startProcessing();
@@ -849,16 +912,22 @@ async function translateChaptersConsumer(
     await tracker.updateTranslationProgress(chaptersProcessed + 1);
 
     try {
-      // Call Claude to translate (with chunking for large chapters)
+      // Call Claude to translate (with chunking for large chapters, artistic handling for poetry)
       const translatedLines = await translateChapterWithChunking(
         content,
         sourceLanguage,
         level,
-        ctx
+        ctx,
+        isPoetry
       );
 
-      const sourceLines = content.split("\n").filter((l) => l.trim());
-      const filteredTranslatedLines = translatedLines.filter((l) => l.trim());
+      // Preserve blank lines for poetry (they mark stanza breaks), filter for prose
+      const sourceLines = isPoetry
+        ? content.split("\n")
+        : content.split("\n").filter((l) => l.trim());
+      const filteredTranslatedLines = isPoetry
+        ? translatedLines
+        : translatedLines.filter((l) => l.trim());
 
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {

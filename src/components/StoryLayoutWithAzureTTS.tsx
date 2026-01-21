@@ -30,6 +30,8 @@ type ActiveAudio = {
 
 interface StoryLayoutWithAzureTTSProps {
   sentences: StoryLine[];
+  /** Nested stanzas for poems - takes priority over sentences for rendering */
+  stanzas?: StoryLine[][];
   initialLevel: string;
   storySlug: string;
   title: string;
@@ -51,6 +53,7 @@ interface StoryLayoutWithAzureTTSProps {
 
 export default function StoryLayoutWithAzureTTS({
   sentences,
+  stanzas,
   initialLevel,
   storySlug,
   title,
@@ -838,207 +841,249 @@ export default function StoryLayoutWithAzureTTS({
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
-          {sentences.map((s, i) => {
-            // Check if this is a stanza break (poem)
-            if (s.isStanzaBreak) {
-              return (
-                <div key={i} className="w-full my-4 flex items-center justify-center" data-stanza-break={s.stanzaNumber}>
-                  <div className="flex-1 border-t border-gray-200" />
-                  <span className="px-3 text-xs text-gray-400 whitespace-nowrap">
-                    Stanza {(s.stanzaNumber || 0) + 1}
-                  </span>
-                  <div className="flex-1 border-t border-gray-200" />
-                </div>
-              );
-            }
-
-            // Check if this is a stage-direction-only line (script)
+          {/* Determine if this is poetry for tight line spacing */}
+          {(() => {
+            const isPoemType = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
             const isScriptType = storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue';
-            const stageDirectionText = oppositeLang === 'es'
-              ? (s.stageDirectionEs || s.stageDirection)
-              : (s.stageDirectionEn || s.stageDirection);
 
-            if (s.isStageDirectionOnly && stageDirectionText) {
+            // Helper to render a single line
+            const renderLine = (s: StoryLine, lineIndex: number, isInsideStanza: boolean = false) => {
+              // Check if this is a stanza break (poem) - render as simple visual space
+              if (s.isStanzaBreak) {
+                return (
+                  <div
+                    key={lineIndex}
+                    className="w-full h-6"
+                    data-stanza-break={s.stanzaNumber}
+                    aria-hidden="true"
+                  />
+                );
+              }
+
+              // Check if this is an empty line (blank line in poem/text)
+              const isEmptyLine = !s.es?.trim() && !s.en?.trim();
+              if (isEmptyLine) {
+                return (
+                  <div
+                    key={lineIndex}
+                    className="w-full h-4"
+                    data-empty-line="true"
+                    aria-hidden="true"
+                  />
+                );
+              }
+
+              // Get stage direction text
+              const stageDirectionText = oppositeLang === 'es'
+                ? (s.stageDirectionEs || s.stageDirection)
+                : (s.stageDirectionEn || s.stageDirection);
+
+              // Stage-direction-only line
+              if (s.isStageDirectionOnly && stageDirectionText) {
+                return (
+                  <div key={lineIndex} className="my-4 w-full px-2 text-center" data-sentence-index={lineIndex}>
+                    <span className="italic text-gray-500 text-sm">
+                      ({stageDirectionText})
+                    </span>
+                  </div>
+                );
+              }
+
+              // Regular line - tight spacing for poems/stanzas
+              const lineSpacing = (isPoemType || isInsideStanza) ? "my-0" : "my-6";
+
               return (
-                <div key={i} className="my-4 w-full px-2 text-center" data-sentence-index={i}>
-                  <span className="italic text-gray-500 text-sm">
-                    ({stageDirectionText})
-                  </span>
+                <div key={lineIndex} className={`${lineSpacing} w-full`} data-sentence-index={lineIndex}>
+                  {/* Speaker name for scripts */}
+                  {isScriptType && s.speaker && (
+                    <div className="px-2 mb-1">
+                      <span className="font-bold text-amber-700 text-sm uppercase tracking-wide">
+                        {s.speaker}
+                      </span>
+                      {s.speakerAnnotation && (
+                        <span className="font-normal text-gray-500 text-xs ml-1">
+                          {s.speakerAnnotation}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inline stage direction for scripts */}
+                  {isScriptType && stageDirectionText && !s.isStageDirectionOnly && (
+                    <div className="px-2 mb-1">
+                      <span className="italic text-gray-500 text-sm">
+                        ({stageDirectionText})
+                      </span>
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col w-full ${isScriptType && s.speaker ? 'pl-4' : ''} ${(isPoemType || isInsideStanza) ? '' : 'space-y-2'}`}>
+                    {/* Horizontal emoji + audio bar row - collapses for poems when not active */}
+                    <div className={`flex items-center gap-3 justify-start px-2 transition-all duration-200 ${
+                      showEmojiButtons[lineIndex] ? 'h-auto opacity-100' : ((isPoemType || isInsideStanza) ? 'h-0 overflow-hidden opacity-0' : 'opacity-0 pointer-events-none')
+                    }`}>
+                      {/* Enhanced emoji buttons with loading states and selection indicators */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
+                          className={`hover:scale-110 transition relative rounded p-0.5 ${
+                            playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          } ${
+                            wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          }`}
+                          data-audio-control="speaker"
+                          disabled={playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow}
+                          title={wordSelections[lineIndex] ? 'Play selected words' : 'Play full sentence'}
+                        >
+                          {playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow ? (
+                            <Loader2 className="animate-spin h-5 w-5" />
+                          ) : (
+                            <span className={`text-lg ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>🔊</span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handlePlay(lineIndex, true, s[oppositeLang])}
+                          className={`hover:scale-110 transition relative rounded p-0.5 ${
+                            playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow
+                              ? 'opacity-50 cursor-not-allowed'
+                              : ''
+                          } ${
+                            wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          }`}
+                          data-audio-control="turtle"
+                          disabled={playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow}
+                          title={wordSelections[lineIndex] ? 'Play selected words slowly' : 'Play full sentence slowly'}
+                        >
+                          {playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow ? (
+                            <Loader2 className="animate-spin h-5 w-5" />
+                          ) : (
+                            <Turtle className={`h-5 w-5 ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`} />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setPreloadedMessages(null);
+                            setTutorContext({
+                              lineIndex,
+                              fullLine: s[oppositeLang],
+                              selectedText: wordSelections[lineIndex]
+                                ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                                : undefined,
+                            });
+                            setIsStoryTutorOpen(true);
+                          }}
+                          className={`hover:scale-110 transition relative rounded p-0.5 ${
+                            wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          }`}
+                          title={wordSelections[lineIndex] ? 'Ask tutor about selection' : 'Ask tutor about this line'}
+                        >
+                          <span className={`text-lg ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>💬</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const selectedText = wordSelections[lineIndex]
+                              ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                              : s[oppositeLang];
+                            if (manualTranslateFunctions[lineIndex]) {
+                              manualTranslateFunctions[lineIndex]();
+                            }
+                          }}
+                          className={`hover:scale-110 transition relative rounded p-0.5 ${
+                            wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          }`}
+                          title="Translate"
+                        >
+                          <span className={`text-lg ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>🌎</span>
+                        </button>
+                      </div>
+                      {wordSelections[lineIndex] && (
+                        <button
+                          onClick={() => {
+                            if (clearSelectionFunctions[lineIndex]) {
+                              clearSelectionFunctions[lineIndex]();
+                            }
+                            setWordSelections(prev => ({ ...prev, [lineIndex]: null }));
+                          }}
+                          className="hover:scale-110 transition text-gray-400 hover:text-gray-600 text-sm ml-auto"
+                          title="Clear selection"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Audio playback progress bar - inline with text */}
+                    <div className="w-full h-[6px] relative">
+                      {activeAudio?.index === lineIndex ? (
+                        <>
+                          {renderProgressBar(activeAudio)}
+                          <button
+                            onClick={() => {
+                              stop();
+                              setActiveAudio(null);
+                            }}
+                            className="ml-2 text-xl hover:scale-110 transition z-10"
+                            data-audio-control="close"
+                          >
+                            ✖️
+                          </button>
+                        </>
+                      ) : (
+                        <div className="w-full h-[6px] bg-transparent" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Text content - ensure consistent left alignment */}
+                  <div className="w-full px-2 relative" data-text-content={lineIndex}>
+                    <UnifiedTranslator
+                      sentence={s[oppositeLang]}
+                      enabled={!isAnyDropdownOpen && !menuOpen}
+                      readOnlyMode={translationMode === "free"}
+                      autoTriggerAll={premiumTriggers[lineIndex] || false}
+                      onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
+                      onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
+                      onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
+                      onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
+                      sentenceIndex={lineIndex}
+                      contextSentences={sentences}
+                    />
+                    <p
+                      ref={el => { translationRefs.current[lineIndex] = el; }}
+                      className="translation hidden text-muted-foreground text-sm text-left absolute z-10 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm mt-1"
+                    >
+                      {s[typedLang]}
+                    </p>
+                  </div>
                 </div>
               );
+            };
+
+            // NESTED STANZAS: Render stanzas with visual gaps between them
+            if (stanzas && stanzas.length > 0 && isPoemType) {
+              let globalLineIndex = 0;
+              return stanzas.map((stanza, stanzaIdx) => (
+                <div
+                  key={`stanza-${stanzaIdx}`}
+                  className="w-full mb-6"
+                  data-stanza-number={stanzaIdx + 1}
+                >
+                  {stanza.map((line) => {
+                    const currentIndex = globalLineIndex;
+                    globalLineIndex++;
+                    return renderLine(line, currentIndex, true);
+                  })}
+                </div>
+              ));
             }
 
-            // Regular line rendering
-            return (
-            <div key={i} className="my-6 w-full" data-sentence-index={i}>
-              {/* Speaker name for scripts */}
-              {isScriptType && s.speaker && (
-                <div className="px-2 mb-1">
-                  <span className="font-bold text-amber-700 text-sm uppercase tracking-wide">
-                    {s.speaker}
-                  </span>
-                  {s.speakerAnnotation && (
-                    <span className="font-normal text-gray-500 text-xs ml-1">
-                      {s.speakerAnnotation}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Inline stage direction for scripts */}
-              {isScriptType && stageDirectionText && !s.isStageDirectionOnly && (
-                <div className="px-2 mb-1">
-                  <span className="italic text-gray-500 text-sm">
-                    ({stageDirectionText})
-                  </span>
-                </div>
-              )}
-
-              <div className={`flex flex-col space-y-2 w-full ${isScriptType && s.speaker ? 'pl-4' : ''}`}>
-                {/* Horizontal emoji + audio bar row */}
-                <div className="flex items-center gap-3 justify-start px-2">
-                  {/* Enhanced emoji buttons with loading states and selection indicators */}
-                  <div className={`flex items-center gap-1 transition-opacity duration-200 ${showEmojiButtons[i] ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <button
-                      onClick={() => handlePlay(i, false, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative rounded p-0.5 ${
-                        playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      } ${
-                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
-                      }`}
-                      data-audio-control="speaker"
-                      disabled={playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow}
-                      title={wordSelections[i] ? 'Play selected words' : 'Play full sentence'}
-                    >
-                      {playbackState.isLoading && activeAudio?.index === i && !activeAudio?.isSlow ? (
-                        <Loader2 className="animate-spin h-5 w-5" />
-                      ) : (
-                        <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>🔊</span>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handlePlay(i, true, s[oppositeLang])}
-                      className={`hover:scale-110 transition relative rounded p-0.5 ${
-                        playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow
-                          ? 'opacity-50 cursor-not-allowed'
-                          : ''
-                      } ${
-                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
-                      }`}
-                      data-audio-control="turtle"
-                      disabled={playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow}
-                      title={wordSelections[i] ? 'Play selected words (slow)' : 'Play full sentence (slow)'}
-                    >
-                      {playbackState.isLoading && activeAudio?.index === i && activeAudio?.isSlow ? (
-                        <Loader2 className="animate-spin h-5 w-5" />
-                      ) : (
-                        <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>🐢</span>
-                      )}
-                    </button>
-
-                    {/* Question mark button for AI story tutor */}
-                    <button
-                      onClick={() => {
-                        const fullLine = s[oppositeLang];
-                        const selection = wordSelections[i];
-                        let selectedText: string | undefined;
-
-                        // If there's a word selection, extract the selected text
-                        if (selection) {
-                          const words = fullLine.split(' ');
-                          selectedText = words.slice(selection.start, selection.end + 1).join(' ');
-                        }
-
-                        setTutorContext({
-                          lineIndex: i,
-                          fullLine,
-                          selectedText
-                        });
-                        setIsStoryTutorOpen(true);
-                      }}
-                      className={`hover:scale-110 transition relative rounded p-0.5 ${
-                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
-                      }`}
-                      data-translation-control="question"
-                      title="Ask AI Tutor about this line"
-                    >
-                      <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>❓</span>
-                    </button>
-
-                    <button
-                      onClick={() => manualTranslateFunctions[i]?.()}
-                      className={`hover:scale-110 transition relative rounded p-0.5 ${
-                        wordSelections[i] ? 'bg-blue-100' : 'bg-transparent'
-                      }`}
-                      data-translation-control="diamond"
-                      title={wordSelections[i] ? 'Translate selected words' : 'Translate full sentence'}
-                    >
-                      <span className={`text-lg ${wordSelections[i] ? 'text-blue-600' : ''}`}>💎</span>
-                    </button>
-
-                    {/* Pencil button for static translations */}
-                    <button
-                      onClick={() => {
-                        const el = translationRefs.current[i];
-                        if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                      }}
-                      className="hover:scale-110 transition p-0.5"
-                      data-translation-control="pencil"
-                    >
-                      <span className="text-lg">✍️</span>
-                    </button>
-                  </div>
-
-                  {/* Enhanced audio bar with word timing */}
-                  <div className="relative flex-1 flex items-center h-[30px]">
-                    {activeAudio?.index === i ? (
-                      <>
-                        {renderProgressBar(activeAudio)}
-                        <button 
-                          onClick={() => {
-                            stop();
-                            setActiveAudio(null);
-                          }} 
-                          className="ml-2 text-xl hover:scale-110 transition z-10" 
-                          data-audio-control="close"
-                        >
-                          ✖️
-                        </button>
-                      </>
-                    ) : (
-                      <div className="w-full h-[6px] bg-transparent" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Text content - ensure consistent left alignment */}
-                <div className="w-full px-2 relative" data-text-content={i}>
-                  <UnifiedTranslator
-                    sentence={s[oppositeLang]}
-                    enabled={!isAnyDropdownOpen && !menuOpen}
-                    readOnlyMode={translationMode === "free"}
-                    autoTriggerAll={premiumTriggers[i] || false}
-                    onTranslationStateChange={(hasActive) => handleTranslationStateChange(i, hasActive)}
-                    onSelectionChange={(selection) => handleWordSelectionChange(i, selection)}
-                    onManualTranslate={(translateFn) => handleManualTranslate(i, translateFn)}
-                    onClearSelection={(clearFn) => handleClearSelection(i, clearFn)}
-                    sentenceIndex={i}
-                    contextSentences={sentences}
-                  />
-                  <p
-                    ref={el => { translationRefs.current[i] = el; }}
-                    className="translation hidden text-muted-foreground text-sm text-left absolute z-10 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm mt-1"
-                  >
-                    {s[typedLang]}
-                  </p>
-                </div>
-              </div>
-            </div>
-            );
-          })}
+            // FLAT SENTENCES: Use renderLine helper for prose, scripts, and legacy poem content
+            return sentences.map((s, i) => renderLine(s, i, false));
+          })()}
         </div>
 
         {/* Tab for story page - visible on all screen sizes, fades when chat opens */}

@@ -8,6 +8,7 @@ import { OpenAI } from "openai";
 import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
 import { logOpenAICost } from "@/lib/cost-tracker";
 import { isErrorResponse, stripPreamble } from "./rewriting-utils";
+import { detectStanzas } from "./text-processing";
 
 // Re-export utilities for backward compatibility
 export { isErrorResponse, stripPreamble } from "./rewriting-utils";
@@ -134,6 +135,26 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
         };
       }
 
+      // For poetry: validate line count matches (strict requirement)
+      if (isPoetry) {
+        const originalLines = text.split("\n").length;
+        const rewrittenLines = rewrittenText.split("\n").length;
+
+        if (originalLines !== rewrittenLines) {
+          console.warn(
+            `[Rewrite] Poetry line count mismatch: original=${originalLines}, rewritten=${rewrittenLines} (attempt ${attempt})`
+          );
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, 2000 * attempt));
+            continue;
+          }
+          // On final attempt, still return the rewrite but log the issue
+          console.error(
+            `[Rewrite] Poetry line count mismatch after ${maxRetries} attempts, using result anyway`
+          );
+        }
+      }
+
       // Check if API response was truncated
       if (finishReason === "length") {
         if (attempt < maxRetries) {
@@ -165,5 +186,156 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
     rewrittenLength: text.length,
     wasRewritten: false,
     attempts: maxRetries,
+  };
+}
+
+// ============================================================================
+// STANZA-BASED POEM REWRITING
+// Process poems stanza-by-stanza to guarantee stanza structure preservation
+// ============================================================================
+
+/**
+ * Split poem text into stanzas (nested array of lines).
+ * Uses detectStanzas() to identify stanza boundaries.
+ *
+ * @param text - Raw poem text with line breaks
+ * @returns Array of stanzas, where each stanza is an array of lines
+ */
+export function splitIntoStanzas(text: string): string[][] {
+  const lines = text.split('\n');
+  const stanzaMarked = detectStanzas(lines);
+
+  // Group lines by stanzaNumber
+  const stanzasMap = new Map<number, string[]>();
+
+  for (const marked of stanzaMarked) {
+    // Skip stanza break markers (empty lines between stanzas)
+    if (marked.isStanzaBreak) continue;
+
+    if (!stanzasMap.has(marked.stanzaNumber)) {
+      stanzasMap.set(marked.stanzaNumber, []);
+    }
+    stanzasMap.get(marked.stanzaNumber)!.push(marked.text);
+  }
+
+  // Convert to array, sorted by stanza number
+  const stanzaNumbers = Array.from(stanzasMap.keys()).sort((a, b) => a - b);
+  return stanzaNumbers.map(num => stanzasMap.get(num)!);
+}
+
+/**
+ * Join stanzas back into text with double-newlines between stanzas.
+ *
+ * @param stanzas - Array of stanzas, each stanza is array of lines
+ * @returns Text with single newlines within stanzas, double newlines between
+ */
+export function joinStanzasToText(stanzas: string[][]): string {
+  return stanzas
+    .map(stanza => stanza.join('\n'))
+    .join('\n\n');
+}
+
+/**
+ * Result of stanza-by-stanza rewriting
+ */
+export interface StanzaRewriteResult {
+  rewrittenStanzas: string[][];
+  originalStanzas: string[][];
+  totalOriginalLines: number;
+  totalRewrittenLines: number;
+  allStanzasValid: boolean;
+  stanzaValidation: {
+    stanzaIndex: number;
+    originalLines: number;
+    rewrittenLines: number;
+    valid: boolean;
+  }[];
+  wasRewritten: boolean;
+}
+
+/**
+ * Rewrite a poem stanza-by-stanza.
+ * Each stanza is sent to GPT separately with strict per-stanza line count validation.
+ * This guarantees stanza boundaries are preserved (they're structural, not content).
+ *
+ * @param text - The full poem text
+ * @param sourceLevel - Detected source CEFR level
+ * @param targetLevel - Target CEFR level
+ * @param language - "en" or "es"
+ * @param options - Rewrite options (maxRetries, storyId, userId)
+ */
+export async function rewritePoemByStanza(
+  text: string,
+  sourceLevel: string | number,
+  targetLevel: string | number,
+  language: "en" | "es",
+  options: RewriteOptions = {}
+): Promise<StanzaRewriteResult> {
+  const stanzas = splitIntoStanzas(text);
+
+  console.log(`[RewritePoemByStanza] Splitting poem into ${stanzas.length} stanzas`);
+  stanzas.forEach((s, i) => console.log(`  Stanza ${i + 1}: ${s.length} lines`));
+
+  const rewrittenStanzas: string[][] = [];
+  const stanzaValidation: StanzaRewriteResult['stanzaValidation'] = [];
+  let allStanzasValid = true;
+  let anyWasRewritten = false;
+
+  for (let i = 0; i < stanzas.length; i++) {
+    const stanza = stanzas[i];
+    const stanzaText = stanza.join('\n');
+    const originalLineCount = stanza.length;
+
+    console.log(`[RewritePoemByStanza] Rewriting stanza ${i + 1}/${stanzas.length} (${originalLineCount} lines)`);
+
+    // Rewrite this stanza with poetry mode (strict line validation)
+    const result = await rewriteToLevel(
+      stanzaText,
+      sourceLevel,
+      targetLevel,
+      language,
+      {
+        ...options,
+        isPoetry: true,
+        maxRetries: options.maxRetries || 3, // More retries for stanza-level
+      }
+    );
+
+    if (result.wasRewritten) {
+      anyWasRewritten = true;
+    }
+
+    // Split result back into lines
+    const rewrittenLines = result.rewrittenText.split('\n');
+    const rewrittenLineCount = rewrittenLines.length;
+    const isValid = originalLineCount === rewrittenLineCount;
+
+    if (!isValid) {
+      console.warn(`[RewritePoemByStanza] Stanza ${i + 1} line count mismatch: ${originalLineCount} → ${rewrittenLineCount}`);
+      allStanzasValid = false;
+    }
+
+    rewrittenStanzas.push(rewrittenLines);
+    stanzaValidation.push({
+      stanzaIndex: i,
+      originalLines: originalLineCount,
+      rewrittenLines: rewrittenLineCount,
+      valid: isValid,
+    });
+  }
+
+  const totalOriginalLines = stanzas.reduce((sum, s) => sum + s.length, 0);
+  const totalRewrittenLines = rewrittenStanzas.reduce((sum, s) => sum + s.length, 0);
+
+  console.log(`[RewritePoemByStanza] Complete: ${totalOriginalLines} → ${totalRewrittenLines} lines, all valid: ${allStanzasValid}`);
+
+  return {
+    rewrittenStanzas,
+    originalStanzas: stanzas,
+    totalOriginalLines,
+    totalRewrittenLines,
+    allStanzasValid,
+    stanzaValidation,
+    wasRewritten: anyWasRewritten,
   };
 }

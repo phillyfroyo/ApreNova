@@ -84,6 +84,7 @@ export default async function UserStoryReaderPage({
       isUserStory={true}
       userStoryId={storyId}
       availableLevels={availableLevels}
+      storyType={story.storyType}
     />
   );
 }

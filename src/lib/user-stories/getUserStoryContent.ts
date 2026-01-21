@@ -53,6 +53,14 @@ export async function getUserStoryContent(
         id: userStoryId,
         OR: [{ userId }, { visibility: "PUBLIC" }],
       },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        titleEs: true,
+        titleEn: true,
+        storyType: true,
+      },
     });
 
     if (!story) {
@@ -104,6 +112,7 @@ export async function getUserStoryContent(
         hasChapters: levelContent.hasChapters,
         lines: pageData.lines,
         isUserStory: true,
+        storyType: story.storyType,
       };
     } else {
       throw new Error(`Page not found: chapter ${chapterNum}, page ${pageNum}`);
@@ -122,6 +131,7 @@ export async function getUserStoryContent(
         { en: "Content not available.", es: "Contenido no disponible." },
       ],
       isUserStory: true,
+      storyType: null,
     };
   }
 }

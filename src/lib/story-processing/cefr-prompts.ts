@@ -75,12 +75,35 @@ export function generateRewritePrompt(
 
   // Different structure rules for poetry vs prose
   const structureRules = isPoetry
-    ? `STRUCTURE RULES (POETRY):
-- Preserve the exact meaning, plot, and character names
-- KEEP EVERY LINE BREAK - do not merge lines
-- Each input line → one output line (reworded at the target level)
-- Empty lines must remain empty lines
-- Maintain poetic rhythm where possible`
+    ? `STRUCTURE RULES (POETRY) - CRITICAL:
+LINE COUNT REQUIREMENT (MANDATORY):
+- The rewritten poem MUST have EXACTLY the same number of lines as the original
+- Each original line → exactly ONE rewritten line (simplified vocabulary, same position)
+- Empty lines/stanza breaks must remain in the exact same positions
+- This is NON-NEGOTIABLE - a poem with wrong line count is a failed rewrite
+
+POETIC FORM PRESERVATION:
+- Identify the poem type (Sonnet, Haiku, Limerick, Ballad, Ode, Villanelle, Elegy, Free Verse, Epic, etc.)
+- Preserve the form's structure (14 lines for sonnet, 3 lines for haiku, etc.)
+- Maintain stanza divisions exactly as in the original
+
+POETIC ELEMENTS (preserve as much as possible):
+- Rhyme scheme: Try to maintain end rhymes (ABAB, AABB, etc.) using simpler words
+- Meter/rhythm: Keep similar syllable patterns and stress where possible
+- Tone and mood: The emotional feel must remain (melancholic, joyful, mysterious, etc.)
+- Imagery: Simplify vocabulary but keep the visual/sensory images
+- Repetition/refrains: If the original repeats lines, your rewrite must repeat the same lines
+
+WHAT TO SIMPLIFY:
+- Replace complex vocabulary with simpler synonyms
+- Use more common verb forms (but keep the line count!)
+- Simplify metaphors only if absolutely necessary for the target level
+
+WHAT TO NEVER CHANGE:
+- Number of lines
+- Stanza breaks (empty lines)
+- Character/place names
+- The core meaning of each line`
     : `STRUCTURE RULES (PROSE):
 - Preserve the exact meaning, plot, and character names
 - Preserve PARAGRAPH breaks (empty lines between paragraphs)
@@ -123,7 +146,8 @@ Return ONLY the rewritten text. Preserve the story's voice and flow while adapti
 export function generateTranslationPrompt(
   text: string,
   fromLang: "en" | "es",
-  level: CEFRCode | number | string
+  level: CEFRCode | number | string,
+  isPoetry: boolean = false
 ): string {
   const toLangName = fromLang === "en" ? "Spanish" : "English";
   const fromLangName = fromLang === "en" ? "English" : "Spanish";
@@ -134,12 +158,42 @@ export function generateTranslationPrompt(
       ? `\nFORBIDDEN:\n${cefrLevel.forbidden.join("\n")}`
       : "";
 
-  return `Translate this ${fromLangName} text to ${toLangName} at CEFR ${cefrLevel.code} (${cefrLevel.name}).
+  // Poetry-specific translation guidance
+  const poetryGuidance = isPoetry
+    ? `
+POETRY TRANSLATION (THIS IS A POEM - HANDLE WITH CARE):
+Translating poetry is an art. Your goal is to create a translation that feels like a poem
+in ${toLangName}, not just a literal word-for-word conversion.
+
+PRESERVE THESE POETIC ELEMENTS:
+- Rhyme scheme: If the original rhymes (ABAB, AABB, etc.), try to maintain rhymes in ${toLangName}
+  - It's okay to slightly adjust word choice to achieve rhyme
+  - Prioritize natural-sounding rhymes over forced ones
+- Rhythm and meter: Match the syllable patterns and stress where possible
+  - ${toLangName === "Spanish" ? "Spanish has natural rhythm - use it" : "English stress patterns matter for flow"}
+- Imagery and metaphors: Translate the IMAGE, not just the words
+  - If a metaphor doesn't work in ${toLangName}, find an equivalent that evokes the same feeling
+- Tone and mood: Preserve the emotional atmosphere (melancholic, joyful, mysterious, etc.)
+- Sound devices: Alliteration, assonance, onomatopoeia - recreate these effects where possible
+- Line breaks: These are intentional - maintain the same line structure
+
+POETRY TRANSLATION PRINCIPLES:
+- Faithfulness to MEANING over literal words
+- A beautiful ${toLangName} poem > an awkward literal translation
+- When choosing between accuracy and artistry, lean toward artistry
+- Read your translation aloud - does it SOUND like poetry?
+
+`
+    : "";
+
+  const contentType = isPoetry ? "poem" : "text";
+
+  return `Translate this ${fromLangName} ${contentType} to ${toLangName} at CEFR ${cefrLevel.code} (${cefrLevel.name}).
 
 RULES:
 - Vocabulary: ${cefrLevel.vocabulary}
 - Match the sentence complexity of ${cefrLevel.code}${forbiddenRules}
-
+${poetryGuidance}
 CRITICAL - LINE NUMBER PRESERVATION:
 - Each line starts with [N] where N is a number
 - You MUST keep the same [N] prefix for each translated line

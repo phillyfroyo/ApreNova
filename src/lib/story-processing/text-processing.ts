@@ -40,7 +40,26 @@ export interface StoryLine {
 }
 
 export interface PageContent {
-  lines: StoryLine[];
+  lines?: StoryLine[];           // For prose: flat array of lines
+  stanzas?: StoryLine[][];       // For poems: nested array where each inner array is a stanza
+}
+
+// Type guard to check if content has stanzas (poem) or lines (prose)
+export function hasStanzas(content: PageContent): content is PageContent & { stanzas: StoryLine[][] } {
+  return Array.isArray(content.stanzas) && content.stanzas.length > 0;
+}
+
+// Flatten stanzas to lines for backward compatibility
+export function flattenStanzas(stanzas: StoryLine[][]): StoryLine[] {
+  const lines: StoryLine[] = [];
+  stanzas.forEach((stanza, stanzaIdx) => {
+    stanza.forEach(line => lines.push(line));
+    // Add stanza break marker after each stanza except the last
+    if (stanzaIdx < stanzas.length - 1) {
+      lines.push({ es: '', en: '', isStanzaBreak: true });
+    }
+  });
+  return lines;
 }
 
 // ============================================================================
@@ -169,6 +188,115 @@ export function paginateLines(
 }
 
 // ============================================================================
+// POEM STANZA PAGINATION
+// ============================================================================
+
+/**
+ * Detect if line metadata indicates this is poem content.
+ * Checks for stanzaNumber values in the metadata.
+ */
+function isPoemContent(lineMetadata?: Map<number, LineMetadata>): boolean {
+  if (!lineMetadata || lineMetadata.size === 0) return false;
+  for (const meta of lineMetadata.values()) {
+    if (meta.stanzaNumber !== undefined) return true;
+  }
+  return false;
+}
+
+/**
+ * Group source and translated lines by stanza number.
+ * Returns an array of stanzas, where each stanza is an array of {source, translated, meta}.
+ */
+interface StanzaGroupEntry {
+  source: string;
+  translated: string;
+  meta?: LineMetadata;
+}
+
+function groupLinesByStanza(
+  sourceLines: string[],
+  translatedLines: string[],
+  lineMetadata: Map<number, LineMetadata>
+): StanzaGroupEntry[][] {
+  const stanzasMap = new Map<number, StanzaGroupEntry[]>();
+
+  for (let i = 0; i < sourceLines.length; i++) {
+    const meta = lineMetadata.get(i);
+    const stanzaNum = meta?.stanzaNumber ?? 1;
+
+    // Skip stanza breaks (empty placeholder lines)
+    if (meta?.isStanzaBreak) continue;
+
+    if (!stanzasMap.has(stanzaNum)) {
+      stanzasMap.set(stanzaNum, []);
+    }
+
+    stanzasMap.get(stanzaNum)!.push({
+      source: sourceLines[i] || '',
+      translated: translatedLines[i] || '',
+      meta,
+    });
+  }
+
+  // Return stanzas in order
+  const stanzaNumbers = Array.from(stanzasMap.keys()).sort((a, b) => a - b);
+  return stanzaNumbers.map(num => stanzasMap.get(num)!);
+}
+
+/**
+ * Paginate stanzas for poems, keeping stanzas together when possible.
+ * Returns pages where each page contains complete stanzas.
+ *
+ * @param stanzas - Array of stanzas (each stanza is array of line entries)
+ * @param linesPerPage - Target lines per page (default: 15 for poems)
+ * @returns Array of pages, each page containing stanzas
+ */
+function paginateStanzas(
+  stanzas: StanzaGroupEntry[][],
+  linesPerPage: number = 15
+): StanzaGroupEntry[][][] {
+  const pages: StanzaGroupEntry[][][] = [];
+  let currentPage: StanzaGroupEntry[][] = [];
+  let currentPageLines = 0;
+
+  for (const stanza of stanzas) {
+    const stanzaLineCount = stanza.length;
+
+    // If this stanza alone exceeds page limit, put it on its own page
+    if (stanzaLineCount > linesPerPage) {
+      // Finish current page if it has content
+      if (currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        currentPageLines = 0;
+      }
+      // Put large stanza on its own page
+      pages.push([stanza]);
+      continue;
+    }
+
+    // Check if adding this stanza would exceed page limit
+    if (currentPageLines + stanzaLineCount > linesPerPage && currentPage.length > 0) {
+      // Start a new page
+      pages.push(currentPage);
+      currentPage = [];
+      currentPageLines = 0;
+    }
+
+    // Add stanza to current page
+    currentPage.push(stanza);
+    currentPageLines += stanzaLineCount;
+  }
+
+  // Don't forget the last page
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+
+  return pages.length > 0 ? pages : [[[]]];
+}
+
+// ============================================================================
 // CONTENT STRUCTURE BUILDING
 // ============================================================================
 
@@ -284,6 +412,9 @@ export interface ProcessedChapterDataWithMetadata {
  * Build content structure with line metadata support for poems and scripts.
  * This is an enhanced version that preserves stanza numbers, speaker names, etc.
  *
+ * For poems: Builds nested `stanzas: StoryLine[][]` to guarantee stanza structure.
+ * For scripts/prose: Builds flat `lines: StoryLine[]` with metadata.
+ *
  * @param storySlug - The story's slug identifier
  * @param levelNum - The CEFR level number (1-6)
  * @param hasChapters - Whether the story has multiple chapters
@@ -301,71 +432,114 @@ export function buildContentStructureWithMetadata(
   const chapters: Record<number, ChapterContent> = {};
 
   chaptersData.forEach((chapter, chapterIndex) => {
-    const sourcePages = paginateLines(chapter.sourceLines);
-    const translatedPages = paginateLines(chapter.translatedLines);
     const pages: Record<number, PageContent> = {};
 
-    const maxPages = Math.max(sourcePages.length, translatedPages.length);
+    // Check if this is poem content (has stanza numbers in metadata)
+    const isPoem = isPoemContent(chapter.lineMetadata);
 
-    // Track which source line index we're at for metadata lookup
-    let sourceLineIndex = 0;
+    if (isPoem && chapter.lineMetadata) {
+      // POEM PATH: Build nested stanzas structure
+      console.log(`[BuildContent] Chapter ${chapterIndex + 1}: Building nested stanzas for poem`);
 
-    for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-      const sourcePageLines = sourcePages[pIdx] || [];
-      const translatedPageLines = translatedPages[pIdx] || [];
-      const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+      // Group lines by stanza
+      const groupedStanzas = groupLinesByStanza(
+        chapter.sourceLines,
+        chapter.translatedLines,
+        chapter.lineMetadata
+      );
 
-      const lines: StoryLine[] = [];
-      for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-        const sourceLine = sourcePageLines[lIdx]?.trim() || "";
-        const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+      // Paginate stanzas (keeping stanzas together)
+      const paginatedStanzas = paginateStanzas(groupedStanzas, 15);
 
-        // Get line metadata if available
-        const lineMeta = chapter.lineMetadata?.get(sourceLineIndex);
-        const translatedDirection = chapter.translatedStageDirections?.get(sourceLineIndex);
+      console.log(`[BuildContent] Poem has ${groupedStanzas.length} stanzas across ${paginatedStanzas.length} pages`);
 
-        // Build the StoryLine with metadata
-        const storyLine: StoryLine = sourceLanguage === "es"
-          ? { es: sourceLine, en: translatedLine }
-          : { en: sourceLine, es: translatedLine };
+      // Build pages with nested stanzas
+      for (let pIdx = 0; pIdx < paginatedStanzas.length; pIdx++) {
+        const pageStanzas = paginatedStanzas[pIdx];
+        const stanzas: StoryLine[][] = [];
 
-        // Add poem metadata
-        if (lineMeta?.stanzaNumber !== undefined) {
-          storyLine.stanzaNumber = lineMeta.stanzaNumber;
-        }
-        if (lineMeta?.isStanzaBreak) {
-          storyLine.isStanzaBreak = true;
-        }
+        for (const stanza of pageStanzas) {
+          const stanzaLines: StoryLine[] = [];
 
-        // Add script metadata
-        if (lineMeta?.speaker) {
-          storyLine.speaker = lineMeta.speaker;
-        }
-        if (lineMeta?.speakerAnnotation) {
-          storyLine.speakerAnnotation = lineMeta.speakerAnnotation;
-        }
-        if (lineMeta?.stageDirection) {
-          storyLine.stageDirection = lineMeta.stageDirection;
-          // Store translated stage direction in the appropriate field
-          if (translatedDirection) {
-            if (sourceLanguage === "es") {
-              storyLine.stageDirectionEs = lineMeta.stageDirection;
-              storyLine.stageDirectionEn = translatedDirection;
-            } else {
-              storyLine.stageDirectionEn = lineMeta.stageDirection;
-              storyLine.stageDirectionEs = translatedDirection;
+          for (const entry of stanza) {
+            const storyLine: StoryLine = sourceLanguage === "es"
+              ? { es: entry.source.trim(), en: entry.translated.trim() }
+              : { en: entry.source.trim(), es: entry.translated.trim() };
+
+            // Add stanza number for reference
+            if (entry.meta?.stanzaNumber !== undefined) {
+              storyLine.stanzaNumber = entry.meta.stanzaNumber;
             }
+
+            stanzaLines.push(storyLine);
+          }
+
+          if (stanzaLines.length > 0) {
+            stanzas.push(stanzaLines);
           }
         }
-        if (lineMeta?.isStageDirectionOnly) {
-          storyLine.isStageDirectionOnly = true;
+
+        pages[pIdx + 1] = { stanzas };
+      }
+    } else {
+      // NON-POEM PATH: Build flat lines structure (scripts, prose, etc.)
+      const sourcePages = paginateLines(chapter.sourceLines);
+      const translatedPages = paginateLines(chapter.translatedLines);
+
+      const maxPages = Math.max(sourcePages.length, translatedPages.length);
+
+      // Track which source line index we're at for metadata lookup
+      let sourceLineIndex = 0;
+
+      for (let pIdx = 0; pIdx < maxPages; pIdx++) {
+        const sourcePageLines = sourcePages[pIdx] || [];
+        const translatedPageLines = translatedPages[pIdx] || [];
+        const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+
+        const lines: StoryLine[] = [];
+        for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+          const sourceLine = sourcePageLines[lIdx]?.trim() || "";
+          const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+
+          // Get line metadata if available
+          const lineMeta = chapter.lineMetadata?.get(sourceLineIndex);
+          const translatedDirection = chapter.translatedStageDirections?.get(sourceLineIndex);
+
+          // Build the StoryLine with metadata
+          const storyLine: StoryLine = sourceLanguage === "es"
+            ? { es: sourceLine, en: translatedLine }
+            : { en: sourceLine, es: translatedLine };
+
+          // Add script metadata
+          if (lineMeta?.speaker) {
+            storyLine.speaker = lineMeta.speaker;
+          }
+          if (lineMeta?.speakerAnnotation) {
+            storyLine.speakerAnnotation = lineMeta.speakerAnnotation;
+          }
+          if (lineMeta?.stageDirection) {
+            storyLine.stageDirection = lineMeta.stageDirection;
+            // Store translated stage direction in the appropriate field
+            if (translatedDirection) {
+              if (sourceLanguage === "es") {
+                storyLine.stageDirectionEs = lineMeta.stageDirection;
+                storyLine.stageDirectionEn = translatedDirection;
+              } else {
+                storyLine.stageDirectionEn = lineMeta.stageDirection;
+                storyLine.stageDirectionEs = translatedDirection;
+              }
+            }
+          }
+          if (lineMeta?.isStageDirectionOnly) {
+            storyLine.isStageDirectionOnly = true;
+          }
+
+          lines.push(storyLine);
+          sourceLineIndex++;
         }
 
-        lines.push(storyLine);
-        sourceLineIndex++;
+        pages[pIdx + 1] = { lines };
       }
-
-      pages[pIdx + 1] = { lines };
     }
 
     // Store chapter with pages and metadata (if available)

@@ -53,6 +53,7 @@ export interface TranslationOptions {
   maxRetries?: number;
   storyId?: string;
   userId?: string;
+  isPoetry?: boolean;
 }
 
 /**
@@ -71,7 +72,7 @@ export async function translateText(
   level: string | number,
   options: TranslationOptions = {}
 ): Promise<TranslationResult> {
-  const { maxRetries = 3, storyId, userId } = options;
+  const { maxRetries = 3, storyId, userId, isPoetry = false } = options;
   const levelNum = typeof level === "string" ? levelStringToNumber(level) : level;
   const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
   const sourceLines = text.split("\n");
@@ -79,16 +80,33 @@ export async function translateText(
   const toLanguage = sourceLanguage === "en" ? "Spanish" : "English";
   const fromLanguage = sourceLanguage === "en" ? "English" : "Spanish";
 
+  // Poetry-specific system prompt additions
+  const poetryContext = isPoetry
+    ? `
+
+POETRY TRANSLATION EXPERTISE:
+You are translating POETRY. This requires special care to preserve artistic elements:
+- Rhyme: Try to maintain rhyme schemes using natural ${toLanguage} rhymes
+- Rhythm: Preserve meter and syllable patterns where possible
+- Imagery: Translate the emotional impact, not just literal words
+- Sound: Recreate alliteration, assonance, and other sound devices
+- Feel: The translation should FEEL like poetry in ${toLanguage}
+
+Remember: A beautiful poem in ${toLanguage} is better than an awkward literal translation.`
+    : "";
+
+  const contentType = isPoetry ? "poetry" : "literature";
+
   const systemPrompt = `You are an expert literary translator specializing in ${fromLanguage} to ${toLanguage} translation for language learners.
 
-CONTEXT: You are translating literature for educational language learning purposes. These texts may contain period-appropriate themes, archaic language, gothic/horror elements, or mature literary content typical of classic and contemporary literature. Your role is to faithfully translate the literary work while adapting vocabulary complexity for language learners.
+CONTEXT: You are translating ${contentType} for educational language learning purposes. These texts may contain period-appropriate themes, archaic language, gothic/horror elements, or mature literary content typical of classic and contemporary literature. Your role is to faithfully translate the literary work while adapting vocabulary complexity for language learners.${poetryContext}
 
 CRITICAL RULES:
 1. Each line in the input starts with a number in brackets like [1], [2], [3], etc.
 2. You MUST preserve these exact line numbers in your output.
 3. Each numbered input line produces EXACTLY ONE numbered output line.
 4. NEVER split a single input line into multiple output lines.
-5. NEVER merge multiple input lines into one output line.
+5. NEVER merge multiple input lines into one output lines.
 6. Keep the same [N] prefix for each translated line.
 7. Translate ALL lines - do not skip any.
 
@@ -103,7 +121,7 @@ Output:
 
 Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
 
-  const prompt = generateTranslationPrompt(numberedText, sourceLanguage, levelNum);
+  const prompt = generateTranslationPrompt(numberedText, sourceLanguage, levelNum, isPoetry);
 
   let lastError: Error | null = null;
   let bestResult: string[] | null = null;
