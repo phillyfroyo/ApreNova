@@ -954,3 +954,213 @@ export function quickClean(rawText: string): string {
   const { text: noAsterisks } = removeAsteriskDividers(noFootnotes);
   return normalizeWhitespace(noAsterisks);
 }
+
+// ============================================
+// POEM STANZA DETECTION
+// ============================================
+
+export interface StanzaMarkedLine {
+  text: string;
+  stanzaNumber: number;
+  isStanzaBreak: boolean;
+}
+
+/**
+ * Detect stanza breaks in poetry.
+ * A stanza break is defined as one or more empty lines between text lines.
+ * Returns lines with stanza numbers assigned.
+ *
+ * @param lines - Array of text lines (can include empty lines)
+ * @returns Array of StanzaMarkedLine with stanza numbers and break markers
+ */
+export function detectStanzas(lines: string[]): StanzaMarkedLine[] {
+  const result: StanzaMarkedLine[] = [];
+  let currentStanza = 1;
+  let lastWasContent = false;
+  let pendingBreak = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed === '') {
+      // Empty line - potential stanza break
+      if (lastWasContent) {
+        pendingBreak = true;
+      }
+      // Don't add empty lines to result - we'll add a break marker instead
+    } else {
+      // Content line
+      if (pendingBreak) {
+        // Insert stanza break marker before this line
+        // The break marker indicates the END of the previous stanza
+        result.push({
+          text: '',
+          stanzaNumber: currentStanza,
+          isStanzaBreak: true
+        });
+        currentStanza++;
+        pendingBreak = false;
+      }
+      result.push({
+        text: trimmed,
+        stanzaNumber: currentStanza,
+        isStanzaBreak: false
+      });
+      lastWasContent = true;
+    }
+  }
+
+  return result;
+}
+
+// ============================================
+// SCRIPT LINE PARSING
+// ============================================
+
+export interface ParsedScriptLine {
+  speaker?: string;           // "WALTER", "JESSE" - NOT translated
+  speakerAnnotation?: string; // "(V.O.)", "(O.S.)", "(CONT'D)" - NOT translated
+  stageDirection?: string;    // "sighs", "He exits" - will be read by TTS
+  dialogue: string;           // The actual dialogue text
+  isStageDirectionOnly: boolean; // True if line is ONLY a stage direction
+}
+
+/**
+ * Pattern for speaker names with optional annotation.
+ * Matches:
+ * - WALTER: dialogue
+ * - WALTER WHITE: dialogue
+ * - WALTER (V.O.): dialogue
+ * - WALTER (O.S.): dialogue
+ * - WALTER (CONT'D): dialogue
+ * - COP #2: dialogue
+ *
+ * Speaker names are typically ALL CAPS (with possible numbers, hyphens, apostrophes)
+ * followed by optional parenthetical annotation, then a colon.
+ */
+const SPEAKER_PATTERN = /^([A-Z][A-Z0-9\s\-'#\.]+?)(\s*\([^)]+\))?\s*:\s*(.*)$/;
+
+/**
+ * Pattern for bracketed speaker names: [WALTER]: dialogue
+ */
+const BRACKETED_SPEAKER_PATTERN = /^\[([A-Z][A-Z0-9\s\-'#\.]+?)\]\s*:\s*(.*)$/;
+
+/**
+ * Pattern for stage directions in parentheses or brackets.
+ * Captures content WITHOUT the surrounding brackets.
+ */
+const STAGE_DIRECTION_PATTERN = /\(([^)]+)\)|\[([^\]]+)\]/g;
+
+/**
+ * Pattern for a line that is ONLY a stage direction (standalone).
+ * e.g., "(He walks to the door)" or "[FADE TO BLACK]"
+ */
+const STANDALONE_STAGE_DIRECTION = /^\s*(?:\(([^)]+)\)|\[([^\]]+)\])\s*$/;
+
+/**
+ * Parse a script line to extract speaker name, annotation, stage directions, and dialogue.
+ *
+ * @param line - A single line of script text
+ * @returns ParsedScriptLine with extracted components
+ */
+export function parseScriptLine(line: string): ParsedScriptLine {
+  const trimmed = line.trim();
+
+  // Check if entire line is a standalone stage direction
+  const standaloneMatch = trimmed.match(STANDALONE_STAGE_DIRECTION);
+  if (standaloneMatch) {
+    const direction = standaloneMatch[1] || standaloneMatch[2];
+    return {
+      dialogue: '',
+      stageDirection: direction,
+      isStageDirectionOnly: true
+    };
+  }
+
+  // Try standard speaker pattern: SPEAKER (annotation): dialogue
+  const speakerMatch = trimmed.match(SPEAKER_PATTERN);
+  if (speakerMatch) {
+    const speaker = speakerMatch[1].trim();
+    const annotation = speakerMatch[2]?.trim() || undefined;
+    let dialogue = speakerMatch[3] || '';
+
+    // Extract inline stage directions from dialogue
+    const directions: string[] = [];
+    dialogue = dialogue.replace(STAGE_DIRECTION_PATTERN, (_, p1, p2) => {
+      directions.push(p1 || p2);
+      return '';
+    }).trim();
+
+    return {
+      speaker,
+      speakerAnnotation: annotation,
+      stageDirection: directions.length > 0 ? directions.join('; ') : undefined,
+      dialogue,
+      isStageDirectionOnly: false
+    };
+  }
+
+  // Try bracketed speaker pattern: [SPEAKER]: dialogue
+  const bracketedMatch = trimmed.match(BRACKETED_SPEAKER_PATTERN);
+  if (bracketedMatch) {
+    const speaker = bracketedMatch[1].trim();
+    let dialogue = bracketedMatch[2] || '';
+
+    // Extract inline stage directions from dialogue
+    const directions: string[] = [];
+    dialogue = dialogue.replace(STAGE_DIRECTION_PATTERN, (_, p1, p2) => {
+      directions.push(p1 || p2);
+      return '';
+    }).trim();
+
+    return {
+      speaker,
+      stageDirection: directions.length > 0 ? directions.join('; ') : undefined,
+      dialogue,
+      isStageDirectionOnly: false
+    };
+  }
+
+  // No speaker found - check for inline stage directions in regular text
+  const directions: string[] = [];
+  let dialogue = trimmed.replace(STAGE_DIRECTION_PATTERN, (_, p1, p2) => {
+    directions.push(p1 || p2);
+    return '';
+  }).trim();
+
+  // If we extracted directions but have no remaining dialogue, it's direction-only
+  if (dialogue === '' && directions.length > 0) {
+    return {
+      dialogue: '',
+      stageDirection: directions.join('; '),
+      isStageDirectionOnly: true
+    };
+  }
+
+  return {
+    dialogue: dialogue || trimmed, // Fall back to original if no processing occurred
+    stageDirection: directions.length > 0 ? directions.join('; ') : undefined,
+    isStageDirectionOnly: false
+  };
+}
+
+/**
+ * Extract all unique speaker names from a script text.
+ * Useful for translation prompts to ensure speaker names aren't translated.
+ *
+ * @param text - Full script text
+ * @returns Array of unique speaker names
+ */
+export function extractSpeakerNames(text: string): string[] {
+  const speakers = new Set<string>();
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    const parsed = parseScriptLine(line);
+    if (parsed.speaker) {
+      speakers.add(parsed.speaker);
+    }
+  }
+
+  return Array.from(speakers);
+}

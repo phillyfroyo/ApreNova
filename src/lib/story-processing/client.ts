@@ -89,11 +89,21 @@ export {
   type ChapterMetadata,
   type ParsedChapter,
   type ProcessedChapterData,
+  type ProcessedChapterDataWithMetadata,
+  type LineMetadata,
+  // Poem/script parsing types
+  type StanzaMarkedLine,
+  type ParsedScriptLine,
   // Functions
   isPageMarker,
   paginateLines,
   buildContentStructure,
+  buildContentStructureWithMetadata,
   parseChapters,
+  // Poem/script parsing functions
+  detectStanzas,
+  parseScriptLine,
+  extractSpeakerNames,
   // Re-exports from admin
   preprocessText,
   quickClean,

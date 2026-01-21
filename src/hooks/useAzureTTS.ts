@@ -396,17 +396,22 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     
     // Helper to create requests
     createRequest: useCallback((
-      text: string, 
-      language: 'es-ES' | 'en-US', 
+      text: string,
+      language: 'es-ES' | 'en-US',
       speed: 'normal' | 'slow',
       storySlug?: string,
-      chapterPage?: string
+      chapterPage?: string,
+      // Script support - speaker name and stage direction
+      speakerName?: string,
+      stageDirection?: string
     ): TTSRequest => ({
       text,
       language,
       speed,
       storySlug,
-      chapterPage
+      chapterPage,
+      speakerName,
+      stageDirection
     }), [])
   };
 }

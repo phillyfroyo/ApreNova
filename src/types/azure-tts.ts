@@ -16,6 +16,9 @@ export interface TTSRequest {
   speed: TTSSpeed;
   storySlug?: string;
   chapterPage?: string;
+  // Script support - speaker name and stage direction
+  speakerName?: string;      // Read aloud before dialogue with pause
+  stageDirection?: string;   // Read in softer voice before dialogue
 }
 
 export interface TTSResponse {

@@ -17,6 +17,7 @@ import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from '@/lib/t';
 import { ALL_CEFR_LEVELS, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
+import type { StoryLine } from "@/lib/story-processing/text-processing";
 
 type ActiveAudio = {
   index: number;
@@ -28,7 +29,7 @@ type ActiveAudio = {
 };
 
 interface StoryLayoutWithAzureTTSProps {
-  sentences: Array<{ es: string; en: string }>;
+  sentences: StoryLine[];
   initialLevel: string;
   storySlug: string;
   title: string;
@@ -44,6 +45,8 @@ interface StoryLayoutWithAzureTTSProps {
   isUserStory?: boolean;
   userStoryId?: string;
   availableLevels?: CEFRCode[];
+  /** Story type for special rendering (poems, scripts) */
+  storyType?: string | null;
 }
 
 export default function StoryLayoutWithAzureTTS({
@@ -55,6 +58,7 @@ export default function StoryLayoutWithAzureTTS({
   isUserStory = false,
   userStoryId,
   availableLevels,
+  storyType,
 }: StoryLayoutWithAzureTTSProps) {
   useSessionLogger('reading');
 
@@ -398,24 +402,35 @@ export default function StoryLayoutWithAzureTTS({
     });
 
     try {
+      // Get the full sentence data for speaker/stage direction info
+      const sentenceData = sentences[index];
+
       // Determine language based on which text is being spoken
       // If we're on /en/ route, we speak Spanish text (oppositeLang), so use Spanish voice
       // If we're on /es/ route, we speak English text (oppositeLang), so use English voice
       const isSpanishText = typedLang === "en"; // /en/ route = Spanish text being spoken
       const language = isSpanishText ? "es-ES" : "en-US";
       const speed = isSlow ? "slow" : "normal";
-      
+
+      // Get stage direction in the appropriate language
+      const stageDirectionForTTS = isSpanishText
+        ? (sentenceData.stageDirectionEs || sentenceData.stageDirection)
+        : (sentenceData.stageDirectionEn || sentenceData.stageDirection);
+
       const request = createRequest(
         text,
         language,
         speed,
         storySlug,
-        `${currentChapter}-${currentPage}-line${index + 1}`
+        `${currentChapter}-${currentPage}-line${index + 1}`,
+        // Pass speaker name and stage direction for scripts
+        sentenceData.speaker,
+        stageDirectionForTTS
       );
 
       // Check if there's a word selection for this sentence
       const wordSelection = wordSelections[index];
-      
+
       // Always use playTTSSegment which handles both word selection and slow speed comma logic
       await playTTSSegment(request, wordSelection || undefined);
 
@@ -823,9 +838,63 @@ export default function StoryLayoutWithAzureTTS({
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
 
-          {sentences.map((s, i) => (
+          {sentences.map((s, i) => {
+            // Check if this is a stanza break (poem)
+            if (s.isStanzaBreak) {
+              return (
+                <div key={i} className="w-full my-4 flex items-center justify-center" data-stanza-break={s.stanzaNumber}>
+                  <div className="flex-1 border-t border-gray-200" />
+                  <span className="px-3 text-xs text-gray-400 whitespace-nowrap">
+                    Stanza {(s.stanzaNumber || 0) + 1}
+                  </span>
+                  <div className="flex-1 border-t border-gray-200" />
+                </div>
+              );
+            }
+
+            // Check if this is a stage-direction-only line (script)
+            const isScriptType = storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue';
+            const stageDirectionText = oppositeLang === 'es'
+              ? (s.stageDirectionEs || s.stageDirection)
+              : (s.stageDirectionEn || s.stageDirection);
+
+            if (s.isStageDirectionOnly && stageDirectionText) {
+              return (
+                <div key={i} className="my-4 w-full px-2 text-center" data-sentence-index={i}>
+                  <span className="italic text-gray-500 text-sm">
+                    ({stageDirectionText})
+                  </span>
+                </div>
+              );
+            }
+
+            // Regular line rendering
+            return (
             <div key={i} className="my-6 w-full" data-sentence-index={i}>
-              <div className="flex flex-col space-y-2 w-full">
+              {/* Speaker name for scripts */}
+              {isScriptType && s.speaker && (
+                <div className="px-2 mb-1">
+                  <span className="font-bold text-amber-700 text-sm uppercase tracking-wide">
+                    {s.speaker}
+                  </span>
+                  {s.speakerAnnotation && (
+                    <span className="font-normal text-gray-500 text-xs ml-1">
+                      {s.speakerAnnotation}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Inline stage direction for scripts */}
+              {isScriptType && stageDirectionText && !s.isStageDirectionOnly && (
+                <div className="px-2 mb-1">
+                  <span className="italic text-gray-500 text-sm">
+                    ({stageDirectionText})
+                  </span>
+                </div>
+              )}
+
+              <div className={`flex flex-col space-y-2 w-full ${isScriptType && s.speaker ? 'pl-4' : ''}`}>
                 {/* Horizontal emoji + audio bar row */}
                 <div className="flex items-center gap-3 justify-start px-2">
                   {/* Enhanced emoji buttons with loading states and selection indicators */}
@@ -968,7 +1037,8 @@ export default function StoryLayoutWithAzureTTS({
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Tab for story page - visible on all screen sizes, fades when chat opens */}

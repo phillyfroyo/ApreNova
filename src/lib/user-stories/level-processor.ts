@@ -13,12 +13,19 @@ import {
   translateText,
   parseChapters,
   buildContentStructure,
+  buildContentStructureWithMetadata,
   quickClean,
   cleanText,
   levelStringToNumber,
   ParsedChapter,
   ChapterMetadata,
   ProcessedChapterData,
+  ProcessedChapterDataWithMetadata,
+  LineMetadata,
+  // Poem and script parsing
+  detectStanzas,
+  parseScriptLine,
+  extractSpeakerNames,
   // Chunking for large chapters
   splitIntoSubChunks,
   reassembleChunks,
@@ -30,6 +37,7 @@ import {
   RETRY_CONFIG,
 } from "@/lib/story-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
+import { StoryType } from "@/types/story";
 
 // ============================================================================
 // TYPES
@@ -44,6 +52,8 @@ export interface LevelProcessingParams {
   sourceLanguage: "en" | "es";
   detectedLevel: string;
   storySlug: string;
+  /** Story type for special preprocessing (poems, scripts) */
+  storyType?: StoryType | null;
 }
 
 export interface LevelProcessingResult {
@@ -67,6 +77,103 @@ export interface ProcessedChapter {
 interface CostContext {
   storyId: string;
   userId: string;
+}
+
+// ============================================================================
+// STORY-TYPE-AWARE PREPROCESSING (POEMS & SCRIPTS)
+// ============================================================================
+
+/**
+ * Preprocess chapter text based on story type to extract line metadata.
+ * - For poems: Detects stanza breaks and assigns stanza numbers
+ * - For scripts: Extracts speaker names, annotations, and stage directions
+ *
+ * @param chapterText - The chapter text to preprocess
+ * @param storyType - The detected story type (poem, tv-script, movie-script, etc.)
+ * @returns Object with processed lines and metadata map
+ */
+export function preprocessChapterForStoryType(
+  chapterText: string,
+  storyType: StoryType | null | undefined
+): {
+  /** Lines to translate (speaker names removed for scripts) */
+  processedLines: string[];
+  /** Metadata for each line (indexed by line position) */
+  lineMetadata: Map<number, LineMetadata>;
+  /** Speaker names found (for script translation prompts) */
+  speakerNames: string[];
+} {
+  const lineMetadata = new Map<number, LineMetadata>();
+  const speakerNames: string[] = [];
+
+  // Handle poems
+  if (storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic') {
+    const lines = chapterText.split('\n');
+    const stanzaMarked = detectStanzas(lines);
+
+    const processedLines: string[] = [];
+    stanzaMarked.forEach((markedLine, idx) => {
+      lineMetadata.set(idx, {
+        stanzaNumber: markedLine.stanzaNumber,
+        isStanzaBreak: markedLine.isStanzaBreak,
+      });
+      processedLines.push(markedLine.text);
+    });
+
+    return { processedLines, lineMetadata, speakerNames };
+  }
+
+  // Handle scripts
+  if (storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue') {
+    const lines = chapterText.split('\n');
+    const processedLines: string[] = [];
+    const foundSpeakers = new Set<string>();
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        // Empty line - skip but preserve index offset
+        return;
+      }
+
+      const parsed = parseScriptLine(trimmed);
+
+      // Track speaker name
+      if (parsed.speaker) {
+        foundSpeakers.add(parsed.speaker);
+      }
+
+      // Store metadata
+      if (parsed.speaker || parsed.stageDirection || parsed.isStageDirectionOnly) {
+        lineMetadata.set(processedLines.length, {
+          speaker: parsed.speaker,
+          speakerAnnotation: parsed.speakerAnnotation,
+          stageDirection: parsed.stageDirection,
+          isStageDirectionOnly: parsed.isStageDirectionOnly,
+        });
+      }
+
+      // For translation, we send just the dialogue (speaker already extracted)
+      // Stage directions are also sent separately for translation
+      if (parsed.isStageDirectionOnly && parsed.stageDirection) {
+        // This line is only a stage direction - translate it
+        processedLines.push(parsed.stageDirection);
+      } else {
+        // Regular dialogue line (may have inline stage direction)
+        processedLines.push(parsed.dialogue || trimmed);
+      }
+    });
+
+    return {
+      processedLines,
+      lineMetadata,
+      speakerNames: Array.from(foundSpeakers),
+    };
+  }
+
+  // Default: no special preprocessing needed
+  const lines = chapterText.split('\n').filter(l => l.trim());
+  return { processedLines: lines, lineMetadata, speakerNames };
 }
 
 // ============================================================================
@@ -342,32 +449,48 @@ export interface TranslateParams {
   level: string;
   chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
+  /** Story type for special preprocessing (poems, scripts) */
+  storyType?: StoryType | null;
 }
 
 export interface TranslateResult {
   success: boolean;
   processedChapters: ProcessedChapter[];
+  /** Extended chapter data with line metadata (for poems/scripts) */
+  processedChaptersWithMetadata?: ProcessedChapterDataWithMetadata[];
   error?: string;
 }
 
 /**
  * Translate all chapters to the opposite language
  * Preserves chapter metadata through the translation process.
+ * For poems/scripts, also extracts line-level metadata (stanzas, speakers, stage directions).
  */
 export async function translateLevelChapters(
   params: TranslateParams
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage } = params;
+  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType } = params;
 
   const ctx: CostContext = { storyId, userId };
   const tracker = new LevelProgressTracker(levelId, chapters.length);
 
+  // Check if we need special preprocessing for this story type
+  const needsMetadata = storyType && (
+    storyType === 'poem' ||
+    storyType === 'song-lyrics' ||
+    storyType === 'epic' ||
+    storyType === 'movie-script' ||
+    storyType === 'tv-script' ||
+    storyType === 'dialogue'
+  );
+
   try {
-    console.log(`[LevelProcessor] Translating ${chapters.length} chapters for level ${level}`);
+    console.log(`[LevelProcessor] Translating ${chapters.length} chapters for level ${level}${needsMetadata ? ` (with ${storyType} preprocessing)` : ''}`);
     // Mark level as PROCESSING in database so streaming reader can work
     await tracker.startProcessing();
     await tracker.startTranslating();
     const processedChapters: ProcessedChapter[] = [];
+    const processedChaptersWithMetadata: ProcessedChapterDataWithMetadata[] = [];
 
     for (let i = 0; i < chapters.length; i++) {
       const chapter = chapters[i];
@@ -383,33 +506,99 @@ export async function translateLevelChapters(
       // Update level-specific progress
       await tracker.updateTranslationProgress(i + 1);
 
-      // Translate chapter (with chunking for large chapters)
-      const translatedLines = await translateChapterWithChunking(
+      // Preprocess for story type (poems: stanzas, scripts: speakers)
+      const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
         chapterText,
+        storyType
+      );
+
+      // Log speaker names for scripts (for debugging)
+      if (speakerNames.length > 0) {
+        console.log(`[LevelProcessor] Chapter ${i + 1} speakers: ${speakerNames.join(', ')}`);
+      }
+
+      // Translate the processed lines (with chunking for large chapters)
+      const textToTranslate = processedLines.join('\n');
+      const translatedLines = await translateChapterWithChunking(
+        textToTranslate,
         sourceLanguage,
         level,
         ctx
       );
 
-      // Split source into lines
-      const sourceLines = chapterText.split("\n").filter((l) => l.trim());
+      // Filter translated lines
       const filteredTranslatedLines = translatedLines.filter((l) => l.trim());
 
-      // Preserve metadata from original chapter
+      // Build processed chapter (basic version for backward compatibility)
       const chapterData: ProcessedChapter = {
-        sourceLines,
+        sourceLines: processedLines,
         translatedLines: filteredTranslatedLines,
         metadata: chapter.metadata,
       };
       processedChapters.push(chapterData);
 
+      // Build extended chapter data with line metadata if needed
+      if (needsMetadata && lineMetadata.size > 0) {
+        // For scripts, we also need to translate stage directions
+        const translatedStageDirections = new Map<number, string>();
+
+        // Collect stage directions that need translation
+        const stageDirectionsToTranslate: { idx: number; direction: string }[] = [];
+        lineMetadata.forEach((meta, idx) => {
+          if (meta.stageDirection) {
+            stageDirectionsToTranslate.push({ idx, direction: meta.stageDirection });
+          }
+        });
+
+        // Batch translate stage directions if any exist
+        if (stageDirectionsToTranslate.length > 0) {
+          const directionsText = stageDirectionsToTranslate.map(d => d.direction).join('\n');
+          try {
+            const translatedDirections = await translateChapterWithChunking(
+              directionsText,
+              sourceLanguage,
+              level,
+              ctx
+            );
+            // Map back to line indices
+            stageDirectionsToTranslate.forEach((d, translateIdx) => {
+              if (translatedDirections[translateIdx]) {
+                translatedStageDirections.set(d.idx, translatedDirections[translateIdx]);
+              }
+            });
+          } catch (err) {
+            console.warn(`[LevelProcessor] Stage direction translation failed, using originals`);
+          }
+        }
+
+        const chapterDataWithMeta: ProcessedChapterDataWithMetadata = {
+          sourceLines: processedLines,
+          translatedLines: filteredTranslatedLines,
+          metadata: chapter.metadata,
+          lineMetadata,
+          translatedStageDirections,
+        };
+        processedChaptersWithMetadata.push(chapterDataWithMeta);
+      } else {
+        // No special metadata - just copy basic data
+        processedChaptersWithMetadata.push({
+          sourceLines: processedLines,
+          translatedLines: filteredTranslatedLines,
+          metadata: chapter.metadata,
+        });
+      }
+
       // Update progress with completed chapter data
-      await tracker.updateTranslationProgress(i + 1, { sourceLines, translatedLines: filteredTranslatedLines });
+      await tracker.updateTranslationProgress(i + 1, { sourceLines: processedLines, translatedLines: filteredTranslatedLines });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
 
-    return { success: true, processedChapters };
+    return {
+      success: true,
+      processedChapters,
+      processedChaptersWithMetadata: needsMetadata ? processedChaptersWithMetadata : undefined,
+    };
   } catch (error: any) {
     console.error(`[LevelProcessor] Translation failed for level ${level}:`, error.message);
     await tracker.markFailed();
@@ -429,6 +618,8 @@ export interface BuildAndSaveParams {
   hasChapters: boolean;
   processedChapters: ProcessedChapter[];
   sourceLanguage: "en" | "es";
+  /** Extended chapter data with line metadata (for poems/scripts) */
+  processedChaptersWithMetadata?: ProcessedChapterDataWithMetadata[];
 }
 
 export interface BuildAndSaveResult {
@@ -437,7 +628,8 @@ export interface BuildAndSaveResult {
 }
 
 /**
- * Build content structure and save to database
+ * Build content structure and save to database.
+ * Uses extended metadata builder for poems/scripts when available.
  */
 export async function buildAndSaveLevel(
   params: BuildAndSaveParams
@@ -450,6 +642,7 @@ export async function buildAndSaveLevel(
     hasChapters,
     processedChapters,
     sourceLanguage,
+    processedChaptersWithMetadata,
   } = params;
 
   const tracker = new LevelProgressTracker(levelId, processedChapters.length);
@@ -458,19 +651,29 @@ export async function buildAndSaveLevel(
     // Build content structure
     await updateStoryProgress(storyId, "building_structure", { currentLevel: level });
     const levelNum = levelStringToNumber(level);
-    const content = buildContentStructure(
-      storySlug,
-      levelNum,
-      hasChapters,
-      processedChapters,
-      sourceLanguage
-    );
+
+    // Use metadata-aware builder if we have extended chapter data
+    const content = processedChaptersWithMetadata
+      ? buildContentStructureWithMetadata(
+          storySlug,
+          levelNum,
+          hasChapters,
+          processedChaptersWithMetadata,
+          sourceLanguage
+        )
+      : buildContentStructure(
+          storySlug,
+          levelNum,
+          hasChapters,
+          processedChapters,
+          sourceLanguage
+        );
 
     // Save and mark complete
     await updateStoryProgress(storyId, "saving_content", { currentLevel: level });
     await tracker.markComplete(content);
 
-    console.log(`[LevelProcessor] Level ${level} saved successfully`);
+    console.log(`[LevelProcessor] Level ${level} saved successfully${processedChaptersWithMetadata ? ' (with line metadata)' : ''}`);
     return { success: true };
   } catch (error: any) {
     console.error(`[LevelProcessor] Build/save failed for level ${level}:`, error.message);
@@ -491,6 +694,8 @@ export interface StreamingLevelParams {
   chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   detectedLevel: string;
+  /** Story type for special preprocessing (poems, scripts) */
+  storyType?: StoryType | null;
 }
 
 export interface StreamingLevelResult {
