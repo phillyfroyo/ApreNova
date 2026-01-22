@@ -191,17 +191,21 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     }
 
     if (readOnlyMode) {
+      // Set all states together - React 18 batches into single render
+      setStartIdx(0);
+      setEndIdx(words.length - 1);
       setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
       return;
     }
 
     if (startIdx !== null && endIdx !== null) {
-      // Translate selected words
+      // Words already highlighted, just fetch
       fetchTranslation(startIdx, endIdx);
     } else {
-      // Translate entire sentence
+      // Set indices and start loading together - React 18 batches into single render
       setStartIdx(0);
       setEndIdx(words.length - 1);
+      setLoading(true);
       fetchTranslation(0, words.length - 1);
     }
   };
@@ -418,7 +422,7 @@ useEffect(() => {
           }}
           key={i}
           onClick={() => handleClick(i)}
-          className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md ${
+          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md ${
             enabled && isSelected(i)
               ? "bg-white/10 backdrop-blur-sm border-black/10 shadow-md shadow-black/20"
               : "text-black border-transparent"
