@@ -104,6 +104,8 @@ export {
   detectStanzas,
   parseScriptLine,
   extractSpeakerNames,
+  // Debug helper
+  debugShowLines,
   // Re-exports from admin
   preprocessText,
   quickClean,

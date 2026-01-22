@@ -87,19 +87,11 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      console.log("[API/user-stories] POST: Unauthorized request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { title, content, sourceLanguage, description } = body;
-
-    console.log("[API/user-stories] POST: Creating story", {
-      userId: session.user.id,
-      contentLength: content?.length || 0,
-      title: title || "(auto-generate)",
-      sourceLanguage: sourceLanguage || "(auto-detect)",
-    });
 
     // Validate required fields - only content is required now
     if (!content) {
@@ -120,7 +112,6 @@ export async function POST(req: NextRequest) {
     // Check story count limit
     const canCreate = await canCreateStory(session.user.id, isPremium);
     if (!canCreate.allowed) {
-      console.log("[API/user-stories] POST: Story limit reached", canCreate);
       return NextResponse.json(
         {
           error: canCreate.reason,
@@ -134,7 +125,6 @@ export async function POST(req: NextRequest) {
     // Check daily processing limit
     const canProcess = await canProcessToday(session.user.id, isPremium);
     if (!canProcess.allowed) {
-      console.log("[API/user-stories] POST: Daily limit reached", canProcess);
       return NextResponse.json(
         {
           error: canProcess.reason,
@@ -151,7 +141,6 @@ export async function POST(req: NextRequest) {
     // Validate content length
     const contentValid = validateContentLength(content, isPremium, firstStoryThisMonth);
     if (!contentValid.allowed) {
-      console.log("[API/user-stories] POST: Content too long", contentValid);
       return NextResponse.json(
         {
           error: contentValid.reason,
@@ -229,11 +218,6 @@ export async function POST(req: NextRequest) {
           timestamp: new Date().toISOString(),
         },
       },
-    });
-
-    console.log("[API/user-stories] POST: Story created", {
-      storyId: story.id,
-      slug: story.slug,
     });
 
     // Note: Processing is triggered separately via POST /api/user-stories/process

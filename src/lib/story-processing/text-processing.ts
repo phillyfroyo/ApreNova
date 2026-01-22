@@ -2,6 +2,19 @@
 // Shared text processing utilities for stories
 // Used by both admin and user story pipelines
 
+// Helper to visualize text with blank lines marked (for debugging poem formatting)
+export function debugShowLines(text: string, label: string, maxLines = 20): void {
+  const lines = text.split('\n');
+  console.log(`[PoemFormat] ${label} (${lines.length} lines, showing first ${Math.min(lines.length, maxLines)}):`);
+  lines.slice(0, maxLines).forEach((line, i) => {
+    const display = line.trim() === '' ? '[BLANK]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: ${display}`);
+  });
+  if (lines.length > maxLines) {
+    console.log(`  ... (${lines.length - maxLines} more lines)`);
+  }
+}
+
 // Re-export the admin text preprocessing utilities
 // These are already well-tested and used in production
 export {
@@ -331,9 +344,25 @@ export function buildContentStructure(
   const chapters: Record<number, ChapterContent> = {};
 
   chaptersData.forEach((chapter, chapterIndex) => {
+    // DEBUG: Check if this looks like a poem (has blank lines)
+    const blankLineCount = chapter.sourceLines.filter(l => l.trim() === '').length;
+    if (blankLineCount > 0) {
+      console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1}: ${chapter.sourceLines.length} sourceLines with ${blankLineCount} blank lines`);
+      debugShowLines(chapter.sourceLines.join('\n'), `buildContentStructure INPUT ch${chapterIndex + 1}`);
+    }
+
     const sourcePages = paginateLines(chapter.sourceLines);
     const translatedPages = paginateLines(chapter.translatedLines);
     const pages: Record<number, PageContent> = {};
+
+    // DEBUG: For potential poems, show pagination results
+    if (blankLineCount > 0) {
+      console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1}: paginated into ${sourcePages.length} pages`);
+      sourcePages.forEach((page, pIdx) => {
+        const pageBlankCount = page.filter(l => l.trim() === '').length;
+        console.log(`  Page ${pIdx + 1}: ${page.length} lines (${pageBlankCount} blank)`);
+      });
+    }
 
     const maxPages = Math.max(sourcePages.length, translatedPages.length);
 
@@ -355,6 +384,16 @@ export function buildContentStructure(
         } else {
           lines.push({ en: sourceLine, es: translatedLine });
         }
+      }
+
+      // DEBUG: For potential poems, show lines being saved (check for blank preservation)
+      if (blankLineCount > 0 && pIdx === 0) {
+        const blankLinesInOutput = lines.filter(l => l.es === '' || l.en === '').length;
+        console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1} page 1 OUTPUT: ${lines.length} lines (${blankLinesInOutput} blank in es/en)`);
+        lines.slice(0, 10).forEach((line, i) => {
+          const isBlank = line.es === '' && line.en === '';
+          console.log(`  ${i + 1}: ${isBlank ? '[BLANK LINE]' : `es="${line.es.substring(0, 30)}..." en="${line.en.substring(0, 30)}..."`}`);
+        });
       }
 
       pages[pIdx + 1] = { lines };
@@ -441,12 +480,21 @@ export function buildContentStructureWithMetadata(
       // POEM PATH: Build nested stanzas structure
       console.log(`[BuildContent] Chapter ${chapterIndex + 1}: Building nested stanzas for poem`);
 
+      // DEBUG: Show source lines going into groupByStanza
+      debugShowLines(chapter.sourceLines.join('\n'), `buildContentStructureWithMetadata sourceLines ch${chapterIndex + 1}`);
+
       // Group lines by stanza
       const groupedStanzas = groupLinesByStanza(
         chapter.sourceLines,
         chapter.translatedLines,
         chapter.lineMetadata
       );
+
+      // DEBUG: Show stanza grouping results
+      console.log(`[PoemFormat] After groupLinesByStanza: ${groupedStanzas.length} stanzas`);
+      groupedStanzas.forEach((stanza, i) => {
+        console.log(`  Stanza ${i + 1}: ${stanza.length} lines`);
+      });
 
       // Paginate stanzas (keeping stanzas together)
       const paginatedStanzas = paginateStanzas(groupedStanzas, 15);
@@ -576,17 +624,16 @@ export function parseChapters(text: string): {
   hasChapters: boolean;
   chapters: ParsedChapter[];
 } {
+  // DEBUG: Show raw input text
+  debugShowLines(text, 'parseChapters INPUT (raw text)');
+
   // Use the full admin preprocessing pipeline for robust text cleaning and chapter detection
   const preprocessed = preprocessText(text);
 
-  // DEBUG: Log chapter detection results
-  console.log(`[parseChapters] preprocessText found ${preprocessed.chapters.length} chapters:`);
-  preprocessed.chapters.forEach((ch, idx) => {
-    console.log(`  [${idx}] number=${ch.number}, title="${ch.title}", rawText length=${ch.rawText.length}`);
-  });
-
   // If preprocessing found chapters, use those with full metadata
   if (preprocessed.chapters.length > 1) {
+    // DEBUG: Show first chapter's raw text
+    debugShowLines(preprocessed.chapters[0].rawText, `parseChapters OUTPUT chapter 1 of ${preprocessed.chapters.length}`);
     return {
       hasChapters: true,
       chapters: preprocessed.chapters.map((ch) => ({
@@ -620,6 +667,8 @@ export function parseChapters(text: string): {
   }
 
   // No chapters detected - return as single chapter
+  // DEBUG: Show single chapter text
+  debugShowLines(cleanedText, 'parseChapters OUTPUT (single chapter)');
   return {
     hasChapters: false,
     chapters: [{

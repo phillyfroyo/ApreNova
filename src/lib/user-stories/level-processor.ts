@@ -28,6 +28,8 @@ import {
   detectStanzas,
   parseScriptLine,
   extractSpeakerNames,
+  // Debug helper
+  debugShowLines,
   // Chunking for large chapters
   splitIntoSubChunks,
   reassembleChunks,
@@ -220,10 +222,23 @@ async function rewriteChapterWithChunking(
     // Log validation results
     if (!stanzaResult.allStanzasValid) {
       console.warn(`[RewriteChapter] Per-stanza validation issues:`, stanzaResult.stanzaValidation);
+      // DEBUG: Show what GPT returned for failed stanzas
+      stanzaResult.stanzaValidation
+        .filter(v => !v.valid)
+        .forEach(v => {
+          const stanzaContent = stanzaResult.rewrittenStanzas[v.stanzaIndex];
+          console.warn(`[PoemFormat] Failed stanza ${v.stanzaIndex + 1} content (${stanzaContent?.length} lines):`);
+          stanzaContent?.forEach((line, i) => console.warn(`  ${i + 1}: ${line.substring(0, 60)}`));
+        });
     }
 
     // Join stanzas back together with empty lines between them
-    return joinStanzasToText(stanzaResult.rewrittenStanzas);
+    const joinedText = joinStanzasToText(stanzaResult.rewrittenStanzas);
+
+    // DEBUG: Show reassembled poem after joining stanzas
+    debugShowLines(joinedText, 'rewriteChapterWithChunking AFTER joinStanzasToText');
+
+    return joinedText;
   }
 
   // For prose: check if chapter needs chunking
@@ -241,7 +256,6 @@ async function rewriteChapterWithChunking(
 
   // Large prose chapter - split into chunks
   const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
-  console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks`);
 
   const rewrittenChunks: string[] = [];
 
@@ -300,6 +314,11 @@ async function translateChapterWithChunking(
   ctx: CostContext,
   isPoetry: boolean = false
 ): Promise<string[]> {
+  // DEBUG: Show text going into translation
+  if (isPoetry) {
+    debugShowLines(chapterText, 'translateChapterWithChunking INPUT (poetry)');
+  }
+
   const translateOptions = {
     storyId: ctx.storyId,
     userId: ctx.userId,
@@ -311,12 +330,17 @@ async function translateChapterWithChunking(
   if (chapterText.length <= MAX_CHUNK_CHARS || isPoetry) {
     // Small chapter or poetry - process directly (don't chunk poetry)
     const result = await translateText(chapterText, sourceLanguage, level, translateOptions);
+
+    // DEBUG: Show translation output for poetry
+    if (isPoetry) {
+      debugShowLines(result.translatedLines.join('\n'), 'translateChapterWithChunking OUTPUT (poetry)');
+    }
+
     return result.translatedLines;
   }
 
   // Large chapter - split into chunks (prose only)
   const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
-  console.log(`[Chunking] Large chapter (${chapterText.length} chars) split into ${chunks.length} chunks for translation`);
 
   const allTranslatedLines: string[] = [];
 
@@ -426,11 +450,9 @@ export async function rewriteLevelChapters(
 
     if (!needsRewrite) {
       // No rewrite needed, return original chapters with metadata preserved
-      console.log(`[LevelProcessor] Level ${level} = detected level, skipping rewrite`);
       return { success: true, chapters };
     }
 
-    console.log(`[LevelProcessor] Rewriting ${chapters.length} chapters: ${detectedLevel} → ${level}`);
     await tracker.startRewriting();
     const rewrittenChapters: ParsedChapter[] = [];
 
@@ -531,7 +553,6 @@ export async function translateLevelChapters(
   );
 
   try {
-    console.log(`[LevelProcessor] Translating ${chapters.length} chapters for level ${level}${needsMetadata ? ` (with ${storyType} preprocessing)` : ''}`);
     // Mark level as PROCESSING in database so streaming reader can work
     await tracker.startProcessing();
     await tracker.startTranslating();
@@ -558,9 +579,20 @@ export async function translateLevelChapters(
         storyType
       );
 
-      // Log speaker names for scripts (for debugging)
-      if (speakerNames.length > 0) {
-        console.log(`[LevelProcessor] Chapter ${i + 1} speakers: ${speakerNames.join(', ')}`);
+      // DEBUG: For poems, show what preprocessing produced
+      if (isPoetry) {
+        debugShowLines(processedLines.join('\n'), `translateLevelChapters preprocessed ch${i + 1}`);
+        console.log(`[PoemFormat] lineMetadata entries: ${lineMetadata.size}`);
+        // Show stanza distribution
+        const stanzaCounts = new Map<number, number>();
+        lineMetadata.forEach((meta) => {
+          if (meta.stanzaNumber !== undefined) {
+            stanzaCounts.set(meta.stanzaNumber, (stanzaCounts.get(meta.stanzaNumber) || 0) + 1);
+          }
+        });
+        stanzaCounts.forEach((count, stanzaNum) => {
+          console.log(`  Stanza ${stanzaNum}: ${count} lines`);
+        });
       }
 
       // Translate the processed lines (with chunking for large chapters, artistic handling for poetry)
@@ -582,6 +614,13 @@ export async function translateLevelChapters(
       const filteredSourceLines = isPoetry
         ? processedLines
         : processedLines.filter((l) => l.trim());
+
+      // DEBUG: For poems, show what's being passed to build
+      if (isPoetry) {
+        console.log(`[PoemFormat] After filtering ch${i + 1}:`);
+        console.log(`  sourceLines: ${filteredSourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
+        debugShowLines(filteredSourceLines.join('\n'), `translateLevelChapters FILTERED sourceLines ch${i + 1}`);
+      }
 
       // Build processed chapter (basic version for backward compatibility)
       const chapterData: ProcessedChapter = {
@@ -728,7 +767,6 @@ export async function buildAndSaveLevel(
     await updateStoryProgress(storyId, "saving_content", { currentLevel: level });
     await tracker.markComplete(content);
 
-    console.log(`[LevelProcessor] Level ${level} saved successfully${processedChaptersWithMetadata ? ' (with line metadata)' : ''}`);
     return { success: true };
   } catch (error: any) {
     console.error(`[LevelProcessor] Build/save failed for level ${level}:`, error.message);
@@ -848,7 +886,6 @@ async function* rewriteChaptersProducer(
 
     // Apply backpressure if queue is getting too large
     if (queue.shouldApplyBackpressure(STREAMING_LIMITS.QUEUE_BACKPRESSURE_THRESHOLD)) {
-      console.log(`[StreamingProducer] Backpressure: queue at ${queue.getQueueSize()}, waiting...`);
       await delay(STREAMING_LIMITS.QUEUE_FULL_WAIT_MS);
     }
 
@@ -860,7 +897,6 @@ async function* rewriteChaptersProducer(
 
   // Signal producer is done
   queue.markProducerComplete();
-  console.log(`[StreamingProducer] All ${chapters.length} chapters enqueued`);
 }
 
 /**
@@ -929,6 +965,13 @@ async function translateChaptersConsumer(
         ? translatedLines
         : translatedLines.filter((l) => l.trim());
 
+      // DEBUG: For poems, show final lines going to build
+      if (isPoetry) {
+        console.log(`[PoemFormat] translateChaptersConsumer ch${chapterIndex + 1} FINAL:`);
+        console.log(`  sourceLines: ${sourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
+        debugShowLines(sourceLines.join('\n'), `Consumer sourceLines ch${chapterIndex + 1}`);
+      }
+
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {
         sourceLines,
@@ -960,8 +1003,6 @@ async function translateChaptersConsumer(
   // Filter out any nulls (failed chapters)
   const validChapters = processedChapters.filter((ch): ch is ProcessedChapter => ch !== null);
 
-  console.log(`[StreamingConsumer] Translated ${validChapters.length}/${totalChapters} chapters`);
-
   return {
     success: validChapters.length > 0,
     processedChapters: validChapters,
@@ -980,19 +1021,8 @@ export async function processLevelStreaming(
 ): Promise<StreamingLevelResult> {
   const { level, chapters, detectedLevel } = params;
 
-  console.log(`[StreamingPipeline] Starting streaming pipeline for level ${level}`);
-  console.log(`[StreamingPipeline] ${chapters.length} chapters, needsRewrite: ${level !== detectedLevel}`);
-
   // Create the queue
   const queue = new StreamingChapterQueue(chapters.length);
-
-  // Set up progress logging
-  queue.setProgressCallback((progress) => {
-    console.log(
-      `[StreamingPipeline] Progress: rewrite ${progress.rewriteCompleted}/${progress.totalChapters}, ` +
-      `translate ${progress.translateCompleted}/${progress.totalChapters}`
-    );
-  });
 
   // Start producer (GPT rewriting) - runs independently
   const producerPromise = (async () => {
@@ -1019,8 +1049,6 @@ export async function processLevelStreaming(
       errors.map(e => `ch${e.chapterIndex + 1}(${e.phase})`).join(", ")
     );
   }
-
-  console.log(`[StreamingPipeline] Complete: ${translateResult.processedChapters.length}/${chapters.length} chapters`);
 
   return {
     success: translateResult.success,

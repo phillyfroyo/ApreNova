@@ -8,7 +8,7 @@ import { OpenAI } from "openai";
 import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
 import { logOpenAICost } from "@/lib/cost-tracker";
 import { isErrorResponse, stripPreamble } from "./rewriting-utils";
-import { detectStanzas } from "./text-processing";
+import { detectStanzas, debugShowLines } from "./text-processing";
 
 // Re-export utilities for backward compatibility
 export { isErrorResponse, stripPreamble } from "./rewriting-utils";
@@ -271,6 +271,9 @@ export async function rewritePoemByStanza(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<StanzaRewriteResult> {
+  // DEBUG: Show text coming into rewrite
+  debugShowLines(text, 'rewritePoemByStanza INPUT');
+
   const stanzas = splitIntoStanzas(text);
 
   console.log(`[RewritePoemByStanza] Splitting poem into ${stanzas.length} stanzas`);

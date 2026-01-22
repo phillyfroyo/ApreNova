@@ -238,10 +238,6 @@ async function generateAndSaveAllMetadata(
     story.title === "Untitled Story" || story.title === "Historia sin título";
   const needsDescription = !story.description;
 
-  console.log(
-    `[Pipeline] Generating metadata (essential only): needsTitle=${isDefaultTitle}, needsDescription=${needsDescription}`
-  );
-
   const metadata = await generateAllMetadata(
     story.rawContent,
     sourceLanguage,
@@ -278,9 +274,6 @@ async function generateAndSaveAllMetadata(
     });
   }
 
-  console.log(
-    `[Pipeline] Metadata saved: title="${metadata.title.title}"`
-  );
 }
 
 /**
@@ -293,10 +286,6 @@ async function detectAndSaveLevel(
 ): Promise<string> {
   const detectionResult = await detectCEFRLevel(rawContent, sourceLanguage, ctx);
   const detectedLevel = detectionResult.levelString;
-
-  console.log(
-    `[Pipeline] Detected: ${sourceLanguage.toUpperCase()}, ${detectionResult.cefr}`
-  );
 
   await prisma.userStory.update({
     where: { id: ctx.storyId },
@@ -379,15 +368,12 @@ async function processAllLevels(
   detectedLevel: string
 ): Promise<{ allSucceeded: boolean; anySucceeded: boolean }> {
   const levelsArray = Array.from(levelsToProcess);
-  console.log(`[Pipeline] Processing levels: ${levelsArray.join(", ")}`);
-  console.log(`[Pipeline] STREAMING approach: Translate(detected) || StreamingRewrite+Translate(others) → Build`);
 
   // =========================================================================
   // PHASE 1: Parse chapters (once, shared across all levels)
   // =========================================================================
   await updateStoryProgress(story.id, "parsing_chapters");
   const { hasChapters, chapters: originalChapters } = parseStoryContent(story.rawContent);
-  console.log(`[Pipeline] Parsed ${originalChapters.length} chapters (hasChapters: ${hasChapters})`);
 
   // Track processed chapters for each level (after translation)
   const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();
@@ -399,15 +385,11 @@ async function processAllLevels(
   const levelsNeedingRewrite = levelsArray.filter((l) => l !== detectedLevel);
   const hasDetectedLevel = levelsArray.includes(detectedLevel);
 
-  console.log(`[Pipeline] Detected level: ${detectedLevel} (needs translate only: ${hasDetectedLevel})`);
-  console.log(`[Pipeline] Levels needing rewrite+translate (streaming): ${levelsNeedingRewrite.join(", ") || "none"}`);
-
   // =========================================================================
   // PHASE 2: PARALLEL PROCESSING
   // - Stream A: Translate detected level (Claude only, no rewrite)
   // - Stream B: Streaming rewrite→translate for other levels (GPT + Claude in parallel)
   // =========================================================================
-  console.log(`[Pipeline] === PHASE 2: PARALLEL STREAMING ===`);
   await updateStoryProgress(story.id, "rewriting_levels");
 
   // Create parallel tasks
@@ -415,8 +397,6 @@ async function processAllLevels(
 
   // Task A: Translate detected level (uses Claude only, no rewrite needed)
   if (hasDetectedLevel && detectedLevelRecord) {
-    console.log(`[Pipeline] Starting PARALLEL: Translate ${detectedLevel} (Claude, no rewrite)`);
-
     const translateDetectedTask = (async () => {
       const translateResult = await translateLevelChapters({
         storyId: story.id,
@@ -430,9 +410,8 @@ async function processAllLevels(
       if (translateResult.success) {
         levelProcessedChapters.set(detectedLevel, translateResult.processedChapters);
         levelSuccess.set(detectedLevel, true);
-        console.log(`[Pipeline] ✓ Detected level ${detectedLevel} translation complete`);
       } else {
-        console.error(`[Pipeline] ✗ Translation failed for ${detectedLevel}:`, translateResult.error);
+        console.error(`[Pipeline] Translation failed for ${detectedLevel}:`, translateResult.error);
         levelSuccess.set(detectedLevel, false);
       }
     })();
@@ -443,8 +422,6 @@ async function processAllLevels(
   // Task B: Streaming rewrite→translate for levels that need rewriting
   // Uses the new streaming pipeline: GPT rewrites and Claude translates in parallel
   if (levelsNeedingRewrite.length > 0) {
-    console.log(`[Pipeline] Starting PARALLEL: Streaming rewrite→translate for ${levelsNeedingRewrite.join(", ")}`);
-
     const streamingTask = (async () => {
       for (const level of levelsNeedingRewrite) {
         const levelRecord = story.levels.find((l) => l.level === level);
@@ -453,8 +430,6 @@ async function processAllLevels(
           levelSuccess.set(level, false);
           continue;
         }
-
-        console.log(`[Pipeline] Streaming: ${detectedLevel} → ${level} (GPT rewrite || Claude translate)`);
 
         // Use the new streaming pipeline - GPT and Claude run in parallel!
         const streamingResult = await processLevelStreaming({
@@ -471,9 +446,8 @@ async function processAllLevels(
         if (streamingResult.success) {
           levelProcessedChapters.set(level, streamingResult.processedChapters);
           levelSuccess.set(level, true);
-          console.log(`[Pipeline] ✓ Streaming complete for ${level}`);
         } else {
-          console.error(`[Pipeline] ✗ Streaming failed for ${level}:`, streamingResult.error);
+          console.error(`[Pipeline] Streaming failed for ${level}:`, streamingResult.error);
           levelSuccess.set(level, false);
         }
       }
@@ -484,12 +458,10 @@ async function processAllLevels(
 
   // Wait for all parallel tasks to complete
   await Promise.all(parallelTasks);
-  console.log(`[Pipeline] === PARALLEL STREAMING COMPLETE ===`);
 
   // =========================================================================
   // PHASE 3: Build and save ALL levels
   // =========================================================================
-  console.log(`[Pipeline] === PHASE 3: BUILDING & SAVING ===`);
   await updateStoryProgress(story.id, "building_levels");
 
   for (const level of levelsArray) {
@@ -508,7 +480,6 @@ async function processAllLevels(
       continue;
     }
 
-    console.log(`[Pipeline] Building level ${level}`);
     const buildResult = await buildAndSaveLevel({
       storyId: story.id,
       levelId: levelRecord.id,
@@ -531,8 +502,6 @@ async function processAllLevels(
   const successCount = Array.from(levelSuccess.values()).filter(Boolean).length;
   const allSucceeded = successCount === levelsArray.length;
   const anySucceeded = successCount > 0;
-
-  console.log(`[Pipeline] Results: ${successCount}/${levelsArray.length} levels succeeded`);
 
   return { allSucceeded, anySucceeded };
 }
@@ -562,8 +531,6 @@ async function processAllLevels(
  * 7. Update final status
  */
 export async function processUserStory(storyId: string): Promise<void> {
-  console.log(`[Pipeline] Processing story: ${storyId}`);
-
   // Use select to avoid fetching large content fields from levels
   const story = await prisma.userStory.findUnique({
     where: { id: storyId },
@@ -632,7 +599,6 @@ export async function processUserStory(storyId: string): Promise<void> {
     const missingLevels = Array.from(levelsToProcess).filter(l => !existingLevels.has(l));
 
     if (missingLevels.length > 0) {
-      console.log(`[Pipeline] Creating missing level records: ${missingLevels.join(", ")}`);
       const { randomUUID } = await import("crypto");
 
       await prisma.userStoryLevel.createMany({
@@ -677,7 +643,6 @@ export async function processUserStory(storyId: string): Promise<void> {
     await updateStoryProgress(storyId, "complete");
     const finalStatus = determineFinalStatus(allSucceeded, anySucceeded);
     await updateStoryStatus(storyId, finalStatus);
-    console.log(`[Pipeline] Complete: ${finalStatus}`);
   } catch (error: any) {
     console.error(`[Pipeline] Failed:`, error.message);
     await updateStoryStatus(storyId, "FAILED");

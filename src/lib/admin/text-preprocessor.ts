@@ -521,13 +521,6 @@ function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): Chapter
   }
   contentBetween.push(lastContent);
 
-  // DEBUG: Log markers with content between them
-  console.log(`[filterOutTOCMarkers] Total markers: ${markers.length}`);
-  markers.slice(0, 25).forEach((m, i) => {
-    const content = contentBetween[i];
-    console.log(`  [${i}] line ${m.lineIndex}: "${m.fullMatch.substring(0, 40).padEnd(40)}" | content after: ${content} chars`);
-  });
-
   // Threshold: TOC entries have < 100 chars between them
   // Real chapters have 1000+ chars between them
   const TOC_CONTENT_THRESHOLD = 100;
@@ -552,14 +545,12 @@ function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): Chapter
       // Substantial content after this marker, and we've seen TOC entries before
       // This is the first real chapter
       firstRealChapterIndex = i;
-      console.log(`  -> First real chapter at index ${i} (${contentAfter} chars after)`);
       break;
     } else {
       // Medium content - could be either. If we haven't started a TOC cluster,
       // this might just be a book without a TOC.
       if (!tocClusterStarted) {
         // No TOC detected - return all markers
-        console.log(`  -> No TOC detected (first marker has ${contentAfter} chars after)`);
         return markers;
       }
     }
@@ -576,7 +567,6 @@ function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): Chapter
       // If there's a big line gap AND substantial content after this marker
       if (lineGap > 50 && contentAfter >= CHAPTER_CONTENT_THRESHOLD) {
         firstRealChapterIndex = i;
-        console.log(`  -> First real chapter at index ${i} (line gap: ${lineGap}, content: ${contentAfter})`);
         break;
       }
     }
@@ -584,18 +574,15 @@ function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): Chapter
 
   // If still no clear break found, assume no TOC
   if (firstRealChapterIndex === -1) {
-    console.log(`  -> Could not identify TOC boundary, keeping all markers`);
     return markers;
   }
 
   // Filter out TOC markers (indices 0 through firstRealChapterIndex - 1)
   const filtered = markers.slice(firstRealChapterIndex);
 
-  console.log(`[preprocessText] Filtered out ${firstRealChapterIndex} TOC markers, keeping ${filtered.length} real chapters`);
-
   // Safety check: if we filtered everything, that's wrong
   if (filtered.length === 0) {
-    console.log(`[preprocessText] WARNING: All markers filtered as TOC, keeping all markers`);
+    console.warn(`[preprocessText] WARNING: All markers filtered as TOC, keeping all markers`);
     return markers;
   }
 
