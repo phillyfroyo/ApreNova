@@ -562,9 +562,18 @@ function extractTextFromHTML(html: string): HTMLExtractionResult {
   let text = "";
 
   // Process block elements to preserve paragraph structure
-  // IMPORTANT: For poems and other formatted text, we need DOUBLE newlines between
-  // block elements (paragraphs) to preserve stanza breaks. The stanza detection
-  // algorithm looks for empty lines (double newlines) to identify stanza boundaries.
+  // IMPORTANT: For poems, stanza breaks are detected by EMPTY lines (double newlines).
+  // In HTML poetry, each verse line is often in its own <p> tag, but they're part of
+  // the same stanza. A stanza break is indicated by:
+  // - Empty <p> tags
+  // - <p> tags containing only whitespace/&nbsp;
+  // - Multiple consecutive <br> tags
+  //
+  // Strategy:
+  // - Content <p> tags → single newline (line within stanza)
+  // - Empty <p> tags → double newline (stanza break marker)
+  // - <br> → single newline
+  // - Multiple <br> in sequence → detected later as stanza break
   const processNode = (node: Node): string => {
     if (node.nodeType === Node.TEXT_NODE) {
       return node.textContent || "";
@@ -574,14 +583,13 @@ function extractTextFromHTML(html: string): HTMLExtractionResult {
       const el = node as Element;
       const tagName = el.tagName.toLowerCase();
 
-      // Block elements that should have paragraph breaks (double newline)
-      // These represent semantic paragraph boundaries in HTML
-      const paragraphElements = ["p", "div", "blockquote", "pre"];
-      const isParagraph = paragraphElements.includes(tagName);
-
-      // Other block elements that should have single line breaks
+      // Block elements that should have line breaks
       const lineBreakElements = ["h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"];
       const isLineBreak = lineBreakElements.includes(tagName);
+
+      // Paragraph-like elements need special handling
+      const paragraphElements = ["p", "div", "blockquote", "pre"];
+      const isParagraph = paragraphElements.includes(tagName);
 
       let content = "";
       el.childNodes.forEach(child => {
@@ -592,14 +600,22 @@ function extractTextFromHTML(html: string): HTMLExtractionResult {
         return "\n";
       }
 
-      // Paragraph elements get double newlines to preserve stanza/paragraph structure
-      if (isParagraph && content.trim()) {
-        return "\n\n" + content.trim() + "\n\n";
+      // For paragraph elements, check if they have actual content
+      const trimmedContent = content.trim();
+
+      if (isParagraph) {
+        if (!trimmedContent) {
+          // Empty paragraph = stanza break indicator (double newline)
+          return "\n\n";
+        }
+        // Content paragraph = single line (NOT stanza break)
+        // This preserves poetry where each line is in its own <p>
+        return trimmedContent + "\n";
       }
 
       // Headers and list items get single newlines
-      if (isLineBreak && content.trim()) {
-        return "\n" + content.trim() + "\n";
+      if (isLineBreak && trimmedContent) {
+        return "\n" + trimmedContent + "\n";
       }
 
       return content;
@@ -610,14 +626,15 @@ function extractTextFromHTML(html: string): HTMLExtractionResult {
 
   text = processNode(doc.body);
 
-  // Clean up excessive whitespace while preserving paragraph/stanza breaks
-  // IMPORTANT: We keep double newlines (\n\n) intact - these represent stanza
-  // boundaries in poems. Only collapse 3+ newlines down to 2.
+  // Clean up whitespace while preserving stanza breaks
+  // Stanza breaks are marked by double newlines (\n\n), which occur when:
+  // - Empty <p> tags are encountered
+  // - Multiple blank lines exist in the source
   text = text
-    .replace(/\n{3,}/g, "\n\n")  // Collapse 3+ newlines to exactly 2 (preserve stanza breaks)
     .replace(/[ \t]+/g, " ")     // Collapse horizontal whitespace
     .replace(/\n /g, "\n")       // Remove space after newline
     .replace(/ \n/g, "\n")       // Remove space before newline
+    .replace(/\n{3,}/g, "\n\n")  // Collapse 3+ newlines to exactly 2 (stanza break)
     .trim();
 
   return { text, annotations };
