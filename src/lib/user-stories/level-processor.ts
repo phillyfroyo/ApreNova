@@ -401,7 +401,34 @@ async function translateChapterWithChunking(
  * This is done once and shared across all levels
  */
 export function parseStoryContent(rawContent: string): ParsedChapters {
-  const cleanedContent = cleanText(quickClean(rawContent));
+  // DEBUG: Show rawContent input
+  const inputLines = rawContent.split('\n').slice(0, 15);
+  console.log('[parseStoryContent] rawContent INPUT (first 15 lines):');
+  inputLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
+
+  const afterQuickClean = quickClean(rawContent);
+
+  // DEBUG: Show after quickClean
+  const afterQCLines = afterQuickClean.split('\n').slice(0, 15);
+  console.log('[parseStoryContent] AFTER quickClean (first 15 lines):');
+  afterQCLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
+
+  const cleanedContent = cleanText(afterQuickClean);
+
+  // DEBUG: Show after cleanText
+  const afterCTLines = cleanedContent.split('\n').slice(0, 15);
+  console.log('[parseStoryContent] AFTER cleanText (first 15 lines):');
+  afterCTLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
+
   const { hasChapters, chapters } = parseChapters(cleanedContent);
   return { hasChapters, chapters, cleanedContent };
 }

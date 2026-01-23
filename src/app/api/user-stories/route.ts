@@ -94,6 +94,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { title, content, sourceLanguage, description } = body;
 
+    // DEBUG: Log the content structure to see how lines are separated
+    const contentLines = content?.split('\n').slice(0, 30) || [];
+    console.log('[API/user-stories POST] Content structure (first 30 lines):');
+    contentLines.forEach((line: string, i: number) => {
+      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+      console.log(`  ${i + 1}: "${display}"`);
+    });
+
     // Validate required fields - only content is required now
     if (!content) {
       return NextResponse.json(

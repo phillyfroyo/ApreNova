@@ -811,6 +811,14 @@ function removeGutenbergFrontMatter(text: string): string {
 export function preprocessText(rawText: string): PreprocessedText {
   const originalLength = rawText.length;
 
+  // DEBUG: Show input
+  const inputLines = rawText.split('\n').slice(0, 10);
+  console.log('[preprocessText] INPUT (first 10 lines):');
+  inputLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
+
   // Step 0: Remove Gutenberg front matter markers
   const noGutenbergHeader = removeGutenbergFrontMatter(rawText);
 
@@ -828,6 +836,14 @@ export function preprocessText(rawText: string): PreprocessedText {
 
   // Step 5: Normalize whitespace
   const normalized = normalizeWhitespace(noAsterisks);
+
+  // DEBUG: Show after normalizeWhitespace
+  const afterNormLines = normalized.split('\n').slice(0, 10);
+  console.log('[preprocessText] AFTER normalizeWhitespace (first 10 lines):');
+  afterNormLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
 
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
@@ -877,11 +893,33 @@ export function preprocessText(rawText: string): PreprocessedText {
   const fullTextForDetection = chapters.map(ch => ch.rawText).join('\n\n');
   const detectedLineBreakStyle = detectLineBreakStyle(fullTextForDetection);
 
+  console.log(`[preprocessText] Detected line break style: ${detectedLineBreakStyle}`);
+
+  // DEBUG: Show first chapter before normalization
+  if (chapters.length > 0) {
+    const ch1Lines = chapters[0].rawText.split('\n').slice(0, 15);
+    console.log('[preprocessText] Chapter 1 BEFORE normalizeLineBreaks (first 15 lines):');
+    ch1Lines.forEach((line, i) => {
+      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+      console.log(`  ${i + 1}: "${display}"`);
+    });
+  }
+
   // Normalize each chapter's rawText based on detected style
   chapters = chapters.map(ch => ({
     ...ch,
     rawText: normalizeLineBreaks(ch.rawText, detectedLineBreakStyle),
   }));
+
+  // DEBUG: Show first chapter after normalization
+  if (chapters.length > 0) {
+    const ch1Lines = chapters[0].rawText.split('\n').slice(0, 15);
+    console.log('[preprocessText] Chapter 1 AFTER normalizeLineBreaks (first 15 lines):');
+    ch1Lines.forEach((line, i) => {
+      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+      console.log(`  ${i + 1}: "${display}"`);
+    });
+  }
 
   // Step 13: Build full cleaned text with proper chapter labels
   const cleanedFullText = chapters

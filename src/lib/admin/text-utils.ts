@@ -274,9 +274,16 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
   // - Empty <p> tags → double newline (stanza break marker)
   // - <br> → single newline
   // - Multiple <br> in sequence → detected later as stanza break
-  const processNode = (node: Node): string => {
+  const processNode = (node: Node, parentIsBlock: boolean = false): string => {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent || "";
+      const text = node.textContent || "";
+      // CRITICAL: Ignore whitespace-only text nodes between block elements
+      // HTML like "</p>\n\n<p>" has text nodes with just newlines between the tags
+      // These should NOT be preserved as they create unwanted blank lines
+      if (parentIsBlock && /^\s*$/.test(text)) {
+        return "";
+      }
+      return text;
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -291,9 +298,13 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
       const paragraphElements = ["p", "div", "blockquote", "pre"];
       const isParagraph = paragraphElements.includes(tagName);
 
+      // Block elements where whitespace text nodes should be ignored
+      const blockElements = ["body", "div", "section", "article", "main", "header", "footer", ...paragraphElements, ...lineBreakElements];
+      const isBlock = blockElements.includes(tagName);
+
       let content = "";
       el.childNodes.forEach(child => {
-        content += processNode(child);
+        content += processNode(child, isBlock);
       });
 
       if (tagName === "br") {
@@ -301,11 +312,12 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
       }
 
       // For paragraph elements, check if they have actual content
-      const trimmedContent = content.trim();
+      // Note: content might just be "\n" from <br> tags - that's not real content
+      const trimmedContent = content.replace(/\n/g, '').trim();
 
       if (isParagraph) {
         if (!trimmedContent) {
-          // Empty paragraph = stanza break indicator (double newline)
+          // Empty paragraph (or paragraph with only <br> tags) = stanza break indicator (double newline)
           return "\n\n";
         }
         // Content paragraph = single line (NOT stanza break)
@@ -324,7 +336,15 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
     return "";
   };
 
-  let text = processNode(doc.body);
+  let text = processNode(doc.body, true);  // body is a block element
+
+  // DEBUG: Log extracted text structure
+  const debugLines = text.split('\n').slice(0, 30);
+  console.log('[extractTextFromHTML] First 30 lines of extracted text:');
+  debugLines.forEach((line, i) => {
+    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
+    console.log(`  ${i + 1}: "${display}"`);
+  });
 
   // Clean up whitespace while preserving stanza breaks
   // Stanza breaks are marked by double newlines (\n\n), which occur when:
