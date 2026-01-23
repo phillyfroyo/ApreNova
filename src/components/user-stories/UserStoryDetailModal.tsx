@@ -409,15 +409,25 @@ export default function UserStoryDetailModal({
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {readyLevels.map((lvl) => {
-                        const badgeLevel = `level${lvl.level.replace("l", "")}` as
+                        const cefrLevel = toCEFR(lvl.level);
+                        const isOriginal = story.detectedLevel && toCEFR(story.detectedLevel) === cefrLevel;
+                        // Map CEFR to badge level numbers (A1=1, A2=2, B1=3, B2=4, C1=5, C2=6)
+                        const levelNum = cefrLevel === "A1" ? 1 : cefrLevel === "A2" ? 2 : cefrLevel === "B1" ? 3 : cefrLevel === "B2" ? 4 : cefrLevel === "C1" ? 5 : 6;
+                        const badgeLevel = `level${levelNum}` as
                           | "level1"
                           | "level2"
                           | "level3"
                           | "level4"
-                          | "level5";
+                          | "level5"
+                          | "level6";
                         return (
                           <Badge key={lvl.level} level={badgeLevel}>
-                            {t(typedLang, "stories", "level")} {lvl.level.replace("l", "")}
+                            {cefrLevel}
+                            {isOriginal && (
+                              <span className="ml-1 text-[10px] opacity-75">
+                                ({typedLang === "es" ? "Original" : "Original"})
+                              </span>
+                            )}
                           </Badge>
                         );
                       })}

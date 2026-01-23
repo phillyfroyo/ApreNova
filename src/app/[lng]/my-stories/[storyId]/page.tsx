@@ -206,11 +206,12 @@ export default function StoryDetailPage() {
               <BookOpen className="w-5 h-5 text-green-600" />
               Read Your Story
             </h2>
-            <div className="grid grid-cols-5 gap-2">
-              {ALL_CEFR_LEVELS.slice(0, 5).map((cefrLevel) => {
+            <div className="grid grid-cols-6 gap-2">
+              {ALL_CEFR_LEVELS.map((cefrLevel) => {
                 // Check if this level is ready in the story
                 const levelData = story.levels.find((l) => toCEFR(l.level) === cefrLevel);
                 const isReady = levelData?.status === "READY";
+                const isOriginal = story.detectedLevel && toCEFR(story.detectedLevel) === cefrLevel;
                 const colorClass = isReady
                   ? CEFR_BADGE_COLORS[cefrLevel] || "bg-green-100 text-green-700 hover:bg-green-200"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed";
@@ -222,10 +223,16 @@ export default function StoryDetailPage() {
                         ? `/${typedLang}/my-stories/${story.id}/${cefrLevel}/1/1`
                         : "#"
                     }
-                    className={`py-3 px-2 rounded-lg text-center text-sm font-medium transition-colors ${colorClass}`}
+                    className={`py-3 px-2 rounded-lg text-center text-sm font-medium transition-colors ${colorClass} ${isOriginal && isReady ? "ring-2 ring-offset-1 ring-blue-500" : ""}`}
                     onClick={(e) => !isReady && e.preventDefault()}
+                    title={isOriginal ? (typedLang === "es" ? "Nivel original" : "Original level") : undefined}
                   >
-                    {cefrLevel}
+                    <span>{cefrLevel}</span>
+                    {isOriginal && (
+                      <span className="block text-[10px] opacity-75">
+                        {typedLang === "es" ? "(Original)" : "(Original)"}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

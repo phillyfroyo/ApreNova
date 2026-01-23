@@ -3,7 +3,7 @@ import React from 'react';
 import clsx from 'clsx';
 
 interface BadgeProps {
-  level?: 'level1' | 'level2' | 'level3' | 'level4' | 'level5';
+  level?: 'level1' | 'level2' | 'level3' | 'level4' | 'level5' | 'level6';
   children: React.ReactNode;
 }
 
@@ -14,6 +14,7 @@ const Badge: React.FC<BadgeProps> = ({ level = 'level1', children }) => {
     level3: 'bg-badge-level3',
     level4: 'bg-badge-level4',
     level5: 'bg-badge-level5',
+    level6: 'bg-badge-level6',
   };
 
   return (

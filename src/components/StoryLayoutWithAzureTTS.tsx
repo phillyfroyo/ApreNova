@@ -49,6 +49,8 @@ interface StoryLayoutWithAzureTTSProps {
   availableLevels?: CEFRCode[];
   /** Story type for special rendering (poems, scripts) */
   storyType?: string | null;
+  /** Detected/original CEFR level of the story */
+  detectedLevel?: string | null;
 }
 
 export default function StoryLayoutWithAzureTTS({
@@ -62,6 +64,7 @@ export default function StoryLayoutWithAzureTTS({
   userStoryId,
   availableLevels,
   storyType,
+  detectedLevel,
 }: StoryLayoutWithAzureTTSProps) {
   useSessionLogger('reading');
 
@@ -702,15 +705,24 @@ export default function StoryLayoutWithAzureTTS({
               }}
             />
             <Dropdown
-              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}`}
+              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}${detectedLevel && currentLevel === detectedLevel ? (typedLang === "es" ? " (Original)" : " (Original)") : ""}`}
               variant="glass"
-              options={ALL_CEFR_LEVELS.slice(0, 5).map((level) => {
+              options={ALL_CEFR_LEVELS.map((level) => {
                 const isAvailable = !availableLevels || availableLevels.includes(level);
+                const isOriginal = detectedLevel && level === detectedLevel;
                 const notAvailableText = typedLang === "es" ? "(no disponible)" : "(not available)";
+                const originalText = typedLang === "es" ? "(Original)" : "(Original)";
+
+                let label = getCEFRLabel(level, typedLang);
+                if (isOriginal) {
+                  label += ` ${originalText}`;
+                }
+                if (!isAvailable) {
+                  label += ` ${notAvailableText}`;
+                }
+
                 return {
-                  label: isAvailable
-                    ? getCEFRLabel(level, typedLang)
-                    : `${getCEFRLabel(level, typedLang)} ${notAvailableText}`,
+                  label,
                   value: level,
                   disabled: !isAvailable,
                 };

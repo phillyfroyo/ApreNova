@@ -70,6 +70,7 @@ export async function getUserStoryContent(
         titleEs: true,
         titleEn: true,
         storyType: true,
+        detectedLevel: true,
       },
     });
 
@@ -147,6 +148,7 @@ export async function getUserStoryContent(
         stanzas: hasStanzas ? pageData.stanzas : undefined,
         isUserStory: true,
         storyType: story.storyType,
+        detectedLevel: story.detectedLevel,
       };
     } else {
       throw new Error(`Page not found: chapter ${chapterNum}, page ${pageNum}`);
@@ -166,6 +168,7 @@ export async function getUserStoryContent(
       ],
       isUserStory: true,
       storyType: null,
+      detectedLevel: null,
     };
   }
 }
