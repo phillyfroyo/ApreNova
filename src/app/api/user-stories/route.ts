@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         visibility: true,
         createdAt: true,
         updatedAt: true,
+        cancelledAt: true, // For determining cancelled vs incomplete state
         UserStoryLevel: {
           select: {
             level: true,

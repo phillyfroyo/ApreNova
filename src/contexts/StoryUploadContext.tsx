@@ -131,6 +131,7 @@ interface StoryUploadContextType {
   showProgressViewer: boolean;
   showCancelConfirm: boolean;
   lastConfirmedAt: number | null; // Timestamp of last story confirmation
+  lastCancelledAt: number | null; // Timestamp of last story cancellation
   selectedStreamId: string | null; // Which stream to show in progress viewer
   isReadingCurrentStory: boolean; // Track if user started reading before processing completed
 
@@ -429,6 +430,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showProgressViewer, setShowProgressViewer] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
   const [storyData, setStoryData] = useState<StoryUploadData | null>(null);
   const [isReadingCurrentStory, setIsReadingCurrentStory] = useState(false);
@@ -444,11 +446,20 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
   // Timestamp for when a story was last confirmed (for triggering refetch in UI)
   const [lastConfirmedAt, setLastConfirmedAt] = useState<number | null>(null);
+  const [lastCancelledAt, setLastCancelledAt] = useState<number | null>(null);
 
   // For retry after connection lost
   const [retryTrigger, setRetryTrigger] = useState(0);
   const pollingStoryIdRef = useRef<string | null>(null);
   const pollingAttemptsRef = useRef(0);
+
+  // Store story ID in a ref for immediate access in cancelUpload
+  // (React state updates are async, so storyData.id may be stale when cancel is clicked)
+  const storyIdRef = useRef<string | null>(null);
+
+  // Track if cancel was requested during upload (before story ID is known)
+  // This allows us to cancel the story after creation completes
+  const cancelRequestedRef = useRef(false);
 
   const updateProgress = useCallback((stage: UploadStage, stageProgress: number = 0, extra?: Partial<UploadProgress>) => {
     const weights = STAGE_WEIGHTS[stage];
@@ -483,6 +494,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     setIsMinimized(false);
     setShowUploadModal(false);
 
+    // Clear cancel flag at start of new upload
+    cancelRequestedRef.current = false;
+    storyIdRef.current = null;
+
     console.log("[StoryUpload] Starting upload", {
       contentLength: content.length,
       title: optionalTitle || "(auto-generate)",
@@ -512,6 +527,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         stepLabel: "Creating story record",
       });
 
+      // Note: Don't use abort signal for the create POST
+      // If user cancels during upload, we need the story ID to cancel it properly
+      // The cancel flag mechanism handles this case
       const createResponse = await fetch("/api/user-stories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -521,7 +539,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           sourceLanguage,
           description,
         }),
-        signal: controller.signal,
+        // Intentionally NOT using signal here - see cancelRequestedRef handling below
       });
 
       if (!createResponse.ok) {
@@ -532,12 +550,30 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       const { story } = await createResponse.json();
       console.log("[StoryUpload] Story created:", { id: story.id, slug: story.slug });
+
+      // Check if cancel was requested while the POST was in flight
+      // Do this BEFORE any state updates to avoid modal flashing
+      if (cancelRequestedRef.current) {
+        console.log("[StoryUpload] Cancel was requested during upload, cancelling story:", story.id);
+        try {
+          await fetch(`/api/user-stories/${story.id}/cancel`, { method: "POST" });
+        } catch (e) {
+          console.error("[StoryUpload] Failed to cancel story after deferred cancel:", e);
+        }
+        // State was already reset in cancelUpload, just clear the flag
+        cancelRequestedRef.current = false;
+        setLastCancelledAt(Date.now());
+        return; // Exit early, don't start processing
+      }
+
       updateProgress("uploading", 100, {
         phase: "detecting",
         phaseTitle: PHASE_TITLES.detecting,
         stepLabel: "Preparing reading levels",
       });
 
+      // Store story ID in ref immediately (for cancel to use before React state updates)
+      storyIdRef.current = story.id;
       setStoryData(prev => prev ? { ...prev, id: story.id } : null);
 
       // Stage 2: Process the story (this triggers the AI pipeline)
@@ -894,14 +930,46 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     }
   }, [updateProgress, session?.user?.quizLevel]);
 
-  const cancelUpload = useCallback(() => {
-    console.log("[StoryUpload] cancelUpload called - stack trace:", new Error().stack);
+  const cancelUpload = useCallback(async () => {
+    console.log("[StoryUpload] cancelUpload called");
+    setIsCancelling(true);
+
+    // Use ref for story ID (immediately available, not dependent on React state)
+    const storyId = storyIdRef.current;
+
+    // First, call the cancel API to stop server-side processing
+    if (storyId) {
+      try {
+        console.log("[StoryUpload] Calling cancel API for story:", storyId);
+        const response = await fetch(`/api/user-stories/${storyId}/cancel`, {
+          method: "POST",
+        });
+
+        if (!response.ok) {
+          console.error("[StoryUpload] Cancel API failed:", response.status);
+        } else {
+          const result = await response.json();
+          console.log("[StoryUpload] Cancel API response:", result);
+        }
+      } catch (error) {
+        console.error("[StoryUpload] Cancel API error:", error);
+      }
+    } else {
+      console.log("[StoryUpload] No story ID yet, setting deferred cancel flag");
+      // Set flag so the story will be cancelled after creation completes
+      cancelRequestedRef.current = true;
+    }
+
+    // Then abort client-side requests
     if (abortController) {
       abortController.abort();
     }
+
+    // Reset UI state
     setIsUploading(false);
     setIsMinimized(false);
     setShowCancelConfirm(false);
+    setIsCancelling(false);
     setProgress({
       stage: "idle",
       stageProgress: 0,
@@ -909,6 +977,18 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       message: "",
     });
     setStoryData(null);
+
+    // Only clear refs if we had a story ID (immediate cancel)
+    // If no story ID, leave cancelRequestedRef set for deferred cancel
+    if (storyId) {
+      storyIdRef.current = null;
+      cancelRequestedRef.current = false;
+    }
+    // Note: if !storyId, cancelRequestedRef stays true and will be handled
+    // when the create POST completes in startUpload
+
+    // Trigger refetch in story list pages
+    setLastCancelledAt(Date.now());
   }, [abortController]);
 
   // Show cancel confirmation dialog
@@ -956,6 +1036,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
       setShowReviewModal(false);
       setIsUploading(false);
+      storyIdRef.current = null; // Clear the ref
       setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
       // Show success state - the banner will appear whether user is reading or not
@@ -1102,6 +1183,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     showProgressViewer,
     showCancelConfirm,
     lastConfirmedAt,
+    lastCancelledAt,
     selectedStreamId,
     isReadingCurrentStory,
     startUpload,
@@ -1202,15 +1284,27 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             <div className="flex gap-3 justify-end">
               <button
                 onClick={dismissCancelConfirm}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                disabled={isCancelling}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Keep Uploading
               </button>
               <button
                 onClick={cancelUpload}
-                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+                disabled={isCancelling}
+                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Yes, Cancel
+                {isCancelling ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Cancelling...
+                  </>
+                ) : (
+                  "Yes, Cancel"
+                )}
               </button>
             </div>
           </div>

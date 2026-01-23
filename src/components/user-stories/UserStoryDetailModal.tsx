@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { Badge, Button } from "@/components/ui";
-import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
@@ -28,7 +28,8 @@ interface UserStory {
   thumbnailUrl: string | null;
   sourceLanguage: string;
   detectedLevel?: string | null;
-  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
+  cancelledAt?: string | null;
   levels: UserStoryLevel[];
   createdAt?: string;
 }
@@ -41,33 +42,59 @@ type UserStoryDetailModalProps = {
   user: any;
 };
 
-const statusConfig = {
+// Display status can differ from database status
+type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED" | "INCOMPLETE";
+
+// Map display status to translation key in myStories section
+const statusTranslationKeys: Record<DisplayStatus, string> = {
+  PROCESSING: "processing",
+  READY: "ready",
+  FAILED: "failed",
+  PARTIAL: "partial",
+  CANCELLED: "cancelled",
+  INCOMPLETE: "incomplete",
+};
+
+const statusConfig: Record<DisplayStatus, {
+  icon: typeof Loader2;
+  color: string;
+  bg: string;
+  animate: boolean;
+}> = {
   PROCESSING: {
     icon: Loader2,
     color: "text-blue-600",
     bg: "bg-blue-100",
-    label: { en: "Processing...", es: "Procesando..." },
     animate: true,
   },
   READY: {
     icon: CheckCircle,
     color: "text-green-600",
     bg: "bg-green-100",
-    label: { en: "Ready to read", es: "Listo para leer" },
     animate: false,
   },
   FAILED: {
     icon: AlertCircle,
     color: "text-red-600",
     bg: "bg-red-100",
-    label: { en: "Processing failed", es: "Error de procesamiento" },
     animate: false,
   },
   PARTIAL: {
     icon: Clock,
     color: "text-yellow-600",
     bg: "bg-yellow-100",
-    label: { en: "Partially ready", es: "Parcialmente listo" },
+    animate: false,
+  },
+  CANCELLED: {
+    icon: XCircle,
+    color: "text-gray-600",
+    bg: "bg-gray-100",
+    animate: false,
+  },
+  INCOMPLETE: {
+    icon: AlertTriangle,
+    color: "text-orange-600",
+    bg: "bg-orange-100",
     animate: false,
   },
 };
@@ -130,7 +157,11 @@ export default function UserStoryDetailModal({
   }, [story, onClose, isEditing, showDeleteConfirm]);
 
   const handleReadStory = useCallback(async () => {
-    if (!story || story.status !== "READY") return;
+    if (!story) return;
+
+    // Check if story has any readable levels
+    const readyLevels = story.levels.filter((l) => l.status === "READY");
+    if (readyLevels.length === 0) return;
 
     // Check for bookmark first
     try {
@@ -141,18 +172,22 @@ export default function UserStoryDetailModal({
       if (bookmarkResponse.ok) {
         const data = await bookmarkResponse.json();
         if (data.bookmark) {
-          router.push(
-            `/${typedLang}/my-stories/${story.id}/${data.bookmark.level}/${data.bookmark.chapter}/${data.bookmark.page}`
-          );
-          return;
+          // Verify the bookmarked level is still ready
+          const isLevelReady = readyLevels.some(l => l.level === data.bookmark.level);
+          if (isLevelReady) {
+            router.push(
+              `/${typedLang}/my-stories/${story.id}/${data.bookmark.level}/${data.bookmark.chapter}/${data.bookmark.page}`
+            );
+            return;
+          }
         }
       }
     } catch (error) {
       console.error("Error checking bookmark:", error);
     }
 
-    // No bookmark - use first ready level, then detected level, then A1
-    const readyLevel = story.levels.find((l) => l.status === "READY")?.level;
+    // No valid bookmark - use first ready level
+    const readyLevel = readyLevels[0]?.level;
     const defaultLevel = readyLevel || story.detectedLevel || "A1";
     router.push(`/${typedLang}/my-stories/${story.id}/${defaultLevel}/1/1`);
   }, [story, typedLang, router]);
@@ -208,9 +243,30 @@ export default function UserStoryDetailModal({
 
   if (!story) return null;
 
-  const statusInfo = statusConfig[story.status];
+  // CEFR level order for sorting
+  const levelOrder: Record<string, number> = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6 };
+
+  const readyLevels = story.levels
+    .filter((l) => l.status === "READY")
+    .sort((a, b) => {
+      const orderA = levelOrder[toCEFR(a.level)] ?? 99;
+      const orderB = levelOrder[toCEFR(b.level)] ?? 99;
+      return orderA - orderB;
+    });
+  const hasReadableChapters = readyLevels.length > 0;
+
+  // Compute display status: CANCELLED with readable chapters shows as INCOMPLETE
+  const displayStatus: DisplayStatus =
+    story.status === "CANCELLED" && hasReadableChapters ? "INCOMPLETE" : story.status;
+
+  const statusInfo = statusConfig[displayStatus];
   const StatusIcon = statusInfo.icon;
-  const readyLevels = story.levels.filter((l) => l.status === "READY");
+  const statusLabel = t(typedLang, "myStories", statusTranslationKeys[displayStatus]);
+
+  // Can read if: READY, PARTIAL with ready levels, or CANCELLED with ready levels (INCOMPLETE)
+  const canRead = story.status === "READY" ||
+    (story.status === "PARTIAL" && hasReadableChapters) ||
+    (story.status === "CANCELLED" && hasReadableChapters);
 
   // Filter out invalid blob URLs (they don't persist across page refreshes)
   const validThumbnailUrl = story.thumbnailUrl && !story.thumbnailUrl.startsWith("blob:")
@@ -286,7 +342,7 @@ export default function UserStoryDetailModal({
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   <span className={`px-3 py-1 ${statusInfo.bg} ${statusInfo.color} rounded-full text-xs font-medium flex items-center gap-1.5`}>
                     <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.animate ? "animate-spin" : ""}`} />
-                    {statusInfo.label[typedLang]}
+                    {statusLabel}
                   </span>
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                     {typedLang === "es" ? "Mi Historia" : "My Story"}
@@ -370,8 +426,8 @@ export default function UserStoryDetailModal({
                   </div>
                 ) : (
                   <>
-                    {/* Read Button - only show if ready */}
-                    {story.status === "READY" && (
+                    {/* Read Button - show if story has readable content */}
+                    {canRead && (
                       <Button
                         variant="parts"
                         onClick={handleReadStory}
@@ -421,14 +477,21 @@ export default function UserStoryDetailModal({
                           | "level5"
                           | "level6";
                         return (
-                          <Badge key={lvl.level} level={badgeLevel}>
-                            {cefrLevel}
-                            {isOriginal && (
-                              <span className="ml-1 text-[10px] opacity-75">
-                                ({typedLang === "es" ? "Original" : "Original"})
-                              </span>
-                            )}
-                          </Badge>
+                          <button
+                            key={lvl.level}
+                            onClick={() => router.push(`/${typedLang}/my-stories/${story.id}/${cefrLevel}/1/1`)}
+                            className="cursor-pointer hover:scale-105 transition-transform"
+                            title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
+                          >
+                            <Badge level={badgeLevel}>
+                              {cefrLevel}
+                              {isOriginal && (
+                                <span className="ml-1 text-[10px] opacity-75">
+                                  ({typedLang === "es" ? "Original" : "Original"})
+                                </span>
+                              )}
+                            </Badge>
+                          </button>
                         );
                       })}
                     </div>
@@ -473,6 +536,17 @@ export default function UserStoryDetailModal({
                       {typedLang === "es"
                         ? "Hubo un error procesando tu historia. Por favor, intenta subirla de nuevo."
                         : "There was an error processing your story. Please try uploading it again."}
+                    </p>
+                  </div>
+                )}
+
+                {/* Cancelled/Incomplete status message */}
+                {story.status === "CANCELLED" && (
+                  <div className={`${hasReadableChapters ? "bg-orange-50" : "bg-gray-50"} rounded-lg p-4 mb-6`}>
+                    <p className={`${hasReadableChapters ? "text-orange-700" : "text-gray-700"} text-sm`}>
+                      {hasReadableChapters
+                        ? t(typedLang, "myStories", "incompleteMessage")
+                        : t(typedLang, "myStories", "cancelledMessage")}
                     </p>
                   </div>
                 )}

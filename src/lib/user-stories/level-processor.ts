@@ -7,7 +7,7 @@
 // - This is more logical and allows for potential parallelization
 
 import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
-import { LevelProgressTracker, updateStoryProgress } from "./progress-tracker";
+import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, createThrottledCancellationChecker } from "./progress-tracker";
 import {
   rewriteToLevel,
   rewritePoemByStanza,
@@ -347,7 +347,14 @@ async function translateChapterWithChunking(
 
   const allTranslatedLines: string[] = [];
 
+  // Create throttled cancellation checker for long chunking operations
+  // Checks every 10 seconds to avoid wasting API calls after user cancels
+  const cancellationChecker = createThrottledCancellationChecker(ctx.storyId, 10000);
+
   for (let i = 0; i < chunks.length; i++) {
+    // Check for cancellation (throttled - only queries DB every 10 seconds)
+    await cancellationChecker.checkIfCancelled();
+
     const chunk = chunks[i];
     let lastError: Error | null = null;
 
@@ -460,6 +467,12 @@ export async function rewriteLevelChapters(
     const rewrittenChapters: ParsedChapter[] = [];
 
     for (let i = 0; i < chapters.length; i++) {
+      // Check for cancellation before each chapter
+      if (await isStoryCancelled(storyId)) {
+        console.log(`[LevelProcessor] Story ${storyId} cancelled, stopping rewrite at chapter ${i + 1}`);
+        throw new StoryCancelledError(storyId);
+      }
+
       const chapter = chapters[i];
       const chapterText = chapter.text;
 
@@ -501,7 +514,10 @@ export async function rewriteLevelChapters(
     return { success: true, chapters: rewrittenChapters };
   } catch (error: any) {
     console.error(`[LevelProcessor] Rewrite failed for level ${level}:`, error.message);
-    await tracker.markFailed();
+    // Don't mark as failed for cancellation - cancel API handles status
+    if (!(error instanceof StoryCancelledError) && error.name !== "StoryCancelledError") {
+      await tracker.markFailed();
+    }
     return { success: false, chapters: [], error: error.message };
   }
 }
@@ -563,6 +579,12 @@ export async function translateLevelChapters(
     const processedChaptersWithMetadata: ProcessedChapterDataWithMetadata[] = [];
 
     for (let i = 0; i < chapters.length; i++) {
+      // Check for cancellation before each chapter
+      if (await isStoryCancelled(storyId)) {
+        console.log(`[LevelProcessor] Story ${storyId} cancelled, stopping translation at chapter ${i + 1}`);
+        throw new StoryCancelledError(storyId);
+      }
+
       const chapter = chapters[i];
       const chapterText = chapter.text;
 
@@ -698,7 +720,10 @@ export async function translateLevelChapters(
     };
   } catch (error: any) {
     console.error(`[LevelProcessor] Translation failed for level ${level}:`, error.message);
-    await tracker.markFailed();
+    // Don't mark as failed for cancellation - cancel API handles status
+    if (!(error instanceof StoryCancelledError) && error.name !== "StoryCancelledError") {
+      await tracker.markFailed();
+    }
     return { success: false, processedChapters: [], error: error.message };
   }
 }
@@ -773,7 +798,10 @@ export async function buildAndSaveLevel(
     return { success: true };
   } catch (error: any) {
     console.error(`[LevelProcessor] Build/save failed for level ${level}:`, error.message);
-    await tracker.markFailed();
+    // Don't mark as failed for cancellation - cancel API handles status
+    if (!(error instanceof StoryCancelledError) && error.name !== "StoryCancelledError") {
+      await tracker.markFailed();
+    }
     return { success: false, error: error.message };
   }
 }
@@ -834,6 +862,13 @@ async function* rewriteChaptersProducer(
   await tracker.startRewriting();
 
   for (let i = 0; i < chapters.length; i++) {
+    // Check for cancellation before each chapter
+    if (await isStoryCancelled(storyId)) {
+      console.log(`[StreamingProducer] Story ${storyId} cancelled, stopping at chapter ${i + 1}`);
+      queue.markProducerComplete(); // Signal consumer to stop waiting
+      return; // Exit generator early
+    }
+
     const chapter = chapters[i];
     const chapterText = chapter.text;
 
@@ -941,12 +976,18 @@ async function translateChaptersConsumer(
   let chaptersProcessed = 0;
 
   while (chaptersProcessed < totalChapters) {
+    // Check for cancellation at the start of each iteration
+    if (await isStoryCancelled(storyId)) {
+      console.log(`[StreamingConsumer] Story ${storyId} cancelled, stopping translation at chapter ${chaptersProcessed + 1}`);
+      break; // Exit loop but return what we have
+    }
+
     // Wait for next chapter from queue (blocks if producer is behind)
     const queuedChapter = await queue.dequeue();
 
     if (!queuedChapter) {
       // Producer finished but we haven't processed all chapters
-      // This means some chapters failed in producer
+      // This means some chapters failed in producer or story was cancelled
       console.warn(`[StreamingConsumer] Queue empty before all chapters processed`);
       break;
     }

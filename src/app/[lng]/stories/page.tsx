@@ -43,10 +43,16 @@ interface UserStory {
   descriptionEn?: string | null;
   thumbnailUrl: string | null;
   sourceLanguage: string;
-  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
   detectedLevel?: string | null;
   createdAt?: string;
+  cancelledAt?: string | null;
   levels: UserStoryLevel[];
+}
+
+// Helper to check if a story has any readable chapters
+function hasReadableChapters(story: UserStory): boolean {
+  return story.levels.some((level) => level.status === "READY");
 }
 
 // All theme tags combined into one list
@@ -127,7 +133,7 @@ function StoriesPageContent() {
   const [userStories, setUserStories] = useState<UserStory[]>([]);
   const [selectedUserStory, setSelectedUserStory] = useState<UserStory | null>(null);
   const { data: session } = useSession();
-  const { lastConfirmedAt } = useStoryUpload();
+  const { lastConfirmedAt, lastCancelledAt } = useStoryUpload();
 
   // Fetch user stories
   useEffect(() => {
@@ -159,7 +165,7 @@ function StoriesPageContent() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [session?.user?.id, lastConfirmedAt]);
+  }, [session?.user?.id, lastConfirmedAt, lastCancelledAt]);
 
   const handleUserStoryDelete = (storyId: string) => {
     setUserStories((prev) => prev.filter((s) => s.id !== storyId));
@@ -466,6 +472,8 @@ useEffect(() => {
           title={story.title}
           thumbnailUrl={story.thumbnailUrl}
           status={story.status}
+          hasReadableChapters={hasReadableChapters(story)}
+          lang={typedLang}
           onClick={() => setSelectedUserStory(story)}
         />
       ))}

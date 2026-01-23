@@ -139,6 +139,7 @@ export type StoryStatus = "PROCESSING" | "READY" | "PARTIAL" | "FAILED";
 
 /**
  * Update story-level processing progress
+ * Silently fails if story was deleted (to allow pipeline to exit gracefully)
  */
 export async function updateStoryProgress(
   storyId: string,
@@ -167,10 +168,19 @@ export async function updateStoryProgress(
     timestamp: new Date().toISOString(),
   };
 
-  await prisma.userStory.update({
-    where: { id: storyId },
-    data: { processingProgress: progress as any },
-  });
+  try {
+    await prisma.userStory.update({
+      where: { id: storyId },
+      data: { processingProgress: progress as any },
+    });
+  } catch (error: any) {
+    // If story was deleted, just log and continue - pipeline will exit on next cancellation check
+    if (error?.code === "P2025") {
+      console.log(`[updateStoryProgress] Story ${storyId} was deleted, skipping update`);
+      return;
+    }
+    throw error;
+  }
 }
 
 // ============================================================================
@@ -198,12 +208,21 @@ export class LevelProgressTracker {
 
   /**
    * Mark level as processing
+   * Silently fails if level/story was deleted
    */
   async startProcessing(): Promise<void> {
-    await prisma.userStoryLevel.update({
-      where: { id: this.levelId },
-      data: { status: "PROCESSING" },
-    });
+    try {
+      await prisma.userStoryLevel.update({
+        where: { id: this.levelId },
+        data: { status: "PROCESSING" },
+      });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping startProcessing`);
+        return;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -283,79 +302,202 @@ export class LevelProgressTracker {
   /**
    * Mark level as complete with final content
    * Preserves rewriteData and completedData for preview functionality
+   * Silently fails if level/story was deleted
    */
   async markComplete(content: unknown): Promise<void> {
-    // Read existing progress to preserve rewriteData and completedData for preview
-    const level = await prisma.userStoryLevel.findUnique({
-      where: { id: this.levelId },
-      select: { processingProgress: true },
-    });
+    try {
+      // Read existing progress to preserve rewriteData and completedData for preview
+      const level = await prisma.userStoryLevel.findUnique({
+        where: { id: this.levelId },
+        select: { processingProgress: true },
+      });
 
-    const existing = (level?.processingProgress as unknown as ProcessingProgress) || {};
+      // Level was deleted, exit gracefully
+      if (!level) {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping markComplete`);
+        return;
+      }
 
-    await prisma.userStoryLevel.update({
-      where: { id: this.levelId },
-      data: {
-        content: content as any,
-        status: "READY",
-        processingProgress: {
-          stage: "complete",
-          currentChapter: this.totalChapters,
-          totalChapters: this.totalChapters,
-          chaptersCompleted: Array.from({ length: this.totalChapters }, (_, i) => i),
-          // Preserve chapter data for preview modal
-          rewriteData: existing.rewriteData,
-          completedData: existing.completedData,
-          rewriteProgress: existing.rewriteProgress,
-          translateProgress: existing.translateProgress,
-        } as any,
-      },
-    });
+      const existing = (level.processingProgress as unknown as ProcessingProgress) || {};
+
+      await prisma.userStoryLevel.update({
+        where: { id: this.levelId },
+        data: {
+          content: content as any,
+          status: "READY",
+          processingProgress: {
+            stage: "complete",
+            currentChapter: this.totalChapters,
+            totalChapters: this.totalChapters,
+            chaptersCompleted: Array.from({ length: this.totalChapters }, (_, i) => i),
+            // Preserve chapter data for preview modal
+            rewriteData: existing.rewriteData,
+            completedData: existing.completedData,
+            rewriteProgress: existing.rewriteProgress,
+            translateProgress: existing.translateProgress,
+          } as any,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping markComplete`);
+        return;
+      }
+      throw error;
+    }
   }
 
   /**
    * Mark level as failed
+   * Silently fails if level/story was deleted
    */
   async markFailed(): Promise<void> {
-    await prisma.userStoryLevel.update({
-      where: { id: this.levelId },
-      data: { status: "FAILED" },
-    });
+    try {
+      await prisma.userStoryLevel.update({
+        where: { id: this.levelId },
+        data: { status: "FAILED" },
+      });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping markFailed`);
+        return;
+      }
+      throw error;
+    }
   }
 
   /**
    * Merge progress update with existing progress.
    * This is critical for streaming pipeline where rewrite and translate
    * run in parallel and must not overwrite each other's data.
+   * Silently fails if level/story was deleted
    */
   private async mergeProgress(updates: Partial<ProcessingProgress>): Promise<void> {
-    // Read current progress
-    const level = await prisma.userStoryLevel.findUnique({
-      where: { id: this.levelId },
-      select: { processingProgress: true },
-    });
+    try {
+      // Read current progress
+      const level = await prisma.userStoryLevel.findUnique({
+        where: { id: this.levelId },
+        select: { processingProgress: true },
+      });
 
-    const existing = (level?.processingProgress as unknown as ProcessingProgress) || {};
+      // Level was deleted, exit gracefully
+      if (!level) {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping mergeProgress`);
+        return;
+      }
 
-    // Merge: new values override, but preserve fields not in updates
-    const merged: ProcessingProgress = {
-      stage: updates.stage || existing.stage || "rewriting",
-      currentChapter: updates.currentChapter ?? existing.currentChapter ?? 0,
-      totalChapters: this.totalChapters,
-      chaptersCompleted: updates.chaptersCompleted || existing.chaptersCompleted || [],
-      // Preserve rewrite data if not being updated
-      rewriteData: updates.rewriteData ?? existing.rewriteData,
-      rewriteProgress: updates.rewriteProgress ?? existing.rewriteProgress,
-      // Preserve translation data if not being updated
-      completedData: updates.completedData ?? existing.completedData,
-      translateProgress: updates.translateProgress ?? existing.translateProgress,
-    };
+      const existing = (level.processingProgress as unknown as ProcessingProgress) || {};
 
-    await prisma.userStoryLevel.update({
-      where: { id: this.levelId },
-      data: { processingProgress: merged as any },
-    });
+      // Merge: new values override, but preserve fields not in updates
+      const merged: ProcessingProgress = {
+        stage: updates.stage || existing.stage || "rewriting",
+        currentChapter: updates.currentChapter ?? existing.currentChapter ?? 0,
+        totalChapters: this.totalChapters,
+        chaptersCompleted: updates.chaptersCompleted || existing.chaptersCompleted || [],
+        // Preserve rewrite data if not being updated
+        rewriteData: updates.rewriteData ?? existing.rewriteData,
+        rewriteProgress: updates.rewriteProgress ?? existing.rewriteProgress,
+        // Preserve translation data if not being updated
+        completedData: updates.completedData ?? existing.completedData,
+        translateProgress: updates.translateProgress ?? existing.translateProgress,
+      };
+
+      await prisma.userStoryLevel.update({
+        where: { id: this.levelId },
+        data: { processingProgress: merged as any },
+      });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping mergeProgress`);
+        return;
+      }
+      throw error;
+    }
   }
+}
+
+// ============================================================================
+// CANCELLATION CHECK
+// ============================================================================
+
+/**
+ * Check if a story has been cancelled or deleted.
+ * Call this before processing each chapter to stop early if user cancelled.
+ * @returns true if the story has been cancelled OR deleted, false otherwise
+ */
+export async function isStoryCancelled(storyId: string): Promise<boolean> {
+  const story = await prisma.userStory.findUnique({
+    where: { id: storyId },
+    select: { cancelledAt: true },
+  });
+  // Treat deleted stories (story === null) as cancelled
+  // This allows the pipeline to exit gracefully if user deletes during processing
+  if (!story) return true;
+  return story.cancelledAt !== null && story.cancelledAt !== undefined;
+}
+
+/**
+ * Custom error class for cancelled stories
+ */
+export class StoryCancelledError extends Error {
+  constructor(storyId: string) {
+    super(`Story ${storyId} was cancelled by user`);
+    this.name = "StoryCancelledError";
+  }
+}
+
+/**
+ * Throttled cancellation checker - checks DB at most once every N seconds.
+ * Use this inside long-running loops (like stanza-by-stanza processing) to
+ * avoid excessive DB queries while still catching cancellations reasonably quickly.
+ *
+ * Usage:
+ *   const checker = createThrottledCancellationChecker(storyId, 10000); // 10 seconds
+ *   for (const item of items) {
+ *     await checker.checkIfCancelled(); // Throws StoryCancelledError if cancelled
+ *     // ... process item
+ *   }
+ */
+export function createThrottledCancellationChecker(
+  storyId: string,
+  intervalMs: number = 10000 // Default: check every 10 seconds
+) {
+  let lastCheckTime = 0;
+  let cachedResult = false;
+
+  return {
+    /**
+     * Check if the story has been cancelled.
+     * Only queries DB if intervalMs has passed since last check.
+     * @throws StoryCancelledError if the story was cancelled
+     */
+    async checkIfCancelled(): Promise<void> {
+      const now = Date.now();
+
+      // Only check DB if enough time has passed
+      if (now - lastCheckTime >= intervalMs) {
+        lastCheckTime = now;
+        cachedResult = await isStoryCancelled(storyId);
+      }
+
+      if (cachedResult) {
+        throw new StoryCancelledError(storyId);
+      }
+    },
+
+    /**
+     * Force an immediate check, ignoring the throttle.
+     * Use this at major boundaries (like end of chapter).
+     * @throws StoryCancelledError if the story was cancelled
+     */
+    async forceCheck(): Promise<void> {
+      lastCheckTime = Date.now();
+      cachedResult = await isStoryCancelled(storyId);
+      if (cachedResult) {
+        throw new StoryCancelledError(storyId);
+      }
+    },
+  };
 }
 
 // ============================================================================
@@ -364,15 +506,25 @@ export class LevelProgressTracker {
 
 /**
  * Update the overall story status based on level processing results
+ * Silently fails if story was deleted (to allow pipeline to exit gracefully)
  */
 export async function updateStoryStatus(
   storyId: string,
   status: StoryStatus
 ): Promise<void> {
-  await prisma.userStory.update({
-    where: { id: storyId },
-    data: { status },
-  });
+  try {
+    await prisma.userStory.update({
+      where: { id: storyId },
+      data: { status },
+    });
+  } catch (error: any) {
+    // If story was deleted, just log and continue
+    if (error?.code === "P2025") {
+      console.log(`[updateStoryStatus] Story ${storyId} was deleted, skipping update`);
+      return;
+    }
+    throw error;
+  }
 }
 
 /**

@@ -178,6 +178,7 @@ model UserStory {
   processingProgress Json?
   visibility        StoryVisibility     @default(PRIVATE)
   rawContent        String
+  cancelledAt       DateTime?           // Set when user cancels upload - pipeline checks this before each chapter
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
   ApiCost           ApiCost[]
@@ -238,6 +239,7 @@ enum UserStoryStatus {
   READY
   FAILED
   PARTIAL
+  CANCELLED
 }
 
 // ============================================================================

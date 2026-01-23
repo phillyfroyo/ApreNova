@@ -25,13 +25,20 @@ interface UserStory {
   descriptionEn?: string | null;
   thumbnailUrl: string | null;
   sourceLanguage: string;
-  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
   detectedLevel?: string | null;
   createdAt?: string;
+  cancelledAt?: string | null;
   levels: {
     level: string;
     status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
   }[];
+}
+
+// Helper to check if a story has any readable chapters
+function hasReadableChapters(story: UserStory): boolean {
+  // A story has readable chapters if at least one level is READY
+  return story.levels.some((level) => level.status === "READY");
 }
 
 interface StoryStats {
@@ -45,7 +52,7 @@ export default function MyStoriesPage() {
   const router = useRouter();
   const { lng } = useParams();
   const typedLang = lng as Language;
-  const { setShowUploadModal, progress, lastConfirmedAt } = useStoryUpload();
+  const { setShowUploadModal, progress, lastConfirmedAt, lastCancelledAt } = useStoryUpload();
 
   const [stories, setStories] = useState<UserStory[]>([]);
   const [stats, setStats] = useState<StoryStats | null>(null);
@@ -125,9 +132,9 @@ export default function MyStoriesPage() {
     setSelectedStory(updatedStory);
   };
 
-  // Refetch stories when upload completes or story is confirmed
+  // Refetch stories when upload completes, story is confirmed, or cancelled
   useEffect(() => {
-    if (!lastConfirmedAt) return;
+    if (!lastConfirmedAt && !lastCancelledAt) return;
 
     const refetch = async () => {
       try {
@@ -148,7 +155,7 @@ export default function MyStoriesPage() {
       }
     };
     refetch();
-  }, [lastConfirmedAt]);
+  }, [lastConfirmedAt, lastCancelledAt]);
 
   if (sessionStatus === "loading" || loading) {
     return (
@@ -237,6 +244,8 @@ export default function MyStoriesPage() {
               title={story.title}
               thumbnailUrl={story.thumbnailUrl}
               status={story.status}
+              hasReadableChapters={hasReadableChapters(story)}
+              lang={typedLang}
               onClick={() => handleStoryClick(story)}
             />
           ))}

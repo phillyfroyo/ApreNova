@@ -339,6 +339,11 @@ myStories: {
   waiting: "Waiting",
   storyTooShort: "Story is too short. Please provide at least 100 characters.",
   storyTooLong: "Story exceeds maximum length.",
+  // Cancelled/Incomplete status
+  cancelled: "Cancelled",
+  incomplete: "Incomplete",
+  cancelledMessage: "This story upload was cancelled before any chapters were completed.",
+  incompleteMessage: "This story upload was cancelled. Only some chapters are available to read.",
 },
 
 storiesMetadata: {

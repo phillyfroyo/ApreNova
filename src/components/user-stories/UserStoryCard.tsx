@@ -3,43 +3,76 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle, Loader2, XCircle, AlertTriangle } from "lucide-react";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 interface UserStoryCardProps {
   id: string;
   title: string;
   thumbnailUrl?: string | null;
-  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL";
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
+  /** Whether the story has any readable chapters (for cancelled stories) */
+  hasReadableChapters?: boolean;
+  /** Language for translations */
+  lang?: Language;
   onClick: () => void;
 }
 
-const statusConfig = {
+// Display status can differ from database status
+// e.g., CANCELLED with readable chapters shows as "Incomplete"
+type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED" | "INCOMPLETE";
+
+// Map display status to translation key in myStories section
+const statusTranslationKeys: Record<DisplayStatus, string> = {
+  PROCESSING: "processing",
+  READY: "ready",
+  FAILED: "failed",
+  PARTIAL: "partial",
+  CANCELLED: "cancelled",
+  INCOMPLETE: "incomplete",
+};
+
+const statusConfig: Record<DisplayStatus, {
+  icon: typeof Loader2;
+  color: string;
+  bg: string;
+  animate: boolean;
+}> = {
   PROCESSING: {
     icon: Loader2,
     color: "text-blue-500",
     bg: "bg-blue-100",
-    label: "Processing...",
     animate: true,
   },
   READY: {
     icon: CheckCircle,
     color: "text-green-500",
     bg: "bg-green-100",
-    label: "Ready",
     animate: false,
   },
   FAILED: {
     icon: AlertCircle,
     color: "text-red-500",
     bg: "bg-red-100",
-    label: "Failed",
     animate: false,
   },
   PARTIAL: {
     icon: Clock,
     color: "text-yellow-500",
     bg: "bg-yellow-100",
-    label: "Partial",
+    animate: false,
+  },
+  CANCELLED: {
+    icon: XCircle,
+    color: "text-gray-500",
+    bg: "bg-gray-100",
+    animate: false,
+  },
+  INCOMPLETE: {
+    icon: AlertTriangle,
+    color: "text-orange-500",
+    bg: "bg-orange-100",
     animate: false,
   },
 };
@@ -49,10 +82,21 @@ export default function UserStoryCard({
   title,
   thumbnailUrl,
   status,
+  hasReadableChapters = false,
+  lang = "en",
   onClick,
 }: UserStoryCardProps) {
-  const statusInfo = statusConfig[status];
+  // Compute display status: CANCELLED with readable chapters shows as INCOMPLETE
+  const displayStatus: DisplayStatus =
+    status === "CANCELLED" && hasReadableChapters ? "INCOMPLETE" : status;
+
+  const statusInfo = statusConfig[displayStatus];
   const StatusIcon = statusInfo.icon;
+  const statusLabel = t(lang, "myStories", statusTranslationKeys[displayStatus]);
+
+  // All stories are clickable (to open modal for viewing/deleting)
+  // Visual styling indicates cancelled stories with no readable chapters
+  const isCancelledWithNoChapters = status === "CANCELLED" && !hasReadableChapters;
 
   // Filter out invalid blob URLs (they don't persist across page refreshes)
   const validThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith("blob:") ? thumbnailUrl : null;
@@ -68,7 +112,9 @@ export default function UserStoryCard({
           : undefined
       }
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="cursor-pointer rounded-xl overflow-hidden w-40 flex-shrink-0 scroll-snap-align-start"
+      className={`rounded-xl overflow-hidden w-40 flex-shrink-0 scroll-snap-align-start cursor-pointer ${
+        isCancelledWithNoChapters ? "opacity-60" : ""
+      }`}
     >
       <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-gray-100">
         {validThumbnailUrl ? (
@@ -95,7 +141,7 @@ export default function UserStoryCard({
             }`}
           />
           <span className={`text-xs font-medium ${statusInfo.color}`}>
-            {statusInfo.label}
+            {statusLabel}
           </span>
         </div>
       </div>

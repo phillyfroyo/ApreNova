@@ -9,6 +9,7 @@ import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
 import { logOpenAICost } from "@/lib/cost-tracker";
 import { isErrorResponse, stripPreamble } from "./rewriting-utils";
 import { detectStanzas, debugShowLines } from "./text-processing";
+import { createThrottledCancellationChecker } from "@/lib/user-stories/progress-tracker";
 
 // Re-export utilities for backward compatibility
 export { isErrorResponse, stripPreamble } from "./rewriting-utils";
@@ -284,7 +285,18 @@ export async function rewritePoemByStanza(
   let allStanzasValid = true;
   let anyWasRewritten = false;
 
+  // Create throttled cancellation checker if storyId is provided
+  // Checks every 10 seconds to avoid wasting API calls after user cancels
+  const cancellationChecker = options.storyId
+    ? createThrottledCancellationChecker(options.storyId, 10000)
+    : null;
+
   for (let i = 0; i < stanzas.length; i++) {
+    // Check for cancellation (throttled - only queries DB every 10 seconds)
+    if (cancellationChecker) {
+      await cancellationChecker.checkIfCancelled();
+    }
+
     const stanza = stanzas[i];
     const stanzaText = stanza.join('\n');
     const originalLineCount = stanza.length;

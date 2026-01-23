@@ -37,7 +37,7 @@ import {
   type ProcessedChapter,
   type ProcessedChapterDataWithMetadata,
 } from "./level-processor";
-import { updateStoryStatus, determineFinalStatus, updateStoryProgress } from "./progress-tracker";
+import { updateStoryStatus, determineFinalStatus, updateStoryProgress, isStoryCancelled, StoryCancelledError } from "./progress-tracker";
 
 // Shared library imports
 import { detectLanguage, detectCEFRLevel } from "@/lib/story-processing";
@@ -86,16 +86,25 @@ interface CostContext {
 
 /**
  * Step 1: Detect the source language (English or Spanish)
+ * Handles story deletion gracefully
  */
 async function detectAndSaveLanguage(
   ctx: CostContext,
   rawContent: string
 ): Promise<"en" | "es"> {
   const sourceLanguage = await detectLanguage(rawContent, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: { sourceLanguage },
-  });
+  try {
+    await prisma.userStory.update({
+      where: { id: ctx.storyId },
+      data: { sourceLanguage },
+    });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      console.log(`[Pipeline] Story ${ctx.storyId} deleted, skipping language save`);
+      throw new StoryCancelledError(ctx.storyId);
+    }
+    throw error;
+  }
   await apiDelay();
   return sourceLanguage;
 }
@@ -269,16 +278,25 @@ async function generateAndSaveAllMetadata(
 
   // Only update if we have something to update
   if (Object.keys(updateData).length > 0) {
-    await prisma.userStory.update({
-      where: { id: ctx.storyId },
-      data: updateData,
-    });
+    try {
+      await prisma.userStory.update({
+        where: { id: ctx.storyId },
+        data: updateData,
+      });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[Pipeline] Story ${ctx.storyId} deleted, skipping metadata save`);
+        throw new StoryCancelledError(ctx.storyId);
+      }
+      throw error;
+    }
   }
 
 }
 
 /**
  * Step 4: Detect and save CEFR level
+ * Handles story deletion gracefully
  */
 async function detectAndSaveLevel(
   ctx: CostContext,
@@ -288,10 +306,18 @@ async function detectAndSaveLevel(
   const detectionResult = await detectCEFRLevel(rawContent, sourceLanguage, ctx);
   const detectedLevel = detectionResult.levelString;
 
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: { detectedLevel },
-  });
+  try {
+    await prisma.userStory.update({
+      where: { id: ctx.storyId },
+      data: { detectedLevel },
+    });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      console.log(`[Pipeline] Story ${ctx.storyId} deleted, skipping level save`);
+      throw new StoryCancelledError(ctx.storyId);
+    }
+    throw error;
+  }
   await apiDelay();
 
   return detectedLevel;
@@ -432,6 +458,13 @@ async function processAllLevels(
   if (levelsNeedingRewrite.length > 0) {
     const streamingTask = (async () => {
       for (const level of levelsNeedingRewrite) {
+        // Check for cancellation before starting each level
+        if (await isStoryCancelled(story.id)) {
+          console.log(`[Pipeline] Story ${story.id} cancelled, skipping level ${level}`);
+          levelSuccess.set(level, false);
+          break; // Stop processing remaining levels
+        }
+
         const levelRecord = story.levels.find((l) => l.level === level);
         if (!levelRecord) {
           console.warn(`[Pipeline] Level record not found for ${level}, skipping`);
@@ -586,6 +619,12 @@ export async function processUserStory(storyId: string): Promise<void> {
     await updateStoryProgress(storyId, "detecting_language");
     const sourceLanguage = await detectAndSaveLanguage(ctx, story.rawContent);
 
+    // Early cancellation check - bail if story was cancelled or deleted
+    if (await isStoryCancelled(storyId)) {
+      console.log(`[Pipeline] Story ${storyId} cancelled during language detection, exiting`);
+      return;
+    }
+
     // Step 2-3: Generate all metadata in a single batched API call
     // This replaces 6 separate API calls with 1, saving ~80% on metadata costs
     await updateStoryProgress(storyId, "generating_metadata");
@@ -595,6 +634,12 @@ export async function processUserStory(storyId: string): Promise<void> {
       sourceLanguage
     );
 
+    // Early cancellation check - bail if story was cancelled or deleted
+    if (await isStoryCancelled(storyId)) {
+      console.log(`[Pipeline] Story ${storyId} cancelled during metadata generation, exiting`);
+      return;
+    }
+
     // Step 4: Detect CEFR level (still separate - needs dedicated analysis)
     await updateStoryProgress(storyId, "detecting_level");
     const detectedLevel = await detectAndSaveLevel(
@@ -602,6 +647,12 @@ export async function processUserStory(storyId: string): Promise<void> {
       story.rawContent,
       sourceLanguage
     );
+
+    // Early cancellation check - bail if story was cancelled or deleted
+    if (await isStoryCancelled(storyId)) {
+      console.log(`[Pipeline] Story ${storyId} cancelled during level detection, exiting`);
+      return;
+    }
 
     // Step 5: Determine which levels to process
     const levelsToProcess = await determineLevelsToProcess(
@@ -617,34 +668,51 @@ export async function processUserStory(storyId: string): Promise<void> {
     if (missingLevels.length > 0) {
       const { randomUUID } = await import("crypto");
 
-      await prisma.userStoryLevel.createMany({
-        data: missingLevels.map((level) => ({
-          id: randomUUID(),
-          userStoryId: story.id,
-          level,
-          content: {},
-          status: "PENDING",
-          updatedAt: new Date(),
-        })),
-      });
+      try {
+        await prisma.userStoryLevel.createMany({
+          data: missingLevels.map((level) => ({
+            id: randomUUID(),
+            userStoryId: story.id,
+            level,
+            content: {},
+            status: "PENDING",
+            updatedAt: new Date(),
+          })),
+        });
 
-      // Refresh the levels list
-      const newLevels = await prisma.userStoryLevel.findMany({
-        where: { userStoryId: story.id },
-        select: { id: true, level: true },
-      });
-      storyWithLevels.levels = newLevels;
+        // Refresh the levels list
+        const newLevels = await prisma.userStoryLevel.findMany({
+          where: { userStoryId: story.id },
+          select: { id: true, level: true },
+        });
+        storyWithLevels.levels = newLevels;
+      } catch (error: any) {
+        // Foreign key constraint fails if story was deleted
+        if (error?.code === "P2025" || error?.code === "P2003") {
+          console.log(`[Pipeline] Story ${story.id} deleted, skipping level creation`);
+          throw new StoryCancelledError(story.id);
+        }
+        throw error;
+      }
     }
 
     // Step 5.5: Detect story type if not already set (needed for poetry-specific rewriting)
     let storyType = story.storyType;
     if (!storyType) {
       storyType = await detectStoryType(story.rawContent, sourceLanguage, ctx);
-      await prisma.userStory.update({
-        where: { id: story.id },
-        data: { storyType },
-      });
-      console.log(`[Pipeline] Detected story type: ${storyType}`);
+      try {
+        await prisma.userStory.update({
+          where: { id: story.id },
+          data: { storyType },
+        });
+        console.log(`[Pipeline] Detected story type: ${storyType}`);
+      } catch (error: any) {
+        if (error?.code === "P2025") {
+          console.log(`[Pipeline] Story ${story.id} deleted, skipping story type save`);
+          throw new StoryCancelledError(story.id);
+        }
+        throw error;
+      }
     }
 
     // Step 6: Process all levels (NEW PHASED APPROACH)
@@ -660,6 +728,13 @@ export async function processUserStory(storyId: string): Promise<void> {
     const finalStatus = determineFinalStatus(allSucceeded, anySucceeded);
     await updateStoryStatus(storyId, finalStatus);
   } catch (error: any) {
+    // Handle cancellation specially - don't mark as FAILED
+    if (error instanceof StoryCancelledError || error.name === "StoryCancelledError") {
+      console.log(`[Pipeline] Story ${storyId} was cancelled by user`);
+      // The cancel API already handles status update and cleanup
+      return;
+    }
+
     console.error(`[Pipeline] Failed:`, error.message);
     await updateStoryStatus(storyId, "FAILED");
     throw error;
