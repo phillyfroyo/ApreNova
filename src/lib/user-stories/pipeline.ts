@@ -35,6 +35,7 @@ import {
   processLevel, // Keep for retryLevel backward compatibility
   processLevelStreaming, // NEW: Streaming rewrite→translate pipeline
   type ProcessedChapter,
+  type ProcessedChapterDataWithMetadata,
 } from "./level-processor";
 import { updateStoryStatus, determineFinalStatus, updateStoryProgress } from "./progress-tracker";
 
@@ -377,6 +378,8 @@ async function processAllLevels(
 
   // Track processed chapters for each level (after translation)
   const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();
+  // Track extended chapter data with metadata (for poems/scripts)
+  const levelProcessedChaptersWithMetadata: Map<string, ProcessedChapterDataWithMetadata[]> = new Map();
   // Track which levels succeeded
   const levelSuccess: Map<string, boolean> = new Map();
 
@@ -405,10 +408,15 @@ async function processAllLevels(
         level: detectedLevel,
         chapters: originalChapters,
         sourceLanguage,
+        storyType: story.storyType as StoryType | null, // For poem/script preprocessing
       });
 
       if (translateResult.success) {
         levelProcessedChapters.set(detectedLevel, translateResult.processedChapters);
+        // Store extended metadata if available (for poems/scripts)
+        if (translateResult.processedChaptersWithMetadata) {
+          levelProcessedChaptersWithMetadata.set(detectedLevel, translateResult.processedChaptersWithMetadata);
+        }
         levelSuccess.set(detectedLevel, true);
       } else {
         console.error(`[Pipeline] Translation failed for ${detectedLevel}:`, translateResult.error);
@@ -445,6 +453,10 @@ async function processAllLevels(
 
         if (streamingResult.success) {
           levelProcessedChapters.set(level, streamingResult.processedChapters);
+          // Store extended metadata if available (for poems/scripts)
+          if (streamingResult.processedChaptersWithMetadata) {
+            levelProcessedChaptersWithMetadata.set(level, streamingResult.processedChaptersWithMetadata);
+          }
           levelSuccess.set(level, true);
         } else {
           console.error(`[Pipeline] Streaming failed for ${level}:`, streamingResult.error);
@@ -480,6 +492,9 @@ async function processAllLevels(
       continue;
     }
 
+    // Get extended metadata if available (for poems/scripts)
+    const processedChaptersWithMetadata = levelProcessedChaptersWithMetadata.get(level);
+
     const buildResult = await buildAndSaveLevel({
       storyId: story.id,
       levelId: levelRecord.id,
@@ -488,6 +503,7 @@ async function processAllLevels(
       hasChapters,
       processedChapters,
       sourceLanguage,
+      processedChaptersWithMetadata,
     });
 
     levelSuccess.set(level, buildResult.success);

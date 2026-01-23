@@ -61,9 +61,11 @@ export default async function UserStoryReaderPage({
     lng as Language
   );
 
-  console.log(`[UserStoryReaderPage] Story result: hasStory=${!!story}, hasLines=${!!story?.lines}, linesCount=${story?.lines?.length}`);
+  const hasLines = story?.lines && story.lines.length > 0;
+  const hasStanzas = story?.stanzas && story.stanzas.length > 0;
+  console.log(`[UserStoryReaderPage] Story result: hasStory=${!!story}, hasLines=${hasLines}, hasStanzas=${hasStanzas}, linesCount=${story?.lines?.length}`);
 
-  if (!story || !story.lines || story.lines.length === 0) {
+  if (!story || (!hasLines && !hasStanzas)) {
     console.log(`[UserStoryReaderPage] No story content, returning notFound`);
     return notFound();
   }
@@ -79,6 +81,7 @@ export default async function UserStoryReaderPage({
       title={title || "My Story"}
       storySlug={story.storySlug}
       sentences={story.lines}
+      stanzas={story.stanzas}
       initialLevel={level}
       storyMap={storyMap}
       isUserStory={true}

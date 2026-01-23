@@ -7,12 +7,27 @@ import type { CEFRCode } from "@/lib/cefr";
 interface StoryLine {
   es: string;
   en: string;
+  // Poem support
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
+  // Script support
+  speaker?: string;
+  speakerAnnotation?: string;
+  stageDirection?: string;
+  stageDirectionEs?: string;
+  stageDirectionEn?: string;
+  isStageDirectionOnly?: boolean;
 }
 
 interface ChapterMetadata {
   number: number;
   title: string;
   subtitle?: string;
+}
+
+interface PageContent {
+  lines?: StoryLine[];
+  stanzas?: StoryLine[][];  // For poems - nested array by stanza
 }
 
 interface LevelContent {
@@ -22,12 +37,7 @@ interface LevelContent {
   chapters: Record<
     number,
     {
-      pages: Record<
-        number,
-        {
-          lines: StoryLine[];
-        }
-      >;
+      pages: Record<number, PageContent>;
       metadata?: ChapterMetadata; // Optional for backward compatibility
     }
   >;
@@ -100,6 +110,29 @@ export async function getUserStoryContent(
     const pageData = levelContent.chapters?.[chapterNum]?.pages?.[pageNum];
 
     if (pageData) {
+      // Handle both flat lines and nested stanzas (for poems)
+      const hasStanzas = !!pageData.stanzas && pageData.stanzas.length > 0;
+      const hasLines = !!pageData.lines && pageData.lines.length > 0;
+
+      // Flatten stanzas to lines for backwards compatibility with page component
+      // while also passing the stanzas structure for poem-aware rendering
+      let lines: StoryLine[] = [];
+      if (hasStanzas) {
+        // Flatten stanzas into lines array, preserving stanza metadata
+        lines = pageData.stanzas!.flatMap((stanza, stanzaIdx) =>
+          stanza.map((line, lineIdx) => ({
+            ...line,
+            stanzaNumber: line.stanzaNumber ?? (stanzaIdx + 1),
+            // Mark last line of each stanza (except the last stanza) as having a break after
+            isStanzaBreak: lineIdx === stanza.length - 1 && stanzaIdx < pageData.stanzas!.length - 1,
+          }))
+        );
+      } else if (hasLines) {
+        lines = pageData.lines!;
+      }
+
+      console.log(`[getUserStoryContent] Page has ${hasStanzas ? 'stanzas' : 'lines'}: ${hasStanzas ? pageData.stanzas!.length + ' stanzas' : lines.length + ' lines'}`);
+
       return {
         storySlug: story.slug,
         storyId: story.id,
@@ -110,7 +143,8 @@ export async function getUserStoryContent(
         chapter: chapterNum,
         page: pageNum,
         hasChapters: levelContent.hasChapters,
-        lines: pageData.lines,
+        lines,
+        stanzas: hasStanzas ? pageData.stanzas : undefined,
         isUserStory: true,
         storyType: story.storyType,
       };

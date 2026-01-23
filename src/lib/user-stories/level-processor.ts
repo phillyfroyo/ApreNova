@@ -77,6 +77,9 @@ export interface ProcessedChapter {
   metadata?: ChapterMetadata;
 }
 
+// Re-export for pipeline usage
+export type { ProcessedChapterDataWithMetadata };
+
 /** Context for cost tracking */
 interface CostContext {
   storyId: string;
@@ -794,6 +797,8 @@ export interface StreamingLevelParams {
 export interface StreamingLevelResult {
   success: boolean;
   processedChapters: ProcessedChapter[];
+  /** Extended chapter data with line metadata (for poems/scripts) */
+  processedChaptersWithMetadata?: ProcessedChapterDataWithMetadata[];
   error?: string;
 }
 
@@ -914,9 +919,20 @@ async function translateChaptersConsumer(
   const totalChapters = chapters.length;
   const tracker = new LevelProgressTracker(levelId, totalChapters);
   const processedChapters: (ProcessedChapter | null)[] = new Array(totalChapters).fill(null);
+  const processedChaptersWithMetadata: (ProcessedChapterDataWithMetadata | null)[] = new Array(totalChapters).fill(null);
 
   // Determine if this is poetry (for artistic translation handling)
   const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
+
+  // Check if we need special preprocessing for this story type
+  const needsMetadata = storyType && (
+    storyType === 'poem' ||
+    storyType === 'song-lyrics' ||
+    storyType === 'epic' ||
+    storyType === 'movie-script' ||
+    storyType === 'tv-script' ||
+    storyType === 'dialogue'
+  );
 
   // Mark level as PROCESSING in database so streaming reader can work
   await tracker.startProcessing();
@@ -948,9 +964,17 @@ async function translateChaptersConsumer(
     await tracker.updateTranslationProgress(chaptersProcessed + 1);
 
     try {
-      // Call Claude to translate (with chunking for large chapters, artistic handling for poetry)
-      const translatedLines = await translateChapterWithChunking(
+      // Preprocess for story type (poems: stanzas, scripts: speakers)
+      // This extracts metadata from the REWRITTEN content
+      const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
         content,
+        storyType
+      );
+
+      // Call Claude to translate (with chunking for large chapters, artistic handling for poetry)
+      const textToTranslate = processedLines.join('\n');
+      const translatedLines = await translateChapterWithChunking(
+        textToTranslate,
         sourceLanguage,
         level,
         ctx,
@@ -958,9 +982,9 @@ async function translateChaptersConsumer(
       );
 
       // Preserve blank lines for poetry (they mark stanza breaks), filter for prose
-      const sourceLines = isPoetry
-        ? content.split("\n")
-        : content.split("\n").filter((l) => l.trim());
+      const filteredSourceLines = isPoetry
+        ? processedLines
+        : processedLines.filter((l) => l.trim());
       const filteredTranslatedLines = isPoetry
         ? translatedLines
         : translatedLines.filter((l) => l.trim());
@@ -968,23 +992,42 @@ async function translateChaptersConsumer(
       // DEBUG: For poems, show final lines going to build
       if (isPoetry) {
         console.log(`[PoemFormat] translateChaptersConsumer ch${chapterIndex + 1} FINAL:`);
-        console.log(`  sourceLines: ${sourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
-        debugShowLines(sourceLines.join('\n'), `Consumer sourceLines ch${chapterIndex + 1}`);
+        console.log(`  sourceLines: ${filteredSourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
+        debugShowLines(filteredSourceLines.join('\n'), `Consumer sourceLines ch${chapterIndex + 1}`);
       }
 
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {
-        sourceLines,
+        sourceLines: filteredSourceLines,
         translatedLines: filteredTranslatedLines,
         metadata,
       };
 
       // Store in correct order (by original chapter index)
       processedChapters[chapterIndex] = processedChapter;
+
+      // Build extended chapter data with line metadata if needed
+      if (needsMetadata && lineMetadata.size > 0) {
+        const chapterDataWithMeta: ProcessedChapterDataWithMetadata = {
+          sourceLines: filteredSourceLines,
+          translatedLines: filteredTranslatedLines,
+          metadata,
+          lineMetadata,
+        };
+        processedChaptersWithMetadata[chapterIndex] = chapterDataWithMeta;
+      } else {
+        // No special metadata - just copy basic data
+        processedChaptersWithMetadata[chapterIndex] = {
+          sourceLines: filteredSourceLines,
+          translatedLines: filteredTranslatedLines,
+          metadata,
+        };
+      }
+
       queue.markTranslateComplete(chapterIndex, processedChapter);
 
       // Update progress with completed data (without metadata for tracker)
-      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines, translatedLines: filteredTranslatedLines });
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines: filteredSourceLines, translatedLines: filteredTranslatedLines });
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);
@@ -1002,10 +1045,12 @@ async function translateChaptersConsumer(
 
   // Filter out any nulls (failed chapters)
   const validChapters = processedChapters.filter((ch): ch is ProcessedChapter => ch !== null);
+  const validChaptersWithMetadata = processedChaptersWithMetadata.filter((ch): ch is ProcessedChapterDataWithMetadata => ch !== null);
 
   return {
     success: validChapters.length > 0,
     processedChapters: validChapters,
+    processedChaptersWithMetadata: needsMetadata ? validChaptersWithMetadata : undefined,
     error: validChapters.length === 0 ? "All chapters failed to translate" : undefined,
   };
 }
@@ -1053,6 +1098,7 @@ export async function processLevelStreaming(
   return {
     success: translateResult.success,
     processedChapters: translateResult.processedChapters,
+    processedChaptersWithMetadata: translateResult.processedChaptersWithMetadata,
     error: translateResult.error,
   };
 }
