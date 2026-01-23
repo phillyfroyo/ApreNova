@@ -18,7 +18,8 @@ export type UploadStage =
   | "review"
   | "complete"
   | "error"
-  | "connection-lost"; // Network connectivity issue - can retry
+  | "connection-lost" // Network connectivity issue - can retry
+  | "reconnecting"; // Recovering from state loss (e.g., after 404 navigation)
 
 // Progress phases from backend (main titles)
 export type ProgressPhase = "detecting" | "adapting" | "translating" | "finalizing";
@@ -179,6 +180,7 @@ const STAGE_WEIGHTS: Record<UploadStage, { start: number; end: number }> = {
   complete: { start: 100, end: 100 },
   error: { start: 0, end: 0 },
   "connection-lost": { start: 0, end: 0 }, // Preserves last progress visually
+  reconnecting: { start: 0, end: 0 }, // Shows while recovering from state loss
 };
 
 // Helper to calculate overall progress accounting for multi-level processing
@@ -422,6 +424,43 @@ function getStageMessage(
   }
 }
 
+// Session storage key for persisting upload state across navigation
+const UPLOAD_STATE_KEY = "cuentana_upload_state";
+
+interface PersistedUploadState {
+  storyId: string;
+  isUploading: boolean;
+  timestamp: number;
+}
+
+function persistUploadState(state: PersistedUploadState | null) {
+  try {
+    if (state) {
+      sessionStorage.setItem(UPLOAD_STATE_KEY, JSON.stringify(state));
+    } else {
+      sessionStorage.removeItem(UPLOAD_STATE_KEY);
+    }
+  } catch (e) {
+    // Ignore sessionStorage errors (e.g., in SSR or private browsing)
+  }
+}
+
+function getPersistedUploadState(): PersistedUploadState | null {
+  try {
+    const stored = sessionStorage.getItem(UPLOAD_STATE_KEY);
+    if (!stored) return null;
+    const state = JSON.parse(stored) as PersistedUploadState;
+    // Ignore if older than 1 hour
+    if (Date.now() - state.timestamp > 60 * 60 * 1000) {
+      sessionStorage.removeItem(UPLOAD_STATE_KEY);
+      return null;
+    }
+    return state;
+  } catch (e) {
+    return null;
+  }
+}
+
 export function StoryUploadProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [isUploading, setIsUploading] = useState(false);
@@ -440,6 +479,17 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     overallProgress: 0,
     message: "",
   });
+
+  // Debug: Log state changes that would hide the widget
+  useEffect(() => {
+    console.log("[StoryUploadContext] State changed:", {
+      isUploading,
+      progressStage: progress.stage,
+      storyId: storyData?.id,
+      isMinimized,
+      wouldHideWidget: !isUploading && progress.stage === "idle",
+    });
+  }, [isUploading, progress.stage, storyData?.id, isMinimized]);
 
   // Abort controller for cancellation
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -460,6 +510,29 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   // Track if cancel was requested during upload (before story ID is known)
   // This allows us to cancel the story after creation completes
   const cancelRequestedRef = useRef(false);
+
+  // Recover from persisted state if React state was lost (e.g., after 404 navigation)
+  useEffect(() => {
+    // Only try to recover if we're in idle state (potential state loss)
+    if (!isUploading && progress.stage === "idle" && !storyData) {
+      const persisted = getPersistedUploadState();
+      if (persisted && persisted.isUploading && persisted.storyId) {
+        console.log("[StoryUploadContext] Recovering from persisted state:", persisted);
+        // We have a story that was uploading - trigger reconnection via polling
+        pollingStoryIdRef.current = persisted.storyId;
+        storyIdRef.current = persisted.storyId;
+        setIsUploading(true);
+        setStoryData({ id: persisted.storyId } as StoryUploadData);
+        setProgress({
+          stage: "reconnecting",
+          stageProgress: 0,
+          overallProgress: 0,
+          message: "Reconnecting...",
+          phaseTitle: "Reconnecting to upload...",
+        });
+      }
+    }
+  }, []); // Only run once on mount
 
   const updateProgress = useCallback((stage: UploadStage, stageProgress: number = 0, extra?: Partial<UploadProgress>) => {
     const weights = STAGE_WEIGHTS[stage];
@@ -575,6 +648,13 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       // Store story ID in ref immediately (for cancel to use before React state updates)
       storyIdRef.current = story.id;
       setStoryData(prev => prev ? { ...prev, id: story.id } : null);
+
+      // Persist upload state to sessionStorage (for recovery after navigation issues like 404)
+      persistUploadState({
+        storyId: story.id,
+        isUploading: true,
+        timestamp: Date.now(),
+      });
 
       // Stage 2: Process the story (this triggers the AI pipeline)
       console.log("[StoryUpload] Stage 2: Starting AI processing...");
@@ -978,6 +1058,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     });
     setStoryData(null);
 
+    // Clear persisted upload state
+    persistUploadState(null);
+
     // Only clear refs if we had a story ID (immediate cancel)
     // If no story ID, leave cancelRequestedRef set for deferred cancel
     if (storyId) {
@@ -1039,6 +1122,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       storyIdRef.current = null; // Clear the ref
       setLastConfirmedAt(Date.now()); // Signal to UI to refresh story list
 
+      // Clear persisted upload state - upload is complete
+      persistUploadState(null);
+
       // Show success state - the banner will appear whether user is reading or not
       // This ensures users always know when processing completes
       console.log("[StoryUpload] Processing complete, showing success state", { isReadingCurrentStory });
@@ -1076,7 +1162,25 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     });
     setStoryData(null);
     setIsReadingCurrentStory(false);
+    // Clear persisted upload state
+    persistUploadState(null);
   }, []);
+
+  // Effect to handle reconnecting after state loss
+  useEffect(() => {
+    if (progress.stage !== "reconnecting") return;
+    if (!pollingStoryIdRef.current) return;
+
+    console.log("[StoryUpload] Reconnecting after state loss...");
+
+    // Trigger the regular polling retry mechanism
+    setRetryTrigger(prev => prev + 1);
+    // Update stage to connection-lost so the retry effect can pick it up
+    setProgress(prev => ({
+      ...prev,
+      stage: "connection-lost",
+    }));
+  }, [progress.stage]);
 
   // Effect to resume polling when retry is triggered
   useEffect(() => {

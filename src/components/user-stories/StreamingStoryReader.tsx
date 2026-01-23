@@ -35,6 +35,7 @@ interface StreamMapResponse {
   isProcessing: boolean;
   currentStage?: string;
   currentChapter?: number;
+  levelPending?: boolean; // Level record not created yet
 }
 
 interface ReadStreamResponse {
@@ -61,6 +62,7 @@ interface ReadStreamResponse {
   // Error case
   error?: string;
   chapterPending?: boolean;
+  levelPending?: boolean; // Level record not created yet
 }
 
 interface StreamingStoryReaderProps {
@@ -89,6 +91,7 @@ export default function StreamingStoryReader({
   const [content, setContent] = useState<ReadStreamResponse | null>(null);
   const [streamMap, setStreamMap] = useState<StreamMapResponse | null>(null);
   const [chapterPending, setChapterPending] = useState(false);
+  const [levelPending, setLevelPending] = useState(false);
 
   // Track if we're polling
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -123,6 +126,11 @@ export default function StreamingStoryReader({
       if (isMountedRef.current) {
         setStreamMap(data);
 
+        // Handle level pending state
+        if (data.levelPending) {
+          setLevelPending(true);
+        }
+
         // If no longer processing, stop polling
         if (!data.isProcessing && pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current);
@@ -142,6 +150,7 @@ export default function StreamingStoryReader({
     try {
       setLoading(true);
       setChapterPending(false);
+      setLevelPending(false);
 
       const res = await fetch(
         `/api/user-stories/${storyId}/read-stream?level=${level}&chapter=${chapter}&page=${page}`,
@@ -150,14 +159,23 @@ export default function StreamingStoryReader({
 
       const data: ReadStreamResponse = await res.json();
 
-      if (res.status === 202 && data.chapterPending) {
-        // Chapter not ready yet
-        setChapterPending(true);
-        setContent(null);
-        setStreamMap(prev => prev ? {
-          ...prev,
-          completedChapters: data.availableChapters?.length || 0,
-        } : null);
+      if (res.status === 202) {
+        // Level or chapter not ready yet
+        if (data.levelPending) {
+          // Level doesn't exist yet - show waiting state
+          setLevelPending(true);
+          setChapterPending(false);
+          setContent(null);
+        } else if (data.chapterPending) {
+          // Chapter not ready yet
+          setChapterPending(true);
+          setLevelPending(false);
+          setContent(null);
+          setStreamMap(prev => prev ? {
+            ...prev,
+            completedChapters: data.availableChapters?.length || 0,
+          } : null);
+        }
         return;
       }
 
@@ -168,6 +186,8 @@ export default function StreamingStoryReader({
       if (isMountedRef.current) {
         setContent(data);
         setError(null);
+        setLevelPending(false);
+        setChapterPending(false);
       }
     } catch (err: any) {
       console.error("[StreamingStoryReader] fetchContent error:", err);
@@ -252,6 +272,36 @@ export default function StreamingStoryReader({
         })),
     };
   }, [streamMap]);
+
+  // Show level pending overlay (level doesn't exist yet)
+  if (levelPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
+        <div className="text-center max-w-md bg-white/90 rounded-2xl p-8 shadow-lg">
+          <div className="text-5xl mb-4">⏳</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            {lng === "es" ? "Preparando nivel..." : "Preparing level..."}
+          </h2>
+          <p className="text-gray-600 mb-4">
+            {lng === "es"
+              ? "El contenido de este nivel se está generando. Por favor espera un momento."
+              : "Content for this level is being generated. Please wait a moment."}
+          </p>
+          <div className="flex items-center justify-center gap-1 mb-4">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+          <button
+            onClick={() => router.back()}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            {lng === "es" ? "Volver" : "Go back"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Show chapter pending overlay
   if (chapterPending && streamMap) {

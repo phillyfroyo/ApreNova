@@ -83,12 +83,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     const levelData = story.UserStoryLevel[0];
+
+    // If level doesn't exist yet, return empty but valid response
+    // This happens when user clicks "Read While Uploading" before the level record is created
     if (!levelData) {
-      return NextResponse.json({ error: "Level not found" }, { status: 404 });
+      return NextResponse.json({
+        hasChapters: false,
+        chapters: [],
+        totalChapters: 0,
+        completedChapters: 0,
+        isProcessing: true,
+        levelPending: true, // Signal that level is being prepared
+      });
     }
 
     const progress = levelData.processingProgress as ProcessingProgress | null;
-    const isProcessing = levelData.status === "PROCESSING";
+    const isProcessing = levelData.status === "PROCESSING" || levelData.status === "PENDING";
 
     // If level is READY, serve complete map from finalized content
     if (levelData.status === "READY" && levelData.content) {

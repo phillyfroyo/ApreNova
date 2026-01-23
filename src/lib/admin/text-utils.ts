@@ -262,6 +262,10 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
   });
 
   // Process nodes to extract text while preserving structure
+  // IMPORTANT: For poems and other formatted text, we need DOUBLE newlines between
+  // block elements (paragraphs) to preserve stanza breaks. The stanza detection
+  // algorithm in text-preprocessor.ts looks for empty lines (double newlines) to
+  // identify stanza boundaries.
   const processNode = (node: Node): string => {
     if (node.nodeType === Node.TEXT_NODE) {
       return node.textContent || "";
@@ -271,9 +275,14 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
       const el = node as Element;
       const tagName = el.tagName.toLowerCase();
 
-      // Block elements that should have line breaks
-      const blockElements = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr", "blockquote", "pre"];
-      const isBlock = blockElements.includes(tagName);
+      // Block elements that should have paragraph breaks (double newline)
+      // These represent semantic paragraph boundaries in HTML
+      const paragraphElements = ["p", "div", "blockquote", "pre"];
+      const isParagraph = paragraphElements.includes(tagName);
+
+      // Other block elements that should have single line breaks
+      const lineBreakElements = ["h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"];
+      const isLineBreak = lineBreakElements.includes(tagName);
 
       let content = "";
       el.childNodes.forEach(child => {
@@ -284,7 +293,13 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
         return "\n";
       }
 
-      if (isBlock && content.trim()) {
+      // Paragraph elements get double newlines to preserve stanza/paragraph structure
+      if (isParagraph && content.trim()) {
+        return "\n\n" + content.trim() + "\n\n";
+      }
+
+      // Headers and list items get single newlines
+      if (isLineBreak && content.trim()) {
         return "\n" + content.trim() + "\n";
       }
 
@@ -296,12 +311,14 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
 
   let text = processNode(doc.body);
 
-  // Clean up excessive whitespace while preserving paragraph breaks
+  // Clean up excessive whitespace while preserving paragraph/stanza breaks
+  // IMPORTANT: We keep double newlines (\n\n) intact - these represent stanza
+  // boundaries in poems. Only collapse 3+ newlines down to 2.
   text = text
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n /g, "\n")
-    .replace(/ \n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")  // Collapse 3+ newlines to exactly 2 (preserve stanza breaks)
+    .replace(/[ \t]+/g, " ")     // Collapse horizontal whitespace
+    .replace(/\n /g, "\n")       // Remove space after newline
+    .replace(/ \n/g, "\n")       // Remove space before newline
     .trim();
 
   return { text, annotations };

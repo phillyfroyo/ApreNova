@@ -88,11 +88,19 @@ export default async function StreamingReaderPage({
 
   const availableLevels = allLevels.map(l => l.level as CEFRCode);
 
-  // If level is not processing (PENDING or FAILED), show not found
+  // If level doesn't exist or is FAILED, show not found
   // Note: READY case is handled above with redirect
-  if (levelData?.status !== "PROCESSING") {
-    console.log(`[StreamingReaderPage] Level not available: status=${levelData?.status}`);
+  // PENDING and PROCESSING are valid states for streaming reader
+  if (levelData?.status === "FAILED") {
+    console.log(`[StreamingReaderPage] Level failed: status=${levelData?.status}`);
     return notFound();
+  }
+
+  // If level is PENDING or doesn't exist yet, render the streaming reader
+  // It will show a "waiting for content" state until chapters become available
+  const isPending = !levelData || levelData.status === "PENDING";
+  if (isPending) {
+    console.log(`[StreamingReaderPage] Level is pending/not created yet: status=${levelData?.status}`);
   }
 
   return (
