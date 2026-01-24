@@ -7,12 +7,12 @@ import "server-only";
 import { OpenAI } from "openai";
 import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
 import { logOpenAICost } from "@/lib/cost-tracker";
-import { isErrorResponse, stripPreamble } from "./rewriting-utils";
+import { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText } from "./rewriting-utils";
 import { detectStanzas, debugShowLines } from "./text-processing";
 import { createThrottledCancellationChecker } from "@/lib/user-stories/progress-tracker";
 
 // Re-export utilities for backward compatibility
-export { isErrorResponse, stripPreamble } from "./rewriting-utils";
+export { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText } from "./rewriting-utils";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -120,6 +120,22 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
 
       // Strip preambles
       const rewrittenText = stripPreamble(rawResponse);
+
+      // Validate content - check response is related to original (catches meta-commentary)
+      if (!isValidRewriteResponse(text, rewrittenText)) {
+        console.warn(`[Rewrite] Response failed content validation (attempt ${attempt})`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        return {
+          rewrittenText: text,
+          originalLength: text.length,
+          rewrittenLength: text.length,
+          wasRewritten: false,
+          attempts: attempt,
+        };
+      }
 
       // Validate the rewrite worked
       if (!rewrittenText || rewrittenText.length < text.length * 0.3) {
@@ -301,6 +317,20 @@ export async function rewritePoemByStanza(
     const stanzaText = stanza.join('\n');
     const originalLineCount = stanza.length;
 
+    // Skip rewriting for title-like stanzas (single word, ALL CAPS, etc.)
+    // These don't need simplification and often cause AI confusion
+    if (isTitleLikeText(stanzaText)) {
+      console.log(`[RewritePoemByStanza] Skipping title-like stanza ${i + 1}/${stanzas.length}: "${stanzaText.substring(0, 30)}..."`);
+      rewrittenStanzas.push(stanza); // Keep original
+      stanzaValidation.push({
+        stanzaIndex: i,
+        originalLines: originalLineCount,
+        rewrittenLines: originalLineCount,
+        valid: true,
+      });
+      continue;
+    }
+
     console.log(`[RewritePoemByStanza] Rewriting stanza ${i + 1}/${stanzas.length} (${originalLineCount} lines)`);
 
     // Rewrite this stanza with poetry mode (strict line validation)
@@ -315,6 +345,19 @@ export async function rewritePoemByStanza(
         maxRetries: options.maxRetries || 3, // More retries for stanza-level
       }
     );
+
+    // Validate response content - check it's related to the original
+    if (!isValidRewriteResponse(stanzaText, result.rewrittenText)) {
+      console.warn(`[RewritePoemByStanza] Stanza ${i + 1} failed content validation, using original`);
+      rewrittenStanzas.push(stanza); // Fall back to original
+      stanzaValidation.push({
+        stanzaIndex: i,
+        originalLines: originalLineCount,
+        rewrittenLines: originalLineCount,
+        valid: true,
+      });
+      continue;
+    }
 
     if (result.wasRewritten) {
       anyWasRewritten = true;

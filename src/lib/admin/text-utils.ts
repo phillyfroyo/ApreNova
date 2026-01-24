@@ -317,8 +317,11 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
 
       if (isParagraph) {
         if (!trimmedContent) {
-          // Empty paragraph (or paragraph with only <br> tags) = stanza break indicator (double newline)
-          return "\n\n";
+          // Empty paragraph (or paragraph with only <br> tags)
+          // In Gutenberg HTML, single empty <p><br/></p> is used for visual spacing between lines
+          // A real stanza break has TWO or more consecutive empty paragraphs
+          // So: single empty = \n, multiple consecutive empties = \n\n (stanza break after collapse)
+          return "\n";
         }
         // Content paragraph = single line (NOT stanza break)
         // This preserves poetry where each line is in its own <p>
@@ -347,14 +350,24 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
   });
 
   // Clean up whitespace while preserving stanza breaks
-  // Stanza breaks are marked by double newlines (\n\n), which occur when:
-  // - Empty <p> tags are encountered
-  // - Multiple blank lines exist in the source
+  //
+  // After processNode:
+  // - Content paragraph: "text\n"
+  // - Empty paragraph: "\n"
+  //
+  // Sequences:
+  // - content + empty + content = "text\n\ntext\n" (2 newlines = normal spacing)
+  // - content + empty + empty + content = "text\n\n\ntext\n" (3 newlines = stanza break)
+  //
+  // Strategy: Use a placeholder to preserve stanza breaks during collapsing
+  const STANZA_BREAK_MARKER = "\x00STANZA\x00";
   text = text
-    .replace(/[ \t]+/g, " ")     // Collapse horizontal whitespace
-    .replace(/\n /g, "\n")       // Remove space after newline
-    .replace(/ \n/g, "\n")       // Remove space before newline
-    .replace(/\n{3,}/g, "\n\n")  // Collapse 3+ newlines to exactly 2 (stanza break)
+    .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
+    .replace(/\n /g, "\n")               // Remove space after newline
+    .replace(/ \n/g, "\n")               // Remove space before newline
+    .replace(/\n{3,}/g, STANZA_BREAK_MARKER)  // 3+ newlines = stanza break → mark it
+    .replace(/\n+/g, "\n")               // Collapse all remaining newlines to 1
+    .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")  // Restore stanza breaks as \n\n
     .trim();
 
   return { text, annotations };
