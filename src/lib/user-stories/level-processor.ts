@@ -16,6 +16,7 @@ import {
   parseChapters,
   buildContentStructure,
   buildContentStructureWithMetadata,
+  buildSingleChapterContent,
   quickClean,
   cleanText,
   levelStringToNumber,
@@ -28,8 +29,6 @@ import {
   detectStanzas,
   parseScriptLine,
   extractSpeakerNames,
-  // Debug helper
-  debugShowLines,
   // Chunking for large chapters
   splitIntoSubChunks,
   reassembleChunks,
@@ -69,6 +68,8 @@ export interface ParsedChapters {
   hasChapters: boolean;
   chapters: ParsedChapter[];
   cleanedContent: string;
+  /** Detected content structure type (prose, anthology, epic, script) */
+  structureType: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface ProcessedChapter {
@@ -222,24 +223,8 @@ async function rewriteChapterWithChunking(
       rewriteOptions
     );
 
-    // Log validation results
-    if (!stanzaResult.allStanzasValid) {
-      console.warn(`[RewriteChapter] Per-stanza validation issues:`, stanzaResult.stanzaValidation);
-      // DEBUG: Show what GPT returned for failed stanzas
-      stanzaResult.stanzaValidation
-        .filter(v => !v.valid)
-        .forEach(v => {
-          const stanzaContent = stanzaResult.rewrittenStanzas[v.stanzaIndex];
-          console.warn(`[PoemFormat] Failed stanza ${v.stanzaIndex + 1} content (${stanzaContent?.length} lines):`);
-          stanzaContent?.forEach((line, i) => console.warn(`  ${i + 1}: ${line.substring(0, 60)}`));
-        });
-    }
-
     // Join stanzas back together with empty lines between them
     const joinedText = joinStanzasToText(stanzaResult.rewrittenStanzas);
-
-    // DEBUG: Show reassembled poem after joining stanzas
-    debugShowLines(joinedText, 'rewriteChapterWithChunking AFTER joinStanzasToText');
 
     return joinedText;
   }
@@ -317,11 +302,6 @@ async function translateChapterWithChunking(
   ctx: CostContext,
   isPoetry: boolean = false
 ): Promise<string[]> {
-  // DEBUG: Show text going into translation
-  if (isPoetry) {
-    debugShowLines(chapterText, 'translateChapterWithChunking INPUT (poetry)');
-  }
-
   const translateOptions = {
     storyId: ctx.storyId,
     userId: ctx.userId,
@@ -333,12 +313,6 @@ async function translateChapterWithChunking(
   if (chapterText.length <= MAX_CHUNK_CHARS || isPoetry) {
     // Small chapter or poetry - process directly (don't chunk poetry)
     const result = await translateText(chapterText, sourceLanguage, level, translateOptions);
-
-    // DEBUG: Show translation output for poetry
-    if (isPoetry) {
-      debugShowLines(result.translatedLines.join('\n'), 'translateChapterWithChunking OUTPUT (poetry)');
-    }
-
     return result.translatedLines;
   }
 
@@ -397,40 +371,44 @@ async function translateChapterWithChunking(
 // ============================================================================
 
 /**
+ * Options for parsing story content
+ */
+export interface ParseContentOptions {
+  /**
+   * Content structure type. When "auto" or undefined, will analyze text to detect.
+   * - "anthology": Poetry collections - preserves "I. LIFE." markers in content
+   * - "epic": Narrative poetry - preserves markers
+   * - "prose": Standard novels/stories
+   * - "script": Screenplays/transcripts
+   */
+  structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
+}
+
+/**
  * Parse story content into chapters
  * This is done once and shared across all levels
+ *
+ * @param rawContent - Raw text content
+ * @param options - Optional settings including structureType for anthology handling
  */
-export function parseStoryContent(rawContent: string): ParsedChapters {
-  // DEBUG: Show rawContent input
-  const inputLines = rawContent.split('\n').slice(0, 15);
-  console.log('[parseStoryContent] rawContent INPUT (first 15 lines):');
-  inputLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
-  });
-
+export function parseStoryContent(
+  rawContent: string,
+  options: ParseContentOptions = {}
+): ParsedChapters {
   const afterQuickClean = quickClean(rawContent);
-
-  // DEBUG: Show after quickClean
-  const afterQCLines = afterQuickClean.split('\n').slice(0, 15);
-  console.log('[parseStoryContent] AFTER quickClean (first 15 lines):');
-  afterQCLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
-  });
-
   const cleanedContent = cleanText(afterQuickClean);
 
-  // DEBUG: Show after cleanText
-  const afterCTLines = cleanedContent.split('\n').slice(0, 15);
-  console.log('[parseStoryContent] AFTER cleanText (first 15 lines):');
-  afterCTLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
+  // Parse chapters, passing structure type for proper marker handling
+  const parseResult = parseChapters(cleanedContent, {
+    structureType: options.structureType || "auto"
   });
 
-  const { hasChapters, chapters } = parseChapters(cleanedContent);
-  return { hasChapters, chapters, cleanedContent };
+  return {
+    hasChapters: parseResult.hasChapters,
+    chapters: parseResult.chapters,
+    cleanedContent,
+    structureType: parseResult.structureType,
+  };
 }
 
 // ============================================================================
@@ -562,6 +540,8 @@ export interface TranslateParams {
   sourceLanguage: "en" | "es";
   /** Story type for special preprocessing (poems, scripts) */
   storyType?: StoryType | null;
+  /** Structure type for anthology pagination */
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface TranslateResult {
@@ -580,7 +560,7 @@ export interface TranslateResult {
 export async function translateLevelChapters(
   params: TranslateParams
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType } = params;
+  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType, structureType } = params;
 
   const ctx: CostContext = { storyId, userId };
   const tracker = new LevelProgressTracker(levelId, chapters.length);
@@ -631,22 +611,6 @@ export async function translateLevelChapters(
         storyType
       );
 
-      // DEBUG: For poems, show what preprocessing produced
-      if (isPoetry) {
-        debugShowLines(processedLines.join('\n'), `translateLevelChapters preprocessed ch${i + 1}`);
-        console.log(`[PoemFormat] lineMetadata entries: ${lineMetadata.size}`);
-        // Show stanza distribution
-        const stanzaCounts = new Map<number, number>();
-        lineMetadata.forEach((meta) => {
-          if (meta.stanzaNumber !== undefined) {
-            stanzaCounts.set(meta.stanzaNumber, (stanzaCounts.get(meta.stanzaNumber) || 0) + 1);
-          }
-        });
-        stanzaCounts.forEach((count, stanzaNum) => {
-          console.log(`  Stanza ${stanzaNum}: ${count} lines`);
-        });
-      }
-
       // Translate the processed lines (with chunking for large chapters, artistic handling for poetry)
       const textToTranslate = processedLines.join('\n');
       const translatedLines = await translateChapterWithChunking(
@@ -666,13 +630,6 @@ export async function translateLevelChapters(
       const filteredSourceLines = isPoetry
         ? processedLines
         : processedLines.filter((l) => l.trim());
-
-      // DEBUG: For poems, show what's being passed to build
-      if (isPoetry) {
-        console.log(`[PoemFormat] After filtering ch${i + 1}:`);
-        console.log(`  sourceLines: ${filteredSourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
-        debugShowLines(filteredSourceLines.join('\n'), `translateLevelChapters FILTERED sourceLines ch${i + 1}`);
-      }
 
       // Build processed chapter (basic version for backward compatibility)
       const chapterData: ProcessedChapter = {
@@ -734,8 +691,27 @@ export async function translateLevelChapters(
         });
       }
 
-      // Update progress with completed chapter data
-      await tracker.updateTranslationProgress(i + 1, { sourceLines: filteredSourceLines, translatedLines: filteredTranslatedLines });
+      // Build chapter content immediately for streaming reader consistency
+      // This ensures "Start Reading" shows the same pagination as the final content
+      const builtChapter = buildSingleChapterContent(
+        filteredSourceLines,
+        filteredTranslatedLines,
+        sourceLanguage,
+        structureType || "prose",
+        lineMetadata.size > 0 ? lineMetadata : undefined
+      );
+
+      console.log(`[TranslateLevelChapters] Built chapter ${i + 1}: ${Object.keys(builtChapter.pages).length} pages` +
+        (builtChapter.poems ? `, ${builtChapter.poems.length} poems` : ""));
+
+      // Update progress with built pages for streaming reader
+      await tracker.updateTranslationProgress(i + 1, {
+        sourceLines: filteredSourceLines,
+        translatedLines: filteredTranslatedLines,
+        builtPages: builtChapter.pages as any, // Convert PageContent to BuiltPageContent
+        poems: builtChapter.poems,
+        metadata: chapter.metadata,
+      });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -743,7 +719,8 @@ export async function translateLevelChapters(
     return {
       success: true,
       processedChapters,
-      processedChaptersWithMetadata: needsMetadata ? processedChaptersWithMetadata : undefined,
+      // Always return extended metadata to support structureType-based features (anthology pagination)
+      processedChaptersWithMetadata,
     };
   } catch (error: any) {
     console.error(`[LevelProcessor] Translation failed for level ${level}:`, error.message);
@@ -769,6 +746,8 @@ export interface BuildAndSaveParams {
   sourceLanguage: "en" | "es";
   /** Extended chapter data with line metadata (for poems/scripts) */
   processedChaptersWithMetadata?: ProcessedChapterDataWithMetadata[];
+  /** Content structure type for anthology pagination */
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface BuildAndSaveResult {
@@ -792,6 +771,7 @@ export async function buildAndSaveLevel(
     processedChapters,
     sourceLanguage,
     processedChaptersWithMetadata,
+    structureType,
   } = params;
 
   const tracker = new LevelProgressTracker(levelId, processedChapters.length);
@@ -801,6 +781,8 @@ export async function buildAndSaveLevel(
     await updateStoryProgress(storyId, "building_structure", { currentLevel: level });
     const levelNum = levelStringToNumber(level);
 
+    console.log(`[BuildAndSaveLevel] Building level ${level} with structureType=${structureType}`);
+
     // Use metadata-aware builder if we have extended chapter data
     const content = processedChaptersWithMetadata
       ? buildContentStructureWithMetadata(
@@ -808,7 +790,8 @@ export async function buildAndSaveLevel(
           levelNum,
           hasChapters,
           processedChaptersWithMetadata,
-          sourceLanguage
+          sourceLanguage,
+          { structureType }
         )
       : buildContentStructure(
           storySlug,
@@ -847,6 +830,8 @@ export interface StreamingLevelParams {
   detectedLevel: string;
   /** Story type for special preprocessing (poems, scripts) */
   storyType?: StoryType | null;
+  /** Structure type for anthology pagination */
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface StreamingLevelResult {
@@ -975,7 +960,7 @@ async function translateChaptersConsumer(
   params: StreamingLevelParams,
   queue: StreamingChapterQueue
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType } = params;
+  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType, structureType } = params;
 
   const ctx: CostContext = { storyId, userId };
   const totalChapters = chapters.length;
@@ -1057,13 +1042,6 @@ async function translateChaptersConsumer(
         ? translatedLines
         : translatedLines.filter((l) => l.trim());
 
-      // DEBUG: For poems, show final lines going to build
-      if (isPoetry) {
-        console.log(`[PoemFormat] translateChaptersConsumer ch${chapterIndex + 1} FINAL:`);
-        console.log(`  sourceLines: ${filteredSourceLines.length}, translatedLines: ${filteredTranslatedLines.length}`);
-        debugShowLines(filteredSourceLines.join('\n'), `Consumer sourceLines ch${chapterIndex + 1}`);
-      }
-
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {
         sourceLines: filteredSourceLines,
@@ -1094,8 +1072,27 @@ async function translateChaptersConsumer(
 
       queue.markTranslateComplete(chapterIndex, processedChapter);
 
-      // Update progress with completed data (without metadata for tracker)
-      await tracker.updateTranslationProgress(chaptersProcessed + 1, { sourceLines: filteredSourceLines, translatedLines: filteredTranslatedLines });
+      // Build chapter content immediately for streaming reader consistency
+      // This ensures "Start Reading" shows the same pagination as the final content
+      const builtChapter = buildSingleChapterContent(
+        filteredSourceLines,
+        filteredTranslatedLines,
+        sourceLanguage,
+        structureType || "prose",
+        lineMetadata.size > 0 ? lineMetadata : undefined
+      );
+
+      console.log(`[StreamingConsumer] Built chapter ${chapterIndex + 1}: ${Object.keys(builtChapter.pages).length} pages` +
+        (builtChapter.poems ? `, ${builtChapter.poems.length} poems` : ""));
+
+      // Update progress with built pages for streaming reader
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, {
+        sourceLines: filteredSourceLines,
+        translatedLines: filteredTranslatedLines,
+        builtPages: builtChapter.pages as any, // Convert PageContent to BuiltPageContent
+        poems: builtChapter.poems,
+        metadata,
+      });
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);
@@ -1118,7 +1115,8 @@ async function translateChaptersConsumer(
   return {
     success: validChapters.length > 0,
     processedChapters: validChapters,
-    processedChaptersWithMetadata: needsMetadata ? validChaptersWithMetadata : undefined,
+    // Always return extended metadata to support structureType-based features (anthology pagination)
+    processedChaptersWithMetadata: validChaptersWithMetadata,
     error: validChapters.length === 0 ? "All chapters failed to translate" : undefined,
   };
 }

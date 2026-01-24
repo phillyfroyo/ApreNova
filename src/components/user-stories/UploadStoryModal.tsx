@@ -37,6 +37,7 @@ export default function UploadStoryModal() {
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [structureType, setStructureType] = useState<"auto" | "prose" | "anthology" | "epic" | "script">("auto");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<StoryStats | null>(null);
@@ -82,6 +83,7 @@ export default function UploadStoryModal() {
       setContent("");
       setTitle("");
       setDescription("");
+      setStructureType("auto");
       setShowAdvanced(false);
       setError("");
       setUploadedFileName(null);
@@ -210,6 +212,7 @@ export default function UploadStoryModal() {
       content: content.trim(),
       title: title.trim() || undefined,
       description: description.trim() || undefined,
+      structureType: structureType,
     });
   };
 
@@ -300,6 +303,41 @@ export default function UploadStoryModal() {
 
           {canUpload && (
             <>
+              {/* Content Type Selector - badge buttons */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {lng === "es" ? "Tipo de contenido" : "Content Type"}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "auto", labelEn: "Auto-detect", labelEs: "Auto-detectar" },
+                    { value: "prose", labelEn: "Novel / Story", labelEs: "Novela / Cuento" },
+                    { value: "anthology", labelEn: "Poetry Collection", labelEs: "Antología Poética" },
+                    { value: "epic", labelEn: "Epic Poetry", labelEs: "Poesía Épica" },
+                    { value: "script", labelEn: "Script", labelEs: "Guión" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStructureType(option.value as typeof structureType)}
+                      disabled={isUploading}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        structureType === option.value
+                          ? "bg-blue-500 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      } disabled:opacity-50`}
+                    >
+                      {lng === "es" ? option.labelEs : option.labelEn}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {lng === "es"
+                    ? "Para colecciones de poesía, selecciona \"Antología Poética\" para agrupar poemas por sección."
+                    : "For poetry collections, select \"Poetry Collection\" to group poems by section."}
+                </p>
+              </div>
+
               {/* Story content input area */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -503,6 +541,7 @@ export default function UploadStoryModal() {
                       disabled={isUploading}
                     />
                   </div>
+
                 </div>
               )}
 

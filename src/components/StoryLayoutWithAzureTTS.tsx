@@ -28,6 +28,15 @@ type ActiveAudio = {
   currentWordIndex: number;
 };
 
+/** Poem info for anthology navigation */
+interface PoemNavInfo {
+  number: number;      // 1-based poem number
+  title: string;       // Poem title or Roman numeral
+  startPage: number;   // First page of this poem
+  endPage: number;     // Last page of this poem
+  pageCount: number;   // Total pages this poem spans
+}
+
 interface StoryLayoutWithAzureTTSProps {
   sentences: StoryLine[];
   /** Nested stanzas for poems - takes priority over sentences for rendering */
@@ -42,7 +51,9 @@ interface StoryLayoutWithAzureTTSProps {
       pages: number[];
       title?: string;    // Chapter title (e.g., "Down the Rabbit-Hole")
       subtitle?: string; // Optional subtitle
+      poems?: PoemNavInfo[];  // For anthologies: poem list for navigation
     }[];
+    structureType?: "prose" | "anthology" | "epic" | "script";
   };
   isUserStory?: boolean;
   userStoryId?: string;
@@ -51,6 +62,8 @@ interface StoryLayoutWithAzureTTSProps {
   storyType?: string | null;
   /** Detected/original CEFR level of the story */
   detectedLevel?: string | null;
+  /** Content structure type for navigation labels */
+  structureType?: "prose" | "anthology" | "epic" | "script" | null;
 }
 
 export default function StoryLayoutWithAzureTTS({
@@ -65,6 +78,7 @@ export default function StoryLayoutWithAzureTTS({
   availableLevels,
   storyType,
   detectedLevel,
+  structureType,
 }: StoryLayoutWithAzureTTSProps) {
   useSessionLogger('reading');
 
@@ -132,6 +146,49 @@ export default function StoryLayoutWithAzureTTS({
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
   const oppositeLang = typedLang === "en" ? "es" : "en";
+
+  // Helper function to get navigation labels based on structure type
+  // Returns translated label for "chapter" or "page" based on content structure
+  // Use storyMap.structureType if available (more reliable), fall back to prop
+  const effectiveStructureType = storyMap.structureType || structureType;
+
+  const getNavigationLabel = (type: "chapter" | "page"): string => {
+    if (effectiveStructureType === "anthology") {
+      return type === "chapter"
+        ? t(typedLang, "story", "collection")
+        : t(typedLang, "story", "poem");
+    }
+    if (effectiveStructureType === "epic") {
+      return type === "chapter"
+        ? t(typedLang, "story", "canto")
+        : t(typedLang, "story", "section");
+    }
+    if (effectiveStructureType === "script") {
+      return type === "chapter"
+        ? t(typedLang, "story", "act")
+        : t(typedLang, "story", "scene");
+    }
+    // Default: prose
+    return t(typedLang, "story", type);
+  };
+
+  // For anthologies: determine current poem from page number
+  const getCurrentPoem = (chapterNum: number, pageNum: number): PoemNavInfo | null => {
+    const chapter = storyMap.chapters.find(ch => ch.chapter === chapterNum);
+    if (!chapter?.poems) return null;
+
+    // Find poem that contains this page
+    for (const poem of chapter.poems) {
+      if (pageNum >= poem.startPage && pageNum <= poem.endPage) {
+        return poem;
+      }
+    }
+    return null;
+  };
+
+  // Check if we should use poem-based navigation (anthologies with poem data)
+  const usePoemNavigation = effectiveStructureType === "anthology";
+
   const pathname = usePathname() ?? "";
   const router = useRouter();
 
@@ -230,9 +287,33 @@ export default function StoryLayoutWithAzureTTS({
     Object.values(clearSelectionFunctions).forEach(clearFn => clearFn());
   }, [clearSelectionFunctions]);
 
-  const dynamicPageTitle = storyMap.hasChapters
-    ? `${t(typedLang, "story", "chapter")} ${chapterNumber}, ${t(typedLang, "story", "page")} ${pageNumber}`
-    : `${t(typedLang, "story", "page")} ${pageNumber}`;
+  // Build dynamic page title - for anthologies, show poem info instead of page number
+  const dynamicPageTitle = (() => {
+    // Check for anthology with poem data
+    const currentChapter = storyMap.chapters.find(c => c.chapter === chapterNumber);
+    const hasPoems = usePoemNavigation && currentChapter?.poems && currentChapter.poems.length > 0;
+
+    if (hasPoems) {
+      const currentPoem = getCurrentPoem(chapterNumber, pageNumber);
+      if (currentPoem) {
+        const poemTitle = currentPoem.title.length > 30
+          ? `${currentPoem.title.substring(0, 30)}...`
+          : currentPoem.title;
+
+        // Show collection and poem info
+        if (storyMap.hasChapters) {
+          return `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${currentPoem.number}: ${poemTitle}`;
+        }
+        return `${getNavigationLabel("page")} ${currentPoem.number}: ${poemTitle}`;
+      }
+    }
+
+    // Default: Chapter X, Page Y or just Page Y
+    if (storyMap.hasChapters) {
+      return `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${pageNumber}`;
+    }
+    return `${getNavigationLabel("page")} ${pageNumber}`;
+  })();
 
   // Calculate current page position within the story
   let currentPagePosition = 0;
@@ -738,13 +819,13 @@ export default function StoryLayoutWithAzureTTS({
             {/* Chapter Dropdown – only if hasChapters */}
             {storyMap.chapters.length > 1 && (
               <Dropdown
-                label={`${t(typedLang, "story", "chapter")} ▾ ${chapterNumber}`}
+                label={`${getNavigationLabel("chapter")} ▾ ${chapterNumber}`}
                 variant="glass"
                 options={storyMap.chapters.map((ch) => ({
                   // Show chapter title if available (e.g., "Chapter 1: Down the Rabbit-Hole")
                   label: ch.title && ch.title !== `Chapter ${ch.chapter}`
-                    ? `${t(typedLang, "story", "chapter")} ${ch.chapter}: ${ch.title}`
-                    : `${t(typedLang, "story", "chapter")} ${ch.chapter}`,
+                    ? `${getNavigationLabel("chapter")} ${ch.chapter}: ${ch.title}`
+                    : `${getNavigationLabel("chapter")} ${ch.chapter}`,
                   value: ch.chapter.toString(),
                 }))}
                 onSelect={(selectedValue) => {
@@ -759,25 +840,64 @@ export default function StoryLayoutWithAzureTTS({
               />
             )}
 
-            {/* Page Dropdown – always shown */}
-            <Dropdown
-              label={`${t(typedLang, "story", "page")} ▾ ${pageNumber}`}
-              variant="glass"
-              options={
-                (storyMap.chapters.find((c) => c.chapter === chapterNumber)?.pages || []).map((pg) => ({
-                  label: `${t(typedLang, "story", "page")} ${pg}`,
-                  value: pg.toString(),
-                }))
+            {/* Page/Poem Dropdown – content depends on structure type */}
+            {(() => {
+              const currentChapter = storyMap.chapters.find((c) => c.chapter === chapterNumber);
+              const hasPoems = usePoemNavigation && currentChapter?.poems && currentChapter.poems.length > 0;
+              const currentPoem = hasPoems ? getCurrentPoem(chapterNumber, pageNumber) : null;
+
+              if (hasPoems && currentChapter?.poems) {
+                // ANTHOLOGY: Show Poem dropdown instead of Page dropdown
+                const poemLabel = currentPoem
+                  ? `${getNavigationLabel("page")} ${currentPoem.number}: ${currentPoem.title.substring(0, 15)}${currentPoem.title.length > 15 ? '...' : ''}`
+                  : `${getNavigationLabel("page")} ▾`;
+
+                return (
+                  <Dropdown
+                    label={`${poemLabel} ▾`}
+                    variant="glass"
+                    options={currentChapter.poems.map((poem) => ({
+                      label: `${poem.number}. ${poem.title.substring(0, 25)}${poem.title.length > 25 ? '...' : ''}`,
+                      value: poem.number.toString(),
+                    }))}
+                    onSelect={(selectedValue) => {
+                      const selectedPoemNum = parseInt(selectedValue);
+                      const selectedPoem = currentChapter.poems?.find(p => p.number === selectedPoemNum);
+                      if (selectedPoem) {
+                        // Navigate to first page of selected poem
+                        router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPoem.startPage));
+                      }
+                    }}
+                    onOpenChange={(isOpen) => {
+                      setActiveDropdown(isOpen ? "page" : null);
+                      setIsAnyDropdownOpen(isOpen);
+                    }}
+                  />
+                );
               }
-              onSelect={(selectedValue) => {
-                const selectedPage = parseInt(selectedValue);
-                router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPage));
-              }}
-              onOpenChange={(isOpen) => {
-                setActiveDropdown(isOpen ? "page" : null);
-                setIsAnyDropdownOpen(isOpen);
-              }}
-            />
+
+              // DEFAULT: Show Page dropdown
+              return (
+                <Dropdown
+                  label={`${getNavigationLabel("page")} ▾ ${pageNumber}`}
+                  variant="glass"
+                  options={
+                    (currentChapter?.pages || []).map((pg) => ({
+                      label: `${getNavigationLabel("page")} ${pg}`,
+                      value: pg.toString(),
+                    }))
+                  }
+                  onSelect={(selectedValue) => {
+                    const selectedPage = parseInt(selectedValue);
+                    router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPage));
+                  }}
+                  onOpenChange={(isOpen) => {
+                    setActiveDropdown(isOpen ? "page" : null);
+                    setIsAnyDropdownOpen(isOpen);
+                  }}
+                />
+              );
+            })()}
           </div>
         </div>
       )}
@@ -897,6 +1017,18 @@ export default function StoryLayoutWithAzureTTS({
                     <span className="italic text-gray-500 text-sm">
                       ({stageDirectionText})
                     </span>
+                  </div>
+                );
+              }
+
+              // Editorial note (poetry anthologies) - render in italics with muted color
+              if (s.isEditorialNote) {
+                const displayText = s[oppositeLang] || s.es || s.en;
+                return (
+                  <div key={lineIndex} className="my-4 w-full px-2" data-sentence-index={lineIndex}>
+                    <p className="italic text-gray-500 text-sm leading-relaxed">
+                      {displayText}
+                    </p>
                   </div>
                 );
               }

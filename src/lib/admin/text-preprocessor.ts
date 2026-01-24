@@ -157,6 +157,8 @@ export interface PreprocessedText {
     chaptersDetected: number;
     backMatterRemoved: boolean;
     lineBreakStyle: LineBreakStyle;
+    /** Detected content structure type (prose, anthology, epic, script) */
+    structureType: "prose" | "anthology" | "epic" | "script";
   };
 
   // The full cleaned text (all chapters joined)
@@ -339,14 +341,86 @@ function normalizeWhitespace(text: string): string {
  */
 interface ChapterMarker {
   lineIndex: number;
-  type: 'roman' | 'arabic' | 'word';
+  type: 'roman' | 'arabic' | 'word' | 'thematic';
   number: number;
   title: string;
   subtitle?: string;
   fullMatch: string;
 }
 
-function detectChapterMarkers(lines: string[]): ChapterMarker[] {
+/**
+ * Options for chapter detection
+ */
+interface DetectChapterOptions {
+  /**
+   * When "anthology", prioritize thematic section headers (e.g., "I. LIFE.")
+   * over individual poem markers (e.g., "I.", "II.").
+   */
+  structureType?: "prose" | "anthology" | "epic" | "script";
+}
+
+/**
+ * Detect thematic section markers for anthologies.
+ * These are patterns like "I. LIFE." or "II. LOVE AND SORROW."
+ * Used to group poems into themed collections rather than treating each poem as a chapter.
+ */
+function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
+  const romanToArabic: Record<string, number> = {
+    'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+    'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+    'XI': 11, 'XII': 12, 'XIII': 13, 'XIV': 14, 'XV': 15,
+    'XVI': 16, 'XVII': 17, 'XVIII': 18, 'XIX': 19, 'XX': 20,
+  };
+
+  // Pattern for thematic section headers: "I. LIFE." or "II. LOVE AND SORROW"
+  // Roman numeral + period + space + ALL CAPS words + optional period
+  const thematicPattern = /^([IVXLC]+)\.\s+([A-Z][A-Z\s,'".\-—–]+)\.?\s*$/;
+
+  const markers: ChapterMarker[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const match = line.match(thematicPattern);
+    if (match) {
+      const romanNumeral = match[1];
+      const sectionTitle = match[2].trim();
+      const num = romanToArabic[romanNumeral] || markers.length + 1;
+
+      // Verify this looks like a thematic section (not just "I. SUCCESS.")
+      // Thematic sections are typically short (1-4 words) and general concepts
+      const wordCount = sectionTitle.split(/\s+/).length;
+      if (wordCount <= 4 && sectionTitle.length <= 30) {
+        markers.push({
+          lineIndex: i,
+          type: 'thematic',
+          number: num,
+          title: sectionTitle,
+          fullMatch: line,
+        });
+      }
+    }
+  }
+
+  return markers;
+}
+
+function detectChapterMarkers(lines: string[], options: DetectChapterOptions = {}): ChapterMarker[] {
+  const { structureType } = options;
+
+  // For anthologies, prioritize thematic section markers (e.g., "I. LIFE.")
+  // This groups poems by theme instead of treating each poem as a separate chapter
+  if (structureType === "anthology") {
+    const thematicMarkers = detectThematicSectionMarkers(lines);
+    if (thematicMarkers.length >= 2) {
+      console.log(`[detectChapterMarkers] Using ${thematicMarkers.length} thematic sections for anthology`);
+      return thematicMarkers;
+    }
+    // Fall through to standard detection if no thematic sections found
+    console.log(`[detectChapterMarkers] No thematic sections found, falling back to standard detection`);
+  }
+
   // Roman numeral mapping (extended for longer works - up to 100)
   const romanToArabic: Record<string, number> = {
     'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
@@ -590,9 +664,27 @@ function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): Chapter
 }
 
 /**
+ * Options for chapter splitting
+ */
+interface SplitChaptersOptions {
+  /**
+   * When true, include the chapter marker line (e.g., "I. LIFE.") in the chapter content.
+   * Useful for anthologies where the thematic section header should be visible to readers.
+   * Default: false (existing behavior - exclude markers)
+   */
+  preserveMarkers?: boolean;
+}
+
+/**
  * Split text into chapters based on detected markers
  */
-function splitIntoChapters(lines: string[], markers: ChapterMarker[]): DetectedChapter[] {
+function splitIntoChapters(
+  lines: string[],
+  markers: ChapterMarker[],
+  options: SplitChaptersOptions = {}
+): DetectedChapter[] {
+  const { preserveMarkers = false } = options;
+
   if (markers.length === 0) {
     // No chapters detected - treat entire text as one chapter
     return [{
@@ -613,11 +705,15 @@ function splitIntoChapters(lines: string[], markers: ChapterMarker[]): DetectedC
     const startLine = marker.lineIndex;
     const endLine = nextMarker ? nextMarker.lineIndex - 1 : lines.length - 1;
 
-    // Get chapter content (excluding the marker line itself for cleaner text)
-    const chapterLines = lines.slice(startLine + 1, endLine + 1);
+    // Get chapter content
+    // When preserveMarkers is true, include the marker line in content (for anthologies)
+    // When false (default), exclude the marker line for cleaner text
+    const contentStartLine = preserveMarkers ? startLine : startLine + 1;
+    const chapterLines = lines.slice(contentStartLine, endLine + 1);
 
-    // Also skip subtitle line if present
-    const skipLines = marker.subtitle ? 1 : 0;
+    // Skip subtitle line if present (and we're not preserving markers)
+    // When preserving markers, keep subtitle too as it's part of the visible content
+    const skipLines = (!preserveMarkers && marker.subtitle) ? 1 : 0;
     const contentLines = chapterLines.slice(skipLines);
 
     chapters.push({
@@ -805,19 +901,25 @@ function removeGutenbergFrontMatter(text: string): string {
 }
 
 /**
+ * Options for text preprocessing
+ */
+export interface PreprocessOptions {
+  /**
+   * Content structure type. When "auto" or undefined, will analyze text to detect.
+   * - "prose": Standard novels/short stories - chapter markers removed from content
+   * - "anthology": Poetry collections - thematic markers preserved in content (e.g., "I. LIFE.")
+   * - "epic": Narrative poetry - markers preserved
+   * - "script": Screenplays/transcripts
+   */
+  structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
+}
+
+/**
  * Main preprocessing function
  * Takes raw text and returns structured, cleaned output
  */
-export function preprocessText(rawText: string): PreprocessedText {
+export function preprocessText(rawText: string, options: PreprocessOptions = {}): PreprocessedText {
   const originalLength = rawText.length;
-
-  // DEBUG: Show input
-  const inputLines = rawText.split('\n').slice(0, 10);
-  console.log('[preprocessText] INPUT (first 10 lines):');
-  inputLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
-  });
 
   // Step 0: Remove Gutenberg front matter markers
   const noGutenbergHeader = removeGutenbergFrontMatter(rawText);
@@ -837,14 +939,6 @@ export function preprocessText(rawText: string): PreprocessedText {
   // Step 5: Normalize whitespace
   const normalized = normalizeWhitespace(noAsterisks);
 
-  // DEBUG: Show after normalizeWhitespace
-  const afterNormLines = normalized.split('\n').slice(0, 10);
-  console.log('[preprocessText] AFTER normalizeWhitespace (first 10 lines):');
-  afterNormLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
-  });
-
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
 
@@ -859,8 +953,25 @@ export function preprocessText(rawText: string): PreprocessedText {
     backMatterRemoved = true;
   }
 
-  // Step 8: Detect chapter markers
-  const rawMarkers = detectChapterMarkers(lines);
+  // Step 7b: Determine content structure type FIRST
+  // This needs to happen before chapter detection because anthologies use different chapter markers
+  let detectedStructureType: "prose" | "anthology" | "epic" | "script" = "prose";
+
+  if (options.structureType && options.structureType !== "auto") {
+    detectedStructureType = options.structureType;
+    console.log(`[preprocessText] Using specified structure type: ${detectedStructureType}`);
+  } else {
+    // Auto-detect structure type from content
+    const structureAnalysis = analyzeContentStructure(lines.join('\n'));
+    detectedStructureType = structureAnalysis.structureType;
+    console.log(`[preprocessText] Auto-detected structure type: ${detectedStructureType} (confidence: ${structureAnalysis.confidence})`);
+    if (structureAnalysis.thematicSections.length > 0) {
+      console.log(`[preprocessText] Found thematic sections: ${structureAnalysis.thematicSections.slice(0, 5).join(', ')}${structureAnalysis.thematicSections.length > 5 ? '...' : ''}`);
+    }
+  }
+
+  // Step 8: Detect chapter markers (passing structure type for anthology-aware detection)
+  const rawMarkers = detectChapterMarkers(lines, { structureType: detectedStructureType });
 
   // Step 8b: Filter out Table of Contents markers (clusters of markers close together)
   const markers = filterOutTOCMarkers(rawMarkers, lines);
@@ -870,7 +981,13 @@ export function preprocessText(rawText: string): PreprocessedText {
   const frontMatter = extractFrontMatter(lines, firstChapterLine);
 
   // Step 10: Split into chapters
-  let chapters = splitIntoChapters(lines, markers);
+  // For anthologies and epics, preserve markers (e.g., "I. LIFE.") in the content
+  const preserveMarkers = detectedStructureType === "anthology" || detectedStructureType === "epic";
+  let chapters = splitIntoChapters(lines, markers, { preserveMarkers });
+
+  if (preserveMarkers) {
+    console.log(`[preprocessText] Preserving chapter markers in content for ${detectedStructureType} structure`);
+  }
 
   // Step 11: Filter out chapters that are mostly empty or look like boilerplate
   chapters = chapters.filter(chapter => {
@@ -893,33 +1010,11 @@ export function preprocessText(rawText: string): PreprocessedText {
   const fullTextForDetection = chapters.map(ch => ch.rawText).join('\n\n');
   const detectedLineBreakStyle = detectLineBreakStyle(fullTextForDetection);
 
-  console.log(`[preprocessText] Detected line break style: ${detectedLineBreakStyle}`);
-
-  // DEBUG: Show first chapter before normalization
-  if (chapters.length > 0) {
-    const ch1Lines = chapters[0].rawText.split('\n').slice(0, 15);
-    console.log('[preprocessText] Chapter 1 BEFORE normalizeLineBreaks (first 15 lines):');
-    ch1Lines.forEach((line, i) => {
-      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-      console.log(`  ${i + 1}: "${display}"`);
-    });
-  }
-
   // Normalize each chapter's rawText based on detected style
   chapters = chapters.map(ch => ({
     ...ch,
     rawText: normalizeLineBreaks(ch.rawText, detectedLineBreakStyle),
   }));
-
-  // DEBUG: Show first chapter after normalization
-  if (chapters.length > 0) {
-    const ch1Lines = chapters[0].rawText.split('\n').slice(0, 15);
-    console.log('[preprocessText] Chapter 1 AFTER normalizeLineBreaks (first 15 lines):');
-    ch1Lines.forEach((line, i) => {
-      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-      console.log(`  ${i + 1}: "${display}"`);
-    });
-  }
 
   // Step 13: Build full cleaned text with proper chapter labels
   const cleanedFullText = chapters
@@ -947,6 +1042,7 @@ export function preprocessText(rawText: string): PreprocessedText {
       chaptersDetected: chapters.length,
       backMatterRemoved,
       lineBreakStyle: detectedLineBreakStyle,
+      structureType: detectedStructureType,
     },
     cleanedFullText,
   };
@@ -1188,4 +1284,196 @@ export function extractSpeakerNames(text: string): string[] {
   }
 
   return Array.from(speakers);
+}
+
+// ============================================
+// CONTENT STRUCTURE ANALYSIS
+// Detects anthology vs narrative structure for poetry
+// ============================================
+
+export interface StructureAnalysis {
+  structureType: "prose" | "anthology" | "epic" | "script";
+  confidence: number; // 0-1
+  thematicSections: string[]; // e.g., ["I. LIFE.", "II. LOVE."]
+  poemCount: number;
+  avgPoemLength: number;
+  hasEditorialNotes: boolean;
+}
+
+export interface EditorialNote {
+  lineIndex: number;
+  text: string;
+  type: "publication" | "biographical" | "annotation";
+}
+
+/**
+ * Analyze text structure to determine if it's an anthology or narrative poetry.
+ *
+ * Algorithm:
+ * 1. Detect thematic section headers (I. LIFE., II. LOVE., etc.)
+ * 2. Detect individual poem titles (ALL CAPS, short, standalone)
+ * 3. Count distinct "poems" based on markers and blank line patterns
+ * 4. Calculate average poem length
+ *
+ * Decision logic:
+ * - Anthology: thematic sections (>=2) AND many short poems (>=10, avg <50 lines)
+ * - Epic: numbered sections but continuous narrative (avg >30 lines per section)
+ * - Script: detected by dialog patterns (handled elsewhere)
+ * - Prose: default for no poetry markers
+ *
+ * @param text - Full text to analyze
+ * @returns Structure analysis with detected type and markers
+ */
+export function analyzeContentStructure(text: string): StructureAnalysis {
+  const lines = text.split('\n');
+
+  // Pattern for thematic section headers: "I. LIFE." or "II. LOVE AND SORROW"
+  // Roman numeral + period + ALL CAPS words + optional period
+  const thematicSectionPattern = /^([IVXLC]+)\.\s+([A-Z][A-Z\s,'".-]+)\.?\s*$/;
+
+  // Pattern for poem titles (ALL CAPS, short, standalone)
+  const poemTitlePattern = /^[A-Z][A-Z\s,.'"-]{2,50}\.?\s*$/;
+
+  // Detected markers
+  const thematicSections: string[] = [];
+  const poemBoundaries: number[] = [];
+  let editorialNoteCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Skip empty lines
+    if (!line) continue;
+
+    // Check for thematic section headers
+    const thematicMatch = line.match(thematicSectionPattern);
+    if (thematicMatch) {
+      thematicSections.push(line);
+      poemBoundaries.push(i);
+      continue;
+    }
+
+    // Check for poem titles (ALL CAPS, standalone, not too long)
+    if (poemTitlePattern.test(line) && line.length < 60) {
+      // Verify next line is not another title (to avoid false positives)
+      const nextLine = lines[i + 1]?.trim() || '';
+      if (!poemTitlePattern.test(nextLine) && nextLine !== '') {
+        poemBoundaries.push(i);
+      }
+      continue;
+    }
+
+    // Check for editorial notes
+    if (/^\s*\[.{10,}\]\s*$/.test(line)) {
+      editorialNoteCount++;
+    }
+  }
+
+  // Calculate average content length between poem boundaries
+  const poemLengths: number[] = [];
+  for (let i = 0; i < poemBoundaries.length; i++) {
+    const start = poemBoundaries[i];
+    const end = poemBoundaries[i + 1] ?? lines.length;
+    const contentLines = lines.slice(start, end).filter(l => l.trim().length > 0);
+    poemLengths.push(contentLines.length);
+  }
+
+  const avgPoemLength = poemLengths.length > 0
+    ? poemLengths.reduce((a, b) => a + b, 0) / poemLengths.length
+    : 0;
+
+  const poemCount = poemBoundaries.length;
+  const hasThematicSections = thematicSections.length >= 2;
+  const isManyShortPoems = poemCount >= 10 && avgPoemLength < 50;
+  const isFewerLongerSections = poemCount > 0 && poemCount < 20 && avgPoemLength > 30;
+
+  // Decision logic
+  if (hasThematicSections && isManyShortPoems) {
+    return {
+      structureType: "anthology",
+      confidence: 0.9,
+      thematicSections,
+      poemCount,
+      avgPoemLength,
+      hasEditorialNotes: editorialNoteCount > 2,
+    };
+  }
+
+  if (hasThematicSections || (poemCount >= 5 && isManyShortPoems)) {
+    return {
+      structureType: "anthology",
+      confidence: 0.7,
+      thematicSections,
+      poemCount,
+      avgPoemLength,
+      hasEditorialNotes: editorialNoteCount > 2,
+    };
+  }
+
+  if (isFewerLongerSections && poemCount > 0) {
+    return {
+      structureType: "epic",
+      confidence: 0.7,
+      thematicSections,
+      poemCount,
+      avgPoemLength,
+      hasEditorialNotes: editorialNoteCount > 0,
+    };
+  }
+
+  // Default to prose
+  return {
+    structureType: "prose",
+    confidence: 0.5,
+    thematicSections: [],
+    poemCount: 0,
+    avgPoemLength: 0,
+    hasEditorialNotes: editorialNoteCount > 0,
+  };
+}
+
+/**
+ * Detect editorial notes in text.
+ *
+ * Editorial notes are typically:
+ * - Bracketed: [Published in "A Masque of Poets," 1878.]
+ * - Contains publication/biographical information
+ *
+ * These should be preserved but not rewritten, and rendered in italics.
+ *
+ * @param lines - Array of text lines
+ * @returns Array of detected editorial notes with line indices
+ */
+export function detectEditorialNotes(lines: string[]): EditorialNote[] {
+  const notes: EditorialNote[] = [];
+
+  const patterns = [
+    // [Published in "Magazine Name", year]
+    { regex: /^\s*\[.*(Published|First appeared|First printed|Written|Composed).+\]\s*$/i, type: "publication" as const },
+    // [Born 1830, died 1886] or similar biographical
+    { regex: /^\s*\[.*(Born|Died|lived|b\.\s*\d|d\.\s*\d).+\]\s*$/i, type: "biographical" as const },
+    // [This poem refers to...] or [The following...]
+    { regex: /^\s*\[.*(poem|refers|alludes|written for|dedicated|The following).+\]\s*$/i, type: "annotation" as const },
+    // Generic bracketed text with 20+ chars that looks like a note
+    { regex: /^\s*\[.{20,}\]\s*$/, type: "annotation" as const },
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    for (const pattern of patterns) {
+      if (pattern.regex.test(line)) {
+        // Extract the text without brackets
+        const text = line.trim().replace(/^\[|\]$/g, '').trim();
+        notes.push({
+          lineIndex: i,
+          text,
+          type: pattern.type,
+        });
+        break; // Only match first pattern
+      }
+    }
+  }
+
+  return notes;
 }

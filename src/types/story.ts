@@ -25,6 +25,13 @@ export type StoryType =
   | "movie-script"  // Movie screenplay
   | "tv-script";    // TV show script
 
+// Content structure type - determines chapter/page hierarchy and navigation labels
+export type ContentStructureType =
+  | "prose"      // Default: chapters and pages (novels, short stories)
+  | "anthology"  // Poetry collections: collections and poems
+  | "epic"       // Narrative poetry: cantos/books and sections
+  | "script";    // Scripts: acts/scenes and dialogue blocks
+
 // Genre/theme tags (curated list for consistency)
 export type StoryTag =
   // Themes

@@ -28,6 +28,20 @@ interface ChapterMetadata {
 interface PageContent {
   lines?: StoryLine[];
   stanzas?: StoryLine[][];  // For poems - nested array by stanza
+  // Anthology poem tracking
+  poemNumber?: number;
+  poemTitle?: string;
+  isFirstPageOfPoem?: boolean;
+  isContinuation?: boolean;
+}
+
+/** Poem info for anthology navigation */
+interface PoemInfo {
+  number: number;
+  title: string;
+  startPage: number;
+  endPage: number;
+  pageCount: number;
 }
 
 interface LevelContent {
@@ -39,8 +53,40 @@ interface LevelContent {
     {
       pages: Record<number, PageContent>;
       metadata?: ChapterMetadata; // Optional for backward compatibility
+      poems?: PoemInfo[];  // For anthologies: poem list for navigation
     }
   >;
+  /** Content structure type - may not be present in older content */
+  structureType?: "prose" | "anthology" | "epic" | "script";
+}
+
+/**
+ * Infer structure type from story type for older content that doesn't have structureType
+ */
+function inferStructureType(
+  storyType: string | null | undefined,
+  levelContent?: LevelContent
+): "prose" | "anthology" | "epic" | "script" {
+  // If level content has explicit structure type, use it
+  if (levelContent?.structureType) {
+    return levelContent.structureType;
+  }
+
+  // Infer from story type
+  if (!storyType) return "prose";
+
+  switch (storyType) {
+    case "poem":
+    case "song-lyrics":
+      return "anthology";
+    case "epic":
+      return "epic";
+    case "script":
+    case "transcript":
+      return "script";
+    default:
+      return "prose";
+  }
 }
 
 /**
@@ -132,7 +178,9 @@ export async function getUserStoryContent(
         lines = pageData.lines!;
       }
 
-      console.log(`[getUserStoryContent] Page has ${hasStanzas ? 'stanzas' : 'lines'}: ${hasStanzas ? pageData.stanzas!.length + ' stanzas' : lines.length + ' lines'}`);
+      // Infer structure type for navigation labels
+      const structureType = inferStructureType(story.storyType, levelContent);
+      console.log(`[getUserStoryContent] Page has ${hasStanzas ? 'stanzas' : 'lines'}: ${hasStanzas ? pageData.stanzas!.length + ' stanzas' : lines.length + ' lines'}, structureType=${structureType}`);
 
       return {
         storySlug: story.slug,
@@ -149,6 +197,7 @@ export async function getUserStoryContent(
         isUserStory: true,
         storyType: story.storyType,
         detectedLevel: story.detectedLevel,
+        structureType,
       };
     } else {
       throw new Error(`Page not found: chapter ${chapterNum}, page ${pageNum}`);
@@ -174,8 +223,20 @@ export async function getUserStoryContent(
 }
 
 /**
+ * Poem info for anthology navigation
+ */
+export interface PoemNavInfo {
+  number: number;      // 1-based poem number
+  title: string;       // Poem title or Roman numeral
+  startPage: number;   // First page of this poem
+  endPage: number;     // Last page of this poem
+  pageCount: number;   // Total pages this poem spans
+}
+
+/**
  * Get story structure (chapters and pages) for a user story
  * Now includes chapter titles for display in UI navigation
+ * For anthologies, also includes poem info for poem-based navigation
  */
 export async function getUserStoryMap(
   userStoryId: string,
@@ -188,7 +249,9 @@ export async function getUserStoryMap(
     pages: number[];
     title?: string;    // Chapter title (e.g., "Down the Rabbit-Hole")
     subtitle?: string; // Optional subtitle
+    poems?: PoemNavInfo[];  // For anthologies: poem list for navigation
   }[];
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }> {
   try {
     // Verify ownership or public visibility
@@ -231,6 +294,8 @@ export async function getUserStoryMap(
           pages: pages.sort((a, b) => a - b),
           title: chapterData?.metadata?.title,
           subtitle: chapterData?.metadata?.subtitle,
+          // Include poem info for anthologies (used for poem-based navigation)
+          poems: chapterData?.poems as PoemNavInfo[] | undefined,
         };
       }
     );
@@ -238,6 +303,7 @@ export async function getUserStoryMap(
     return {
       hasChapters: levelContent.hasChapters,
       chapters: chapters.sort((a, b) => a.chapter - b.chapter),
+      structureType: levelContent.structureType,
     };
   } catch (err) {
     console.error(`Failed to load user story map:`, err);

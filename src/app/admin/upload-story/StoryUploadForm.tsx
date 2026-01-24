@@ -40,6 +40,7 @@ const initialStoryData: StoryData = {
   backgroundPreview: null,
   // Tagging defaults
   storyType: "short-story",
+  structureType: "auto",  // Auto-detect content structure
   isOriginal: true,
   attribution: null,
   tags: [],

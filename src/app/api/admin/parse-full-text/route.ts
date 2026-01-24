@@ -11,7 +11,7 @@ export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
   try {
-    const { rawText } = await request.json();
+    const { rawText, structureType } = await request.json();
 
     if (!rawText || typeof rawText !== "string") {
       return NextResponse.json(
@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Run algorithmic preprocessing
-    const result = preprocessText(rawText);
+    // Pass structureType to control marker preservation (anthologies keep "I. LIFE." etc.)
+    const result = preprocessText(rawText, {
+      structureType: structureType || "auto"
+    });
 
     return NextResponse.json({ result });
   } catch (error) {

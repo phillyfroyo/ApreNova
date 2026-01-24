@@ -13,6 +13,14 @@ interface RouteParams {
   params: Promise<{ storyId: string }>;
 }
 
+interface PoemInfo {
+  number: number;
+  title: string;
+  startPage: number;
+  endPage: number;
+  pageCount: number;
+}
+
 interface LevelContent {
   storySlug: string;
   level: number;
@@ -24,7 +32,9 @@ interface LevelContent {
       title: string;
       subtitle?: string;
     };
+    poems?: PoemInfo[];  // For anthologies
   }>;
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 interface ChapterInfo {
@@ -33,6 +43,7 @@ interface ChapterInfo {
   title?: string;
   subtitle?: string;
   status: "ready" | "pending";
+  poems?: PoemInfo[];  // For anthologies - poem list for navigation
 }
 
 // GET: Fetch navigation map for streaming reader
@@ -65,6 +76,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         id: true,
         status: true,
         sourceLanguage: true,
+        storyType: true,
         UserStoryLevel: {
           where: { level },
           select: {
@@ -121,6 +133,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           title: chapterData.metadata?.title,
           subtitle: chapterData.metadata?.subtitle,
           status: "ready",
+          // Include poem info for anthology navigation
+          poems: chapterData.poems,
         });
       }
 
@@ -130,6 +144,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         totalChapters: chapters.length,
         completedChapters: chapters.length,
         isProcessing: false,
+        // Include structure type for UI labels
+        structureType: content.structureType,
       });
     }
 
@@ -143,15 +159,28 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // Add completed chapters with page counts
     for (let i = 0; i < completedChapters; i++) {
       const chapterData = completedData[i] as ChapterTranslationData;
-      // Paginate to get page count
-      const sourcePages = paginateLines(chapterData.sourceLines);
-      const translatedPages = paginateLines(chapterData.translatedLines);
-      const pageCount = Math.max(sourcePages.length, translatedPages.length);
+
+      // Use pre-built pages if available (ensures consistent pagination with final content)
+      let pageCount: number;
+      let poems: PoemInfo[] | undefined;
+
+      if (chapterData.builtPages) {
+        pageCount = Object.keys(chapterData.builtPages).length;
+        poems = chapterData.poems;
+      } else {
+        // Fallback: Legacy pagination for older in-progress stories
+        const sourcePages = paginateLines(chapterData.sourceLines);
+        const translatedPages = paginateLines(chapterData.translatedLines);
+        pageCount = Math.max(sourcePages.length, translatedPages.length);
+      }
 
       chapters.push({
         chapter: i + 1,
         pages: Array.from({ length: pageCount }, (_, idx) => idx + 1),
+        title: chapterData.metadata?.title,
+        subtitle: chapterData.metadata?.subtitle,
         status: "ready",
+        poems, // Include poem info for anthology navigation
       });
     }
 
@@ -164,6 +193,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       });
     }
 
+    // Infer structureType from storyType for in-progress stories
+    let inferredStructureType: "prose" | "anthology" | "epic" | "script" | undefined;
+    if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
+      inferredStructureType = "anthology";
+    } else if (story.storyType === 'epic') {
+      inferredStructureType = "epic";
+    } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
+      inferredStructureType = "script";
+    }
+
     return NextResponse.json({
       hasChapters: totalChapters > 1,
       chapters,
@@ -173,6 +212,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // Include current processing state for UI
       currentStage: progress?.stage,
       currentChapter: progress?.currentChapter,
+      // Include structure type for UI labels
+      structureType: inferredStructureType,
     });
 
   } catch (error: any) {

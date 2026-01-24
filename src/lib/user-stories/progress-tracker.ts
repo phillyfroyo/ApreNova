@@ -7,9 +7,52 @@ import { prisma } from "@/lib/prisma";
 // TYPES
 // ============================================================================
 
+/** Poem info for anthology navigation */
+export interface PoemInfo {
+  number: number;
+  title: string;
+  startPage: number;
+  endPage: number;
+  pageCount: number;
+}
+
+/** Story line with translations and metadata */
+export interface BuiltStoryLine {
+  es: string;
+  en: string;
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
+  // Anthology poem tracking
+  poemNumber?: number;
+  poemTitle?: string;
+  isFirstPageOfPoem?: boolean;
+  isContinuation?: boolean;
+}
+
+/** Pre-built page content (same structure as final content) */
+export interface BuiltPageContent {
+  lines?: BuiltStoryLine[];
+  stanzas?: BuiltStoryLine[][];
+  // Anthology poem tracking
+  poemNumber?: number;
+  poemTitle?: string;
+  isFirstPageOfPoem?: boolean;
+  isContinuation?: boolean;
+}
+
 export interface ChapterTranslationData {
   sourceLines: string[];
   translatedLines: string[];
+  // Pre-built paginated content (for streaming to match final output)
+  builtPages?: Record<number, BuiltPageContent>;
+  // Poem info for anthology navigation
+  poems?: PoemInfo[];
+  // Chapter metadata
+  metadata?: {
+    number: number;
+    title: string;
+    subtitle?: string;
+  };
 }
 
 export interface ChapterRewriteData {

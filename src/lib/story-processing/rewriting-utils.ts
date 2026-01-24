@@ -174,6 +174,48 @@ export function isTitleLikeText(text: string): boolean {
 }
 
 /**
+ * Check if text is an editorial note (should not be rewritten)
+ *
+ * Editorial notes are typically:
+ * - Bracketed: [Published in "A Masque of Poets," 1878.]
+ * - Contains publication/biographical/annotation information
+ * - These should be preserved exactly as-is, not rewritten
+ *
+ * @param text - Text to check
+ * @returns true if text is an editorial note
+ */
+export function isEditorialNote(text: string): boolean {
+  const trimmed = text.trim();
+  const lines = trimmed.split('\n').filter(l => l.trim());
+
+  // Must be 1-3 lines (multi-line brackets are allowed)
+  if (lines.length === 0 || lines.length > 3) return false;
+
+  const fullText = lines.join(' ').trim();
+
+  // Check for bracketed editorial notes
+  // Pattern: starts with [ and ends with ]
+  if (/^\[.+\]$/.test(fullText)) {
+    // Must have reasonable length (editorial notes are typically 20+ chars)
+    if (fullText.length >= 15) {
+      return true;
+    }
+  }
+
+  // Check for common editorial note patterns (even without brackets)
+  const editorialPatterns = [
+    /Published in/i,
+    /First appeared/i,
+    /First printed/i,
+    /Written in \d/i,
+    /Composed in \d/i,
+    /at the request of/i,
+  ];
+
+  return editorialPatterns.some(pattern => pattern.test(fullText));
+}
+
+/**
  * Strip common preambles and formatting from AI response
  */
 export function stripPreamble(text: string): string {

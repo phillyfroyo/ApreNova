@@ -20,6 +20,31 @@ export const MAX_CHUNK_CHARS = 12000;
  */
 export const DEFAULT_LINES_PER_PAGE = 10;
 
+/**
+ * Lines per page by content structure type.
+ * Poetry anthologies get more lines per page to keep poems together.
+ */
+export const LINES_PER_PAGE_BY_TYPE = {
+  prose: 10,      // Default for novels, short stories
+  anthology: 30,  // Poetry collections need more lines per page
+  epic: 25,       // Narrative poetry
+  script: 15,     // Scripts with dialogue
+} as const;
+
+/**
+ * Get lines per page for a given structure type.
+ * Falls back to default if type is not recognized.
+ *
+ * @param structureType - Content structure type or "auto"
+ * @returns Lines per page for that type
+ */
+export function getLinesPerPage(structureType?: string): number {
+  if (structureType && structureType !== "auto" && structureType in LINES_PER_PAGE_BY_TYPE) {
+    return LINES_PER_PAGE_BY_TYPE[structureType as keyof typeof LINES_PER_PAGE_BY_TYPE];
+  }
+  return DEFAULT_LINES_PER_PAGE;
+}
+
 // ============================================================================
 // RETRY CONFIGURATION
 // ============================================================================

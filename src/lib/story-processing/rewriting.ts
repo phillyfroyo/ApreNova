@@ -7,12 +7,12 @@ import "server-only";
 import { OpenAI } from "openai";
 import { generateRewritePrompt, levelStringToNumber } from "./cefr-prompts";
 import { logOpenAICost } from "@/lib/cost-tracker";
-import { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText } from "./rewriting-utils";
-import { detectStanzas, debugShowLines } from "./text-processing";
+import { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText, isEditorialNote } from "./rewriting-utils";
+import { detectStanzas } from "./text-processing";
 import { createThrottledCancellationChecker } from "@/lib/user-stories/progress-tracker";
 
 // Re-export utilities for backward compatibility
-export { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText } from "./rewriting-utils";
+export { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText, isEditorialNote } from "./rewriting-utils";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -288,13 +288,7 @@ export async function rewritePoemByStanza(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<StanzaRewriteResult> {
-  // DEBUG: Show text coming into rewrite
-  debugShowLines(text, 'rewritePoemByStanza INPUT');
-
   const stanzas = splitIntoStanzas(text);
-
-  console.log(`[RewritePoemByStanza] Splitting poem into ${stanzas.length} stanzas`);
-  stanzas.forEach((s, i) => console.log(`  Stanza ${i + 1}: ${s.length} lines`));
 
   const rewrittenStanzas: string[][] = [];
   const stanzaValidation: StanzaRewriteResult['stanzaValidation'] = [];
@@ -320,7 +314,6 @@ export async function rewritePoemByStanza(
     // Skip rewriting for title-like stanzas (single word, ALL CAPS, etc.)
     // These don't need simplification and often cause AI confusion
     if (isTitleLikeText(stanzaText)) {
-      console.log(`[RewritePoemByStanza] Skipping title-like stanza ${i + 1}/${stanzas.length}: "${stanzaText.substring(0, 30)}..."`);
       rewrittenStanzas.push(stanza); // Keep original
       stanzaValidation.push({
         stanzaIndex: i,
@@ -331,7 +324,18 @@ export async function rewritePoemByStanza(
       continue;
     }
 
-    console.log(`[RewritePoemByStanza] Rewriting stanza ${i + 1}/${stanzas.length} (${originalLineCount} lines)`);
+    // Skip rewriting for editorial notes (bracketed publication info, annotations)
+    // These should be preserved exactly as-is
+    if (isEditorialNote(stanzaText)) {
+      rewrittenStanzas.push(stanza); // Keep original
+      stanzaValidation.push({
+        stanzaIndex: i,
+        originalLines: originalLineCount,
+        rewrittenLines: originalLineCount,
+        valid: true,
+      });
+      continue;
+    }
 
     // Rewrite this stanza with poetry mode (strict line validation)
     const result = await rewriteToLevel(

@@ -91,6 +91,9 @@ export {
   type ProcessedChapterData,
   type ProcessedChapterDataWithMetadata,
   type LineMetadata,
+  type BuildContentOptions,
+  // Anthology types
+  type PoemInfo,
   // Poem/script parsing types
   type StanzaMarkedLine,
   type ParsedScriptLine,
@@ -99,13 +102,13 @@ export {
   paginateLines,
   buildContentStructure,
   buildContentStructureWithMetadata,
+  buildSingleChapterContent,
+  type BuiltChapterResult,
   parseChapters,
   // Poem/script parsing functions
   detectStanzas,
   parseScriptLine,
   extractSpeakerNames,
-  // Debug helper
-  debugShowLines,
   // Re-exports from admin
   preprocessText,
   quickClean,

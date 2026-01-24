@@ -89,6 +89,7 @@ export default async function UserStoryReaderPage({
       availableLevels={availableLevels}
       storyType={story.storyType}
       detectedLevel={story.detectedLevel}
+      structureType={story.structureType}
     />
   );
 }

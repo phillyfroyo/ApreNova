@@ -400,7 +400,9 @@ async function processAllLevels(
   // PHASE 1: Parse chapters (once, shared across all levels)
   // =========================================================================
   await updateStoryProgress(story.id, "parsing_chapters");
-  const { hasChapters, chapters: originalChapters } = parseStoryContent(story.rawContent);
+  const { hasChapters, chapters: originalChapters, structureType } = parseStoryContent(story.rawContent);
+
+  console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}`);
 
   // Track processed chapters for each level (after translation)
   const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();
@@ -435,6 +437,7 @@ async function processAllLevels(
         chapters: originalChapters,
         sourceLanguage,
         storyType: story.storyType as StoryType | null, // For poem/script preprocessing
+        structureType, // Pass for anthology-aware incremental build
       });
 
       if (translateResult.success) {
@@ -482,6 +485,7 @@ async function processAllLevels(
           sourceLanguage,
           detectedLevel,
           storyType: story.storyType as StoryType | null, // For poetry-specific rewrite handling
+          structureType, // Pass for anthology-aware incremental build
         });
 
         if (streamingResult.success) {
@@ -537,6 +541,7 @@ async function processAllLevels(
       processedChapters,
       sourceLanguage,
       processedChaptersWithMetadata,
+      structureType, // Pass for anthology-aware pagination
     });
 
     levelSuccess.set(level, buildResult.success);

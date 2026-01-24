@@ -72,6 +72,15 @@ story: {
   levelUnavailable: "This story is not available at your current level.",
   availableLevelsAre: "Available levels:",
   selectLevel: "Select a level to continue reading:",
+  // Poetry anthology navigation labels
+  collection: "Collection",
+  poem: "Poem",
+  // Epic/narrative poetry navigation labels
+  canto: "Canto",
+  section: "Section",
+  // Script navigation labels
+  act: "Act",
+  scene: "Scene",
 },
 
 levels: {

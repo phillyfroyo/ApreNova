@@ -19,12 +19,21 @@ interface StoryLine {
   isStanzaBreak?: boolean;
 }
 
+interface PoemNavInfo {
+  number: number;
+  title: string;
+  startPage: number;
+  endPage: number;
+  pageCount: number;
+}
+
 interface ChapterInfo {
   chapter: number;
   pages: number[];
   title?: string;
   subtitle?: string;
   status: "ready" | "pending";
+  poems?: PoemNavInfo[];  // For anthologies - poem list for navigation
 }
 
 interface StreamMapResponse {
@@ -36,6 +45,7 @@ interface StreamMapResponse {
   currentStage?: string;
   currentChapter?: number;
   levelPending?: boolean; // Level record not created yet
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 interface ReadStreamResponse {
@@ -59,6 +69,8 @@ interface ReadStreamResponse {
   isProcessing: boolean;
   hasChapters: boolean;
   storyType?: string | null;
+  /** Content structure type for navigation labels (Collection/Poem vs Chapter/Page) */
+  structureType?: "prose" | "anthology" | "epic" | "script" | null;
   // Error case
   error?: string;
   chapterPending?: boolean;
@@ -269,7 +281,11 @@ export default function StreamingStoryReader({
           pages: c.pages,
           title: c.title,
           subtitle: c.subtitle,
+          // Include poem info for anthology navigation
+          poems: c.poems,
         })),
+      // Include structure type for navigation labels
+      structureType: streamMap.structureType,
     };
   }, [streamMap]);
 
@@ -376,6 +392,7 @@ export default function StreamingStoryReader({
         userStoryId={storyId}
         availableLevels={availableLevels}
         storyType={content.storyType}
+        structureType={content.structureType}
       />
     </>
   );

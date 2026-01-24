@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { StoryType } from "@/types/story";
+import type { StoryType, ContentStructureType } from "@/types/story";
 import type { StoryData } from "../../types";
 import { FormAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 import {
@@ -653,6 +653,33 @@ export function Step3Metadata({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Content Structure Type */}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">
+            Content Structure
+            <span
+              className="ml-2 text-gray-400 cursor-help"
+              title="Controls how chapters and pages are labeled in navigation. Auto-detect works for most content."
+            >
+              ℹ️
+            </span>
+          </label>
+          <select
+            value={storyData.structureType}
+            onChange={(e) => updateStoryData({ structureType: e.target.value as ContentStructureType | "auto" })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="auto">Auto-detect (recommended)</option>
+            <option value="prose">Novel / Short Story (Chapter → Page)</option>
+            <option value="anthology">Poetry Anthology (Collection → Poem)</option>
+            <option value="epic">Epic / Narrative Poetry (Canto → Section)</option>
+            <option value="script">Script / Transcript (Act → Scene)</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            For poetry collections with thematic sections (like &quot;I. LIFE.&quot;), select Poetry Anthology.
+          </p>
         </div>
 
         {/* Target Audience */}

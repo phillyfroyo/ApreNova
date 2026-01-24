@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { buildContentStructure } from "@/lib/story-processing";
+import { buildContentStructureWithMetadata } from "@/lib/story-processing";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
@@ -70,6 +70,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     console.log(`[CancelStory] Cancelling story ${storyId} with ${story.UserStoryLevel.length} levels`);
 
+    // Determine structureType from storyType for proper anthology pagination
+    let structureType: "prose" | "anthology" | "epic" | "script" = "prose";
+    if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
+      structureType = "anthology";
+    } else if (story.storyType === 'epic') {
+      structureType = "epic";
+    } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
+      structureType = "script";
+    }
+
     let totalCompleteChapters = 0;
     const levelUpdates: { levelId: string; content: any; status: "READY" | "FAILED" }[] = [];
 
@@ -92,12 +102,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         // Note: We need to convert level string (e.g., "A2") to number for buildContentStructure
         const levelNum = levelStringToNumber(level.level);
 
-        const content = buildContentStructure(
+        const content = buildContentStructureWithMetadata(
           story.slug,
           levelNum,
           completeChapters.length > 1, // hasChapters: true if more than 1 chapter
-          completeChapters,
-          story.sourceLanguage as "en" | "es"
+          completeChapters as any, // Cast to allow partial data
+          story.sourceLanguage as "en" | "es",
+          { structureType } // Pass structureType for proper anthology pagination
         );
 
         levelUpdates.push({

@@ -1,7 +1,7 @@
 // src/app/admin/upload-story/types.ts
 // Shared types for the story upload pipeline
 
-import type { StoryType, StoryTag } from "@/types/story";
+import type { StoryType, StoryTag, ContentStructureType } from "@/types/story";
 import type { FormAttribution } from "@/lib/admin/attribution-helpers";
 
 // ============================================
@@ -109,6 +109,7 @@ export interface StoryData {
   backgroundFile: File | null;
   backgroundPreview: string | null;
   storyType: StoryType;
+  structureType: ContentStructureType | "auto";  // Content structure for navigation/processing
   isOriginal: boolean;
   attribution: FormAttribution | null;
   tags: StoryTag[];

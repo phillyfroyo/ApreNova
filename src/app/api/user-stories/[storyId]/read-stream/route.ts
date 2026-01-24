@@ -30,6 +30,8 @@ interface LevelContent {
       subtitle?: string;
     };
   }>;
+  // Content structure type for navigation labels
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 // GET: Fetch paginated content for streaming reader
@@ -138,6 +140,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         isProcessing: false,
         hasChapters: content.hasChapters,
         storyType: story.storyType,
+        // Include structure type for navigation labels (Collection/Poem vs Chapter/Page)
+        structureType: content.structureType,
       };
 
       // Return stanzas if available (poem content), otherwise lines
@@ -174,7 +178,66 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Chapter data not found" }, { status: 404 });
     }
 
-    // Paginate the chapter content
+    // Check if we have pre-built pages from incremental building
+    // This ensures streaming content matches final pagination (especially for anthologies)
+    if (chapterData.builtPages) {
+      const totalPages = Object.keys(chapterData.builtPages).length;
+
+      if (page > totalPages || page < 1) {
+        return NextResponse.json({ error: "Page not found" }, { status: 404 });
+      }
+
+      const pageData = chapterData.builtPages[page];
+      if (!pageData) {
+        return NextResponse.json({ error: "Page not found" }, { status: 404 });
+      }
+
+      // For in-progress content, infer structureType from storyType
+      let inferredStructureType: "prose" | "anthology" | "epic" | "script" | undefined;
+      if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
+        inferredStructureType = "anthology";
+      } else if (story.storyType === 'epic') {
+        inferredStructureType = "epic";
+      } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
+        inferredStructureType = "script";
+      }
+
+      // Build response using pre-built content
+      const response: Record<string, unknown> = {
+        storySlug: story.slug,
+        title: story.title,
+        titleEs: story.titleEs,
+        titleEn: story.titleEn,
+        chapter,
+        page,
+        totalPages,
+        totalChapters,
+        availableChapters: Array.from({ length: completedChapters }, (_, i) => i + 1),
+        chapterMetadata: chapterData.metadata,
+        isProcessing,
+        hasChapters: totalChapters > 1,
+        storyType: story.storyType,
+        structureType: inferredStructureType,
+        // Include poem info for anthology navigation
+        poemNumber: pageData.poemNumber,
+        poemTitle: pageData.poemTitle,
+        isFirstPageOfPoem: pageData.isFirstPageOfPoem,
+        isContinuation: pageData.isContinuation,
+      };
+
+      // Return stanzas if available (poem content), otherwise lines
+      if (pageData.stanzas && pageData.stanzas.length > 0) {
+        response.stanzas = pageData.stanzas;
+        // Also flatten to lines for backward compatibility
+        response.lines = pageData.stanzas.flat();
+      } else {
+        response.lines = pageData.lines || [];
+      }
+
+      return NextResponse.json(response);
+    }
+
+    // Fallback: Legacy pagination for stories started before incremental building
     const sourceLanguage = story.sourceLanguage as "en" | "es";
     const sourcePages = paginateLines(chapterData.sourceLines);
     const translatedPages = paginateLines(chapterData.translatedLines);
@@ -218,6 +281,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // For in-progress content, infer structureType from storyType
+    // (actual structureType will be set when build phase completes)
+    let inferredStructureType: "prose" | "anthology" | "epic" | "script" | undefined;
+    if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
+      // Poems default to anthology structure for navigation labels
+      inferredStructureType = "anthology";
+    } else if (story.storyType === 'epic') {
+      inferredStructureType = "epic";
+    } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
+      inferredStructureType = "script";
+    }
+
     return NextResponse.json({
       lines,
       storySlug: story.slug,
@@ -233,6 +308,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       isProcessing,
       hasChapters: totalChapters > 1,
       storyType: story.storyType,
+      structureType: inferredStructureType,
     });
 
   } catch (error: any) {

@@ -2,19 +2,6 @@
 // Shared text processing utilities for stories
 // Used by both admin and user story pipelines
 
-// Helper to visualize text with blank lines marked (for debugging poem formatting)
-export function debugShowLines(text: string, label: string, maxLines = 20): void {
-  const lines = text.split('\n');
-  console.log(`[PoemFormat] ${label} (${lines.length} lines, showing first ${Math.min(lines.length, maxLines)}):`);
-  lines.slice(0, maxLines).forEach((line, i) => {
-    const display = line.trim() === '' ? '[BLANK]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: ${display}`);
-  });
-  if (lines.length > maxLines) {
-    console.log(`  ... (${lines.length - maxLines} more lines)`);
-  }
-}
-
 // Re-export the admin text preprocessing utilities
 // These are already well-tested and used in production
 export {
@@ -50,11 +37,29 @@ export interface StoryLine {
   stageDirectionEs?: string;    // Translated stage direction for Spanish display
   stageDirectionEn?: string;    // Translated stage direction for English display
   isStageDirectionOnly?: boolean; // True if line is ONLY a stage direction (no dialogue)
+  // Editorial note support (for poetry anthologies)
+  isEditorialNote?: boolean;    // True for editorial notes - render in italics, not rewritten
 }
 
 export interface PageContent {
   lines?: StoryLine[];           // For prose: flat array of lines
   stanzas?: StoryLine[][];       // For poems: nested array where each inner array is a stanza
+  // Anthology poem tracking (which poem this page belongs to)
+  poemNumber?: number;           // 1-based poem number within the collection
+  poemTitle?: string;            // Poem title (e.g., "SUCCESS.", "I.")
+  isFirstPageOfPoem?: boolean;   // True if this is the first page of a poem
+  isContinuation?: boolean;      // True if poem continues from previous page
+}
+
+/**
+ * Poem metadata for anthology navigation
+ */
+export interface PoemInfo {
+  number: number;                // 1-based poem number within collection
+  title: string;                 // Poem title or Roman numeral
+  startPage: number;             // First page of this poem (1-based)
+  endPage: number;               // Last page of this poem (1-based)
+  pageCount: number;             // Total pages this poem spans
 }
 
 // Type guard to check if content has stanzas (poem) or lines (prose)
@@ -93,6 +98,8 @@ export interface ParsedChapter {
 export interface ChapterContent {
   pages: Record<number, PageContent>;
   metadata?: ChapterMetadata; // Optional for backward compatibility with existing stories
+  // Anthology-specific: list of poems in this collection for navigation
+  poems?: PoemInfo[];
 }
 
 export interface LevelContent {
@@ -100,6 +107,13 @@ export interface LevelContent {
   level: number;
   hasChapters: boolean;
   chapters: Record<number, ChapterContent>;
+  // Content structure type - determines navigation labels and processing behavior
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  // Custom navigation labels (optional, falls back to defaults based on structureType)
+  navigationLabels?: {
+    chapter: { en: string; es: string };
+    page: { en: string; es: string };
+  };
 }
 
 // ============================================================================
@@ -214,6 +228,578 @@ function isPoemContent(lineMetadata?: Map<number, LineMetadata>): boolean {
     if (meta.stanzaNumber !== undefined) return true;
   }
   return false;
+}
+
+// ============================================================================
+// POEM-AWARE PAGINATION (for anthologies)
+// ============================================================================
+
+/**
+ * Pattern for poem titles within an anthology section.
+ * Matches ALL CAPS text that's 3-60 chars, may end with period.
+ * Examples: "SUCCESS.", "THE SOUL SELECTS", "I. HOPE"
+ */
+const POEM_TITLE_PATTERN = /^[A-Z][A-Z\s,.'"-]{2,58}\.?\s*$/;
+
+/**
+ * Pattern for numbered poem markers (I., II., III., 1., 2., etc.)
+ * These are standalone markers that indicate poem boundaries.
+ */
+const NUMBERED_POEM_PATTERN = /^([IVXLC]+\.|\d+\.)\s*$/;
+
+/**
+ * Check if a line looks like a poem title or marker.
+ *
+ * Detection methods:
+ * 1. Numbered markers: "I.", "II.", "1.", "2." (standalone)
+ * 2. ALL CAPS titles: "SUCCESS.", "THE SOUL SELECTS"
+ * 3. Roman numeral with title: "I. HOPE" (handled by ALL CAPS pattern)
+ */
+function isPoemTitleLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length > 60) return false;
+
+  // Check for numbered poems (standalone "I.", "II.", "1.", etc.)
+  // Min length is 2 chars (e.g., "I.")
+  if (trimmed.length >= 2 && NUMBERED_POEM_PATTERN.test(trimmed)) return true;
+
+  // Check for ALL CAPS titles (need at least 3 chars for meaningful title)
+  if (trimmed.length >= 3 && POEM_TITLE_PATTERN.test(trimmed)) {
+    // Exclude lines that are clearly not titles:
+    // - Lines with lowercase letters
+    // - Lines that are purely punctuation
+    if (/[a-z]/.test(trimmed)) return false;
+    if (trimmed.replace(/[^A-Z]/g, '').length < 2) return false;
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Represents a single poem within an anthology section.
+ */
+interface DetectedPoem {
+  /** Title line of the poem */
+  title: string;
+  /** Line index where poem starts (including title) */
+  startLine: number;
+  /** Line index where poem ends (exclusive) */
+  endLine: number;
+  /** Content lines (including title) */
+  lines: string[];
+}
+
+/**
+ * Detect poem boundaries within a chapter/section text.
+ * Returns an array of poems, each with title and content.
+ *
+ * Detection strategy:
+ * 1. First, try to find explicit poem markers (Roman numerals, ALL CAPS titles)
+ * 2. If no markers found, fall back to double blank lines as separators
+ * 3. If still no boundaries, treat entire chapter as one poem
+ */
+function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
+  const poems: DetectedPoem[] = [];
+  let currentPoemStart = -1;
+  let currentTitle = "";
+
+  // First pass: detect explicit poem markers
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (isPoemTitleLine(trimmed)) {
+      // Found a new poem title/marker
+      if (currentPoemStart >= 0) {
+        // Close previous poem
+        poems.push({
+          title: currentTitle,
+          startLine: currentPoemStart,
+          endLine: i,
+          lines: lines.slice(currentPoemStart, i),
+        });
+      }
+      currentPoemStart = i;
+      currentTitle = trimmed;
+    }
+  }
+
+  // Don't forget the last poem
+  if (currentPoemStart >= 0) {
+    poems.push({
+      title: currentTitle,
+      startLine: currentPoemStart,
+      endLine: lines.length,
+      lines: lines.slice(currentPoemStart),
+    });
+  }
+
+  // If explicit markers found, post-process to merge header-only entries
+  if (poems.length > 0) {
+    // Merge strategy:
+    // - Section headers (like "I. LIFE.") attach to following poem
+    // - Roman numerals (like "I.", "II.") START a new poem - they don't cascade
+    // - Poem titles with content finalize the current poem
+    const mergedPoems: DetectedPoem[] = [];
+    let pendingHeaders: DetectedPoem[] = [];
+
+    for (let i = 0; i < poems.length; i++) {
+      const poem = poems[i];
+      // Count non-blank content lines (excluding the title line itself)
+      const contentLines = poem.lines.filter((line, idx) => {
+        if (idx === 0) return false; // Skip title line
+        return line.trim() !== '';
+      });
+
+      const isRomanMarker = /^[IVXLC]+\.?\s*$/.test(poem.title);
+      const isSectionHeader = /^[IVXLC]+\.\s+[A-Z]/.test(poem.title); // "I. LIFE."
+      // Only treat as header-only if it has very few content lines AND is not a substantial entry
+      const isHeaderOnly = contentLines.length <= 1;
+
+      if (isRomanMarker) {
+        // Roman numeral starts a NEW poem sequence
+        // First, check if pending already has a Roman numeral - if so, finalize pending
+        const pendingHasRoman = pendingHeaders.some(h => /^[IVXLC]+\.?\s*$/.test(h.title));
+        if (pendingHasRoman && pendingHeaders.length > 0) {
+          // Finalize pending as a standalone poem (has Roman but no content title)
+          const allLines = pendingHeaders.flatMap(h => h.lines);
+          mergedPoems.push({
+            title: pendingHeaders[pendingHeaders.length - 1].title,
+            startLine: pendingHeaders[0].startLine,
+            endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
+            lines: allLines,
+          });
+          pendingHeaders = [];
+        }
+        // Add this Roman numeral to pending
+        pendingHeaders.push(poem);
+
+      } else if (isSectionHeader && isHeaderOnly) {
+        // Section header like "I. LIFE." - can prefix following poems
+        // If we have pending with Roman numeral, finalize first
+        if (pendingHeaders.length > 0) {
+          const allLines = pendingHeaders.flatMap(h => h.lines);
+          mergedPoems.push({
+            title: pendingHeaders[pendingHeaders.length - 1].title,
+            startLine: pendingHeaders[0].startLine,
+            endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
+            lines: allLines,
+          });
+          pendingHeaders = [];
+        }
+        pendingHeaders.push(poem);
+
+      } else if (isHeaderOnly && !isRomanMarker) {
+        // Non-Roman header with few content lines - add to pending
+        pendingHeaders.push(poem);
+
+      } else {
+        // This is an actual poem with content - finalize with pending headers
+        if (pendingHeaders.length > 0) {
+          const allLines = pendingHeaders.flatMap(h => h.lines);
+          mergedPoems.push({
+            title: poem.title, // Use the content poem's title
+            startLine: pendingHeaders[0].startLine,
+            endLine: poem.endLine,
+            lines: [...allLines, ...poem.lines],
+          });
+          pendingHeaders = [];
+        } else {
+          mergedPoems.push(poem);
+        }
+      }
+    }
+
+    // Finalize any leftover pending headers
+    if (pendingHeaders.length > 0) {
+      const allLines = pendingHeaders.flatMap(h => h.lines);
+      mergedPoems.push({
+        title: pendingHeaders[pendingHeaders.length - 1].title,
+        startLine: pendingHeaders[0].startLine,
+        endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
+        lines: allLines,
+      });
+    }
+
+    console.log(`[detectPoemBoundaries] Found ${poems.length} markers, merged to ${mergedPoems.length} poems:`,
+      mergedPoems.slice(0, 5).map(p => `"${p.title.slice(0, 25)}"`).join(', ') +
+      (mergedPoems.length > 5 ? '...' : ''));
+    return mergedPoems;
+  }
+
+  // Fallback: detect poem boundaries using double blank lines
+  // (two or more consecutive blank lines = poem separator)
+
+  let poemStart = 0;
+  let consecutiveBlanks = 0;
+  let poemNumber = 0;
+
+  // Skip leading blank lines
+  while (poemStart < lines.length && lines[poemStart].trim() === '') {
+    poemStart++;
+  }
+
+  for (let i = poemStart; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    if (trimmed === '') {
+      consecutiveBlanks++;
+    } else {
+      // If we had 2+ blank lines, this is a new poem
+      if (consecutiveBlanks >= 2 && i > poemStart) {
+        // Find where content actually ended (skip trailing blanks)
+        let endLine = i - consecutiveBlanks;
+        if (endLine > poemStart) {
+          poemNumber++;
+          poems.push({
+            title: `Poem ${poemNumber}`,
+            startLine: poemStart,
+            endLine: endLine,
+            lines: lines.slice(poemStart, endLine),
+          });
+          poemStart = i;
+        }
+      }
+      consecutiveBlanks = 0;
+    }
+  }
+
+  // Add the last poem
+  if (poemStart < lines.length) {
+    // Find actual end (skip trailing blanks)
+    let endLine = lines.length;
+    while (endLine > poemStart && lines[endLine - 1].trim() === '') {
+      endLine--;
+    }
+    if (endLine > poemStart) {
+      poemNumber++;
+      poems.push({
+        title: poemNumber > 0 ? `Poem ${poemNumber}` : "",
+        startLine: poemStart,
+        endLine: endLine,
+        lines: lines.slice(poemStart, endLine),
+      });
+    }
+  }
+
+  // If double-blank detection found poems, return them
+  if (poems.length > 1) {
+    return poems;
+  }
+
+  // Final fallback: treat entire chapter as one poem
+  if (lines.length > 0) {
+    poems.push({
+      title: "",
+      startLine: 0,
+      endLine: lines.length,
+      lines: lines,
+    });
+  }
+
+  return poems;
+}
+
+/**
+ * Maximum lines per page for anthology poems.
+ * Set high enough that most poems fit on a single page.
+ * Each poem starts on its own page; only very long poems span multiple pages.
+ */
+const ANTHOLOGY_MAX_LINES_PER_PAGE = 50;
+
+/**
+ * Result of anthology pagination - includes poem tracking for navigation
+ */
+interface AnthologyPaginationResult {
+  pages: Array<{
+    sourceLines: string[];
+    translatedLines: string[];
+    lineMetadata: Map<number, LineMetadata>;
+    poemNumber: number;           // 1-based poem number
+    poemTitle: string;            // Poem title
+    isFirstPageOfPoem: boolean;   // True if first page of this poem
+    isContinuation: boolean;      // True if continues from previous page
+  }>;
+  poems: PoemInfo[];  // Poem metadata for navigation
+}
+
+/**
+ * Paginate poems for anthology structure with poem tracking.
+ * - Poems can span multiple pages (max 30 lines per page)
+ * - Long poems split at stanza breaks (blank lines)
+ * - Each page tracks which poem it belongs to
+ * - Returns poem metadata for navigation dropdowns
+ *
+ * @param sourceLines - Source language lines
+ * @param translatedLines - Translated lines (parallel array)
+ * @param lineMetadata - Optional metadata for each line
+ * @returns Pages with poem tracking and poem info for navigation
+ */
+function paginateAnthologyPoems(
+  sourceLines: string[],
+  translatedLines: string[],
+  lineMetadata?: Map<number, LineMetadata>
+): AnthologyPaginationResult {
+  // Detect poem boundaries from source lines
+  const detectedPoems = detectPoemBoundaries(sourceLines);
+
+  const pages: AnthologyPaginationResult["pages"] = [];
+  const poemInfoList: PoemInfo[] = [];
+
+  for (let poemIdx = 0; poemIdx < detectedPoems.length; poemIdx++) {
+    const poem = detectedPoems[poemIdx];
+    const poemNumber = poemIdx + 1;
+    const poemSourceLines = poem.lines;
+    const poemTranslatedLines = translatedLines.slice(poem.startLine, poem.endLine);
+
+    // Get metadata for this poem's lines (adjust indices)
+    const poemMetadata = new Map<number, LineMetadata>();
+    if (lineMetadata) {
+      for (let i = poem.startLine; i < poem.endLine; i++) {
+        const meta = lineMetadata.get(i);
+        if (meta) {
+          poemMetadata.set(i - poem.startLine, meta);
+        }
+      }
+    }
+
+    // Track pages for this poem
+    const poemStartPage = pages.length + 1;
+    let poemPageCount = 0;
+
+    // Helper to add a page for this poem
+    const addPage = (
+      srcLines: string[],
+      transLines: string[],
+      pageMeta: Map<number, LineMetadata>,
+      isFirst: boolean
+    ) => {
+      pages.push({
+        sourceLines: srcLines,
+        translatedLines: transLines,
+        lineMetadata: pageMeta,
+        poemNumber,
+        poemTitle: poem.title,
+        isFirstPageOfPoem: isFirst,
+        isContinuation: !isFirst,
+      });
+      poemPageCount++;
+    };
+
+    // If poem fits on one page, add it as-is
+    if (poemSourceLines.length <= ANTHOLOGY_MAX_LINES_PER_PAGE) {
+      addPage(poemSourceLines, poemTranslatedLines, poemMetadata, true);
+    } else {
+      // Poem is too long - split at stanza breaks (blank lines)
+      const blankLineIndices: number[] = [];
+      for (let i = 0; i < poemSourceLines.length; i++) {
+        if (poemSourceLines[i].trim() === '') {
+          blankLineIndices.push(i);
+        }
+      }
+
+      let pageStart = 0;
+      let isFirstPage = true;
+
+      // If no blank lines, just split at max lines
+      if (blankLineIndices.length === 0) {
+        while (pageStart < poemSourceLines.length) {
+          const end = Math.min(pageStart + ANTHOLOGY_MAX_LINES_PER_PAGE, poemSourceLines.length);
+          const pageMetadata = new Map<number, LineMetadata>();
+          for (let i = pageStart; i < end; i++) {
+            const meta = poemMetadata.get(i);
+            if (meta) {
+              pageMetadata.set(i - pageStart, meta);
+            }
+          }
+          addPage(
+            poemSourceLines.slice(pageStart, end),
+            poemTranslatedLines.slice(pageStart, end),
+            pageMetadata,
+            isFirstPage
+          );
+          isFirstPage = false;
+          pageStart = end;
+        }
+      } else {
+        // Split at stanza breaks, respecting max lines
+        let lastBreakInPage = -1;
+
+        for (let i = 0; i < poemSourceLines.length; i++) {
+          const linesInPage = i - pageStart;
+
+          // Track blank lines as potential break points
+          if (poemSourceLines[i].trim() === '') {
+            lastBreakInPage = i;
+          }
+
+          // Check if we've exceeded max lines or reached end
+          if (linesInPage >= ANTHOLOGY_MAX_LINES_PER_PAGE || i === poemSourceLines.length - 1) {
+            let pageEnd: number;
+
+            if (i === poemSourceLines.length - 1) {
+              pageEnd = poemSourceLines.length;
+            } else if (lastBreakInPage > pageStart) {
+              pageEnd = lastBreakInPage + 1;
+            } else {
+              pageEnd = pageStart + ANTHOLOGY_MAX_LINES_PER_PAGE;
+            }
+
+            const pageMetadata = new Map<number, LineMetadata>();
+            for (let j = pageStart; j < pageEnd; j++) {
+              const meta = poemMetadata.get(j);
+              if (meta) {
+                pageMetadata.set(j - pageStart, meta);
+              }
+            }
+
+            addPage(
+              poemSourceLines.slice(pageStart, pageEnd),
+              poemTranslatedLines.slice(pageStart, pageEnd),
+              pageMetadata,
+              isFirstPage
+            );
+            isFirstPage = false;
+            pageStart = pageEnd;
+            lastBreakInPage = -1;
+            i = pageStart - 1;
+          }
+        }
+
+        // Handle any remaining lines
+        if (pageStart < poemSourceLines.length) {
+          const pageMetadata = new Map<number, LineMetadata>();
+          for (let j = pageStart; j < poemSourceLines.length; j++) {
+            const meta = poemMetadata.get(j);
+            if (meta) {
+              pageMetadata.set(j - pageStart, meta);
+            }
+          }
+          addPage(
+            poemSourceLines.slice(pageStart),
+            poemTranslatedLines.slice(pageStart),
+            pageMetadata,
+            isFirstPage
+          );
+        }
+      }
+    }
+
+    // Record poem info for navigation
+    poemInfoList.push({
+      number: poemNumber,
+      title: poem.title || `Poem ${poemNumber}`,
+      startPage: poemStartPage,
+      endPage: poemStartPage + poemPageCount - 1,
+      pageCount: poemPageCount,
+    });
+  }
+
+  return { pages, poems: poemInfoList };
+}
+
+// ============================================================================
+// SINGLE CHAPTER BUILD (for incremental building during streaming)
+// ============================================================================
+
+/**
+ * Result of building a single chapter's content
+ */
+export interface BuiltChapterResult {
+  pages: Record<number, PageContent>;
+  poems?: PoemInfo[];  // Only for anthologies
+}
+
+/**
+ * Build a single chapter's paginated content.
+ * Called immediately after translation to ensure streaming matches final output.
+ *
+ * @param sourceLines - Source language lines
+ * @param translatedLines - Translated lines
+ * @param sourceLanguage - Source language ("en" or "es")
+ * @param structureType - Content structure type for pagination strategy
+ * @param lineMetadata - Optional line metadata (for stanza detection)
+ * @returns Built pages with poem info (for anthologies)
+ */
+export function buildSingleChapterContent(
+  sourceLines: string[],
+  translatedLines: string[],
+  sourceLanguage: "en" | "es",
+  structureType: "prose" | "anthology" | "epic" | "script" = "prose",
+  lineMetadata?: Map<number, LineMetadata>
+): BuiltChapterResult {
+  const pages: Record<number, PageContent> = {};
+
+  // ANTHOLOGY PATH: Poem-aware pagination with poem tracking
+  if (structureType === "anthology") {
+    const { pages: paginatedPages, poems: poemInfoList } = paginateAnthologyPoems(
+      sourceLines,
+      translatedLines,
+      lineMetadata
+    );
+
+    for (let pIdx = 0; pIdx < paginatedPages.length; pIdx++) {
+      const pageData = paginatedPages[pIdx];
+      const lines: StoryLine[] = [];
+
+      for (let lIdx = 0; lIdx < pageData.sourceLines.length; lIdx++) {
+        const sourceLine = pageData.sourceLines[lIdx]?.trim() || "";
+        const translatedLine = pageData.translatedLines[lIdx]?.trim() || "";
+        const lineMeta = pageData.lineMetadata.get(lIdx);
+
+        const storyLine: StoryLine = sourceLanguage === "es"
+          ? { es: sourceLine, en: translatedLine }
+          : { en: sourceLine, es: translatedLine };
+
+        if (lineMeta?.stanzaNumber !== undefined) {
+          storyLine.stanzaNumber = lineMeta.stanzaNumber;
+        }
+        if (lineMeta?.isStanzaBreak) {
+          storyLine.isStanzaBreak = true;
+        }
+
+        lines.push(storyLine);
+      }
+
+      pages[pIdx + 1] = {
+        lines,
+        poemNumber: pageData.poemNumber,
+        poemTitle: pageData.poemTitle,
+        isFirstPageOfPoem: pageData.isFirstPageOfPoem,
+        isContinuation: pageData.isContinuation,
+      };
+    }
+
+    return { pages, poems: poemInfoList };
+  }
+
+  // PROSE/DEFAULT PATH: Simple line-based pagination
+  const sourcePages = paginateLines(sourceLines);
+  const translatedPages = paginateLines(translatedLines);
+  const maxPages = Math.max(sourcePages.length, translatedPages.length);
+
+  for (let pIdx = 0; pIdx < maxPages; pIdx++) {
+    const sourcePageLines = sourcePages[pIdx] || [];
+    const translatedPageLines = translatedPages[pIdx] || [];
+    const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+
+    const lines: StoryLine[] = [];
+    for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+      const sourceLine = sourcePageLines[lIdx]?.trim() || "";
+      const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+
+      const storyLine: StoryLine = sourceLanguage === "es"
+        ? { es: sourceLine, en: translatedLine }
+        : { en: sourceLine, es: translatedLine };
+
+      lines.push(storyLine);
+    }
+
+    pages[pIdx + 1] = { lines };
+  }
+
+  return { pages };
 }
 
 /**
@@ -344,25 +930,9 @@ export function buildContentStructure(
   const chapters: Record<number, ChapterContent> = {};
 
   chaptersData.forEach((chapter, chapterIndex) => {
-    // DEBUG: Check if this looks like a poem (has blank lines)
-    const blankLineCount = chapter.sourceLines.filter(l => l.trim() === '').length;
-    if (blankLineCount > 0) {
-      console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1}: ${chapter.sourceLines.length} sourceLines with ${blankLineCount} blank lines`);
-      debugShowLines(chapter.sourceLines.join('\n'), `buildContentStructure INPUT ch${chapterIndex + 1}`);
-    }
-
     const sourcePages = paginateLines(chapter.sourceLines);
     const translatedPages = paginateLines(chapter.translatedLines);
     const pages: Record<number, PageContent> = {};
-
-    // DEBUG: For potential poems, show pagination results
-    if (blankLineCount > 0) {
-      console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1}: paginated into ${sourcePages.length} pages`);
-      sourcePages.forEach((page, pIdx) => {
-        const pageBlankCount = page.filter(l => l.trim() === '').length;
-        console.log(`  Page ${pIdx + 1}: ${page.length} lines (${pageBlankCount} blank)`);
-      });
-    }
 
     const maxPages = Math.max(sourcePages.length, translatedPages.length);
 
@@ -384,16 +954,6 @@ export function buildContentStructure(
         } else {
           lines.push({ en: sourceLine, es: translatedLine });
         }
-      }
-
-      // DEBUG: For potential poems, show lines being saved (check for blank preservation)
-      if (blankLineCount > 0 && pIdx === 0) {
-        const blankLinesInOutput = lines.filter(l => l.es === '' || l.en === '').length;
-        console.log(`[PoemFormat] buildContentStructure ch${chapterIndex + 1} page 1 OUTPUT: ${lines.length} lines (${blankLinesInOutput} blank in es/en)`);
-        lines.slice(0, 10).forEach((line, i) => {
-          const isBlank = line.es === '' && line.en === '';
-          console.log(`  ${i + 1}: ${isBlank ? '[BLANK LINE]' : `es="${line.es.substring(0, 30)}..." en="${line.en.substring(0, 30)}..."`}`);
-        });
       }
 
       pages[pIdx + 1] = { lines };
@@ -448,10 +1008,24 @@ export interface ProcessedChapterDataWithMetadata {
 }
 
 /**
+ * Options for building content structure with metadata.
+ */
+export interface BuildContentOptions {
+  /**
+   * Content structure type. Affects pagination behavior.
+   * - "anthology": Use poem-aware pagination (one poem per page, max 30 lines)
+   * - "epic": Use stanza-based pagination
+   * - "prose" | "script": Use standard line-based pagination
+   */
+  structureType?: "prose" | "anthology" | "epic" | "script";
+}
+
+/**
  * Build content structure with line metadata support for poems and scripts.
  * This is an enhanced version that preserves stanza numbers, speaker names, etc.
  *
- * For poems: Builds nested `stanzas: StoryLine[][]` to guarantee stanza structure.
+ * For anthologies: Each poem within a section becomes a page (poem-aware pagination).
+ * For poems/epic: Builds nested `stanzas: StoryLine[][]` to guarantee stanza structure.
  * For scripts/prose: Builds flat `lines: StoryLine[]` with metadata.
  *
  * @param storySlug - The story's slug identifier
@@ -459,6 +1033,7 @@ export interface ProcessedChapterDataWithMetadata {
  * @param hasChapters - Whether the story has multiple chapters
  * @param chaptersData - Array of chapter data with source/translated lines and optional line metadata
  * @param sourceLanguage - The source language ("en" or "es")
+ * @param options - Build options including structureType for anthology handling
  * @returns LevelContent object with enhanced StoryLine objects
  */
 export function buildContentStructureWithMetadata(
@@ -466,9 +1041,13 @@ export function buildContentStructureWithMetadata(
   levelNum: number,
   hasChapters: boolean,
   chaptersData: ProcessedChapterDataWithMetadata[],
-  sourceLanguage: "en" | "es"
+  sourceLanguage: "en" | "es",
+  options: BuildContentOptions = {}
 ): LevelContent {
+  const { structureType = "prose" } = options;
   const chapters: Record<number, ChapterContent> = {};
+
+  console.log(`[BuildContent] Building structure with type: ${structureType}, ${chaptersData.length} chapters`);
 
   chaptersData.forEach((chapter, chapterIndex) => {
     const pages: Record<number, PageContent> = {};
@@ -476,12 +1055,63 @@ export function buildContentStructureWithMetadata(
     // Check if this is poem content (has stanza numbers in metadata)
     const isPoem = isPoemContent(chapter.lineMetadata);
 
-    if (isPoem && chapter.lineMetadata) {
-      // POEM PATH: Build nested stanzas structure
-      console.log(`[BuildContent] Chapter ${chapterIndex + 1}: Building nested stanzas for poem`);
+    // ANTHOLOGY PATH: Poem-aware pagination with poem tracking
+    if (structureType === "anthology") {
+      // Use poem-aware pagination - returns pages with poem info and poem list for navigation
+      const { pages: paginatedPages, poems: poemInfoList } = paginateAnthologyPoems(
+        chapter.sourceLines,
+        chapter.translatedLines,
+        chapter.lineMetadata
+      );
 
-      // DEBUG: Show source lines going into groupByStanza
-      debugShowLines(chapter.sourceLines.join('\n'), `buildContentStructureWithMetadata sourceLines ch${chapterIndex + 1}`);
+      // Build pages from paginated poems with poem tracking
+      for (let pIdx = 0; pIdx < paginatedPages.length; pIdx++) {
+        const pageData = paginatedPages[pIdx];
+        const lines: StoryLine[] = [];
+
+        for (let lIdx = 0; lIdx < pageData.sourceLines.length; lIdx++) {
+          const sourceLine = pageData.sourceLines[lIdx]?.trim() || "";
+          const translatedLine = pageData.translatedLines[lIdx]?.trim() || "";
+          const lineMeta = pageData.lineMetadata.get(lIdx);
+
+          const storyLine: StoryLine = sourceLanguage === "es"
+            ? { es: sourceLine, en: translatedLine }
+            : { en: sourceLine, es: translatedLine };
+
+          // Add stanza number if present
+          if (lineMeta?.stanzaNumber !== undefined) {
+            storyLine.stanzaNumber = lineMeta.stanzaNumber;
+          }
+          if (lineMeta?.isStanzaBreak) {
+            storyLine.isStanzaBreak = true;
+          }
+
+          lines.push(storyLine);
+        }
+
+        // Store page with poem tracking metadata
+        pages[pIdx + 1] = {
+          lines,
+          poemNumber: pageData.poemNumber,
+          poemTitle: pageData.poemTitle,
+          isFirstPageOfPoem: pageData.isFirstPageOfPoem,
+          isContinuation: pageData.isContinuation,
+        };
+      }
+
+      // Store chapter with pages and poem list for navigation
+      const chapterContent: ChapterContent = {
+        pages,
+        poems: poemInfoList,  // For anthology navigation dropdown
+      };
+      if (chapter.metadata) {
+        chapterContent.metadata = chapter.metadata;
+      }
+      chapters[chapterIndex + 1] = chapterContent;
+
+      return; // Skip the default chapter storage below
+    } else if (isPoem && chapter.lineMetadata) {
+      // POEM PATH: Build nested stanzas structure (for epic, single poems)
 
       // Group lines by stanza
       const groupedStanzas = groupLinesByStanza(
@@ -490,16 +1120,8 @@ export function buildContentStructureWithMetadata(
         chapter.lineMetadata
       );
 
-      // DEBUG: Show stanza grouping results
-      console.log(`[PoemFormat] After groupLinesByStanza: ${groupedStanzas.length} stanzas`);
-      groupedStanzas.forEach((stanza, i) => {
-        console.log(`  Stanza ${i + 1}: ${stanza.length} lines`);
-      });
-
       // Paginate stanzas (keeping stanzas together)
       const paginatedStanzas = paginateStanzas(groupedStanzas, 15);
-
-      console.log(`[BuildContent] Poem has ${groupedStanzas.length} stanzas across ${paginatedStanzas.length} pages`);
 
       // Build pages with nested stanzas
       for (let pIdx = 0; pIdx < paginatedStanzas.length; pIdx++) {
@@ -603,6 +1225,8 @@ export function buildContentStructureWithMetadata(
     level: levelNum,
     hasChapters,
     chapters,
+    // Include structure type for UI rendering (navigation labels, etc.)
+    structureType: structureType !== "prose" ? structureType : undefined,
   };
 }
 
@@ -610,30 +1234,56 @@ export function buildContentStructureWithMetadata(
 // CHAPTER PARSING (uses admin utilities but provides a simpler interface)
 // ============================================================================
 
-import { preprocessText } from "@/lib/admin/text-preprocessor";
+import { preprocessText, type PreprocessOptions } from "@/lib/admin/text-preprocessor";
 import { cleanText as adminCleanText, parseChaptersFromText } from "@/lib/admin/text-utils";
+
+/**
+ * Options for chapter parsing
+ */
+export interface ParseChaptersOptions {
+  /**
+   * Content structure type for proper marker handling.
+   * - "auto": Auto-detect (default)
+   * - "anthology": Poetry collections - preserves "I. LIFE." style markers in content
+   * - "epic": Narrative poetry - preserves markers in content
+   * - "prose": Standard novels/stories - markers stripped from content
+   * - "script": Screenplays/transcripts
+   */
+  structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
+}
+
+/**
+ * Result of chapter parsing
+ */
+export interface ParseChaptersResult {
+  hasChapters: boolean;
+  chapters: ParsedChapter[];
+  /** The detected or specified structure type */
+  structureType: "prose" | "anthology" | "epic" | "script";
+}
 
 /**
  * Parse text into chapters using the admin pipeline's robust preprocessing.
  * Preserves chapter metadata (title, subtitle, number) for display in UI.
  *
  * @param text - Raw text to parse
- * @returns Object with hasChapters flag and array of ParsedChapter objects with metadata
+ * @param options - Optional settings including structureType for anthology handling
+ * @returns Object with hasChapters flag, chapters array, and detected structure type
  */
-export function parseChapters(text: string): {
-  hasChapters: boolean;
-  chapters: ParsedChapter[];
-} {
-  // DEBUG: Show raw input text
-  debugShowLines(text, 'parseChapters INPUT (raw text)');
-
+export function parseChapters(
+  text: string,
+  options: ParseChaptersOptions = {}
+): ParseChaptersResult {
   // Use the full admin preprocessing pipeline for robust text cleaning and chapter detection
-  const preprocessed = preprocessText(text);
+  // Pass structure type to control marker preservation (anthologies keep "I. LIFE." etc.)
+  const preprocessed = preprocessText(text, {
+    structureType: options.structureType || "auto"
+  });
+
+  const detectedStructureType = preprocessed.stats.structureType;
 
   // If preprocessing found chapters, use those with full metadata
   if (preprocessed.chapters.length > 1) {
-    // DEBUG: Show first chapter's raw text
-    debugShowLines(preprocessed.chapters[0].rawText, `parseChapters OUTPUT chapter 1 of ${preprocessed.chapters.length}`);
     return {
       hasChapters: true,
       chapters: preprocessed.chapters.map((ch) => ({
@@ -644,6 +1294,7 @@ export function parseChapters(text: string): {
           subtitle: ch.subtitle,
         },
       })),
+      structureType: detectedStructureType,
     };
   }
 
@@ -663,12 +1314,11 @@ export function parseChapters(text: string): {
           title: `Chapter ${idx + 1}`,
         },
       })),
+      structureType: detectedStructureType,
     };
   }
 
   // No chapters detected - return as single chapter
-  // DEBUG: Show single chapter text
-  debugShowLines(cleanedText, 'parseChapters OUTPUT (single chapter)');
   return {
     hasChapters: false,
     chapters: [{
@@ -678,5 +1328,6 @@ export function parseChapters(text: string): {
         title: "Full Text",
       },
     }],
+    structureType: detectedStructureType,
   };
 }
