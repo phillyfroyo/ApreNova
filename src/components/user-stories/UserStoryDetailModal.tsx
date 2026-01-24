@@ -10,6 +10,7 @@ import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, A
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
+import { useUserLevel } from "@/hooks/useUserLevel";
 
 interface UserStoryLevel {
   level: string;
@@ -109,6 +110,7 @@ export default function UserStoryDetailModal({
   const router = useRouter();
   const { lng } = useParams();
   const typedLang = lng as Language;
+  const userLevel = useUserLevel("A2"); // Get user's preferred reading level
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -186,11 +188,12 @@ export default function UserStoryDetailModal({
       console.error("Error checking bookmark:", error);
     }
 
-    // No valid bookmark - use first ready level
-    const readyLevel = readyLevels[0]?.level;
-    const defaultLevel = readyLevel || story.detectedLevel || "A1";
-    router.push(`/${typedLang}/my-stories/${story.id}/${defaultLevel}/1/1`);
-  }, [story, typedLang, router]);
+    // No valid bookmark - prioritize user's preferred level if available
+    // Fall back to first ready level, then detected level, then A1
+    const userLevelReady = readyLevels.find(l => l.level === userLevel);
+    const targetLevel = userLevelReady?.level || readyLevels[0]?.level || story.detectedLevel || "A1";
+    router.push(`/${typedLang}/my-stories/${story.id}/${targetLevel}/1/1`);
+  }, [story, typedLang, router, userLevel]);
 
   const handleSave = async () => {
     if (!story) return;
