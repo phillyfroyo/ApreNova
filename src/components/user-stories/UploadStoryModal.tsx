@@ -305,16 +305,19 @@ export default function UploadStoryModal() {
             <>
               {/* Content Type Selector - badge buttons */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {lng === "es" ? "Tipo de contenido" : "Content Type"}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.myStories.contentType}
                 </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  {t.myStories.contentTypeDescription}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: "auto", labelEn: "Auto-detect", labelEs: "Auto-detectar" },
-                    { value: "prose", labelEn: "Novel / Story", labelEs: "Novela / Cuento" },
-                    { value: "anthology", labelEn: "Poetry Collection", labelEs: "Antología Poética" },
-                    { value: "epic", labelEn: "Epic Poetry", labelEs: "Poesía Épica" },
-                    { value: "script", labelEn: "Script", labelEs: "Guión" },
+                    { value: "auto", label: t.myStories.contentTypeAuto },
+                    { value: "prose", label: t.myStories.contentTypeProse },
+                    { value: "anthology", label: t.myStories.contentTypePoetry },
+                    { value: "epic", label: t.myStories.contentTypeEpic },
+                    { value: "script", label: t.myStories.contentTypeScript },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -327,14 +330,16 @@ export default function UploadStoryModal() {
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       } disabled:opacity-50`}
                     >
-                      {lng === "es" ? option.labelEs : option.labelEn}
+                      {option.label}
                     </button>
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-1.5">
-                  {lng === "es"
-                    ? "Para colecciones de poesía, selecciona \"Antología Poética\" para agrupar poemas por sección."
-                    : "For poetry collections, select \"Poetry Collection\" to group poems by section."}
+                  {structureType === "auto" && t.myStories.contentTypeHintAuto}
+                  {structureType === "prose" && t.myStories.contentTypeHintProse}
+                  {structureType === "anthology" && t.myStories.contentTypeHintPoetry}
+                  {structureType === "epic" && t.myStories.contentTypeHintEpic}
+                  {structureType === "script" && t.myStories.contentTypeHintScript}
                 </p>
               </div>
 

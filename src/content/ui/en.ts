@@ -353,6 +353,19 @@ myStories: {
   incomplete: "Incomplete",
   cancelledMessage: "This story upload was cancelled before any chapters were completed.",
   incompleteMessage: "This story upload was cancelled. Only some chapters are available to read.",
+  // Content type selection
+  contentType: "Content Type",
+  contentTypeDescription: "This helps us format your story correctly when displayed.",
+  contentTypeAuto: "Auto-detect",
+  contentTypeProse: "Novel / Story",
+  contentTypePoetry: "Poetry / Lyrics",
+  contentTypeEpic: "Epic Poetry",
+  contentTypeScript: "Script",
+  contentTypeHintAuto: "Select this if you're unsure. Our algorithms analyze your content to determine the best formatting.",
+  contentTypeHintProse: "Select this for novels, short stories, articles, or any narrative prose content.",
+  contentTypeHintPoetry: "Select this for poetry, song lyrics, or any content with stanza formatting to preserve.",
+  contentTypeHintEpic: "Select this for epic or narrative poetry like Beowulf or The Odyssey with canto/book structure.",
+  contentTypeHintScript: "Select this for screenplays, stage plays, or dialogue-heavy content with speaker labels.",
 },
 
 storiesMetadata: {

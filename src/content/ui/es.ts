@@ -354,6 +354,19 @@ myStories: {
   incomplete: "Incompleta",
   cancelledMessage: "La carga de esta historia fue cancelada antes de que se completaran los capítulos.",
   incompleteMessage: "La carga de esta historia fue cancelada. Solo algunos capítulos están disponibles para leer.",
+  // Content type selection
+  contentType: "Tipo de contenido",
+  contentTypeDescription: "Esto nos ayuda a formatear tu historia correctamente.",
+  contentTypeAuto: "Auto-detectar",
+  contentTypeProse: "Novela / Cuento",
+  contentTypePoetry: "Poesía / Letras",
+  contentTypeEpic: "Poesía Épica",
+  contentTypeScript: "Guión",
+  contentTypeHintAuto: "Selecciona esto si no estás seguro. Nuestros algoritmos analizan tu contenido para determinar el mejor formato.",
+  contentTypeHintProse: "Selecciona esto para novelas, cuentos, artículos o cualquier contenido narrativo en prosa.",
+  contentTypeHintPoetry: "Selecciona esto para poesía, letras de canciones o cualquier contenido con formato de estrofas.",
+  contentTypeHintEpic: "Selecciona esto para poesía épica o narrativa como Beowulf o La Odisea con estructura de cantos.",
+  contentTypeHintScript: "Selecciona esto para guiones de cine, teatro o contenido con diálogos y nombres de personajes.",
 },
 
 storiesMetadata: {
