@@ -47,6 +47,7 @@ export function addLineNumbers(text: string): {
 /**
  * Parse numbered lines from translation response.
  * Extracts content by line number, stripping the [N] prefix.
+ * Preserves any leading whitespace in the content (for poetry indentation).
  */
 export function parseNumberedLines(
   text: string,
@@ -55,15 +56,17 @@ export function parseNumberedLines(
   const result: string[] = new Array(expectedCount).fill("");
 
   // Match patterns like [1] text, [2] text, etc.
-  const linePattern = /\[(\d+)\]\s*([^\n]*)/g;
+  // Only consume ONE optional space after ], preserve additional whitespace
+  const linePattern = /\[(\d+)\] ?([^\n]*)/g;
 
   let match;
   while ((match = linePattern.exec(text + "\n")) !== null) {
     const lineNum = parseInt(match[1], 10);
-    let lineText = match[2].trim();
+    // Don't trim - preserve leading whitespace for poetry indentation
+    let lineText = match[2].replace(/\s+$/, '');  // Only trim trailing whitespace
 
-    // Double-check: strip any remaining [N] prefix that might be nested
-    lineText = lineText.replace(/^\[\d+\]\s*/, "");
+    // Double-check: strip any remaining [N] prefix that might be nested (preserve whitespace after)
+    lineText = lineText.replace(/^\[\d+\] ?/, "");
 
     if (lineNum >= 1 && lineNum <= expectedCount) {
       result[lineNum - 1] = lineText;
@@ -97,10 +100,12 @@ export function reconstructWithBlankLines(
 }
 
 /**
- * Final cleanup: strip any [N] prefixes that might have leaked through
+ * Final cleanup: strip any [N] prefixes that might have leaked through.
+ * Preserves any leading whitespace after the prefix (for poetry indentation).
  */
 export function stripLineNumberPrefixes(lines: string[]): string[] {
-  return lines.map((line) => line.replace(/^\[\d+\]\s*/, "").trim());
+  // Remove [N] prefix and ONE optional space, but preserve additional whitespace
+  return lines.map((line) => line.replace(/^\[\d+\] ?/, ""));
 }
 
 // ============================================================================

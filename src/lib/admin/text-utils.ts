@@ -186,12 +186,12 @@ export function parseChaptersFromText(text: string): string[] {
     // Otherwise: discard front matter (typical case - title, TOC, etc.)
   }
 
-  // Add chapters with their headers
-  // matches[i-1] is the header for parts[i]
+  // Add chapters WITHOUT their headers
+  // The chapter markers are used for splitting but should not be in content
+  // (headers are metadata, not content - they would get translated incorrectly)
   for (let i = 1; i < parts.length; i++) {
     if (parts[i]?.trim()) {
-      const header = matches[i - 1]?.trim() || '';
-      chapters.push((header + '\n\n' + parts[i]).trim());
+      chapters.push(parts[i].trim());
     }
   }
 

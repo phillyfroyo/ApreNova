@@ -102,8 +102,15 @@ WHAT TO SIMPLIFY:
 WHAT TO NEVER CHANGE:
 - Number of lines
 - Stanza breaks (empty lines)
+- Leading whitespace/indentation (if a line starts with spaces, your rewritten line must start with the SAME spaces)
 - Character/place names
-- The core meaning of each line`
+- The core meaning of each line
+
+INDENTATION IS CRITICAL:
+- Some poems use visual indentation as part of their structure
+- If the original line is "  By those who ne'er succeed." (starts with 2 spaces)
+- Your rewrite must be "  Por quienes nunca triunfan." (also starts with 2 spaces)
+- Copy the EXACT leading whitespace from each input line to your output line`
     : `STRUCTURE RULES (PROSE):
 - Preserve the exact meaning, plot, and character names
 - Preserve PARAGRAPH breaks (empty lines between paragraphs)

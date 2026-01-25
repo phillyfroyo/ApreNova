@@ -85,16 +85,19 @@ export function normalizeLineBreaks(text: string, forceStyle?: LineBreakStyle): 
   const style = forceStyle || detectLineBreakStyle(text);
 
   if (style === "intentional") {
-    // Keep line breaks as-is, just clean up extra whitespace
+    // Keep line breaks as-is, preserve leading whitespace (indentation)
+    // Only remove trailing whitespace from each line
     // Preserve meaningful spacing for poetry:
     // - 1 blank line = stanza break
     // - 2 blank lines = poem separation
-    // - 3+ blank lines = section/collection separation (preserve up to 4)
+    // - 3+ blank lines = section/collection separation (preserve up to 8)
     return text
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
       .split('\n')
-      .map(line => line.trim())
+      .map(line => line.replace(/\s+$/, ''))  // Only trim trailing whitespace, keep leading!
       .join('\n')
-      .replace(/\n{6,}/g, '\n\n\n\n\n'); // Collapse 5+ blank lines to 4
+      .replace(/\n{10,}/g, '\n\n\n\n\n\n\n\n\n'); // Collapse 9+ blank lines to 8 (more lenient for poetry)
   }
 
   // Prose-wrapped: join lines within paragraphs
@@ -341,6 +344,22 @@ function normalizeWhitespace(text: string): string {
 }
 
 /**
+ * Normalize whitespace for poetry - preserves leading whitespace (indentation)
+ * but still normalizes line endings and removes trailing whitespace
+ */
+function normalizeWhitespacePreserveIndent(text: string): string {
+  return text
+    // Normalize line endings
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    // Remove trailing whitespace from lines (but keep leading!)
+    .replace(/[ \t]+$/gm, '')
+    // Collapse excessive blank lines (10+ → 8) - more lenient for poetry
+    .replace(/\n{11,}/g, '\n\n\n\n\n\n\n\n\n\n')
+    .trim();
+}
+
+/**
  * Detect chapter boundaries in text
  * Returns array of chapter markers with their line positions
  */
@@ -387,6 +406,11 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
     const line = lines[i].trim();
     if (!line) continue;
 
+    // Debug: check if line looks like it might be a thematic marker
+    if (/^[IVXLC]+\.\s+[A-Z]/.test(line)) {
+      console.log(`[detectThematicSectionMarkers] Potential marker at line ${i}: "${line}"`);
+    }
+
     const match = line.match(thematicPattern);
     if (match) {
       const romanNumeral = match[1];
@@ -396,6 +420,7 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
       // Verify this looks like a thematic section (not just "I. SUCCESS.")
       // Thematic sections are typically short (1-4 words) and general concepts
       const wordCount = sectionTitle.split(/\s+/).length;
+      console.log(`[detectThematicSectionMarkers] Match: "${line}" -> title="${sectionTitle}", words=${wordCount}, len=${sectionTitle.length}`);
       if (wordCount <= 4 && sectionTitle.length <= 30) {
         markers.push({
           lineIndex: i,
@@ -404,10 +429,14 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
           title: sectionTitle,
           fullMatch: line,
         });
+        console.log(`[detectThematicSectionMarkers] ADDED marker: "${line}"`);
+      } else {
+        console.log(`[detectThematicSectionMarkers] REJECTED (too long): "${line}"`);
       }
     }
   }
 
+  console.log(`[detectThematicSectionMarkers] Found ${markers.length} thematic markers`);
   return markers;
 }
 
@@ -418,12 +447,17 @@ function detectChapterMarkers(lines: string[], options: DetectChapterOptions = {
   // This groups poems by theme instead of treating each poem as a separate chapter
   if (structureType === "anthology") {
     const thematicMarkers = detectThematicSectionMarkers(lines);
-    if (thematicMarkers.length >= 2) {
-      console.log(`[detectChapterMarkers] Using ${thematicMarkers.length} thematic sections for anthology`);
+    // When structureType is explicitly anthology, use thematic markers even if there's only 1
+    // (user explicitly selected poetry type, so we trust their judgment)
+    if (thematicMarkers.length >= 1) {
+      console.log(`[detectChapterMarkers] Using ${thematicMarkers.length} thematic section(s) for anthology`);
       return thematicMarkers;
     }
     // Fall through to standard detection if no thematic sections found
     console.log(`[detectChapterMarkers] No thematic sections found, falling back to standard detection`);
+    // Log first 10 non-empty lines for debugging
+    const previewLines = lines.filter(l => l.trim()).slice(0, 10);
+    console.log(`[detectChapterMarkers] First 10 lines: ${previewLines.map(l => `"${l.substring(0, 40)}"`).join(', ')}`);
   }
 
   // Roman numeral mapping (extended for longer works - up to 100)
@@ -942,7 +976,13 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   const { text: noAsterisks, count: asteriskDividersRemoved } = removeAsteriskDividers(noFootnotes);
 
   // Step 5: Normalize whitespace
-  const normalized = normalizeWhitespace(noAsterisks);
+  // For anthologies/poetry, preserve leading whitespace (indentation)
+  const isPoetry = options.structureType === "anthology" || options.structureType === "epic";
+  const normalized = isPoetry ? normalizeWhitespacePreserveIndent(noAsterisks) : normalizeWhitespace(noAsterisks);
+
+  if (isPoetry) {
+    console.log(`[preprocessText] Preserving indentation for poetry (structureType=${options.structureType})`);
+  }
 
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
@@ -1103,32 +1143,34 @@ export function detectStanzas(lines: string[]): StanzaMarkedLine[] {
   const result: StanzaMarkedLine[] = [];
   let currentStanza = 1;
   let lastWasContent = false;
-  let pendingBreak = false;
+  let pendingBlankCount = 0;  // Track number of consecutive blank lines
 
   for (const line of lines) {
     const trimmed = line.trim();
 
     if (trimmed === '') {
-      // Empty line - potential stanza break
+      // Empty line - count consecutive blanks
       if (lastWasContent) {
-        pendingBreak = true;
+        pendingBlankCount++;
       }
-      // Don't add empty lines to result - we'll add a break marker instead
     } else {
       // Content line
-      if (pendingBreak) {
-        // Insert stanza break marker before this line
-        // The break marker indicates the END of the previous stanza
-        result.push({
-          text: '',
-          stanzaNumber: currentStanza,
-          isStanzaBreak: true
-        });
+      if (pendingBlankCount > 0) {
+        // Add stanza break markers for each blank line to preserve vertical spacing
+        // First blank = stanza break and stanza number increment
+        // Additional blanks = extra spacing (rendered as additional breaks)
+        for (let i = 0; i < pendingBlankCount; i++) {
+          result.push({
+            text: '',
+            stanzaNumber: i === 0 ? currentStanza : currentStanza + 1,
+            isStanzaBreak: true
+          });
+        }
         currentStanza++;
-        pendingBreak = false;
+        pendingBlankCount = 0;
       }
       result.push({
-        text: trimmed,
+        text: line,  // Preserve original whitespace (indentation) for poetry
         stanzaNumber: currentStanza,
         isStanzaBreak: false
       });

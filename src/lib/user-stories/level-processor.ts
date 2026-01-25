@@ -12,13 +12,13 @@ import {
   rewriteToLevel,
   rewritePoemByStanza,
   joinStanzasToText,
+  joinStanzasWithSpacing,
   translateText,
   parseChapters,
   buildContentStructure,
   buildContentStructureWithMetadata,
   buildSingleChapterContent,
   quickClean,
-  cleanText,
   levelStringToNumber,
   ParsedChapter,
   ChapterMetadata,
@@ -223,8 +223,11 @@ async function rewriteChapterWithChunking(
       rewriteOptions
     );
 
-    // Join stanzas back together with empty lines between them
-    const joinedText = joinStanzasToText(stanzaResult.rewrittenStanzas);
+    // Join stanzas back together, preserving original vertical spacing
+    const joinedText = joinStanzasWithSpacing(
+      stanzaResult.rewrittenStanzas,
+      stanzaResult.blankLinesBefore
+    );
 
     return joinedText;
   }
@@ -382,6 +385,10 @@ export interface ParseContentOptions {
    * - "script": Screenplays/transcripts
    */
   structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
+  /**
+   * Story type hint from metadata detection. Used to infer structure type for poetry.
+   */
+  storyType?: string | null;
 }
 
 /**
@@ -389,24 +396,42 @@ export interface ParseContentOptions {
  * This is done once and shared across all levels
  *
  * @param rawContent - Raw text content
- * @param options - Optional settings including structureType for anthology handling
+ * @param options - Optional settings including structureType and storyType for handling
  */
 export function parseStoryContent(
   rawContent: string,
   options: ParseContentOptions = {}
 ): ParsedChapters {
-  const afterQuickClean = quickClean(rawContent);
-  const cleanedContent = cleanText(afterQuickClean);
+  // Infer structure type from storyType if not explicitly provided
+  // Poetry types should use anthology structure to preserve formatting
+  let effectiveStructureType = options.structureType || "auto";
+  if (effectiveStructureType === "auto" && options.storyType) {
+    const poetryTypes = ["poem", "song-lyrics", "epic"];
+    if (poetryTypes.includes(options.storyType)) {
+      effectiveStructureType = options.storyType === "epic" ? "epic" : "anthology";
+      console.log(`[parseStoryContent] Inferred structureType=${effectiveStructureType} from storyType=${options.storyType}`);
+    }
+  }
+
+  // For poetry, skip quickClean to preserve whitespace (indentation)
+  // quickClean's normalizeWhitespace strips leading spaces which destroys poem formatting
+  const isPoetry = effectiveStructureType === "anthology" || effectiveStructureType === "epic";
+  const contentToProcess = isPoetry ? rawContent : quickClean(rawContent);
+
+  if (isPoetry) {
+    console.log(`[parseStoryContent] Skipping quickClean for poetry to preserve whitespace`);
+  }
 
   // Parse chapters, passing structure type for proper marker handling
-  const parseResult = parseChapters(cleanedContent, {
-    structureType: options.structureType || "auto"
+  // preprocessText inside parseChapters will do the detailed cleaning
+  const parseResult = parseChapters(contentToProcess, {
+    structureType: effectiveStructureType
   });
 
   return {
     hasChapters: parseResult.hasChapters,
     chapters: parseResult.chapters,
-    cleanedContent,
+    cleanedContent: contentToProcess,
     structureType: parseResult.structureType,
   };
 }

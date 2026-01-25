@@ -400,9 +400,12 @@ async function processAllLevels(
   // PHASE 1: Parse chapters (once, shared across all levels)
   // =========================================================================
   await updateStoryProgress(story.id, "parsing_chapters");
-  const { hasChapters, chapters: originalChapters, structureType } = parseStoryContent(story.rawContent);
+  // Pass storyType to help infer structure type for poetry
+  const { hasChapters, chapters: originalChapters, structureType } = parseStoryContent(story.rawContent, {
+    storyType: story.storyType
+  });
 
-  console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}`);
+  console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}, storyType=${story.storyType}`);
 
   // Track processed chapters for each level (after translation)
   const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();

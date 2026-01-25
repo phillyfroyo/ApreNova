@@ -35,6 +35,7 @@ export {
   rewritePoemByStanza,
   splitIntoStanzas,
   joinStanzasToText,
+  joinStanzasWithSpacing,
   type RewriteResult,
   type RewriteOptions,
   type StanzaRewriteResult,

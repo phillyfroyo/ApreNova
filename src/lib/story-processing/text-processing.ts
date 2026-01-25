@@ -412,6 +412,7 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
   const poems: DetectedPoem[] = [];
   let currentPoemStart = -1;
   let currentTitle = "";
+  let firstPoemMarkerIndex = -1;
 
   // First pass: detect explicit poem markers
   for (let i = 0; i < lines.length; i++) {
@@ -419,6 +420,10 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
     const trimmed = line.trim();
 
     if (isPoemTitleLine(trimmed)) {
+      // Track the first poem marker index for preamble handling
+      if (firstPoemMarkerIndex < 0) {
+        firstPoemMarkerIndex = i;
+      }
       // Found a new poem title/marker
       if (currentPoemStart >= 0) {
         // Close previous poem
@@ -442,6 +447,23 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
       endLine: lines.length,
       lines: lines.slice(currentPoemStart),
     });
+  }
+
+  // Handle preamble: if there's content before the first poem marker, include it
+  // This captures section headers like "I. LIFE." that precede the first poem
+  if (firstPoemMarkerIndex > 0 && poems.length > 0) {
+    const preambleLines = lines.slice(0, firstPoemMarkerIndex);
+    // Check if preamble has actual content (not just blank lines)
+    const hasContent = preambleLines.some(line => line.trim().length > 0);
+    if (hasContent) {
+      console.log(`[detectPoemBoundaries] Including ${firstPoemMarkerIndex} preamble lines before first poem`);
+      // Prepend preamble to the first poem
+      poems[0] = {
+        ...poems[0],
+        startLine: 0,
+        lines: [...preambleLines, ...poems[0].lines],
+      };
+    }
   }
 
   // If explicit markers found, post-process to merge header-only entries
@@ -858,6 +880,13 @@ export function buildSingleChapterContent(
 ): BuiltChapterResult {
   const pages: Record<number, PageContent> = {};
 
+  // Helper to trim lines - preserve leading whitespace for poetry
+  const trimLine = (line: string | undefined, preserveIndent: boolean): string => {
+    if (!line) return "";
+    // For poetry: preserve leading whitespace (indentation) but remove trailing
+    return preserveIndent ? line.trimEnd() : line.trim();
+  };
+
   // ANTHOLOGY PATH: Poem-aware pagination with poem tracking
   if (structureType === "anthology") {
     const { pages: paginatedPages, poems: poemInfoList } = paginateAnthologyPoems(
@@ -871,8 +900,9 @@ export function buildSingleChapterContent(
       const lines: StoryLine[] = [];
 
       for (let lIdx = 0; lIdx < pageData.sourceLines.length; lIdx++) {
-        const sourceLine = pageData.sourceLines[lIdx]?.trim() || "";
-        const translatedLine = pageData.translatedLines[lIdx]?.trim() || "";
+        // Preserve indentation for anthology poetry
+        const sourceLine = trimLine(pageData.sourceLines[lIdx], true);
+        const translatedLine = trimLine(pageData.translatedLines[lIdx], true);
         const lineMeta = pageData.lineMetadata.get(lIdx);
 
         const storyLine: StoryLine = sourceLanguage === "es"
@@ -902,6 +932,8 @@ export function buildSingleChapterContent(
   }
 
   // PROSE/DEFAULT PATH: Simple line-based pagination
+  // For epic poetry, preserve indentation
+  const preserveIndent = structureType === "epic";
   const sourcePages = paginateLines(sourceLines);
   const translatedPages = paginateLines(translatedLines);
   const maxPages = Math.max(sourcePages.length, translatedPages.length);
@@ -913,8 +945,8 @@ export function buildSingleChapterContent(
 
     const lines: StoryLine[] = [];
     for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-      const sourceLine = sourcePageLines[lIdx]?.trim() || "";
-      const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+      const sourceLine = trimLine(sourcePageLines[lIdx], preserveIndent);
+      const translatedLine = trimLine(translatedPageLines[lIdx], preserveIndent);
 
       const storyLine: StoryLine = sourceLanguage === "es"
         ? { es: sourceLine, en: translatedLine }
@@ -1174,6 +1206,12 @@ export function buildContentStructureWithMetadata(
   const { structureType = "prose" } = options;
   const chapters: Record<number, ChapterContent> = {};
 
+  // Helper to trim lines - preserve leading whitespace for poetry
+  const trimLine = (line: string | undefined, preserveIndent: boolean): string => {
+    if (!line) return "";
+    return preserveIndent ? line.trimEnd() : line.trim();
+  };
+
   console.log(`[BuildContent] Building structure with type: ${structureType}, ${chaptersData.length} chapters`);
 
   chaptersData.forEach((chapter, chapterIndex) => {
@@ -1197,8 +1235,9 @@ export function buildContentStructureWithMetadata(
         const lines: StoryLine[] = [];
 
         for (let lIdx = 0; lIdx < pageData.sourceLines.length; lIdx++) {
-          const sourceLine = pageData.sourceLines[lIdx]?.trim() || "";
-          const translatedLine = pageData.translatedLines[lIdx]?.trim() || "";
+          // Preserve indentation for anthology poetry
+          const sourceLine = trimLine(pageData.sourceLines[lIdx], true);
+          const translatedLine = trimLine(pageData.translatedLines[lIdx], true);
           const lineMeta = pageData.lineMetadata.get(lIdx);
 
           const storyLine: StoryLine = sourceLanguage === "es"
@@ -1259,9 +1298,11 @@ export function buildContentStructureWithMetadata(
           const stanzaLines: StoryLine[] = [];
 
           for (const entry of stanza) {
+            // Preserve indentation for epic poetry
+            const preserveIndent = structureType === "epic";
             const storyLine: StoryLine = sourceLanguage === "es"
-              ? { es: entry.source.trim(), en: entry.translated.trim() }
-              : { en: entry.source.trim(), es: entry.translated.trim() };
+              ? { es: trimLine(entry.source, preserveIndent), en: trimLine(entry.translated, preserveIndent) }
+              : { en: trimLine(entry.source, preserveIndent), es: trimLine(entry.translated, preserveIndent) };
 
             // Add stanza number for reference
             if (entry.meta?.stanzaNumber !== undefined) {
@@ -1294,9 +1335,11 @@ export function buildContentStructureWithMetadata(
         const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
 
         const lines: StoryLine[] = [];
+        // Preserve indentation for epic poetry
+        const preserveIndent = structureType === "epic";
         for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-          const sourceLine = sourcePageLines[lIdx]?.trim() || "";
-          const translatedLine = translatedPageLines[lIdx]?.trim() || "";
+          const sourceLine = trimLine(sourcePageLines[lIdx], preserveIndent);
+          const translatedLine = trimLine(translatedPageLines[lIdx], preserveIndent);
 
           // Get line metadata if available
           const lineMeta = chapter.lineMetadata?.get(sourceLineIndex);
@@ -1409,10 +1452,21 @@ export function parseChapters(
 
   const detectedStructureType = preprocessed.stats.structureType;
 
-  // If preprocessing found chapters, use those with full metadata
-  if (preprocessed.chapters.length > 1) {
+  console.log(`[parseChapters] Preprocessing found ${preprocessed.chapters.length} chapters, structureType=${detectedStructureType}`);
+
+  // If preprocessing found chapters (1 or more), use those with full metadata
+  // IMPORTANT: Use rawText from chapters, NOT cleanedFullText (which has --- Chapter X --- markers)
+  if (preprocessed.chapters.length >= 1) {
+    const hasMultiple = preprocessed.chapters.length > 1;
+    console.log(`[parseChapters] Using ${preprocessed.chapters.length} preprocessed chapter(s), hasChapters=${hasMultiple}`);
+
+    // Log first chapter preview for debugging
+    const firstChapter = preprocessed.chapters[0];
+    const preview = firstChapter.rawText.substring(0, 200).replace(/\n/g, '\\n');
+    console.log(`[parseChapters] First chapter preview: "${preview}..."`);
+
     return {
-      hasChapters: true,
+      hasChapters: hasMultiple,
       chapters: preprocessed.chapters.map((ch) => ({
         text: ch.rawText,
         metadata: {
@@ -1425,13 +1479,16 @@ export function parseChapters(
     };
   }
 
-  // For single-chapter or no-chapter content, use the cleaned full text
-  // Also try the simpler parseChaptersFromText for common chapter markers
-  const cleanedText = adminCleanText(preprocessed.cleanedFullText || text);
+  // Fallback: preprocessing found 0 chapters (shouldn't happen normally)
+  // Try the simpler parseChaptersFromText for common chapter markers
+  console.log(`[parseChapters] FALLBACK: No chapters from preprocessing, trying parseChaptersFromText`);
+  const preserveWhitespace = detectedStructureType === "anthology" || detectedStructureType === "epic";
+  const cleanedText = adminCleanText(text, { preserveWhitespace });
   const parsedChapters = parseChaptersFromText(cleanedText);
 
   if (parsedChapters.length > 1) {
-    // Fallback parser doesn't extract titles, use default
+    // Fallback parser found chapters
+    console.log(`[parseChapters] FALLBACK: Found ${parsedChapters.length} chapters via parseChaptersFromText`);
     return {
       hasChapters: true,
       chapters: parsedChapters.map((chText, idx) => ({
@@ -1446,6 +1503,7 @@ export function parseChapters(
   }
 
   // No chapters detected - return as single chapter
+  console.log(`[parseChapters] FALLBACK: Single chapter, no markers found`);
   return {
     hasChapters: false,
     chapters: [{

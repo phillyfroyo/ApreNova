@@ -24,7 +24,10 @@ interface Props {
 
 
 export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences }: Props) {
-  const words = sentence.split(" ");
+  // Extract leading whitespace for poetry indentation
+  const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
+  const contentWithoutLeading = sentence.trimStart();
+  const words = contentWithoutLeading.split(" ");
   const [startIdx, setStartIdx] = useState<number | null>(null);
   const [endIdx, setEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
@@ -415,6 +418,10 @@ useEffect(() => {
   <div className="relative" data-translator>
     <div ref={containerRef} className="relative">
       <div ref={sentenceRef} className="flex flex-wrap justify-start gap-1 text-lg text-left w-full">
+      {/* Render leading whitespace for poetry indentation */}
+      {leadingWhitespace && (
+        <span className="whitespace-pre" style={{ userSelect: 'none' }}>{leadingWhitespace}</span>
+      )}
       {words.map((word, i) => (
         <button
           ref={(el) => {

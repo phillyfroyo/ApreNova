@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   rewriteToLevel,
   rewritePoemByStanza,
-  joinStanzasToText,
+  joinStanzasWithSpacing,
   type RewriteResult,
 } from "@/lib/story-processing";
 
@@ -37,8 +37,11 @@ export async function POST(req: NextRequest) {
         { isPoetry: true, maxRetries: 3, adminStorySlug: slug }
       );
 
-      // Convert stanza result back to flat text
-      const rewrittenText = joinStanzasToText(stanzaResult.rewrittenStanzas);
+      // Convert stanza result back to flat text, preserving vertical spacing
+      const rewrittenText = joinStanzasWithSpacing(
+        stanzaResult.rewrittenStanzas,
+        stanzaResult.blankLinesBefore
+      );
 
       if (!stanzaResult.wasRewritten && effectiveSourceLevel !== targetLevel) {
         return NextResponse.json(

@@ -235,6 +235,83 @@ export function joinStanzasToText(stanzas: string[][]): string {
 }
 
 /**
+ * Split text into stanzas WITH spacing information preserved.
+ * Returns both the stanzas and the number of blank lines before each stanza.
+ *
+ * @param text - Raw poem text with line breaks
+ * @returns Object with stanzas array and blankLinesBefore array (same length)
+ */
+export function splitIntoStanzasWithSpacing(text: string): {
+  stanzas: string[][];
+  blankLinesBefore: number[];  // How many blank lines before each stanza (first is leading blanks)
+} {
+  const lines = text.split('\n');
+  const stanzaMarked = detectStanzas(lines);
+
+  const stanzas: string[][] = [];
+  const blankLinesBefore: number[] = [];
+
+  let currentStanza: string[] = [];
+  let blankCount = 0;
+  let lastStanzaNum = -1;
+
+  for (const marked of stanzaMarked) {
+    if (marked.isStanzaBreak) {
+      blankCount++;
+    } else {
+      // New stanza started?
+      if (marked.stanzaNumber !== lastStanzaNum) {
+        // Save previous stanza if exists
+        if (currentStanza.length > 0) {
+          stanzas.push(currentStanza);
+        }
+        // Record blank lines before this stanza
+        blankLinesBefore.push(blankCount);
+        currentStanza = [];
+        blankCount = 0;
+        lastStanzaNum = marked.stanzaNumber;
+      }
+      currentStanza.push(marked.text);
+    }
+  }
+
+  // Don't forget the last stanza
+  if (currentStanza.length > 0) {
+    stanzas.push(currentStanza);
+  }
+
+  return { stanzas, blankLinesBefore };
+}
+
+/**
+ * Join stanzas back into text, preserving the original blank line spacing.
+ *
+ * @param stanzas - Array of stanzas, each stanza is array of lines
+ * @param blankLinesBefore - Number of blank lines before each stanza
+ * @returns Text with preserved vertical spacing
+ */
+export function joinStanzasWithSpacing(stanzas: string[][], blankLinesBefore: number[]): string {
+  const parts: string[] = [];
+
+  for (let i = 0; i < stanzas.length; i++) {
+    const blanks = blankLinesBefore[i] || 0;
+    const stanzaText = stanzas[i].join('\n');
+
+    if (i === 0) {
+      // First stanza - add leading blanks if any
+      parts.push('\n'.repeat(blanks) + stanzaText);
+    } else {
+      // Subsequent stanzas - add blank lines before
+      // At minimum 1 blank line between stanzas
+      const spacing = Math.max(1, blanks);
+      parts.push('\n'.repeat(spacing) + stanzaText);
+    }
+  }
+
+  return parts.join('\n');
+}
+
+/**
  * Result of stanza-by-stanza rewriting
  */
 export interface StanzaRewriteResult {
@@ -250,6 +327,8 @@ export interface StanzaRewriteResult {
     valid: boolean;
   }[];
   wasRewritten: boolean;
+  /** Number of blank lines before each stanza (for preserving vertical spacing) */
+  blankLinesBefore: number[];
 }
 
 /**
@@ -270,7 +349,8 @@ export async function rewritePoemByStanza(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<StanzaRewriteResult> {
-  const stanzas = splitIntoStanzas(text);
+  // Use spacing-aware split to preserve vertical whitespace
+  const { stanzas, blankLinesBefore } = splitIntoStanzasWithSpacing(text);
 
   const rewrittenStanzas: string[][] = [];
   const stanzaValidation: StanzaRewriteResult['stanzaValidation'] = [];
@@ -357,7 +437,19 @@ export async function rewritePoemByStanza(
       allStanzasValid = false;
     }
 
-    rewrittenStanzas.push(rewrittenLines);
+    // Re-apply original indentation to rewritten lines (AI may not preserve it reliably)
+    // Only do this if line counts match; otherwise we can't map 1:1
+    const indentedRewrittenLines = linesMatch
+      ? rewrittenLines.map((rewrittenLine, lineIdx) => {
+          const originalLine = stanza[lineIdx];
+          // Extract leading whitespace from original line
+          const leadingWhitespace = originalLine.match(/^(\s*)/)?.[1] || '';
+          // Strip any whitespace AI may have added and apply original
+          return leadingWhitespace + rewrittenLine.trimStart();
+        })
+      : rewrittenLines;
+
+    rewrittenStanzas.push(indentedRewrittenLines);
     stanzaValidation.push({
       stanzaIndex: i,
       originalLines: originalLineCount,
@@ -379,5 +471,6 @@ export async function rewritePoemByStanza(
     allStanzasValid,
     stanzaValidation,
     wasRewritten: anyWasRewritten,
+    blankLinesBefore,  // Preserve vertical spacing info
   };
 }
