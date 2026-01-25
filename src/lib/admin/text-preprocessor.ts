@@ -1051,14 +1051,21 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   }));
 
   // Step 12: Detect line break style and normalize each chapter's text
-  // Detect from the full text (before normalization) to get accurate metrics
-  const fullTextForDetection = chapters.map(ch => ch.rawText).join('\n\n');
-  const detectedLineBreakStyle = detectLineBreakStyle(fullTextForDetection);
+  // For anthology/epic (poetry), ALWAYS use "intentional" to preserve vertical spacing
+  // For prose, detect from the full text to get accurate metrics
+  const isPoetryStructure = detectedStructureType === "anthology" || detectedStructureType === "epic";
+  const lineBreakStyleForNormalization: LineBreakStyle = isPoetryStructure
+    ? "intentional"
+    : detectLineBreakStyle(chapters.map(ch => ch.rawText).join('\n\n'));
 
-  // Normalize each chapter's rawText based on detected style
+  if (isPoetryStructure) {
+    console.log(`[preprocessText] Forcing "intentional" line break style for ${detectedStructureType} to preserve vertical spacing`);
+  }
+
+  // Normalize each chapter's rawText based on determined style
   chapters = chapters.map(ch => ({
     ...ch,
-    rawText: normalizeLineBreaks(ch.rawText, detectedLineBreakStyle),
+    rawText: normalizeLineBreaks(ch.rawText, lineBreakStyleForNormalization),
   }));
 
   // Step 13: Build full cleaned text with proper chapter labels
@@ -1086,7 +1093,7 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
       asteriskDividersRemoved,
       chaptersDetected: chapters.length,
       backMatterRemoved,
-      lineBreakStyle: detectedLineBreakStyle,
+      lineBreakStyle: lineBreakStyleForNormalization,
       structureType: detectedStructureType,
     },
     cleanedFullText,
