@@ -35,11 +35,20 @@ export interface HTMLExtractionResult {
 // Text Cleaning
 // ============================================
 
+export interface CleanTextOptions {
+  /** Preserve whitespace typology for poetry (don't collapse newlines or strip indentation) */
+  preserveWhitespace?: boolean;
+}
+
 /**
  * Clean text by removing AI artifacts, markdown formatting, and normalizing.
  * This is the single source of truth for text cleaning across the pipeline.
+ *
+ * @param text The text to clean
+ * @param options.preserveWhitespace If true, preserve all whitespace (for poetry)
  */
-export function cleanText(text: string): string {
+export function cleanText(text: string, options: CleanTextOptions = {}): string {
+  const { preserveWhitespace = false } = options;
   let cleaned = text
     // Remove code fences (```language or just ```)
     .replace(/^```[\w]*\n?/gm, "")
@@ -59,42 +68,75 @@ export function cleanText(text: string): string {
     .replace(/_(.*?)_/g, "$1")
     // Remove markdown headers
     .replace(/^#{1,6}\s+/gm, "")
-    // Normalize whitespace
-    .replace(/\r\n/g, "\n")
-    // Preserve meaningful spacing for poetry/structured content:
-    // - 1 blank line (\n\n) = stanza break
-    // - 2 blank lines (\n\n\n) = poem separation
-    // - 3+ blank lines (\n\n\n\n+) = section/collection separation
-    // Only collapse excessive spacing (6+ newlines → 5, i.e., 4 blank lines max)
-    .replace(/\n{6,}/g, "\n\n\n\n\n");
+    // Normalize line endings
+    .replace(/\r\n/g, "\n");
+
+  // Whitespace handling depends on preserveWhitespace option
+  if (preserveWhitespace) {
+    // For poetry: preserve all whitespace (vertical and horizontal)
+    // Only remove truly excessive blank lines (10+)
+    cleaned = cleaned.replace(/\n{11,}/g, "\n\n\n\n\n\n\n\n\n\n");
+  } else {
+    // For prose: normalize whitespace
+    // Preserve meaningful spacing for structured content (up to 4 blank lines)
+    cleaned = cleaned.replace(/\n{6,}/g, "\n\n\n\n\n");
+  }
 
   // Process line by line to remove quote wrapping
   cleaned = cleaned
     .split("\n")
     .map(line => {
-      let l = line.trim();
-      // Remove surrounding double quotes (straight and curly)
-      if ((l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith("'") && l.endsWith("'")) ||
-          (l.startsWith("'") && l.endsWith("'"))) {
-        l = l.slice(1, -1);
+      // For poetry, preserve leading whitespace (indentation)
+      const trimmedLine = preserveWhitespace ? line.trimEnd() : line.trim();
+      let l = trimmedLine;
+
+      // Remove surrounding double quotes (straight and curly) from the trimmed content
+      const contentToCheck = l.trim();
+      if ((contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
+          (contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
+          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'")) ||
+          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'"))) {
+        // Only unwrap if it's the whole line content
+        if (contentToCheck === l.trim()) {
+          const leadingSpace = preserveWhitespace ? l.match(/^\s*/)?.[0] || '' : '';
+          l = leadingSpace + contentToCheck.slice(1, -1);
+        }
       }
       // Handle lines that are just quotes
-      if (l === '""' || l === "''" || l === '""' || l === "''") {
-        return "";
+      if (l.trim() === '""' || l.trim() === "''" || l.trim() === '""' || l.trim() === "''") {
+        return preserveWhitespace ? "" : "";
       }
       return l;
     })
     .filter(line => line.length > 0 || line === "")
     .join("\n");
 
-  // Final trim and remove any remaining quote-only lines
+  // Final cleanup - remove any remaining quote-only lines
   return cleaned
     .split("\n")
     .filter(line => !/^["'"'""'']+$/.test(line.trim()))
     .join("\n")
     .trim();
+}
+
+/**
+ * Trim leading blank lines from text so first line is content.
+ * Preserves all other whitespace (for poetry).
+ * Used to ensure each poem starts with actual content, not whitespace gaps.
+ */
+export function trimLeadingBlankLines(text: string): string {
+  const lines = text.split('\n');
+  let firstContentIndex = 0;
+
+  // Find first non-empty line
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().length > 0) {
+      firstContentIndex = i;
+      break;
+    }
+  }
+
+  return lines.slice(firstContentIndex).join('\n');
 }
 
 // ============================================
@@ -170,11 +212,20 @@ export function splitIntoSubChunks(text: string, maxChars: number = MAX_CHUNK_CH
 // HTML Processing (Client-side only)
 // ============================================
 
+export interface HTMLExtractionOptions {
+  /** Preserve whitespace typology for poetry (don't collapse newlines) */
+  preserveWhitespace?: boolean;
+}
+
 /**
  * Extract text from HTML, also extracting sidenotes and footnotes.
  * NOTE: This function uses DOM APIs and only works in browser context.
+ *
+ * @param html The HTML to extract text from
+ * @param options.preserveWhitespace If true, preserve all whitespace (for poetry)
  */
-export function extractTextFromHTML(html: string): HTMLExtractionResult {
+export function extractTextFromHTML(html: string, options: HTMLExtractionOptions = {}): HTMLExtractionResult {
+  const { preserveWhitespace = false } = options;
   // Create a temporary DOM parser
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -354,33 +405,43 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
     console.log(`  ${i + 1}: "${display}"`);
   });
 
-  // Clean up whitespace while preserving meaningful spacing for poetry
-  //
-  // After processNode:
-  // - Content paragraph: "text\n"
-  // - Empty paragraph: "\n"
-  //
-  // Preserve hierarchical spacing:
-  // - 1 blank line (\n\n) = stanza break
-  // - 2 blank lines (\n\n\n) = poem separation
-  // - 3+ blank lines (\n\n\n\n+) = section/collection separation
-  //
-  // Strategy: Use placeholders to preserve different spacing levels during collapsing
-  const SECTION_BREAK_MARKER = "\x00SECTION\x00";  // 4+ blank lines → section break
-  const POEM_BREAK_MARKER = "\x00POEM\x00";        // 3 blank lines → poem break
-  const STANZA_BREAK_MARKER = "\x00STANZA\x00";    // 2 blank lines → stanza break
-  text = text
-    .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
-    .replace(/\n /g, "\n")               // Remove space after newline
-    .replace(/ \n/g, "\n")               // Remove space before newline
-    .replace(/\n{5,}/g, SECTION_BREAK_MARKER)  // 5+ newlines (4+ blank lines) = section break
-    .replace(/\n{4}/g, POEM_BREAK_MARKER)      // 4 newlines (3 blank lines) = poem break
-    .replace(/\n{3}/g, STANZA_BREAK_MARKER)    // 3 newlines (2 blank lines) = stanza break
-    .replace(/\n+/g, "\n")               // Collapse remaining newlines to 1
-    .replace(new RegExp(SECTION_BREAK_MARKER, 'g'), "\n\n\n\n")  // Restore section breaks (3 blank lines)
-    .replace(new RegExp(POEM_BREAK_MARKER, 'g'), "\n\n\n")       // Restore poem breaks (2 blank lines)
-    .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")       // Restore stanza breaks (1 blank line)
-    .trim();
+  // Clean up whitespace - behavior depends on preserveWhitespace option
+  if (preserveWhitespace) {
+    // For poetry: preserve ALL whitespace exactly
+    // Only do minimal cleanup (remove trailing spaces, excessive blank lines 10+)
+    text = text
+      .replace(/[ \t]+$/gm, "")          // Remove trailing horizontal whitespace from lines
+      .replace(/\n{11,}/g, "\n\n\n\n\n\n\n\n\n\n")  // Only collapse 10+ blank lines
+      .trim();
+  } else {
+    // For prose: normalize whitespace while preserving meaningful spacing
+    //
+    // After processNode:
+    // - Content paragraph: "text\n"
+    // - Empty paragraph: "\n"
+    //
+    // Preserve hierarchical spacing:
+    // - 1 blank line (\n\n) = stanza break
+    // - 2 blank lines (\n\n\n) = poem separation
+    // - 3+ blank lines (\n\n\n\n+) = section/collection separation
+    //
+    // Strategy: Use placeholders to preserve different spacing levels during collapsing
+    const SECTION_BREAK_MARKER = "\x00SECTION\x00";  // 4+ blank lines → section break
+    const POEM_BREAK_MARKER = "\x00POEM\x00";        // 3 blank lines → poem break
+    const STANZA_BREAK_MARKER = "\x00STANZA\x00";    // 2 blank lines → stanza break
+    text = text
+      .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
+      .replace(/\n /g, "\n")               // Remove space after newline
+      .replace(/ \n/g, "\n")               // Remove space before newline
+      .replace(/\n{5,}/g, SECTION_BREAK_MARKER)  // 5+ newlines (4+ blank lines) = section break
+      .replace(/\n{4}/g, POEM_BREAK_MARKER)      // 4 newlines (3 blank lines) = poem break
+      .replace(/\n{3}/g, STANZA_BREAK_MARKER)    // 3 newlines (2 blank lines) = stanza break
+      .replace(/\n+/g, "\n")               // Collapse remaining newlines to 1
+      .replace(new RegExp(SECTION_BREAK_MARKER, 'g'), "\n\n\n\n")  // Restore section breaks (3 blank lines)
+      .replace(new RegExp(POEM_BREAK_MARKER, 'g'), "\n\n\n")       // Restore poem breaks (2 blank lines)
+      .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")       // Restore stanza breaks (1 blank line)
+      .trim();
+  }
 
   return { text, annotations };
 }

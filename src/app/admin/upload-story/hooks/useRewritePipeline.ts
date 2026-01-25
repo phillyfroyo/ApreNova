@@ -288,8 +288,10 @@ export function useRewritePipeline({
 
     try {
       if (level === storyData.detectedLevel || mode === "use-original") {
+        // Preserve whitespace for anthology/poetry content
+        const preserveWhitespace = storyData.structureType === "anthology";
         accumulator[level] = {
-          sourceText: cleanText(storyData.rawText),
+          sourceText: cleanText(storyData.rawText, { preserveWhitespace }),
           translatedText: "",
           status: "done",
           mode,
@@ -356,8 +358,10 @@ export function useRewritePipeline({
           })
           .join("\n\n");
 
+        // Preserve whitespace for anthology/poetry content
+        const preserveWhitespace = storyData.structureType === "anthology";
         accumulator[level] = {
-          sourceText: cleanText(fullRewrittenText),
+          sourceText: cleanText(fullRewrittenText, { preserveWhitespace }),
           translatedText: "",
           status: "done",
           mode,
@@ -366,9 +370,11 @@ export function useRewritePipeline({
         setChapterProgress(null);
         return true;
       } else {
-        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText), level);
+        // Preserve whitespace for anthology/poetry content
+        const preserveWhitespace = storyData.structureType === "anthology";
+        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText, { preserveWhitespace }), level);
         accumulator[level] = {
-          sourceText: cleanText(rewrittenText),
+          sourceText: cleanText(rewrittenText, { preserveWhitespace }),
           translatedText: "",
           status: "done",
           mode,

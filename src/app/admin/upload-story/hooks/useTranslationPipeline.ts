@@ -351,12 +351,14 @@ export function useTranslationPipeline({
     accumulator: Record<number, LevelContent>
   ) => {
     const fullTranslatedText = buildTranslatedText(translatedChapters);
+    // Preserve whitespace for anthology/poetry content
+    const preserveWhitespace = storyData.structureType === "anthology";
     accumulator[level] = {
       ...accumulator[level],
-      translatedText: cleanText(fullTranslatedText),
+      translatedText: cleanText(fullTranslatedText, { preserveWhitespace }),
     };
     updateStoryData({ levelContent: { ...accumulator } });
-  }, [buildTranslatedText, updateStoryData]);
+  }, [buildTranslatedText, updateStoryData, storyData.structureType]);
 
   const translateLevel = useCallback(async (level: number, accumulator: Record<number, LevelContent>) => {
     setTranslatingLevels(prev => new Set(prev).add(level));
@@ -469,9 +471,11 @@ export function useTranslationPipeline({
           // Single chapter case
           currentChapterRef.current = 0;
           const translatedText = await translateChunk(sourceText, level);
+          // Preserve whitespace for anthology/poetry content
+          const preserveWhitespace = storyData.structureType === "anthology";
           accumulator[level] = {
             ...accumulator[level],
-            translatedText: cleanText(translatedText),
+            translatedText: cleanText(translatedText, { preserveWhitespace }),
           };
           updateStoryData({ levelContent: { ...accumulator } });
         } catch (singleChunkError) {

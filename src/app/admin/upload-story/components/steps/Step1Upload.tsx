@@ -34,8 +34,10 @@ export function Step1Upload({
     let extractedAnnotations: ExtractedAnnotation[] = [];
 
     // Convert HTML to plain text, extracting sidenotes/footnotes
+    // Preserve whitespace during initial extraction - normalization happens later
+    // based on structure type (prose vs anthology)
     if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
-      const result = extractTextFromHTML(text);
+      const result = extractTextFromHTML(text, { preserveWhitespace: true });
       text = result.text;
       extractedAnnotations = result.annotations;
     }

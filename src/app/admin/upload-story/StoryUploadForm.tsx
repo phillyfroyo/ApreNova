@@ -130,9 +130,10 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
 
   const goToStep = (step: Step) => {
     // Clean raw text when moving from Step 1 to Step 2
+    // Preserve whitespace during initial clean - structure-specific normalization happens later
     let updatedData = storyData;
     if (currentStep === 1 && step === 2) {
-      updatedData = { ...storyData, rawText: cleanText(storyData.rawText) };
+      updatedData = { ...storyData, rawText: cleanText(storyData.rawText, { preserveWhitespace: true }) };
       setStoryData(updatedData);
     }
     // Reset processing state when navigating away from steps that use async processing
