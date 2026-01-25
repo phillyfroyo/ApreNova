@@ -125,9 +125,11 @@ export async function updateStoriesMetadata(
     if (extractedSlug) {
       // Check if this story already exists in STORY_METADATA
       // Match the entire object entry for this slug
+      // Use [\s\S]*? to match any content (including newlines) non-greedily
+      // until we hit the closing pattern: newline + spaces + },
       const existingEntryPattern = new RegExp(
-        `\\{\\s*\\n\\s*slug:\\s*"${extractedSlug}",[^}]*targetAudience:[^}]*\\},?`,
-        's'
+        `\\{\\s*\\n\\s*slug:\\s*"${extractedSlug}",[\\s\\S]*?\\n\\s*\\},?`,
+        ''
       );
 
       if (existingEntryPattern.test(content)) {
