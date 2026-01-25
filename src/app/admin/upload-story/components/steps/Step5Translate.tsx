@@ -116,6 +116,7 @@ export function Step5Translate({
           sourceLanguage: storyData.sourceLanguage,
           targetLanguage: storyData.sourceLanguage === "en" ? "es" : "en",
           targetLevel: level,
+          slug: storyData.slug || undefined,  // For cost tracking
         }),
       });
 

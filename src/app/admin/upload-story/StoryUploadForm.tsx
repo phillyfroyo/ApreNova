@@ -831,31 +831,7 @@ function Step1Upload({
           attribution: parsedAttribution,
         };
 
-        // Auto-fill title from sourceTitle if available and title is empty
-        if (parsedAttribution.sourceTitle && !storyData.title.en) {
-          updates.title = {
-            en: parsedAttribution.sourceTitle,
-            es: metadata.sourceTitleEs || storyData.title.es || "",
-          };
-
-          // Auto-generate slug from display title (short) or source title
-          const slugSource = metadata.displayTitle || parsedAttribution.sourceTitle;
-          if (slugSource && !storyData.slug) {
-            updates.slug = slugSource
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-|-$/g, "")
-              .substring(0, 50);
-          }
-        }
-
-        // Auto-fill display title if provided
-        if (metadata.displayTitle) {
-          updates.displayTitle = {
-            en: metadata.displayTitle,
-            es: metadata.displayTitleEs || metadata.displayTitle,
-          };
-        }
+        // Note: title, displayTitle, slug are NOT auto-filled - they come from the bundle generation
 
         // Auto-fill summary if provided (goes to description field which is now the summary)
         if (metadata.summary && !storyData.description.en) {
@@ -1298,7 +1274,8 @@ function Step2Detect({
   };
 
   const lines = storyData.rawText.split("\n").filter((l) => l.trim());
-  const chapters = storyData.rawText.split(/---|\bCHAPTER\b/i).filter((c) => c.trim());
+  // Use preprocessed chapter count from Step 1 (accurate), not naive regex
+  const chapterCount = storyData.parsedResult?.stats.chaptersDetected ?? 0;
   const levelLabels: Record<number, string> = {
     1: "A1 - Beginner",
     2: "A2 - Elementary",
@@ -1323,7 +1300,7 @@ function Step2Detect({
             <div className="text-sm text-gray-500">Lines</div>
           </div>
           <div className="bg-white rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{chapters.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{chapterCount}</div>
             <div className="text-sm text-gray-500">Chapters</div>
           </div>
           <div className="bg-white rounded-lg p-4 text-center">
@@ -1409,6 +1386,7 @@ function Step3Metadata({
   // AI Attribution Parser state
   const [frontMatterText, setFrontMatterText] = useState("");
   const [isParsingAttribution, setIsParsingAttribution] = useState(false);
+  const [isAttributionParserOpen, setIsAttributionParserOpen] = useState(false);
   const [parseError, setParseError] = useState("");
 
   // Translation state
@@ -1420,8 +1398,18 @@ function Step3Metadata({
   const [imageOptions, setImageOptions] = useState<Array<{ url: string; revisedPrompt?: string }>>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<Array<{ url: string; revisedPrompt?: string }>>([]);
 
+  // Bundled metadata options
+  const [bundleOptions, setBundleOptions] = useState<Array<{
+    title: { en: string; es: string };
+    displayTitle: { en: string; es: string };
+    slug: string;
+    hook: { en: string; es: string };
+    description: { en: string; es: string };
+  }>>([]);
+  const [isGeneratingBundle, setIsGeneratingBundle] = useState(false);
+
   const isGenerating = (type: "title" | "description" | "image" | "background") => generatingTypes.has(type);
-  const isAnyGenerating = generatingTypes.size > 0;
+  const isAnyGenerating = generatingTypes.size > 0 || isGeneratingBundle;
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -1543,6 +1531,58 @@ function Step3Metadata({
 
     // Fire all requests in parallel
     await Promise.all(types.map(type => generateMetadata(type)));
+  };
+
+  // Generate bundled metadata (title, displayTitle, slug, hook in one call)
+  const generateBundleMetadata = async () => {
+    setIsGeneratingBundle(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/generate-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storyText: storyData.rawText,
+          sourceLanguage: storyData.sourceLanguage,
+          type: "bundle",
+          frontMatter: storyData.parsedResult?.frontMatter,
+          customPrompt: titlePrompt || undefined,
+          // Pass existing title for translation if available
+          existingTitle: (storyData.title.en || storyData.title.es) ? storyData.title : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate metadata bundle");
+      }
+
+      setBundleOptions(data.options);
+    } catch (err) {
+      setError(`Failed to generate metadata: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsGeneratingBundle(false);
+    }
+  };
+
+  // Select a bundle option and apply all fields
+  const selectBundle = (option: {
+    title: { en: string; es: string };
+    displayTitle: { en: string; es: string };
+    slug: string;
+    hook: { en: string; es: string };
+    description: { en: string; es: string };
+  }) => {
+    updateStoryData({
+      title: option.title,
+      displayTitle: option.displayTitle,
+      slug: option.slug,
+      hook: option.hook,
+      description: option.description,
+    });
+    setBundleOptions([]);
   };
 
   const selectTitle = (option: { en: string; es: string }) => {
@@ -1718,25 +1758,25 @@ function Step3Metadata({
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Story Metadata</h2>
-        <p className="text-gray-500 text-sm">Enter manually or generate with AI. Add optional prompts to guide generation.</p>
+        <p className="text-gray-500 text-sm">Enter manually or generate. Add optional prompts to guide generation.</p>
       </div>
 
       {error && (
         <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
       )}
 
-      {/* Generate All Button */}
+      {/* Generate Images Button */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 flex items-center justify-between">
         <div>
-          <h3 className="font-medium text-gray-900">AI Generation</h3>
-          <p className="text-xs text-gray-500">Generate title, description, and images in parallel</p>
+          <h3 className="font-medium text-gray-900">AI Image Generation</h3>
+          <p className="text-xs text-gray-500">Generate thumbnail and background images</p>
         </div>
         <button
           onClick={generateAll}
           disabled={isAnyGenerating || !storyData.rawText}
           className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
         >
-          {isAnyGenerating ? "Generating..." : "Generate All with AI"}
+          {generatingTypes.size > 0 ? "Generating..." : "Generate Images"}
         </button>
       </div>
 
@@ -1750,7 +1790,7 @@ function Step3Metadata({
               disabled={isGenerating("image") || !storyData.rawText}
               className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isGenerating("image") ? "Generating..." : "Generate with AI"}
+              {isGenerating("image") ? "Generating..." : "Generate"}
             </button>
           )}
         </div>
@@ -1856,12 +1896,9 @@ function Step3Metadata({
               className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 disabled:opacity-50"
             >
               {isGenerating("background") ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  Generating...
-                </>
+                "Generating..."
               ) : (
-                <>✨ Generate with AI</>
+                "Generate"
               )}
             </button>
           )}
@@ -2073,13 +2110,13 @@ function Step3Metadata({
       {/* Title Section */}
       <div className="space-y-4 border-t pt-6">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Title</h3>
+          <h3 className="font-medium text-gray-900">Title & Metadata</h3>
           <button
-            onClick={() => generateMetadata("title")}
-            disabled={isGenerating("title") || !storyData.rawText}
+            onClick={generateBundleMetadata}
+            disabled={isGeneratingBundle || !storyData.rawText}
             className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isGenerating("title") ? "Generating..." : "Generate with AI"}
+            {isGeneratingBundle ? "Generating..." : "Generate"}
           </button>
         </div>
 
@@ -2095,20 +2132,49 @@ function Step3Metadata({
           />
         </div>
 
-        {/* Title Options */}
-        {titleOptions.length > 0 && (
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-purple-600 font-medium mb-2">Click to select:</p>
-            {titleOptions.map((option, idx) => (
+        {/* Bundle Options - includes title, displayTitle, slug, hook, description */}
+        {bundleOptions.length > 0 && (
+          <div className="bg-purple-50 rounded-lg p-4 space-y-3">
+            <p className="text-xs text-purple-600 font-medium mb-2">Click to select (fills all metadata fields):</p>
+            {bundleOptions.map((option, idx) => (
               <button
                 key={idx}
-                onClick={() => selectTitle(option)}
-                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
+                onClick={() => selectBundle(option)}
+                className="w-full text-left p-4 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
               >
-                <div className="font-medium text-gray-900">{option.en}</div>
-                <div className="text-sm text-gray-500">{option.es}</div>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Title:</span>
+                    <p className="font-medium text-gray-900">{option.title.en}</p>
+                    <p className="text-sm text-gray-500">{option.title.es}</p>
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Display:</span>
+                      <p className="text-gray-700">{option.displayTitle.en} / {option.displayTitle.es}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Slug:</span>
+                      <p className="text-gray-700 font-mono">{option.slug}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Hook:</span>
+                    <p className="text-sm text-gray-700">{option.hook.en}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Description:</span>
+                    <p className="text-sm text-gray-700">{option.description.en}</p>
+                  </div>
+                </div>
               </button>
             ))}
+            <button
+              onClick={() => setBundleOptions([])}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Dismiss options
+            </button>
           </div>
         )}
 
@@ -2239,45 +2305,7 @@ function Step3Metadata({
 
       {/* Description Section */}
       <div className="space-y-4 border-t pt-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Description</h3>
-          <button
-            onClick={() => generateMetadata("description")}
-            disabled={isGenerating("description") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating("description") ? "Generating..." : "Generate Hook with AI"}
-          </button>
-        </div>
-
-        {/* Description AI Prompt Input */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
-          <input
-            type="text"
-            value={descriptionPrompt}
-            onChange={(e) => setDescriptionPrompt(e.target.value)}
-            placeholder="e.g., Focus on the emotional journey, keep it mysterious, mention the setting..."
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-          />
-        </div>
-
-        {/* AI Hook Options */}
-        {descriptionOptions.length > 0 && (
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-purple-600 font-medium mb-2">Click to select a hook:</p>
-            {descriptionOptions.map((option, idx) => (
-              <button
-                key={idx}
-                onClick={() => selectDescription(option)}
-                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
-              >
-                <div className="text-gray-900 text-sm">{option.en}</div>
-                <div className="text-gray-500 text-sm mt-1">{option.es}</div>
-              </button>
-            ))}
-          </div>
-        )}
+        <h3 className="font-medium text-gray-900">Description</h3>
 
         {/* Hook (required) - short teaser for cards */}
         <div className="grid grid-cols-2 gap-4">
@@ -2353,48 +2381,65 @@ function Step3Metadata({
         <div className="space-y-4 border-t pt-6">
           <h3 className="font-medium text-gray-900">Attribution Information</h3>
 
-          {/* AI Attribution Parser */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
-                <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info) and let AI extract the metadata</p>
+          {/* Attribution Parser - Collapsible */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsAttributionParserOpen(!isAttributionParserOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${isAttributionParserOpen ? "rotate-90" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">Parse Front Matter</span>
               </div>
-              <button
-                type="button"
-                onClick={parseAttributionWithAI}
-                disabled={isParsingAttribution || !frontMatterText.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isParsingAttribution ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <span>✨</span>
-                    Parse with AI
-                  </>
+              <span className="text-xs text-gray-500">Extract metadata from pasted text</span>
+            </button>
+
+            {isAttributionParserOpen && (
+              <div className="p-4 bg-purple-50 border-t border-purple-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info)</p>
+                  <button
+                    type="button"
+                    onClick={parseAttributionWithAI}
+                    disabled={isParsingAttribution || !frontMatterText.trim()}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isParsingAttribution ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Parsing...
+                      </>
+                    ) : (
+                      "Parse"
+                    )}
+                  </button>
+                </div>
+                <textarea
+                  value={frontMatterText}
+                  onChange={(e) => {
+                    setFrontMatterText(e.target.value);
+                    setParseError("");
+                  }}
+                  placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)..."
+                  rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
+                  className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
+                />
+                {parseError && (
+                  <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+                    {parseError}
+                  </div>
                 )}
-              </button>
-            </div>
-            <textarea
-              value={frontMatterText}
-              onChange={(e) => {
-                setFrontMatterText(e.target.value);
-                setParseError("");
-              }}
-              placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)..."
-              rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
-              className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
-            />
-            {parseError && (
-              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
-                {parseError}
               </div>
             )}
           </div>
@@ -3352,6 +3397,7 @@ function Step5Translate({
           sourceLanguage: storyData.sourceLanguage,
           targetLanguage: storyData.sourceLanguage === "en" ? "es" : "en",
           targetLevel: level,
+          slug: storyData.slug || undefined,  // For cost tracking
         }),
       });
 
@@ -3818,7 +3864,7 @@ function Step5Translate({
                                 {chunkError.subChunkIndex !== undefined && ` (Part ${chunkError.subChunkIndex + 1})`}
                               </div>
                               <div className="text-xs text-red-600">
-                                {getErrorDisplayMessage(chunkError.errorType)}
+                                {chunkError.errorMessage || getErrorDisplayMessage(chunkError.errorType)}
                                 {chunkError.retryCount > 0 && ` (${chunkError.retryCount} retries)`}
                               </div>
                             </div>
@@ -4170,6 +4216,8 @@ function Step7Preview({
           origin,
           tags: storyData.tags,
           targetAudience: storyData.targetAudience,
+          // Structure type for pagination (only send if explicitly set, not "auto")
+          structureType: storyData.structureType !== "auto" ? storyData.structureType : undefined,
         }),
       });
 

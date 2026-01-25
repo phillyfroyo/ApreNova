@@ -9,7 +9,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, fromLanguage, level } = await req.json();
+    const { text, fromLanguage, level, slug } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use the shared translation function
+    // Use the shared translation function with cost tracking
     const result: TranslationResult = await translateText(
       text,
       fromLanguage as "en" | "es",
-      level
+      level,
+      { adminStorySlug: slug }
     );
 
     return NextResponse.json({

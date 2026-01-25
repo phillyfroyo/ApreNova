@@ -80,6 +80,8 @@ export function Step7Preview({
           origin,
           tags: storyData.tags,
           targetAudience: storyData.targetAudience,
+          // Structure type for pagination (only send if explicitly set, not "auto")
+          structureType: storyData.structureType !== "auto" ? storyData.structureType : undefined,
         }),
       });
 

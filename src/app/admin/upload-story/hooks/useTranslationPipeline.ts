@@ -71,6 +71,9 @@ export function useTranslationPipeline({
 
   const categorizeError = useCallback((error: Error, responseStatus?: number): TranslationErrorType => {
     const msg = error.message.toLowerCase();
+    // Log for debugging - this helps identify what's going wrong
+    console.log(`[categorizeError] Categorizing error: "${error.message}" (name: ${error.name})`);
+
     if (responseStatus === 429 || msg.includes('rate limit') || msg.includes('too many requests')) {
       return 'rate_limit';
     }
@@ -83,9 +86,11 @@ export function useTranslationPipeline({
     if (msg.includes('timeout') || msg.includes('timed out') || error.name === 'AbortError') {
       return 'timeout';
     }
-    if (msg.includes('json') || msg.includes('parse') || responseStatus === 500 || responseStatus === 502) {
+    if (msg.includes('json') || msg.includes('parse') || msg.includes('invalid') || responseStatus === 500 || responseStatus === 502) {
       return 'malformed';
     }
+    // Log when we fall through to unknown - this is the problematic case
+    console.warn(`[categorizeError] Could not categorize error, returning 'unknown': "${error.message}"`);
     return 'unknown';
   }, []);
 
@@ -169,7 +174,22 @@ export function useTranslationPipeline({
         throw new Error("Cancelled");
       }
 
+      // Create a timeout controller (12 minutes per request - large chapters need time)
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 720000);
+
+      // Link manual cancel to timeout controller
+      const manualAbortHandler = () => timeoutController.abort();
+      abortControllerRef.current?.signal.addEventListener('abort', manualAbortHandler);
+
       try {
+        // Check if already cancelled
+        if (abortControllerRef.current?.signal.aborted || cancelledRef.current) {
+          clearTimeout(timeoutId);
+          abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
+          throw new Error("Cancelled");
+        }
+
         const response = await fetch("/api/admin/translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -177,9 +197,12 @@ export function useTranslationPipeline({
             text,
             fromLanguage: storyData.sourceLanguage,
             level,
+            slug: storyData.slug || undefined,  // For cost tracking
           }),
-          signal: abortControllerRef.current?.signal,
+          signal: timeoutController.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (cancelledRef.current) {
           throw new Error("Cancelled");
@@ -189,11 +212,23 @@ export function useTranslationPipeline({
         try {
           data = await response.json();
         } catch (parseError) {
-          throw new Error("Translation response interrupted");
+          console.error(`[translateChunk] JSON parse error for chapter, status=${response.status}:`, parseError);
+          throw new Error(`Translation response parse error (status ${response.status})`);
         }
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to translate");
+          console.error(`[translateChunk] API error response:`, data);
+          throw new Error(data.error || `Translation failed with status ${response.status}`);
+        }
+
+        // Validate response has translatedText
+        if (!data.translatedText || typeof data.translatedText !== 'string') {
+          console.error(`[translateChunk] Invalid response - missing translatedText:`, {
+            hasTranslatedText: !!data.translatedText,
+            typeOfTranslatedText: typeof data.translatedText,
+            responseKeys: Object.keys(data),
+          });
+          throw new Error(`Invalid translation response - missing translatedText field`);
         }
 
         // Check for truncation
@@ -210,6 +245,8 @@ export function useTranslationPipeline({
             reasons,
           });
 
+          // Clean up before retry
+          abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * 2));
           continue; // Retry the same chunk
         }
@@ -221,23 +258,34 @@ export function useTranslationPipeline({
           console.warn(`[translateChunk] Truncation persisted after ${MAX_TRUNCATION_RETRIES} retries:`, data.truncationInfo);
         }
 
+        // Clean up event listener before returning
+        abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
         return data.translatedText;
       } catch (error) {
+        clearTimeout(timeoutId);
+        abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        if (lastError.message === "Cancelled") {
-          throw lastError;
+        // Check for manual cancellation
+        if (lastError.message === "Cancelled" || cancelledRef.current) {
+          throw new Error("Cancelled");
+        }
+
+        // Check for timeout (AbortError from timeout controller)
+        if (lastError.name === "AbortError") {
+          console.warn(`[translateChunk] Request timed out after 12 minutes, attempt ${attempt}/${MAX_TRANSLATION_RETRIES}`);
+          lastError = new Error("Request timed out after 12 minutes");
         }
 
         if (attempt < MAX_TRANSLATION_RETRIES) {
-          console.log(`[translateChunk] Attempt ${attempt} failed, retrying in ${RETRY_DELAY_MS}ms...`);
+          console.log(`[translateChunk] Attempt ${attempt} failed: ${lastError.message}, retrying in ${RETRY_DELAY_MS}ms...`);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
         }
       }
     }
 
     throw lastError || new Error("Translation failed after retries");
-  }, [storyData.sourceLanguage]);
+  }, [storyData.sourceLanguage, storyData.slug]);
 
   // ============================================
   // Comparison Modal
@@ -372,10 +420,14 @@ export function useTranslationPipeline({
             try {
               // Track current chapter for truncation status display
               currentChapterRef.current = i;
+              console.log(`[translateLevel] L${level} Chapter ${i + 1}: Starting translation (${chapters[i].length} chars)`);
               const translated = await translateChunk(chapters[i], level);
+              console.log(`[translateLevel] L${level} Chapter ${i + 1}: SUCCESS (${translated.length} chars)`);
               return { index: i, translated, success: true as const };
             } catch (err) {
-              return { index: i, error: err as Error, original: chapters[i], success: false as const };
+              const error = err as Error;
+              console.error(`[translateLevel] L${level} Chapter ${i + 1}: FAILED -`, error.message);
+              return { index: i, error, original: chapters[i], success: false as const };
             }
           });
 

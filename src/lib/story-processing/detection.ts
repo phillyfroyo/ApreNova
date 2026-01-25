@@ -17,6 +17,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export interface DetectionContext {
   storyId?: string;
   userId?: string;
+  /** Admin story slug for cost tracking (admin uploads don't have storyId) */
+  adminStorySlug?: string;
 }
 
 // ============================================================================
@@ -151,7 +153,7 @@ export async function detectLanguage(
   text: string,
   context: DetectionContext = {}
 ): Promise<"en" | "es"> {
-  const { storyId, userId } = context;
+  const { storyId, userId, adminStorySlug } = context;
 
   // Run algorithmic detection first
   const algorithmicResult = detectLanguageAlgorithmic(text);
@@ -199,7 +201,7 @@ ${text.substring(0, 500)}`,
     logOpenAICost("detection", "gpt-4o-mini", completion.usage, {
       userId,
       userStoryId: storyId,
-      metadata: { type: "language", reason: "low_confidence_fallback" },
+      metadata: { type: "language", reason: "low_confidence_fallback", ...(adminStorySlug && { adminStorySlug }) },
     });
 
     const response = completion.choices[0]?.message?.content?.toLowerCase().trim();
@@ -239,7 +241,7 @@ export async function detectCEFRLevel(
   language: "en" | "es",
   context: DetectionContext = {}
 ): Promise<CEFRDetectionResult> {
-  const { storyId, userId } = context;
+  const { storyId, userId, adminStorySlug } = context;
   // Sample from multiple parts of the text for better detection
   const textLength = text.length;
   let sampleText = "";
@@ -277,7 +279,7 @@ export async function detectCEFRLevel(
     logOpenAICost("detection", "gpt-4o-mini", completion.usage, {
       userId,
       userStoryId: storyId,
-      metadata: { type: "cefr-level" },
+      metadata: { type: "cefr-level", ...(adminStorySlug && { adminStorySlug }) },
     });
 
     const response = completion.choices[0]?.message?.content || "";

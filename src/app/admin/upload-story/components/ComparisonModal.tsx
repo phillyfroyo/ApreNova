@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 export interface ComparisonModalProps {
   isOpen: boolean;
@@ -13,6 +13,79 @@ export interface ComparisonModalProps {
   onSave?: (editedText: string, side: 'left' | 'right') => void;
   editableSide?: 'left' | 'right' | 'none';
   headerGradient?: string;
+}
+
+// Parse chapter markers from text: "--- Chapter N ---" or "--- Chapter N: Title ---"
+// Also handles Spanish "--- Capítulo N ---"
+interface ParsedChapter {
+  number: number;
+  title: string;
+  content: string;
+  startLine: number;
+}
+
+function parseChaptersFromText(text: string): ParsedChapter[] {
+  const lines = text.split('\n');
+  const chapters: ParsedChapter[] = [];
+  const chapterPattern = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?::\s*(.+?))?\s*---$/i;
+
+  let currentChapter: ParsedChapter | null = null;
+  let contentLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(chapterPattern);
+
+    if (match) {
+      // Save previous chapter if exists
+      if (currentChapter) {
+        currentChapter.content = contentLines.join('\n');
+        chapters.push(currentChapter);
+      }
+
+      // Start new chapter
+      currentChapter = {
+        number: parseInt(match[1], 10),
+        title: match[2]?.trim() || '',
+        content: '',
+        startLine: i,
+      };
+      contentLines = [];
+    } else if (currentChapter) {
+      contentLines.push(line);
+    } else {
+      // Content before first chapter marker - create "Chapter 0" for it
+      if (chapters.length === 0 && !currentChapter && line.trim()) {
+        currentChapter = {
+          number: 0,
+          title: 'Preamble',
+          content: '',
+          startLine: 0,
+        };
+      }
+      if (currentChapter) {
+        contentLines.push(line);
+      }
+    }
+  }
+
+  // Don't forget the last chapter
+  if (currentChapter) {
+    currentChapter.content = contentLines.join('\n');
+    chapters.push(currentChapter);
+  }
+
+  // If no chapters found, return all text as one chapter
+  if (chapters.length === 0) {
+    return [{
+      number: 1,
+      title: '',
+      content: text,
+      startLine: 0,
+    }];
+  }
+
+  return chapters;
 }
 
 interface EditingCell {
@@ -33,6 +106,16 @@ export function ComparisonModal({
   editableSide = 'right',
   headerGradient = "bg-gradient-to-r from-indigo-600 to-purple-600",
 }: ComparisonModalProps) {
+  // Chapter parsing
+  const leftChapters = useMemo(() => parseChaptersFromText(leftText), [leftText]);
+  const rightChapters = useMemo(() => parseChaptersFromText(rightText), [rightText]);
+  const hasMultipleChapters = leftChapters.length > 1 || rightChapters.length > 1;
+  const maxChapters = Math.max(leftChapters.length, rightChapters.length);
+
+  // Chapter selection state
+  const [selectedChapter, setSelectedChapter] = useState(0);
+  const [viewMode, setViewMode] = useState<'chapter' | 'all'>('chapter');
+
   // Lines state for editing
   const [leftLines, setLeftLines] = useState<string[]>([]);
   const [rightLines, setRightLines] = useState<string[]>([]);
@@ -45,15 +128,31 @@ export function ComparisonModal({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize lines when opening
+  // Initialize lines when opening or chapter changes
   useEffect(() => {
     if (isOpen) {
-      setLeftLines(leftText.split("\n"));
-      setRightLines(rightText.split("\n"));
+      if (viewMode === 'all' || !hasMultipleChapters) {
+        setLeftLines(leftText.split("\n"));
+        setRightLines(rightText.split("\n"));
+      } else {
+        const leftChapter = leftChapters[selectedChapter];
+        const rightChapter = rightChapters[selectedChapter];
+        setLeftLines(leftChapter?.content.split("\n") || []);
+        setRightLines(rightChapter?.content.split("\n") || []);
+      }
       setEditingCell(null);
+      // Don't reset unsaved changes when just changing chapters
+    }
+  }, [isOpen, leftText, rightText, selectedChapter, viewMode, hasMultipleChapters, leftChapters, rightChapters]);
+
+  // Reset chapter selection when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedChapter(0);
+      setViewMode('chapter');
       setHasUnsavedChanges(false);
     }
-  }, [isOpen, leftText, rightText]);
+  }, [isOpen]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -63,7 +162,7 @@ export function ComparisonModal({
     }
   }, [editingCell]);
 
-  // Handle Escape key
+  // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -73,10 +172,21 @@ export function ComparisonModal({
           onClose();
         }
       }
+      // Arrow key navigation for chapters (only when not editing)
+      if (!editingCell && hasMultipleChapters && viewMode === 'chapter') {
+        if (e.key === "ArrowLeft" && selectedChapter > 0) {
+          e.preventDefault();
+          setSelectedChapter(prev => prev - 1);
+        }
+        if (e.key === "ArrowRight" && selectedChapter < maxChapters - 1) {
+          e.preventDefault();
+          setSelectedChapter(prev => prev + 1);
+        }
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, editingCell]);
+  }, [isOpen, onClose, editingCell, hasMultipleChapters, viewMode, selectedChapter, maxChapters]);
 
   // Divider drag handlers
   const handleDividerMouseDown = (e: React.MouseEvent) => {
@@ -452,6 +562,53 @@ export function ComparisonModal({
           </div>
         </div>
 
+        {/* Chapter selector - only show if multiple chapters */}
+        {hasMultipleChapters && (
+          <div className="px-4 md:px-6 py-3 bg-gray-50 border-b flex items-center gap-3 overflow-x-auto shrink-0">
+            <span className="text-sm text-gray-500 shrink-0">Chapters:</span>
+            <div className="flex gap-2">
+              {Array.from({ length: maxChapters }, (_, idx) => {
+                const leftChapter = leftChapters[idx];
+                const rightChapter = rightChapters[idx];
+                const chapterNum = leftChapter?.number || rightChapter?.number || idx + 1;
+                const chapterTitle = leftChapter?.title || rightChapter?.title || '';
+                const isSelected = selectedChapter === idx && viewMode === 'chapter';
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedChapter(idx);
+                      setViewMode('chapter');
+                    }}
+                    className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap ${
+                      isSelected
+                        ? "bg-indigo-500 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                    title={chapterTitle || `Chapter ${chapterNum}`}
+                  >
+                    {chapterNum === 0 ? 'Pre' : chapterNum}
+                    {chapterTitle && <span className="ml-1 text-xs opacity-75 hidden sm:inline">({chapterTitle.slice(0, 15)}{chapterTitle.length > 15 ? '...' : ''})</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setViewMode(viewMode === 'all' ? 'chapter' : 'all')}
+                className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                  viewMode === 'all'
+                    ? "bg-gray-700 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                {viewMode === 'all' ? 'Viewing All' : 'View All'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div
           ref={containerRef}
@@ -493,24 +650,55 @@ export function ComparisonModal({
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500 border-t flex items-center justify-center gap-4 shrink-0 flex-wrap">
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            Click cell to edit
-          </span>
-          <span className="text-gray-300">|</span>
-          <span className="flex items-center gap-2">
-            Hover # for:
-            <span className="text-green-600">↑↓</span> add row
-            <span className="text-red-600">L/R/✕</span> delete left/right/both
-          </span>
-          <span className="text-gray-300">|</span>
-          <span className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs">Enter</kbd> save
-            <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-xs">Esc</kbd> cancel
-          </span>
+        <div className="bg-gray-50 px-6 py-3 text-sm text-gray-500 border-t flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4 flex-wrap">
+            {hasMultipleChapters && viewMode === 'chapter' && (
+              <>
+                <span className="font-medium text-gray-700">
+                  Chapter {leftChapters[selectedChapter]?.number || selectedChapter + 1}
+                  {leftChapters[selectedChapter]?.title && `: ${leftChapters[selectedChapter].title}`}
+                </span>
+                <span className="text-gray-300">|</span>
+              </>
+            )}
+            <span>{leftLines.length} left → {rightLines.length} right lines</span>
+            {leftLines.length !== rightLines.length && (
+              <span className="text-amber-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="hidden sm:inline">Line mismatch</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 flex-wrap text-xs">
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Click to edit
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="hidden md:flex items-center gap-1">
+              Hover # for:
+              <span className="text-green-600">↑↓</span>
+              <span className="text-red-600">L/R/✕</span>
+            </span>
+            <span className="hidden md:inline text-gray-300">|</span>
+            {hasMultipleChapters && viewMode === 'chapter' && (
+              <>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1 py-0.5 bg-gray-200 rounded">←</kbd>
+                  <kbd className="px-1 py-0.5 bg-gray-200 rounded">→</kbd>
+                  chapters
+                </span>
+                <span className="text-gray-300">|</span>
+              </>
+            )}
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-0.5 bg-gray-200 rounded">Esc</kbd> close
+            </span>
+          </div>
         </div>
       </div>
     </div>

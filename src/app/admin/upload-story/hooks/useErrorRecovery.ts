@@ -108,7 +108,7 @@ const ERROR_TYPE_INFO: Record<TranslationErrorType, { label: string; description
   },
   unknown: {
     label: "Unknown Error",
-    description: "An unexpected error occurred.",
+    description: "An unexpected error occurred. Check the error message below for details.",
     canBatchRetry: true,
   },
 };

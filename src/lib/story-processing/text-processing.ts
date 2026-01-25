@@ -279,7 +279,7 @@ function isPoemTitleLine(line: string): boolean {
 /**
  * Represents a single poem within an anthology section.
  */
-interface DetectedPoem {
+export interface DetectedPoem {
   /** Title line of the poem */
   title: string;
   /** Line index where poem starts (including title) */
@@ -299,7 +299,7 @@ interface DetectedPoem {
  * 2. If no markers found, fall back to double blank lines as separators
  * 3. If still no boundaries, treat entire chapter as one poem
  */
-function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
+export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
   const poems: DetectedPoem[] = [];
   let currentPoemStart = -1;
   let currentTitle = "";
@@ -536,7 +536,7 @@ interface AnthologyPaginationResult {
  * @param lineMetadata - Optional metadata for each line
  * @returns Pages with poem tracking and poem info for navigation
  */
-function paginateAnthologyPoems(
+export function paginateAnthologyPoems(
   sourceLines: string[],
   translatedLines: string[],
   lineMetadata?: Map<number, LineMetadata>

@@ -2,11 +2,16 @@
 // Admin rewrite API using the shared story-processing library
 
 import { NextRequest, NextResponse } from "next/server";
-import { rewriteToLevel, type RewriteResult } from "@/lib/story-processing";
+import {
+  rewriteToLevel,
+  rewritePoemByStanza,
+  joinStanzasToText,
+  type RewriteResult,
+} from "@/lib/story-processing";
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, sourceLanguage, targetLevel, sourceLevel, isPoetry } = await req.json();
+    const { text, sourceLanguage, targetLevel, sourceLevel, isPoetry, slug } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
@@ -19,16 +24,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use the shared rewrite function
+    const language = sourceLanguage || "en";
+    const effectiveSourceLevel = sourceLevel || targetLevel;
+
+    // For poetry, use stanza-by-stanza rewriting for better structure preservation
+    if (isPoetry) {
+      const stanzaResult = await rewritePoemByStanza(
+        text,
+        effectiveSourceLevel,
+        targetLevel,
+        language,
+        { isPoetry: true, maxRetries: 3, adminStorySlug: slug }
+      );
+
+      // Convert stanza result back to flat text
+      const rewrittenText = joinStanzasToText(stanzaResult.rewrittenStanzas);
+
+      if (!stanzaResult.wasRewritten && effectiveSourceLevel !== targetLevel) {
+        return NextResponse.json(
+          {
+            error: "AI could not process this poetry chunk. It may be empty or contain only non-story content.",
+          },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        rewrittenText,
+        targetLevel,
+        wasRewritten: stanzaResult.wasRewritten,
+        originalLength: text.length,
+        rewrittenLength: rewrittenText.length,
+        // Include stanza validation info for debugging
+        stanzaValidation: stanzaResult.allStanzasValid ? undefined : stanzaResult.stanzaValidation,
+      });
+    }
+
+    // For prose, use standard rewriting
     const result: RewriteResult = await rewriteToLevel(
       text,
-      sourceLevel || targetLevel, // If no source level, assume same as target (no rewrite)
+      effectiveSourceLevel,
       targetLevel,
-      sourceLanguage || "en",
-      isPoetry ?? false
+      language,
+      { isPoetry: false, maxRetries: 2, adminStorySlug: slug }
     );
 
-    if (!result.wasRewritten && sourceLevel !== targetLevel) {
+    if (!result.wasRewritten && effectiveSourceLevel !== targetLevel) {
       return NextResponse.json(
         {
           error: "AI could not process this text chunk. It may be empty or contain only non-story content.",

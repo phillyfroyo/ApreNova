@@ -166,6 +166,7 @@ export function useRewritePipeline({
         targetLevel,
         sourceLevel: storyData.detectedLevel,
         isPoetry,
+        slug: storyData.slug || undefined,  // For cost tracking
       }),
       signal: abortControllerRef.current?.signal,
     });

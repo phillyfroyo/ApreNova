@@ -6,7 +6,7 @@ import { detectCEFRLevel, type CEFRDetectionResult } from "@/lib/story-processin
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, language } = await req.json();
+    const { text, language, slug } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -15,10 +15,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use the shared detection function
+    // Use the shared detection function with cost tracking
     const result: CEFRDetectionResult = await detectCEFRLevel(
       text,
-      (language || "en") as "en" | "es"
+      (language || "en") as "en" | "es",
+      { adminStorySlug: slug }
     );
 
     return NextResponse.json({

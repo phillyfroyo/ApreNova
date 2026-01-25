@@ -18,6 +18,8 @@ interface Story {
   origin?: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+  // Cost tracking
+  totalCostCents?: number;
 }
 
 interface EditingStory {
@@ -562,6 +564,7 @@ export default function StoryManager() {
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Story</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Slug</th>
               <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Levels</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Cost</th>
               <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
@@ -598,6 +601,13 @@ export default function StoryManager() {
                       </span>
                     ))}
                   </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className="text-sm text-gray-600">
+                    {story.totalCostCents
+                      ? `$${(story.totalCostCents / 100).toFixed(2)}`
+                      : "-"}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">

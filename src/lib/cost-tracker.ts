@@ -2,7 +2,7 @@
 // Tracks actual API costs to the database for monitoring and optimization
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 // ============================================================================
 // PRICING CONSTANTS (as of January 2025)
@@ -164,15 +164,7 @@ export async function logApiCost(entry: CostLogEntry): Promise<void> {
       },
     });
 
-    // Log for debugging (can be removed in production)
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[CostTracker] ${entry.operation} | ${entry.model} | ` +
-        `$${(costCents / 100).toFixed(4)} | ` +
-        `in:${entry.inputTokens || 0} out:${entry.outputTokens || 0} | ` +
-        `story:${entry.userStoryId?.slice(0, 8) || "NULL"} user:${entry.userId?.slice(0, 8) || "NULL"}`
-      );
-    }
+    // Cost tracking logs removed - now visible in admin UI after story completion
   } catch (error) {
     // Log error but don't throw - cost tracking shouldn't break the app
     console.error("[CostTracker] Failed to log cost:", error);
@@ -361,6 +353,68 @@ export async function getCostsSummary(
   }
 
   return { totalCents, byProvider, byOperation, byModel };
+}
+
+/**
+ * Get total costs for an admin story by slug
+ * Admin stories store their slug in metadata.adminStorySlug
+ */
+export async function getAdminStoryCosts(slug: string): Promise<{
+  totalCents: number;
+  byOperation: Record<string, number>;
+}> {
+  const costs = await prisma.apiCost.findMany({
+    where: {
+      metadata: {
+        path: ["adminStorySlug"],
+        equals: slug,
+      },
+    },
+    select: {
+      operation: true,
+      costCents: true,
+    },
+  });
+
+  const byOperation: Record<string, number> = {};
+  let totalCents = 0;
+
+  for (const cost of costs) {
+    byOperation[cost.operation] = (byOperation[cost.operation] || 0) + cost.costCents;
+    totalCents += cost.costCents;
+  }
+
+  return { totalCents, byOperation };
+}
+
+/**
+ * Get total costs for all admin stories (grouped by slug)
+ * Returns a map of slug -> totalCents
+ */
+export async function getAllAdminStoryCosts(): Promise<Record<string, number>> {
+  const costs = await prisma.apiCost.findMany({
+    where: {
+      metadata: {
+        path: ["adminStorySlug"],
+        not: Prisma.DbNull,
+      },
+    },
+    select: {
+      metadata: true,
+      costCents: true,
+    },
+  });
+
+  const costsBySlug: Record<string, number> = {};
+
+  for (const cost of costs) {
+    const slug = (cost.metadata as Record<string, unknown>)?.adminStorySlug as string | undefined;
+    if (slug) {
+      costsBySlug[slug] = (costsBySlug[slug] || 0) + cost.costCents;
+    }
+  }
+
+  return costsBySlug;
 }
 
 /**

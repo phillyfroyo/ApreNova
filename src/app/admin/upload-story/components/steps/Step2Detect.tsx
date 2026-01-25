@@ -42,7 +42,8 @@ export function Step2Detect({
   };
 
   const lines = storyData.rawText.split("\n").filter((l) => l.trim());
-  const chapters = storyData.rawText.split(/---|\bCHAPTER\b/i).filter((c) => c.trim());
+  // Use preprocessed chapter count from Step 1 (accurate), not naive regex
+  const chapterCount = storyData.parsedResult?.stats.chaptersDetected ?? 0;
 
   return (
     <div className="space-y-6">
@@ -59,7 +60,7 @@ export function Step2Detect({
             <div className="text-sm text-gray-500">Lines</div>
           </div>
           <div className="bg-white rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">{chapters.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{chapterCount}</div>
             <div className="text-sm text-gray-500">Chapters</div>
           </div>
           <div className="bg-white rounded-lg p-4 text-center">

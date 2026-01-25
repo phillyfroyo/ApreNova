@@ -149,28 +149,7 @@ export function Step1Upload({
           attribution: parsedAttribution,
         };
 
-        if (parsedAttribution.sourceTitle && !storyData.title.en) {
-          updates.title = {
-            en: parsedAttribution.sourceTitle,
-            es: metadata.sourceTitleEs || storyData.title.es || "",
-          };
-
-          const slugSource = metadata.displayTitle || parsedAttribution.sourceTitle;
-          if (slugSource && !storyData.slug) {
-            updates.slug = slugSource
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/^-|-$/g, "")
-              .substring(0, 50);
-          }
-        }
-
-        if (metadata.displayTitle) {
-          updates.displayTitle = {
-            en: metadata.displayTitle,
-            es: metadata.displayTitleEs || metadata.displayTitle,
-          };
-        }
+        // Note: title, displayTitle, slug are NOT auto-filled - they come from the bundle generation
 
         if (metadata.summary && !storyData.description.en) {
           updates.description = {

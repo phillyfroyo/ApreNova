@@ -10,44 +10,52 @@ const openai = new OpenAI({
 interface GenerateMetadataRequest {
   storyText: string;
   sourceLanguage: "en" | "es";
-  type: "title" | "description" | "image" | "background" | "translate-to-spanish" | "translate-to-english";
+  type: "title" | "description" | "image" | "background" | "translate-to-spanish" | "translate-to-english" | "bundle";
   customPrompt?: string;
+  slug?: string; // For cost tracking
+  frontMatter?: string; // For algorithmic title extraction from Gutenberg
+  existingTitle?: { en: string; es: string }; // For translating existing title in bundle
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { storyText, sourceLanguage, type, customPrompt }: GenerateMetadataRequest = await req.json();
+    const { storyText, sourceLanguage, type, customPrompt, slug, frontMatter, existingTitle }: GenerateMetadataRequest = await req.json();
 
     if (!storyText || typeof storyText !== "string") {
       return NextResponse.json({ error: "Story text is required" }, { status: 400 });
     }
 
-    if (!type || !["title", "description", "image", "background", "translate-to-spanish", "translate-to-english"].includes(type)) {
-      return NextResponse.json({ error: "Valid type (title/description/image/background/translate-to-spanish/translate-to-english) is required" }, { status: 400 });
+    if (!type || !["title", "description", "image", "background", "translate-to-spanish", "translate-to-english", "bundle"].includes(type)) {
+      return NextResponse.json({ error: "Valid type (title/description/image/background/translate-to-spanish/translate-to-english/bundle) is required" }, { status: 400 });
     }
 
     // For image generation, use DALL-E
     if (type === "image") {
-      return generateImage(storyText, sourceLanguage, customPrompt, "thumbnail");
+      return generateImage(storyText, sourceLanguage, customPrompt, "thumbnail", slug);
     }
 
     // For background image generation, use DALL-E with landscape format
     if (type === "background") {
-      return generateImage(storyText, sourceLanguage, customPrompt, "background");
+      return generateImage(storyText, sourceLanguage, customPrompt, "background", slug);
     }
 
     // For translation to Spanish
     if (type === "translate-to-spanish") {
-      return translateText(storyText, "es");
+      return translateText(storyText, "es", slug);
     }
 
     // For translation to English
     if (type === "translate-to-english") {
-      return translateText(storyText, "en");
+      return translateText(storyText, "en", slug);
+    }
+
+    // For bundled metadata generation (title, displayTitle, slug, hook in one call)
+    if (type === "bundle") {
+      return generateBundledMetadata(storyText, sourceLanguage, frontMatter, customPrompt, slug, existingTitle);
     }
 
     // For title and description, use GPT-4o
-    return generateTextMetadata(storyText, sourceLanguage, type, customPrompt);
+    return generateTextMetadata(storyText, sourceLanguage, type, customPrompt, slug);
   } catch (error) {
     console.error("Generate metadata error:", error);
     return NextResponse.json(
@@ -61,7 +69,8 @@ async function generateTextMetadata(
   storyText: string,
   sourceLanguage: "en" | "es",
   type: "title" | "description",
-  customPrompt?: string
+  customPrompt?: string,
+  slug?: string
 ) {
   const isTitle = type === "title";
   const langName = sourceLanguage === "en" ? "English" : "Spanish";
@@ -106,7 +115,7 @@ Return ONLY the JSON, no other text.`;
 
   // Log cost (fire-and-forget) - admin operations don't have userId
   logOpenAICost("metadata", "gpt-4o", response.usage, {
-    metadata: { type, admin: true },
+    metadata: { type, admin: true, ...(slug && { adminStorySlug: slug }) },
   });
 
   const content = response.choices[0]?.message?.content?.trim();
@@ -137,11 +146,154 @@ Return ONLY the JSON, no other text.`;
   }
 }
 
+/**
+ * Extract title algorithmically from Gutenberg front matter
+ * Returns null if not found or not confident
+ */
+function extractTitleFromFrontMatter(frontMatter?: string): { title: string; author?: string } | null {
+  if (!frontMatter) return null;
+
+  // Gutenberg format: "Title: The Book Title"
+  const titleMatch = frontMatter.match(/^Title:\s*(.+)$/im);
+  if (!titleMatch) return null;
+
+  let title = titleMatch[1].trim();
+
+  // Clean up common Gutenberg suffixes
+  title = title
+    .replace(/,\s*Complete$/i, "")
+    .replace(/,\s*by\s+.+$/i, "")
+    .replace(/\s*\([^)]+\)\s*$/, "") // Remove trailing parenthetical
+    .trim();
+
+  // Try to extract author too
+  const authorMatch = frontMatter.match(/^Author:\s*(.+)$/im);
+  const author = authorMatch?.[1]?.trim();
+
+  return { title, author };
+}
+
+/**
+ * Generate title, displayTitle, slug, and hook in a single API call
+ */
+async function generateBundledMetadata(
+  storyText: string,
+  sourceLanguage: "en" | "es",
+  frontMatter?: string,
+  customPrompt?: string,
+  slug?: string,
+  existingTitle?: { en: string; es: string }
+) {
+  const langName = sourceLanguage === "en" ? "English" : "Spanish";
+  const otherLang = sourceLanguage === "en" ? "Spanish" : "English";
+
+  // Check if we have an existing title that needs translation
+  const hasExistingTitle = existingTitle && (existingTitle.en || existingTitle.es);
+  const existingTitleText = hasExistingTitle
+    ? `The user has already provided this title: EN="${existingTitle?.en || ""}", ES="${existingTitle?.es || ""}". Use this exact title and translate to the missing language.`
+    : "";
+
+  const systemPrompt = `You are a metadata extractor for stories in a language learning app.
+
+Generate the following metadata for the story provided:
+
+1. TITLE:
+   - IMPORTANT: First check the front matter for an existing title (look for "Title:" field). If found, use that EXACT title - do NOT create a new one.
+   - Only create a new title if NO title exists in the front matter.
+   - Provide in both ${langName} and ${otherLang} (translate the existing title if needed).
+   ${existingTitleText ? `- ${existingTitleText}` : ""}
+
+2. DISPLAY_TITLE: A shorter 1-3 word version for cards/navigation. Remove subtitles, parentheticals, and author names UNLESS removing the author leaves a generic non-descriptive title.
+   Examples:
+   - "Poems by Emily Dickinson, Three Series, Complete" → "Poems by Emily Dickinson" (keep author because "Poems" alone is too generic)
+   - "Beowulf: An Anglo-Saxon Epic Poem" → "Beowulf"
+   - "Moby Dick; Or, The Whale" → "Moby Dick"
+   - "Pride and Prejudice by Jane Austen" → "Pride and Prejudice"
+   - "Romeo and Juliet by William Shakespeare" → "Romeo and Juliet"
+
+3. SLUG: A URL-friendly identifier (lowercase, hyphens, no special chars, max 50 chars)
+
+4. HOOK: A 1-2 sentence teaser that entices readers without spoilers, in both languages
+
+5. DESCRIPTION: A 2-4 sentence full description/summary of the story, in both languages
+
+Provide 2 options for variety (different hooks/descriptions, but the title should be the same if extracted from front matter).`;
+
+  const userPrompt = `Story text (${langName}):
+"""
+${storyText.slice(0, 2500)}${storyText.length > 2500 ? "..." : ""}
+"""
+
+${frontMatter ? `Front matter:\n"""\n${frontMatter.slice(0, 500)}\n"""\n\n` : ""}${customPrompt ? `Additional guidance: ${customPrompt}\n\n` : ""}Generate 2 complete metadata options. Return as JSON in this exact format:
+{
+  "options": [
+    {
+      "title": { "en": "Full English Title", "es": "Full Spanish Title" },
+      "displayTitle": { "en": "Short", "es": "Corto" },
+      "slug": "url-friendly-slug",
+      "hook": { "en": "English hook teaser.", "es": "Spanish hook teaser." },
+      "description": { "en": "Full English description 2-4 sentences.", "es": "Full Spanish description 2-4 sentences." }
+    },
+    {
+      "title": { "en": "Alt Full Title", "es": "Alt Full Title Spanish" },
+      "displayTitle": { "en": "Alt Short", "es": "Alt Corto" },
+      "slug": "alt-slug",
+      "hook": { "en": "Alternative hook.", "es": "Gancho alternativo." },
+      "description": { "en": "Alternative description.", "es": "Descripción alternativa." }
+    }
+  ]
+}
+
+Return ONLY the JSON, no other text.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 1500,
+  });
+
+  // Log cost (fire-and-forget)
+  logOpenAICost("metadata", "gpt-4o", response.usage, {
+    metadata: { type: "bundle", admin: true, ...(slug && { adminStorySlug: slug }) },
+  });
+
+  const content = response.choices[0]?.message?.content?.trim();
+
+  if (!content) {
+    return NextResponse.json({ error: "No response from AI" }, { status: 500 });
+  }
+
+  try {
+    const cleanedContent = content
+      .replace(/^```json\n?/g, "")
+      .replace(/\n?```$/g, "")
+      .trim();
+
+    const parsed = JSON.parse(cleanedContent);
+
+    return NextResponse.json({
+      type: "bundle",
+      options: parsed.options,
+    });
+  } catch (parseError) {
+    console.error("Failed to parse bundled metadata response:", content);
+    return NextResponse.json(
+      { error: "Failed to parse AI response", raw: content },
+      { status: 500 }
+    );
+  }
+}
+
 async function generateImage(
   storyText: string,
   sourceLanguage: "en" | "es",
   customPrompt?: string,
-  imageType: "thumbnail" | "background" = "thumbnail"
+  imageType: "thumbnail" | "background" = "thumbnail",
+  slug?: string
 ) {
   // Create a prompt for DALL-E based on the story content
   const langName = sourceLanguage === "en" ? "English" : "Spanish";
@@ -195,7 +347,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
 
   // Log cost (fire-and-forget)
   logOpenAICost("thumbnail", "gpt-4o", promptResponse.usage, {
-    metadata: { type: "prompt-generation", imageType, admin: true },
+    metadata: { type: "prompt-generation", imageType, admin: true, ...(slug && { adminStorySlug: slug }) },
   });
 
   let imagePrompt = promptResponse.choices[0]?.message?.content?.trim();
@@ -224,7 +376,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
       if (result.data && result.data[0]?.url) {
         // Log DALL-E cost (fire-and-forget)
         logDalleCost("thumbnail", 1, imageSize, {
-          metadata: { imageType, admin: true },
+          metadata: { imageType, admin: true, ...(slug && { adminStorySlug: slug }) },
         });
 
         return {
@@ -291,7 +443,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
   }
 }
 
-async function translateText(text: string, targetLanguage: "en" | "es") {
+async function translateText(text: string, targetLanguage: "en" | "es", slug?: string) {
   // Text may contain multiple items separated by ---SEPARATOR---
   const items = text.split("\n\n---SEPARATOR---\n\n");
 
@@ -321,7 +473,7 @@ Return the translations as a JSON array of strings, one for each input item.`;
 
   // Log cost (fire-and-forget)
   logOpenAICost("translation", "gpt-4o", response.usage, {
-    metadata: { targetLanguage, admin: true },
+    metadata: { targetLanguage, admin: true, ...(slug && { adminStorySlug: slug }) },
   });
 
   const content = response.choices[0]?.message?.content?.trim();

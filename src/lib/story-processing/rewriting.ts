@@ -34,6 +34,8 @@ export interface RewriteOptions {
   maxRetries?: number;
   storyId?: string;
   userId?: string;
+  /** Admin story slug for cost tracking (admin uploads don't have storyId) */
+  adminStorySlug?: string;
 }
 
 /**
@@ -53,7 +55,7 @@ export async function rewriteToLevel(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<RewriteResult> {
-  const { isPoetry = false, maxRetries = 2, storyId, userId } = options;
+  const { isPoetry = false, maxRetries = 2, storyId, userId, adminStorySlug } = options;
   const sourceLevelNum =
     typeof sourceLevel === "string" ? levelStringToNumber(sourceLevel) : sourceLevel;
   const targetLevelNum =
@@ -97,7 +99,7 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
       logOpenAICost("rewriting", "gpt-4o", completion.usage, {
         userId,
         userStoryId: storyId,
-        metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt },
+        metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt, ...(adminStorySlug && { adminStorySlug }) },
       });
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";

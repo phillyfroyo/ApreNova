@@ -94,6 +94,7 @@ export {
   type BuildContentOptions,
   // Anthology types
   type PoemInfo,
+  type DetectedPoem,
   // Poem/script parsing types
   type StanzaMarkedLine,
   type ParsedScriptLine,
@@ -105,6 +106,9 @@ export {
   buildSingleChapterContent,
   type BuiltChapterResult,
   parseChapters,
+  // Anthology pagination functions
+  detectPoemBoundaries,
+  paginateAnthologyPoems,
   // Poem/script parsing functions
   detectStanzas,
   parseScriptLine,

@@ -28,7 +28,7 @@ export {
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
-  timeout: 120000, // 2 minute timeout per request
+  timeout: 600000, // 10 minute timeout per request (large chapters need time)
 });
 
 // ============================================================================
@@ -54,6 +54,8 @@ export interface TranslationOptions {
   storyId?: string;
   userId?: string;
   isPoetry?: boolean;
+  /** Admin story slug for cost tracking (admin uploads don't have storyId) */
+  adminStorySlug?: string;
 }
 
 /**
@@ -72,7 +74,7 @@ export async function translateText(
   level: string | number,
   options: TranslationOptions = {}
 ): Promise<TranslationResult> {
-  const { maxRetries = 3, storyId, userId, isPoetry = false } = options;
+  const { maxRetries = 3, storyId, userId, isPoetry = false, adminStorySlug } = options;
   const levelNum = typeof level === "string" ? levelStringToNumber(level) : level;
   const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
   const sourceLines = text.split("\n");
@@ -147,7 +149,7 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
       logAnthropicCost("translation", "claude-haiku-4-5-20251001", response.usage, {
         userId,
         userStoryId: storyId,
-        metadata: { level: levelNum, lineCount, attempt },
+        metadata: { level: levelNum, lineCount, attempt, ...(adminStorySlug && { adminStorySlug }) },
       });
 
       const rawResponse =

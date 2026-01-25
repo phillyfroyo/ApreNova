@@ -8,16 +8,22 @@ import {
   generateChapterIndexTS,
   generateMetadataEntry,
   generateUITranslationEntry,
-  buildContentStructure,
   parseChapters,
-  paginateLines,
+  buildContentStructure,
   type StoryMetadataInput,
   type StoryChapter,
 } from "@/lib/admin/story-generator";
 import { writeAllStoryFiles, writeChapterFile, writeChapterIndexFile } from "@/lib/admin/file-writer";
 import { cleanText } from "@/lib/admin/text-utils";
 import { SPLIT_CHAPTER_THRESHOLD } from "@/app/admin/upload-story/config/constants";
-import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
+import type { StoryType, StoryTag, StoryOrigin, ContentStructureType } from "@/types/story";
+import {
+  paginateAnthologyPoems,
+  detectPoemBoundaries,
+  buildContentStructureWithMetadata,
+  type StoryLine as SharedStoryLine,
+  type ProcessedChapterDataWithMetadata,
+} from "@/lib/story-processing/text-processing";
 
 /**
  * Generate a random 4-digit number for unique filenames
@@ -45,6 +51,8 @@ interface SaveStoryRequest {
   origin: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+  // Structure type for anthology-aware pagination
+  structureType?: ContentStructureType;
 }
 
 export async function POST(req: NextRequest) {
@@ -62,6 +70,7 @@ export async function POST(req: NextRequest) {
       origin,
       tags,
       targetAudience,
+      structureType,
     } = body;
 
     if (!slug || !title || !description || !levels || levels.length === 0) {
@@ -89,10 +98,6 @@ export async function POST(req: NextRequest) {
       const cleanedEn = cleanText(levelData.en);
       const cleanedEs = cleanText(levelData.es);
 
-      // Parse chapters from the cleaned text
-      const enChapters = parseChapters(cleanedEn);
-      const esChapters = parseChapters(cleanedEs);
-
       // Validate line counts match
       const enLineCount = cleanedEn.split("\n").filter(l => l.trim()).length;
       const esLineCount = cleanedEs.split("\n").filter(l => l.trim()).length;
@@ -100,66 +105,74 @@ export async function POST(req: NextRequest) {
         warnings.push(`Level ${levelData.level}: EN has ${enLineCount} lines, ES has ${esLineCount} lines. Lines may be misaligned.`);
       }
 
-      // Build the content structure
-      const contentStructure = buildContentStructure(
-        slug,
-        levelData.level,
-        {
-          en: enChapters.map(ch => {
-            // Custom pagination with provided linesPerPage
-            const pages = paginateLines(ch, linesPerPage);
-            return pages.flat();
-          }),
-          es: esChapters.map(ch => {
-            const pages = paginateLines(ch, linesPerPage);
-            return pages.flat();
-          }),
+      // ========== ANTHOLOGY PIPELINE ==========
+      // Uses shared poem detection and one-poem-per-page pagination
+      if (structureType === "anthology") {
+        const enLines = cleanedEn.split("\n");
+        const esLines = cleanedEs.split("\n");
+
+        // Detect poem boundaries from English text (primary structure)
+        const poemBoundaries = detectPoemBoundaries(enLines);
+        console.log(`[save-story] Anthology Level ${levelData.level}: Detected ${poemBoundaries.length} poems`);
+
+        // Build parallel arrays of source/translated lines for each poem
+        const chapterData: ProcessedChapterDataWithMetadata[] = poemBoundaries.map((poem, idx) => {
+          const sourceLines = enLines.slice(poem.startLine, poem.endLine + 1);
+          const translatedLines = esLines.slice(poem.startLine, poem.endLine + 1);
+          return {
+            sourceLines,
+            translatedLines,
+            metadata: {
+              number: idx + 1,
+              title: poem.title || `Poem ${idx + 1}`,
+            },
+          };
+        });
+
+        // Use shared buildContentStructureWithMetadata for proper anthology pagination
+        const content = buildContentStructureWithMetadata(
+          slug,
+          levelData.level,
+          poemBoundaries.length > 1, // hasChapters
+          chapterData,
+          "en", // sourceLanguage
+          { structureType: "anthology" }
+        );
+
+        const maxChapters = Object.keys(content.chapters).length;
+        const useSplitFormat = maxChapters >= SPLIT_CHAPTER_THRESHOLD;
+
+        if (useSplitFormat) {
+          levelFiles.push({
+            level: levelData.level,
+            content: "",
+            splitFormat: true,
+            // Cast chapters to expected format - structure is compatible at runtime
+            chapters: content.chapters as Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }>,
+            chapterCount: maxChapters,
+            hasChapters: content.hasChapters,
+          });
+        } else {
+          // Cast content to GeneratedStoryContent format for TS file generation
+          const tsContent = generateContentFileTS(content as unknown as import("@/lib/admin/story-generator").GeneratedStoryContent);
+          levelFiles.push({ level: levelData.level, content: tsContent, splitFormat: false });
         }
-      );
-
-      // Actually, let's rebuild this properly - we want to paginate within the structure
-      const hasChapters = enChapters.length > 1 || esChapters.length > 1;
-      const chapters: Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }> = {};
-
-      // Use the max of both to handle potential mismatches
-      const maxChapters = Math.max(enChapters.length, esChapters.length);
-
-      for (let chIdx = 0; chIdx < maxChapters; chIdx++) {
-        // Safely get chapter content, defaulting to empty array if missing
-        const enChapter = enChapters[chIdx] || [];
-        const esChapter = esChapters[chIdx] || [];
-
-        const enPages = paginateLines(enChapter, linesPerPage);
-        const esPages = paginateLines(esChapter, linesPerPage);
-        const pages: Record<number, { lines: Array<{ en: string; es: string }> }> = {};
-
-        const maxPages = Math.max(enPages.length, esPages.length);
-
-        for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-          const enLines = enPages[pIdx] || [];
-          const esLines = esPages[pIdx] || [];
-          const maxLines = Math.max(enLines.length, esLines.length);
-
-          const lines: Array<{ en: string; es: string }> = [];
-          for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-            lines.push({
-              en: enLines[lIdx] || "",
-              es: esLines[lIdx] || "",
-            });
-          }
-
-          pages[pIdx + 1] = { lines };
-        }
-
-        chapters[chIdx + 1] = { pages };
+        continue; // Skip prose pipeline
       }
 
-      const finalContent = {
-        storySlug: slug,
-        level: levelData.level,
-        hasChapters,
-        chapters,
-      };
+      // ========== PROSE PIPELINE (default) ==========
+      // Parse chapters from the cleaned text
+      const enChapters = parseChapters(cleanedEn);
+      const esChapters = parseChapters(cleanedEs);
+
+      // Use shared buildContentStructure for prose content
+      const finalContent = buildContentStructure(
+        slug,
+        levelData.level,
+        { en: enChapters, es: esChapters }
+      );
+
+      const maxChapters = Object.keys(finalContent.chapters).length;
 
       // Determine whether to use split format based on chapter count
       const useSplitFormat = maxChapters >= SPLIT_CHAPTER_THRESHOLD;
@@ -172,7 +185,7 @@ export async function POST(req: NextRequest) {
           splitFormat: true,
           chapters: finalContent.chapters,
           chapterCount: maxChapters,
-          hasChapters,
+          hasChapters: finalContent.hasChapters,
         });
       } else {
         // Single file format
