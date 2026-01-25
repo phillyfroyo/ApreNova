@@ -154,26 +154,6 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
         };
       }
 
-      // For poetry: validate line count matches (strict requirement)
-      if (isPoetry) {
-        const originalLines = text.split("\n").length;
-        const rewrittenLines = rewrittenText.split("\n").length;
-
-        if (originalLines !== rewrittenLines) {
-          console.warn(
-            `[Rewrite] Poetry line count mismatch: original=${originalLines}, rewritten=${rewrittenLines} (attempt ${attempt})`
-          );
-          if (attempt < maxRetries) {
-            await new Promise((r) => setTimeout(r, 2000 * attempt));
-            continue;
-          }
-          // On final attempt, still return the rewrite but log the issue
-          console.error(
-            `[Rewrite] Poetry line count mismatch after ${maxRetries} attempts, using result anyway`
-          );
-        }
-      }
-
       // Check if API response was truncated
       if (finishReason === "length") {
         if (attempt < maxRetries) {
@@ -274,8 +254,8 @@ export interface StanzaRewriteResult {
 
 /**
  * Rewrite a poem stanza-by-stanza.
- * Each stanza is sent to GPT separately with strict per-stanza line count validation.
- * This guarantees stanza boundaries are preserved (they're structural, not content).
+ * Each stanza is sent to GPT separately to preserve stanza boundaries.
+ * Line counts may change when adapting across CEFR levels (this is expected).
  *
  * @param text - The full poem text
  * @param sourceLevel - Detected source CEFR level
@@ -339,7 +319,7 @@ export async function rewritePoemByStanza(
       continue;
     }
 
-    // Rewrite this stanza with poetry mode (strict line validation)
+    // Rewrite this stanza with poetry mode
     const result = await rewriteToLevel(
       stanzaText,
       sourceLevel,
@@ -348,7 +328,6 @@ export async function rewritePoemByStanza(
       {
         ...options,
         isPoetry: true,
-        maxRetries: options.maxRetries || 3, // More retries for stanza-level
       }
     );
 
@@ -372,10 +351,9 @@ export async function rewritePoemByStanza(
     // Split result back into lines
     const rewrittenLines = result.rewrittenText.split('\n');
     const rewrittenLineCount = rewrittenLines.length;
-    const isValid = originalLineCount === rewrittenLineCount;
-
-    if (!isValid) {
-      console.warn(`[RewritePoemByStanza] Stanza ${i + 1} line count mismatch: ${originalLineCount} → ${rewrittenLineCount}`);
+    // Line count differences are normal when adapting across CEFR levels
+    const linesMatch = originalLineCount === rewrittenLineCount;
+    if (!linesMatch) {
       allStanzasValid = false;
     }
 
@@ -384,7 +362,7 @@ export async function rewritePoemByStanza(
       stanzaIndex: i,
       originalLines: originalLineCount,
       rewrittenLines: rewrittenLineCount,
-      valid: isValid,
+      valid: linesMatch,
     });
   }
 

@@ -125,6 +125,11 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
 
   const prompt = generateTranslationPrompt(numberedText, sourceLanguage, levelNum, isPoetry);
 
+  // DEBUG: Log input preview to compare with output
+  const inputLines = numberedText.split("\n").slice(0, 15);
+  console.log(`[Translation] Input preview (first 15 of ${lineCount} content lines):`);
+  inputLines.forEach((line, i) => console.log(`  ${i}: ${line.substring(0, 100)}${line.length > 100 ? "..." : ""}`));
+
   let lastError: Error | null = null;
   let bestResult: string[] | null = null;
   let bestResultCount = 0;
@@ -166,8 +171,19 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
         throw new Error("No response from AI");
       }
 
+      // DEBUG: Log raw response structure to diagnose line alignment issues
+      const rawLines = rawResponse.split("\n").slice(0, 15);
+      console.log(`[Translation] Raw response preview (first 15 lines of ${rawResponse.split("\n").length} total):`);
+      rawLines.forEach((line, i) => console.log(`  ${i}: ${line.substring(0, 100)}${line.length > 100 ? "..." : ""}`));
+
       // Parse the numbered lines
       let translatedContentLines = parseNumberedLines(rawResponse, lineCount);
+
+      // DEBUG: Log parsed result to see if line numbers are being extracted correctly
+      console.log(`[Translation] Parsed lines preview (expecting ${lineCount} lines, got ${translatedContentLines.filter(l => l).length} non-empty):`);
+      translatedContentLines.slice(0, 10).forEach((line, i) => {
+        if (line) console.log(`  [${i + 1}]: ${line.substring(0, 80)}${line.length > 80 ? "..." : ""}`);
+      });
 
       // Strip any remaining [N] prefixes
       translatedContentLines = stripLineNumberPrefixes(translatedContentLines);
@@ -177,8 +193,10 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
       ).length;
 
       // Check for truncation
+      // IMPORTANT: Compare content lines to content lines (sourceLines includes blanks, translatedContentLines doesn't)
+      const sourceContentLines = sourceLines.filter((l) => l.trim() !== "");
       const truncationInfo = detectTruncation(
-        sourceLines,
+        sourceContentLines,
         translatedContentLines,
         lineCount,
         stopReason

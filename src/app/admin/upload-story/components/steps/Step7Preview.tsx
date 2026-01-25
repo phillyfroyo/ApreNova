@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { StoryData } from "../../types";
 import { STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
 import { formToAttribution } from "@/lib/admin/attribution-helpers";
+import { fromNumericLevel } from "@/lib/cefr";
 
 interface SaveResult {
   success: boolean;
@@ -278,7 +279,7 @@ export function Step7Preview({
                 <div className="flex flex-wrap gap-2 mt-1">
                   {completedLevels.map((level) => (
                     <code key={level} className="bg-green-100 px-2 py-1 rounded text-xs">
-                      /en/stories/{storyData.slug}/l{level}/1/1
+                      /en/stories/{storyData.slug}/{fromNumericLevel(level)}/1/1
                     </code>
                   ))}
                 </div>

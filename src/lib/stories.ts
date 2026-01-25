@@ -245,7 +245,27 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["family","multicultural"],
     targetAudience: "all",
-  },];
+  },  {
+    slug: "poems-by-emily-dickinson",
+    image: "/images/poems-by-emily-dickinson-thumbnail-3000.jpeg",
+    levels: ["A2", "C1"],
+    type: "poem",
+    origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems", editor: "Mabel Loomis Todd and T. W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, making her works public domain." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "United States", genres: ["poetry"] } },
+    targetAudience: "all",
+    structureType: "anthology",
+    originalLevel: "C1",
+  },
+  {
+    slug: "poems-by-emily-dickinson",
+    image: "/images/poems-by-emily-dickinson-thumbnail-1418.jpeg",
+    levels: ["A2", "C1"],
+    type: "poem",
+    origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems", editor: "Mabel Loomis Todd and T. W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, making her works public domain." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "United States", genres: ["poetry"] } },
+    targetAudience: "all",
+    structureType: "anthology",
+    originalLevel: "C1",
+  },
+];
 
 export function getStoryUrl({
   locale,

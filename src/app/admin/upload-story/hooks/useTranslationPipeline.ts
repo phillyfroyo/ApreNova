@@ -375,6 +375,13 @@ export function useTranslationPipeline({
       const existingTranslation = accumulator[level].translatedText || "";
       const chapters = parseChaptersFromText(sourceText);
 
+      // DEBUG: Log chapter detection to diagnose alignment issues
+      console.log(`[translateLevel] L${level} parsed ${chapters.length} chapters from sourceText (${sourceText.length} chars)`);
+      chapters.slice(0, 3).forEach((ch, i) => {
+        const preview = ch.substring(0, 100).replace(/\n/g, '\\n');
+        console.log(`  Chapter ${i}: "${preview}..."`);
+      });
+
       if (chapters.length > 1 || sourceText.length > MAX_CHUNK_CHARS) {
         const existingChapters = parseTranslatedChapters(existingTranslation);
         const startChapter = existingChapters.length > 0

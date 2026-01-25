@@ -61,6 +61,9 @@ export default async function Page({ params }: { params: Promise<{ lng: string; 
       initialLevel={cefrLevel}
       storyMap={storyMap}
       availableLevels={storyMeta.levels}
+      storyType={storyMeta.type}
+      structureType={storyMeta.structureType}
+      detectedLevel={storyMeta.originalLevel}
     />
   );
 }

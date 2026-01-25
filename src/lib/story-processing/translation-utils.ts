@@ -158,6 +158,7 @@ export function detectTruncation(
 
   // Check 4: Punctuation mismatch at line endings
   const sentenceEndPunctuation = /[.!?。？！"']$/;
+  const mismatchExamples: Array<{ lineNum: number; source: string; translated: string }> = [];
 
   for (let i = 0; i < Math.min(sourceLines.length, translatedLines.length); i++) {
     const sourceLine = sourceLines[i]?.trim() || "";
@@ -173,6 +174,14 @@ export function detectTruncation(
       if (mismatchedLines.length < 5) {
         mismatchedLines.push(i + 1);
       }
+      // Collect examples for logging (up to 10)
+      if (mismatchExamples.length < 10) {
+        mismatchExamples.push({
+          lineNum: i + 1,
+          source: sourceLine.length > 80 ? sourceLine.substring(0, 80) + "..." : sourceLine,
+          translated: transLine.length > 80 ? transLine.substring(0, 80) + "..." : transLine,
+        });
+      }
     }
   }
 
@@ -181,6 +190,13 @@ export function detectTruncation(
     reasons.push(
       `Punctuation mismatch: ${punctuationMismatches} lines end differently`
     );
+    // Log detailed examples so we can diagnose whether these are legitimate
+    console.warn(`[Translation] Punctuation mismatch details (${punctuationMismatches} total, showing first ${mismatchExamples.length}):`);
+    for (const ex of mismatchExamples) {
+      console.warn(`  Line ${ex.lineNum}:`);
+      console.warn(`    Source:     "${ex.source}"`);
+      console.warn(`    Translated: "${ex.translated}"`);
+    }
   }
 
   return {

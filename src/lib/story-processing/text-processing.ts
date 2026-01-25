@@ -248,16 +248,28 @@ const POEM_TITLE_PATTERN = /^[A-Z][A-Z\s,.'"-]{2,58}\.?\s*$/;
 const NUMBERED_POEM_PATTERN = /^([IVXLC]+\.|\d+\.)\s*$/;
 
 /**
+ * Pattern for SECTION headers in anthologies.
+ * Matches "I. LIFE.", "II. LOVE.", "III. NATURE.", etc.
+ * Format: Roman numeral + period + space + ALL CAPS title
+ */
+const SECTION_HEADER_PATTERN = /^([IVXLC]+)\.\s+([A-Z][A-Z\s,.'"-]+)\.?\s*$/;
+
+/**
  * Check if a line looks like a poem title or marker.
  *
  * Detection methods:
  * 1. Numbered markers: "I.", "II.", "1.", "2." (standalone)
  * 2. ALL CAPS titles: "SUCCESS.", "THE SOUL SELECTS"
  * 3. Roman numeral with title: "I. HOPE" (handled by ALL CAPS pattern)
+ *
+ * Excludes SECTION headers like "I. LIFE." which have their own detection.
  */
 function isPoemTitleLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed || trimmed.length > 60) return false;
+
+  // EXCLUDE section headers (like "I. LIFE.", "II. LOVE.") - these are chapter markers, not poems
+  if (SECTION_HEADER_PATTERN.test(trimmed)) return false;
 
   // Check for numbered poems (standalone "I.", "II.", "1.", etc.)
   // Min length is 2 chars (e.g., "I.")
@@ -274,6 +286,103 @@ function isPoemTitleLine(line: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * Check if a line is a section header (like "I. LIFE.", "II. LOVE.")
+ */
+function isSectionHeader(line: string): boolean {
+  const trimmed = line.trim();
+  return SECTION_HEADER_PATTERN.test(trimmed);
+}
+
+/**
+ * Represents a section/collection within an anthology.
+ */
+export interface DetectedSection {
+  /** Section number (from Roman numeral) */
+  number: string;
+  /** Section title (e.g., "LIFE", "LOVE") */
+  title: string;
+  /** Full header line (e.g., "I. LIFE.") */
+  header: string;
+  /** Line index where section starts (including header) */
+  startLine: number;
+  /** Line index where section ends (exclusive) */
+  endLine: number;
+  /** Content lines (including header) */
+  lines: string[];
+}
+
+/**
+ * Detect section/collection boundaries in an anthology.
+ * Sections are marked by headers like "I. LIFE.", "II. LOVE.", "III. NATURE."
+ *
+ * @param lines - Array of text lines
+ * @returns Array of detected sections
+ */
+export function detectSectionBoundaries(lines: string[]): DetectedSection[] {
+  const sections: DetectedSection[] = [];
+  let currentSectionStart = -1;
+  let currentHeader = "";
+  let currentNumber = "";
+  let currentTitle = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (isSectionHeader(trimmed)) {
+      // Found a new section header
+      if (currentSectionStart >= 0) {
+        // Close previous section
+        sections.push({
+          number: currentNumber,
+          title: currentTitle,
+          header: currentHeader,
+          startLine: currentSectionStart,
+          endLine: i,
+          lines: lines.slice(currentSectionStart, i),
+        });
+      }
+
+      // Parse the header
+      const match = trimmed.match(SECTION_HEADER_PATTERN);
+      currentNumber = match?.[1] || "";
+      currentTitle = match?.[2]?.replace(/\.$/, "").trim() || "";
+      currentHeader = trimmed;
+      currentSectionStart = i;
+    }
+  }
+
+  // Don't forget the last section
+  if (currentSectionStart >= 0) {
+    sections.push({
+      number: currentNumber,
+      title: currentTitle,
+      header: currentHeader,
+      startLine: currentSectionStart,
+      endLine: lines.length,
+      lines: lines.slice(currentSectionStart),
+    });
+  }
+
+  // If no sections detected, treat entire content as one section
+  if (sections.length === 0 && lines.length > 0) {
+    sections.push({
+      number: "1",
+      title: "Poems",
+      header: "",
+      startLine: 0,
+      endLine: lines.length,
+      lines: lines,
+    });
+  }
+
+  console.log(`[detectSectionBoundaries] Found ${sections.length} sections:`,
+    sections.map(s => `"${s.number}. ${s.title}"`).join(', '));
+
+  return sections;
 }
 
 /**
@@ -412,14 +521,32 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
     }
 
     // Finalize any leftover pending headers
+    // BUT: Don't create standalone poems for Roman numerals with no content
+    // These are headers for poems in the next section and should be skipped
     if (pendingHeaders.length > 0) {
+      // Check if pending has any actual content (not just numerals and blanks)
       const allLines = pendingHeaders.flatMap(h => h.lines);
-      mergedPoems.push({
-        title: pendingHeaders[pendingHeaders.length - 1].title,
-        startLine: pendingHeaders[0].startLine,
-        endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
-        lines: allLines,
+      const hasActualContent = allLines.some((line, idx) => {
+        const trimmed = line.trim();
+        // Skip first line of each header (it's the title)
+        // Check for actual content lines (not blank, not just Roman numerals)
+        if (!trimmed) return false;
+        if (NUMBERED_POEM_PATTERN.test(trimmed)) return false;
+        if (POEM_TITLE_PATTERN.test(trimmed) && trimmed.length < 10) return false;
+        return true;
       });
+
+      // Only create a poem if there's actual content, not just dangling headers
+      if (hasActualContent) {
+        mergedPoems.push({
+          title: pendingHeaders[pendingHeaders.length - 1].title,
+          startLine: pendingHeaders[0].startLine,
+          endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
+          lines: allLines,
+        });
+      } else {
+        console.log(`[detectPoemBoundaries] Skipping dangling headers with no content: ${pendingHeaders.map(h => h.title).join(', ')}`);
+      }
     }
 
     console.log(`[detectPoemBoundaries] Found ${poems.length} markers, merged to ${mergedPoems.length} poems:`,

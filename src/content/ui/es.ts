@@ -381,6 +381,10 @@ storiesMetadata: {
     title: "Secretos del Desierto",
     description: "El pasado cobra vida entre las dunas del desierto.",
   },
+        "poems-by-emily-dickinson": {
+    title: "Poemas de Emily Dickinson",
+    description: "Los versos de Emily Dickinson exploran temas de éxito, vida y la condición humana con una profunda perspicacia. A través de sus palabras delicadas pero poderosas, captura la esencia de los triunfos fugaces y las luchas perdurables.",
+  },
 },
 
 };

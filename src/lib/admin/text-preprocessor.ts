@@ -1017,9 +1017,9 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   }));
 
   // Step 13: Build full cleaned text with proper chapter labels
+  // Add markers to ALL chapters including Chapter 1 for consistency with rewrite pipeline
   const cleanedFullText = chapters
-    .map((ch, idx) => {
-      if (idx === 0) return ch.rawText;
+    .map((ch) => {
       // Format: "--- Chapter X: Title ---" or just "--- Chapter X ---"
       const divider = ch.title
         ? `--- Chapter ${ch.number}: ${ch.title} ---`

@@ -1,5 +1,6 @@
 // src/lib/admin/story-generator.ts
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
+import type { CEFRCode } from "@/lib/cefr";
 
 // Re-export text normalization utilities from text-preprocessor
 export { detectLineBreakStyle, normalizeLineBreaks, getLineBreakStyleDescription } from "./text-preprocessor";
@@ -86,6 +87,9 @@ function serializeAttribution(attr: StoryAttribution): string {
 export interface StoryLine {
   en: string;
   es: string;
+  // Poem support
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
 }
 
 export interface StoryPage {
@@ -108,13 +112,17 @@ export interface StoryMetadataInput {
   title: { en: string; es: string };
   description: { en: string; es: string };
   image?: string;
-  levels: number[];
+  levels: CEFRCode[];  // CEFR codes like "A1", "A2", "B1", etc.
   isPremiumOnly?: boolean;
   // Tagging fields
   storyType: StoryType;
   origin: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+  // Content structure type - determines navigation labels
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  // Original level - the CEFR level of the unmodified source text
+  originalLevel?: CEFRCode;
 }
 
 /**
@@ -351,7 +359,8 @@ export async function loadChapter(chapterNum: number) {
  * Generate the entry to add to STORY_METADATA array
  */
 export function generateMetadataEntry(metadata: StoryMetadataInput): string {
-  const levelsArray = metadata.levels.map((l) => `"l${l}"`).join(", ");
+  // Output CEFR codes directly (e.g., "A1", "A2", "B1")
+  const levelsArray = metadata.levels.map((l) => `"${l}"`).join(", ");
   const tagsArray = metadata.tags && metadata.tags.length > 0
     ? metadata.tags.map((t) => `"${t}"`).join(", ")
     : null;
@@ -378,6 +387,16 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
 
   if (metadata.targetAudience) {
     entry += `\n    targetAudience: "${metadata.targetAudience}",`;
+  }
+
+  // Content structure type for navigation labels (Collection/Poem vs Chapter/Page)
+  if (metadata.structureType && metadata.structureType !== "prose") {
+    entry += `\n    structureType: "${metadata.structureType}",`;
+  }
+
+  // Original level - the CEFR level of the unmodified source text
+  if (metadata.originalLevel) {
+    entry += `\n    originalLevel: "${metadata.originalLevel}",`;
   }
 
   entry += `\n  },`;

@@ -197,6 +197,14 @@ export type StoryMetadata = {
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
 
+  // Content structure - determines navigation labels (Collection/Poem vs Chapter/Page)
+  structureType?: ContentStructureType;
+
+  // Original level - the CEFR level of the source/unmodified text
+  // For public domain works, this is typically the highest level (e.g., C1)
+  // Lower levels are simplified adaptations
+  originalLevel?: CEFRCode;
+
   // Descriptions (optional, falls back to translations)
   descriptions?: StoryDescriptions;
 

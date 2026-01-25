@@ -117,6 +117,10 @@ export interface StoryData {
   parsedResult: PreprocessedResult | null;
   uploadedFileName: string | null;
   extractedAnnotations: ExtractedAnnotation[];
+  // Original level - the CEFR level of the unmodified source text
+  // For public domain works, this is typically the highest level
+  // Shows "(Original)" in the level selector
+  originalLevel: number | null;
 }
 
 // ============================================

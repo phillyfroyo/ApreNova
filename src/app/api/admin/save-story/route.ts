@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin/story-generator";
 import { writeAllStoryFiles, writeChapterFile, writeChapterIndexFile } from "@/lib/admin/file-writer";
 import { cleanText } from "@/lib/admin/text-utils";
+import { detectStanzas } from "@/lib/admin/text-preprocessor";
 import { SPLIT_CHAPTER_THRESHOLD } from "@/app/admin/upload-story/config/constants";
 import type { StoryType, StoryTag, StoryOrigin, ContentStructureType } from "@/types/story";
 import {
@@ -24,6 +25,7 @@ import {
   type StoryLine as SharedStoryLine,
   type ProcessedChapterDataWithMetadata,
 } from "@/lib/story-processing/text-processing";
+import { toCEFR, type CEFRCode } from "@/lib/cefr";
 
 /**
  * Generate a random 4-digit number for unique filenames
@@ -53,6 +55,8 @@ interface SaveStoryRequest {
   targetAudience?: "children" | "teen" | "adult" | "all";
   // Structure type for anthology-aware pagination
   structureType?: ContentStructureType;
+  // Original level - the CEFR level of the unmodified source text
+  originalLevel?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -71,6 +75,7 @@ export async function POST(req: NextRequest) {
       tags,
       targetAudience,
       structureType,
+      originalLevel,
     } = body;
 
     if (!slug || !title || !description || !levels || levels.length === 0) {
@@ -106,25 +111,62 @@ export async function POST(req: NextRequest) {
       }
 
       // ========== ANTHOLOGY PIPELINE ==========
-      // Uses shared poem detection and one-poem-per-page pagination
+      // Two-level structure: Sections (collections) contain Poems (pages)
       if (structureType === "anthology") {
         const enLines = cleanedEn.split("\n");
         const esLines = cleanedEs.split("\n");
 
-        // Detect poem boundaries from English text (primary structure)
-        const poemBoundaries = detectPoemBoundaries(enLines);
-        console.log(`[save-story] Anthology Level ${levelData.level}: Detected ${poemBoundaries.length} poems`);
+        // First: Detect section/collection boundaries (e.g., "I. LIFE.", "II. LOVE.")
+        const { detectSectionBoundaries } = await import("@/lib/story-processing/text-processing");
+        const sections = detectSectionBoundaries(enLines);
+        console.log(`[save-story] Anthology Level ${levelData.level}: Detected ${sections.length} sections/collections`);
 
-        // Build parallel arrays of source/translated lines for each poem
-        const chapterData: ProcessedChapterDataWithMetadata[] = poemBoundaries.map((poem, idx) => {
-          const sourceLines = enLines.slice(poem.startLine, poem.endLine + 1);
-          const translatedLines = esLines.slice(poem.startLine, poem.endLine + 1);
+        // Build chapter data for each section
+        const chapterData: ProcessedChapterDataWithMetadata[] = sections.map((section, sectionIdx) => {
+          // Get section lines from both languages
+          const sectionEnLines = section.lines;
+          const sectionEsLines = esLines.slice(section.startLine, section.endLine);
+
+          // Within this section, detect individual poems
+          const poemsInSection = detectPoemBoundaries(sectionEnLines);
+          console.log(`[save-story] Section "${section.number}. ${section.title}": ${poemsInSection.length} poems`);
+
+          // Combine all lines from poems in this section (preserving poem structure for pagination)
+          const sourceLines: string[] = [];
+          const translatedLines: string[] = [];
+          const lineMetadata = new Map<number, { stanzaNumber?: number; isStanzaBreak?: boolean }>();
+
+          // Process each poem in this section
+          for (const poem of poemsInSection) {
+            const poemSourceLines = sectionEnLines.slice(poem.startLine, poem.endLine);
+            const poemTranslatedLines = sectionEsLines.slice(poem.startLine, poem.endLine);
+
+            // Detect stanzas within this poem
+            const stanzaMarked = detectStanzas(poemSourceLines);
+            const translatedStanzaMarked = detectStanzas(poemTranslatedLines);
+
+            // Add lines with metadata
+            stanzaMarked.forEach((markedLine, lineIdx) => {
+              const globalIdx = sourceLines.length;
+              lineMetadata.set(globalIdx, {
+                stanzaNumber: markedLine.stanzaNumber,
+                isStanzaBreak: markedLine.isStanzaBreak,
+              });
+              sourceLines.push(markedLine.text);
+            });
+
+            translatedStanzaMarked.forEach((markedLine) => {
+              translatedLines.push(markedLine.text);
+            });
+          }
+
           return {
             sourceLines,
             translatedLines,
+            lineMetadata,
             metadata: {
-              number: idx + 1,
-              title: poem.title || `Poem ${idx + 1}`,
+              number: sectionIdx + 1,
+              title: `${section.number}. ${section.title}`,
             },
           };
         });
@@ -133,7 +175,7 @@ export async function POST(req: NextRequest) {
         const content = buildContentStructureWithMetadata(
           slug,
           levelData.level,
-          poemBoundaries.length > 1, // hasChapters
+          sections.length > 1, // hasChapters (sections)
           chapterData,
           "en", // sourceLanguage
           { structureType: "anthology" }
@@ -243,17 +285,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate metadata entries with the correct image path
+    // Convert level codes to CEFR format (e.g., "l2" -> "A2", "l5" -> "C1")
+    const cefrLevels = levels.map((l) => toCEFR(l.level));
+
     const metadata: StoryMetadataInput = {
       slug,
       title,
       description,
       image: thumbnailImagePath || undefined, // Use the saved thumbnail path
-      levels: levels.map((l) => l.level),
+      levels: cefrLevels,
       isPremiumOnly: false,
       storyType: storyType || "short-story",
       origin: origin || { isOriginal: true },
       tags: tags || [],
       targetAudience: targetAudience || "all",
+      // Content structure type for navigation labels (Collection/Poem vs Chapter/Page)
+      structureType: structureType && structureType !== "prose" ? structureType : undefined,
+      // Original level - convert to CEFR if provided
+      originalLevel: originalLevel ? toCEFR(originalLevel) : undefined,
     };
 
     const metadataEntry = generateMetadataEntry(metadata);
