@@ -61,7 +61,12 @@ export function cleanText(text: string): string {
     .replace(/^#{1,6}\s+/gm, "")
     // Normalize whitespace
     .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n");
+    // Preserve meaningful spacing for poetry/structured content:
+    // - 1 blank line (\n\n) = stanza break
+    // - 2 blank lines (\n\n\n) = poem separation
+    // - 3+ blank lines (\n\n\n\n+) = section/collection separation
+    // Only collapse excessive spacing (6+ newlines → 5, i.e., 4 blank lines max)
+    .replace(/\n{6,}/g, "\n\n\n\n\n");
 
   // Process line by line to remove quote wrapping
   cleaned = cleaned
@@ -349,25 +354,32 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
     console.log(`  ${i + 1}: "${display}"`);
   });
 
-  // Clean up whitespace while preserving stanza breaks
+  // Clean up whitespace while preserving meaningful spacing for poetry
   //
   // After processNode:
   // - Content paragraph: "text\n"
   // - Empty paragraph: "\n"
   //
-  // Sequences:
-  // - content + empty + content = "text\n\ntext\n" (2 newlines = normal spacing)
-  // - content + empty + empty + content = "text\n\n\ntext\n" (3 newlines = stanza break)
+  // Preserve hierarchical spacing:
+  // - 1 blank line (\n\n) = stanza break
+  // - 2 blank lines (\n\n\n) = poem separation
+  // - 3+ blank lines (\n\n\n\n+) = section/collection separation
   //
-  // Strategy: Use a placeholder to preserve stanza breaks during collapsing
-  const STANZA_BREAK_MARKER = "\x00STANZA\x00";
+  // Strategy: Use placeholders to preserve different spacing levels during collapsing
+  const SECTION_BREAK_MARKER = "\x00SECTION\x00";  // 4+ blank lines → section break
+  const POEM_BREAK_MARKER = "\x00POEM\x00";        // 3 blank lines → poem break
+  const STANZA_BREAK_MARKER = "\x00STANZA\x00";    // 2 blank lines → stanza break
   text = text
     .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
     .replace(/\n /g, "\n")               // Remove space after newline
     .replace(/ \n/g, "\n")               // Remove space before newline
-    .replace(/\n{3,}/g, STANZA_BREAK_MARKER)  // 3+ newlines = stanza break → mark it
-    .replace(/\n+/g, "\n")               // Collapse all remaining newlines to 1
-    .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")  // Restore stanza breaks as \n\n
+    .replace(/\n{5,}/g, SECTION_BREAK_MARKER)  // 5+ newlines (4+ blank lines) = section break
+    .replace(/\n{4}/g, POEM_BREAK_MARKER)      // 4 newlines (3 blank lines) = poem break
+    .replace(/\n{3}/g, STANZA_BREAK_MARKER)    // 3 newlines (2 blank lines) = stanza break
+    .replace(/\n+/g, "\n")               // Collapse remaining newlines to 1
+    .replace(new RegExp(SECTION_BREAK_MARKER, 'g'), "\n\n\n\n")  // Restore section breaks (3 blank lines)
+    .replace(new RegExp(POEM_BREAK_MARKER, 'g'), "\n\n\n")       // Restore poem breaks (2 blank lines)
+    .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")       // Restore stanza breaks (1 blank line)
     .trim();
 
   return { text, annotations };

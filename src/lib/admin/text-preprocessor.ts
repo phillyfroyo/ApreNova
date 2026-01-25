@@ -86,11 +86,15 @@ export function normalizeLineBreaks(text: string, forceStyle?: LineBreakStyle): 
 
   if (style === "intentional") {
     // Keep line breaks as-is, just clean up extra whitespace
+    // Preserve meaningful spacing for poetry:
+    // - 1 blank line = stanza break
+    // - 2 blank lines = poem separation
+    // - 3+ blank lines = section/collection separation (preserve up to 4)
     return text
       .split('\n')
       .map(line => line.trim())
       .join('\n')
-      .replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines to max 2
+      .replace(/\n{6,}/g, '\n\n\n\n\n'); // Collapse 5+ blank lines to 4
   }
 
   // Prose-wrapped: join lines within paragraphs
@@ -326,8 +330,9 @@ function normalizeWhitespace(text: string): string {
     .replace(/[ \t]+$/gm, '')
     // Remove leading whitespace from lines (but preserve indentation structure)
     .replace(/^[ \t]+/gm, (match) => match.length > 4 ? '    ' : '')
-    // Collapse multiple blank lines to max 2
-    .replace(/\n{4,}/g, '\n\n\n')
+    // Preserve meaningful spacing for poetry (up to 4 blank lines)
+    // Collapse excessive blank lines (5+ → 4)
+    .replace(/\n{6,}/g, '\n\n\n\n\n')
     // Remove spaces before punctuation
     .replace(/\s+([.,;:!?])/g, '$1')
     // Ensure space after punctuation
