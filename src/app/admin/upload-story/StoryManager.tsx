@@ -11,6 +11,7 @@ interface Story {
   backgroundImage?: string; // From storyThemes.ts
   levels: string[];
   isPremiumOnly: boolean;
+  isArchived?: boolean;
   title: { en: string; es: string };
   description: { en: string; es: string };
   // Tagging fields
@@ -68,6 +69,9 @@ export default function StoryManager() {
   // Delete modal state
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Archive state
+  const [archivingSlug, setArchivingSlug] = useState<string | null>(null);
 
   // AI Generation state
   const [generatingTypes, setGeneratingTypes] = useState<Set<"title" | "description" | "image" | "background">>(new Set());
@@ -519,6 +523,36 @@ export default function StoryManager() {
     }
   };
 
+  // Archive functions
+  const toggleArchive = async (slug: string, currentlyArchived: boolean) => {
+    setArchivingSlug(slug);
+
+    try {
+      const response = await fetch(`/api/admin/stories/${slug}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: !currentlyArchived }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update archive status");
+      }
+
+      // Update local state
+      setStories((prev) =>
+        prev.map((s) =>
+          s.slug === slug ? { ...s, isArchived: !currentlyArchived } : s
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update archive status");
+    } finally {
+      setArchivingSlug(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-12">
@@ -582,7 +616,14 @@ export default function StoryManager() {
                       }}
                     />
                     <div>
-                      <div className="font-medium text-gray-900">{story.title.en}</div>
+                      <div className="font-medium text-gray-900 flex items-center gap-2">
+                        {story.title.en}
+                        {story.isArchived && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">
+                            Archived
+                          </span>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-500">{story.title.es}</div>
                     </div>
                   </div>
@@ -624,6 +665,21 @@ export default function StoryManager() {
                       className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 border border-blue-300 rounded hover:bg-blue-50"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => toggleArchive(story.slug, story.isArchived || false)}
+                      disabled={archivingSlug === story.slug}
+                      className={`px-3 py-1.5 text-sm border rounded ${
+                        story.isArchived
+                          ? "text-green-600 hover:text-green-800 border-green-300 hover:bg-green-50"
+                          : "text-amber-600 hover:text-amber-800 border-amber-300 hover:bg-amber-50"
+                      } disabled:opacity-50`}
+                    >
+                      {archivingSlug === story.slug
+                        ? "..."
+                        : story.isArchived
+                        ? "Unarchive"
+                        : "Archive"}
                     </button>
                     <button
                       onClick={() => openDeleteModal(story.slug)}

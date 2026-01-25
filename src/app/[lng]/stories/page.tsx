@@ -64,7 +64,7 @@ const ALL_THEME_TAGS: StoryTag[] = [
   "latin-america", "spain", "usa", "multicultural"
 ];
 
-// Get unique authors from story metadata
+// Get unique authors from story metadata (excluding archived stories)
 function getUniqueAuthors(): Array<{ id: string; name: string }> {
   const authors: Array<{ id: string; name: string }> = [
     { id: "cuentana", name: "Cuentana Originals" }
@@ -72,6 +72,9 @@ function getUniqueAuthors(): Array<{ id: string; name: string }> {
   const seenAuthors = new Set<string>();
 
   STORY_METADATA.forEach(story => {
+    // Skip archived stories
+    if (story.isArchived) return;
+
     if (!story.origin.isOriginal && 'attribution' in story.origin) {
       const authorName = getAuthorName(story.origin.attribution);
       if (authorName && !seenAuthors.has(authorName)) {
@@ -183,6 +186,11 @@ function StoriesPageContent() {
 
   // Filter stories by all criteria
   const filteredStories = STORY_METADATA.filter(story => {
+    // Never show archived stories to users
+    if (story.isArchived) {
+      return false;
+    }
+
     // If no filters, show all
     if (selectedTags.length === 0 && selectedTypes.length === 0 && selectedAuthors.length === 0) {
       return true;

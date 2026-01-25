@@ -187,6 +187,7 @@ export type StoryMetadata = {
   image: string;
   levels: CEFRCode[];
   isPremiumOnly?: boolean;
+  isArchived?: boolean;  // Hidden from users but data preserved
 
   // Title info
   title?: TitleInfo;                   // Extended title info (optional, falls back to translations)

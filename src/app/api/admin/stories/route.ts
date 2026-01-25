@@ -36,6 +36,8 @@ export async function GET() {
         origin: story.origin || { isOriginal: true },
         tags: story.tags || [],
         targetAudience: story.targetAudience || "all",
+        // Archive status
+        isArchived: story.isArchived || false,
         // Cost tracking
         totalCostCents: costsBySlug[story.slug] || 0,
       };
