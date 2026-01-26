@@ -755,11 +755,23 @@ function splitIntoChapters(
     const skipLines = (!preserveMarkers && marker.subtitle) ? 1 : 0;
     const contentLines = chapterLines.slice(skipLines);
 
+    const rawText = contentLines.join('\n').trim();
+
+    // DEBUG: Log first chapter content structure
+    if (i === 0) {
+      const firstLines = rawText.split('\n').slice(0, 20);
+      console.log(`[splitIntoChapters] DEBUG: First chapter raw content (first 20 lines):`);
+      firstLines.forEach((line, idx) => {
+        const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 50);
+        console.log(`  ${idx}: "${display}"`);
+      });
+    }
+
     chapters.push({
       number: marker.number,
       title: marker.title,
       subtitle: marker.subtitle,
-      rawText: contentLines.join('\n').trim(),
+      rawText,
       startLine,
       endLine,
     });
@@ -976,16 +988,33 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   const { text: noAsterisks, count: asteriskDividersRemoved } = removeAsteriskDividers(noFootnotes);
 
   // Step 5: Normalize whitespace
-  // For anthologies/poetry, preserve leading whitespace (indentation)
-  const isPoetry = options.structureType === "anthology" || options.structureType === "epic";
-  const normalized = isPoetry ? normalizeWhitespacePreserveIndent(noAsterisks) : normalizeWhitespace(noAsterisks);
+  // For anthologies/poetry, preserve leading whitespace (indentation) and more blank lines
+  // IMPORTANT: When structureType is "auto", we must preserve whitespace until we detect structure
+  // Otherwise blank lines get collapsed BEFORE we know it's poetry
+  const isKnownPoetry = options.structureType === "anthology" || options.structureType === "epic";
+  const isAutoDetect = !options.structureType || options.structureType === "auto";
 
-  if (isPoetry) {
-    console.log(`[preprocessText] Preserving indentation for poetry (structureType=${options.structureType})`);
+  // Use lenient whitespace handling for auto-detect OR known poetry
+  // This preserves vertical spacing for poetry even when structure is auto-detected
+  const preserveWhitespace = isKnownPoetry || isAutoDetect;
+  const normalized = preserveWhitespace ? normalizeWhitespacePreserveIndent(noAsterisks) : normalizeWhitespace(noAsterisks);
+
+  if (preserveWhitespace) {
+    console.log(`[preprocessText] Preserving whitespace (structureType=${options.structureType || 'auto'}, isKnownPoetry=${isKnownPoetry}, isAutoDetect=${isAutoDetect})`);
   }
 
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
+
+  // DEBUG: Log lines around first chapter marker to check whitespace preservation
+  const debugStartIdx = lines.findIndex(l => /^I\.\s*(LIFE|LOVE|NATURE)/i.test(l.trim()));
+  if (debugStartIdx > -1) {
+    console.log(`[preprocessText] DEBUG: Lines around first chapter marker (index ${debugStartIdx}):`);
+    for (let i = Math.max(0, debugStartIdx - 2); i < Math.min(lines.length, debugStartIdx + 15); i++) {
+      const display = lines[i].trim() === '' ? '[EMPTY]' : lines[i].substring(0, 50);
+      console.log(`  ${i}: "${display}"`);
+    }
+  }
 
   // Step 7: Detect and remove back matter
   const backMatterStart = detectBackMatterStart(lines);

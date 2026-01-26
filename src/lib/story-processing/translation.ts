@@ -79,6 +79,14 @@ export async function translateText(
   const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
   const sourceLines = text.split("\n");
 
+  // DEBUG: Log blank line info to trace whitespace preservation
+  if (blankLinePositions.length > 0 || totalLines !== lineCount) {
+    console.log(`[Translation] Blank line info: ${blankLinePositions.length} blanks, ${lineCount} content lines, ${totalLines} total lines`);
+    if (blankLinePositions.length > 0) {
+      console.log(`[Translation] First 10 blank positions: ${blankLinePositions.slice(0, 10).join(', ')}`);
+    }
+  }
+
   const toLanguage = sourceLanguage === "en" ? "Spanish" : "English";
   const fromLanguage = sourceLanguage === "en" ? "English" : "Spanish";
 

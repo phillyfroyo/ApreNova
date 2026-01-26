@@ -7,7 +7,8 @@
 // - This is more logical and allows for potential parallelization
 
 import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
-import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, createThrottledCancellationChecker } from "./progress-tracker";
+import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, createThrottledCancellationChecker, ChapterTranslationData, ProcessingProgress } from "./progress-tracker";
+import { prisma } from "@/lib/prisma";
 import {
   rewriteToLevel,
   rewritePoemByStanza,
@@ -25,6 +26,11 @@ import {
   ProcessedChapterData,
   ProcessedChapterDataWithMetadata,
   LineMetadata,
+  // Types for content assembly
+  LevelContent,
+  ChapterContent,
+  PageContent,
+  PoemInfo,
   // Poem and script parsing
   detectStanzas,
   parseScriptLine,
@@ -127,6 +133,15 @@ export function preprocessChapterForStoryType(
       });
       processedLines.push(markedLine.text);
     });
+
+    // DEBUG: Log blank line preservation in preprocessed poem
+    const blankCount = processedLines.filter(l => l === '').length;
+    const contentCount = processedLines.filter(l => l !== '').length;
+    console.log(`[preprocessChapterForStoryType] Poem: ${contentCount} content lines, ${blankCount} blank lines, ${processedLines.length} total`);
+    if (blankCount > 0) {
+      const firstBlanks = processedLines.slice(0, 20).map((l, i) => l === '' ? i : null).filter(x => x !== null).slice(0, 5);
+      console.log(`[preprocessChapterForStoryType] First blank positions in first 20 lines: ${firstBlanks.join(', ')}`);
+    }
 
     return { processedLines, lineMetadata, speakerNames };
   }
@@ -761,6 +776,67 @@ export async function translateLevelChapters(
 // PHASE 4: BUILD AND SAVE (all levels)
 // ============================================================================
 
+/**
+ * Assemble final LevelContent from pre-built chapter pages.
+ * This reuses the pages built during translation (streaming reader),
+ * ensuring consistency between what users see while reading and the final saved content.
+ *
+ * @param storySlug - Story slug for the content structure
+ * @param level - CEFR level number (1-6)
+ * @param hasChapters - Whether the story has multiple chapters
+ * @param completedData - Pre-built chapter data from progress tracker
+ * @param structureType - Content structure type for navigation
+ * @returns LevelContent ready to save to database
+ */
+export function assembleContentFromBuiltPages(
+  storySlug: string,
+  level: number,
+  hasChapters: boolean,
+  completedData: ChapterTranslationData[],
+  structureType?: "prose" | "anthology" | "epic" | "script"
+): LevelContent {
+  const chapters: Record<number, ChapterContent> = {};
+
+  for (let i = 0; i < completedData.length; i++) {
+    const chapterData = completedData[i];
+    const chapterNum = i + 1;
+
+    if (!chapterData.builtPages) {
+      // This shouldn't happen in normal flow, but log a warning
+      console.warn(`[assembleContentFromBuiltPages] Chapter ${chapterNum} missing builtPages`);
+      continue;
+    }
+
+    // Convert Record<number, BuiltPageContent> to Record<number, PageContent>
+    // The types are compatible (BuiltPageContent has same structure as PageContent)
+    const pages: Record<number, PageContent> = {};
+    for (const [pageNumStr, builtPage] of Object.entries(chapterData.builtPages)) {
+      const pageNum = parseInt(pageNumStr, 10);
+      pages[pageNum] = builtPage as PageContent;
+    }
+
+    const chapterContent: ChapterContent = {
+      pages,
+      metadata: chapterData.metadata,
+      poems: chapterData.poems,
+    };
+
+    chapters[chapterNum] = chapterContent;
+  }
+
+  const content: LevelContent = {
+    storySlug,
+    level,
+    hasChapters,
+    chapters,
+    structureType,
+  };
+
+  console.log(`[assembleContentFromBuiltPages] Assembled ${Object.keys(chapters).length} chapters for level ${level}`);
+
+  return content;
+}
+
 export interface BuildAndSaveParams {
   storyId: string;
   levelId: string;
@@ -782,7 +858,13 @@ export interface BuildAndSaveResult {
 
 /**
  * Build content structure and save to database.
- * Uses extended metadata builder for poems/scripts when available.
+ *
+ * Optimization: When pre-built pages are available from the streaming pipeline,
+ * we assemble the final content from those pages instead of rebuilding.
+ * This ensures consistency between what users see in the streaming reader
+ * and the final saved content.
+ *
+ * Falls back to full rebuild if pre-built pages are not available (backward compatibility).
  */
 export async function buildAndSaveLevel(
   params: BuildAndSaveParams
@@ -802,29 +884,66 @@ export async function buildAndSaveLevel(
   const tracker = new LevelProgressTracker(levelId, processedChapters.length);
 
   try {
-    // Build content structure
     await updateStoryProgress(storyId, "building_structure", { currentLevel: level });
     const levelNum = levelStringToNumber(level);
 
-    console.log(`[BuildAndSaveLevel] Building level ${level} with structureType=${structureType}`);
+    let content: LevelContent;
 
-    // Use metadata-aware builder if we have extended chapter data
-    const content = processedChaptersWithMetadata
-      ? buildContentStructureWithMetadata(
-          storySlug,
-          levelNum,
-          hasChapters,
-          processedChaptersWithMetadata,
-          sourceLanguage,
-          { structureType }
-        )
-      : buildContentStructure(
-          storySlug,
-          levelNum,
-          hasChapters,
-          processedChapters,
-          sourceLanguage
-        );
+    // Try to fetch pre-built pages from the database (stored during streaming translation)
+    let preBuiltChapterData: ChapterTranslationData[] | undefined;
+    try {
+      const levelData = await prisma.userStoryLevel.findUnique({
+        where: { id: levelId },
+        select: { processingProgress: true },
+      });
+
+      if (levelData?.processingProgress) {
+        const progress = levelData.processingProgress as unknown as ProcessingProgress;
+        if (progress.completedData && progress.completedData.length > 0) {
+          preBuiltChapterData = progress.completedData;
+        }
+      }
+    } catch (error) {
+      // Non-fatal: fall back to full rebuild
+      console.warn(`[BuildAndSaveLevel] Could not fetch pre-built data for level ${level}:`, error);
+    }
+
+    // Check if we have valid pre-built pages from the streaming pipeline
+    const hasPreBuiltPages = preBuiltChapterData &&
+      preBuiltChapterData.length > 0 &&
+      preBuiltChapterData.every(ch => ch.builtPages && Object.keys(ch.builtPages).length > 0);
+
+    if (hasPreBuiltPages) {
+      // Assemble from pre-built pages (streaming pipeline optimization)
+      console.log(`[BuildAndSaveLevel] Assembling level ${level} from ${preBuiltChapterData!.length} pre-built chapters`);
+      content = assembleContentFromBuiltPages(
+        storySlug,
+        levelNum,
+        hasChapters,
+        preBuiltChapterData!,
+        structureType
+      );
+    } else {
+      // Fall back to full rebuild (backward compatibility or non-streaming pipeline)
+      console.log(`[BuildAndSaveLevel] Building level ${level} with structureType=${structureType} (full rebuild)`);
+
+      content = processedChaptersWithMetadata
+        ? buildContentStructureWithMetadata(
+            storySlug,
+            levelNum,
+            hasChapters,
+            processedChaptersWithMetadata,
+            sourceLanguage,
+            { structureType }
+          )
+        : buildContentStructure(
+            storySlug,
+            levelNum,
+            hasChapters,
+            processedChapters,
+            sourceLanguage
+          );
+    }
 
     // Save and mark complete
     await updateStoryProgress(storyId, "saving_content", { currentLevel: level });
