@@ -5,6 +5,7 @@ import { useStoryUpload, StreamProgress, StoryUploadData } from "@/contexts/Stor
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
+import { setPrefetchData, readStreamCacheKey } from "@/lib/user-stories/prefetch-cache";
 import { StreamSelector } from "./StreamSelector";
 
 // Minimum duration for displaying each step label (ms)
@@ -157,8 +158,22 @@ function StartReadingButtons({
   isMinimized: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [loadingLevel, setLoadingLevel] = useState<string | null>(null);
   const wasMinimizedRef = useRef(isMinimized);
+  const navigationStartPathRef = useRef<string | null>(null);
+
+  // Minimize modal when navigation completes (pathname changes after clicking Start Reading)
+  useEffect(() => {
+    if (
+      loadingLevel &&
+      navigationStartPathRef.current !== null &&
+      pathname !== navigationStartPathRef.current
+    ) {
+      navigationStartPathRef.current = null;
+      onMinimize();
+    }
+  }, [pathname, loadingLevel, onMinimize]);
 
   // Reset loading state only when transitioning from minimized → visible
   // (i.e., user re-maximized the widget after navigating away)
@@ -250,6 +265,34 @@ function StartReadingButtons({
     rewrittenReady,
   });
 
+  // Prefetch page 1 of each level as soon as it becomes ready
+  // Prefetches both the Next.js route and the API data so navigation + render is near-instant
+  const prefetchedLevelsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!storyData?.id) return;
+    const levels: string[] = [];
+    if (originalReady && originalStream?.level) levels.push(originalStream.level);
+    if (rewrittenReady && rewrittenStream?.level) levels.push(rewrittenStream.level);
+    for (const level of levels) {
+      if (!prefetchedLevelsRef.current.has(level)) {
+        prefetchedLevelsRef.current.add(level);
+        // Prefetch the Next.js route (JS bundle + RSC payload)
+        router.prefetch(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
+        // Prefetch the actual page content API data and cache for the reader
+        fetch(`/api/user-stories/${storyData.id}/read-stream?level=${level}&chapter=1&page=1`, {
+          credentials: "include",
+        })
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) {
+              setPrefetchData(readStreamCacheKey(storyData.id!, level, 1, 1), data);
+            }
+          })
+          .catch(() => {}); // Silently ignore prefetch errors
+      }
+    }
+  }, [storyData?.id, originalReady, rewrittenReady, originalStream?.level, rewrittenStream?.level, lng, router]);
+
   // Don't show if:
   // - Single chapter story (no point in "read while uploading")
   // - No story ID
@@ -261,12 +304,11 @@ function StartReadingButtons({
 
   const handleStartReading = (level: string) => {
     if (loadingLevel) return; // Prevent double-clicks
+    navigationStartPathRef.current = pathname;
     setLoadingLevel(level);
     onStartReading();
-    onMinimize();
-    // Navigate - loading state persists until:
-    // 1. Page navigates away (component unmounts or re-renders)
-    // 2. User re-maximizes widget (useEffect resets loadingLevel)
+    // Modal stays open showing loading spinner until navigation completes
+    // (pathname change detected in useEffect above triggers onMinimize)
     router.push(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
   };
 

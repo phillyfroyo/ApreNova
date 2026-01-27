@@ -375,6 +375,11 @@ export default function StoryLayoutWithAzureTTS({
   useEffect(() => {
     const { next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
     setIsFinalPage(!next);
+
+    // Prefetch next page route so navigation is near-instant
+    if (next) {
+      router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
+    }
   }, [chapterNumber, pageNumber, storyMap]);
 
   // Premium restrictions removed - translationMode is always "premium" for all users

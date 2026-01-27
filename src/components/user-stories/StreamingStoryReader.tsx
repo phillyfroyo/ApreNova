@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
 import StoryLoadingSkeleton from "@/components/StoryLoadingSkeleton";
 import ChapterPendingOverlay from "./ChapterPendingOverlay";
+import { getPrefetchData, setPrefetchData, hasPrefetchData, readStreamCacheKey } from "@/lib/user-stories/prefetch-cache";
 import type { Language } from "@/types/i18n";
 import type { CEFRCode } from "@/lib/cefr";
 
@@ -164,14 +165,24 @@ export default function StreamingStoryReader({
       setChapterPending(false);
       setLevelPending(false);
 
-      const res = await fetch(
-        `/api/user-stories/${storyId}/read-stream?level=${level}&chapter=${chapter}&page=${page}`,
-        { credentials: "include" }
-      );
+      // Check prefetch cache first (populated by FloatingProgressWidget)
+      const cached = getPrefetchData(readStreamCacheKey(storyId, level, chapter, page));
+      let data: ReadStreamResponse;
+      let statusCode: number;
 
-      const data: ReadStreamResponse = await res.json();
+      if (cached) {
+        data = cached;
+        statusCode = data.levelPending || data.chapterPending ? 202 : 200;
+      } else {
+        const res = await fetch(
+          `/api/user-stories/${storyId}/read-stream?level=${level}&chapter=${chapter}&page=${page}`,
+          { credentials: "include" }
+        );
+        data = await res.json();
+        statusCode = res.status;
+      }
 
-      if (res.status === 202) {
+      if (statusCode === 202) {
         // Level or chapter not ready yet
         if (data.levelPending) {
           // Level doesn't exist yet - show waiting state
@@ -191,7 +202,7 @@ export default function StreamingStoryReader({
         return;
       }
 
-      if (!res.ok) {
+      if (statusCode >= 400) {
         throw new Error(data.error || "Failed to fetch content");
       }
 
@@ -200,6 +211,26 @@ export default function StreamingStoryReader({
         setError(null);
         setLevelPending(false);
         setChapterPending(false);
+
+        // Prefetch next page's API data in the background
+        const nextPage = data.page < data.totalPages
+          ? { ch: data.chapter, pg: data.page + 1 }
+          : data.availableChapters?.includes(data.chapter + 1)
+            ? { ch: data.chapter + 1, pg: 1 }
+            : null;
+        if (nextPage) {
+          const nextKey = readStreamCacheKey(storyId, level, nextPage.ch, nextPage.pg);
+          if (!hasPrefetchData(nextKey)) { // Don't re-fetch if already cached
+            fetch(`/api/user-stories/${storyId}/read-stream?level=${level}&chapter=${nextPage.ch}&page=${nextPage.pg}`, {
+              credentials: "include",
+            })
+              .then((res) => res.ok ? res.json() : null)
+              .then((nextData) => {
+                if (nextData) setPrefetchData(nextKey, nextData);
+              })
+              .catch(() => {});
+          }
+        }
       }
     } catch (err: any) {
       console.error("[StreamingStoryReader] fetchContent error:", err);
