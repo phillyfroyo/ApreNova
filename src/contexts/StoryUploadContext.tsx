@@ -120,6 +120,7 @@ interface StartUploadOptions {
   sourceLanguage?: "en" | "es";
   description?: string;
   structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
+  processingMode?: "original_only" | "rewritten_only" | "both";
 }
 
 interface StoryUploadContextType {
@@ -561,7 +562,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const startUpload = useCallback(async (options: StartUploadOptions) => {
-    const { content, title: optionalTitle, sourceLanguage, description, structureType } = options;
+    const { content, title: optionalTitle, sourceLanguage, description, structureType, processingMode } = options;
     const controller = new AbortController();
     setAbortController(controller);
     setIsUploading(true);
@@ -613,6 +614,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           sourceLanguage,
           description,
           structureType: structureType || "auto",
+          processingMode: processingMode || "both",
         }),
         // Intentionally NOT using signal here - see cancelRequestedRef handling below
       });

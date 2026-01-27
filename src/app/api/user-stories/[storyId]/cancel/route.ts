@@ -134,30 +134,43 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Perform all updates in a transaction
-    await prisma.$transaction(async (tx) => {
-      // Update each level
-      for (const update of levelUpdates) {
-        await tx.userStoryLevel.update({
-          where: { id: update.levelId },
-          data: {
-            content: update.content,
-            status: update.status,
-            processingProgress: Prisma.DbNull, // Clear processing progress
-          },
-        });
-      }
+    // Perform all updates in a transaction with retry for transient DB errors
+    const MAX_CANCEL_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_CANCEL_RETRIES; attempt++) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          // Update each level
+          for (const update of levelUpdates) {
+            await tx.userStoryLevel.update({
+              where: { id: update.levelId },
+              data: {
+                content: update.content,
+                status: update.status,
+                processingProgress: Prisma.DbNull, // Clear processing progress
+              },
+            });
+          }
 
-      // Update story status
-      await tx.userStory.update({
-        where: { id: storyId },
-        data: {
-          cancelledAt: new Date(),
-          status: "CANCELLED",
-          processingProgress: Prisma.DbNull, // Clear processing progress
-        },
-      });
-    });
+          // Update story status
+          await tx.userStory.update({
+            where: { id: storyId },
+            data: {
+              cancelledAt: new Date(),
+              status: "CANCELLED",
+              processingProgress: Prisma.DbNull, // Clear processing progress
+            },
+          });
+        });
+        break; // Success — exit retry loop
+      } catch (txError: any) {
+        console.warn(`[CancelStory] Transaction attempt ${attempt}/${MAX_CANCEL_RETRIES} failed:`, txError.message);
+        if (attempt === MAX_CANCEL_RETRIES) {
+          throw txError; // Exhausted retries, propagate error
+        }
+        // Wait before retrying: 2s, 4s
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+      }
+    }
 
     console.log(`[CancelStory] Story ${storyId} cancelled. Total complete chapters across all levels: ${totalCompleteChapters}`);
 

@@ -334,14 +334,16 @@ async function detectAndSaveLevel(
  */
 async function determineLevelsToProcess(
   userId: string,
-  detectedLevel: string
+  detectedLevel: string,
+  processingMode?: string | null
 ): Promise<Set<string>> {
+  const mode = processingMode || "both";
+
   // Valid detected levels (includes C2 for complex texts)
   const VALID_DETECTED_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
   // User-selectable levels (excludes C2 - too advanced for target audience)
   const SUPPORTED_USER_LEVELS = ["A1", "A2", "B1", "B2", "C1"];
 
-  // Always include the detected level (preserves original)
   // Fall back to B1 only if detection returned something unexpected
   let effectiveDetectedLevel = detectedLevel;
   if (!VALID_DETECTED_LEVELS.includes(detectedLevel)) {
@@ -349,16 +351,27 @@ async function determineLevelsToProcess(
     console.log(`[Pipeline] Unknown detected level ${detectedLevel}, falling back to B1`);
   }
 
-  const levelsToProcess = new Set<string>([effectiveDetectedLevel]);
+  const levelsToProcess = new Set<string>();
 
-  // Add user's level if different from detected (creates adapted version)
-  const userLevel = await getUserLevel(userId);
-  if (userLevel && userLevel !== effectiveDetectedLevel) {
-    // User level must be in supported range (no C2)
-    if (SUPPORTED_USER_LEVELS.includes(userLevel)) {
+  // Include original (detected) level
+  if (mode === "original_only" || mode === "both") {
+    levelsToProcess.add(effectiveDetectedLevel);
+  }
+
+  // Include user's level (rewritten version)
+  if (mode === "rewritten_only" || mode === "both") {
+    const userLevel = await getUserLevel(userId);
+    if (userLevel && SUPPORTED_USER_LEVELS.includes(userLevel)) {
       levelsToProcess.add(userLevel);
     }
   }
+
+  // Safety fallback: always have at least one level
+  if (levelsToProcess.size === 0) {
+    levelsToProcess.add(effectiveDetectedLevel);
+  }
+
+  console.log(`[Pipeline] Processing mode: ${mode}, levels to process: ${[...levelsToProcess].join(", ")}`);
 
   return levelsToProcess;
 }
@@ -600,6 +613,7 @@ export async function processUserStory(storyId: string): Promise<void> {
       userId: true,
       sourceLanguage: true,
       storyType: true, // Needed for poetry-specific rewrite handling
+      processingMode: true,
       UserStoryLevel: {
         select: {
           id: true,
@@ -665,7 +679,8 @@ export async function processUserStory(storyId: string): Promise<void> {
     // Step 5: Determine which levels to process
     const levelsToProcess = await determineLevelsToProcess(
       story.userId,
-      detectedLevel
+      detectedLevel,
+      story.processingMode
     );
 
     // Step 5.1: Ensure level records exist for all levels to process

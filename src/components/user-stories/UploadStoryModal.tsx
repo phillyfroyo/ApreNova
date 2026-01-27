@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { X, Upload, FileText, AlertCircle, ChevronDown, ChevronUp, File, Trash2 } from "lucide-react";
+import { X, Upload, FileText, AlertCircle, ChevronDown, ChevronUp, File, Trash2, Info } from "lucide-react";
 import { USER_STORY_LIMITS } from "@/lib/user-stories/limits";
 import {
   extractTextFromHTML,
@@ -38,6 +38,7 @@ export default function UploadStoryModal() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [structureType, setStructureType] = useState<"auto" | "prose" | "anthology" | "epic" | "script">("auto");
+  const [processingMode, setProcessingMode] = useState<"original_only" | "rewritten_only" | "both">("both");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<StoryStats | null>(null);
@@ -84,6 +85,7 @@ export default function UploadStoryModal() {
       setTitle("");
       setDescription("");
       setStructureType("auto");
+      setProcessingMode("both");
       setShowAdvanced(false);
       setError("");
       setUploadedFileName(null);
@@ -116,7 +118,7 @@ export default function UploadStoryModal() {
       setUploadedFileName(file.name);
       setError("");
     } catch (err) {
-      setError(lng === "es" ? "Error al leer el archivo" : "Error reading file");
+      setError(t.myStories.errorReadingFile);
     }
   };
 
@@ -128,9 +130,7 @@ export default function UploadStoryModal() {
       handleFileRead(file);
     } else if (file) {
       setError(
-        lng === "es"
-          ? `Tipo de archivo no soportado. Aceptados: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
-          : `Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+        t.myStories.unsupportedFileType.replace("{types}", SUPPORTED_FILE_TYPES.map((ft) => ft.ext).join(", "))
       );
     }
   };
@@ -142,9 +142,7 @@ export default function UploadStoryModal() {
         handleFileRead(file);
       } else {
         setError(
-          lng === "es"
-            ? `Tipo de archivo no soportado. Aceptados: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
-            : `Unsupported file type. Accepted: ${SUPPORTED_FILE_TYPES.map((t) => t.ext).join(", ")}`
+          t.myStories.unsupportedFileType.replace("{types}", SUPPORTED_FILE_TYPES.map((ft) => ft.ext).join(", "))
         );
       }
     }
@@ -188,7 +186,7 @@ export default function UploadStoryModal() {
 
     // Validate content
     if (!content.trim()) {
-      setError(lng === "es" ? "Por favor pega o escribe tu historia" : "Please paste or type your story");
+      setError(t.myStories.pleaseEnterStory);
       textareaRef.current?.focus();
       return;
     }
@@ -200,9 +198,7 @@ export default function UploadStoryModal() {
 
     if (isOverLimit) {
       setError(
-        lng === "es"
-          ? `La historia excede el límite de ${maxLength.toLocaleString()} caracteres.`
-          : `Story exceeds the ${maxLength.toLocaleString()} character limit.`
+        t.myStories.storyExceedsLimit.replace("{max}", maxLength.toLocaleString())
       );
       return;
     }
@@ -213,6 +209,7 @@ export default function UploadStoryModal() {
       title: title.trim() || undefined,
       description: description.trim() || undefined,
       structureType: structureType,
+      processingMode: processingMode,
     });
   };
 
@@ -239,9 +236,7 @@ export default function UploadStoryModal() {
               {t.myStories.uploadStory}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              {lng === "es"
-                ? "Pega tu historia y la convertiremos en contenido de aprendizaje"
-                : "Paste your story and we'll turn it into learning content"}
+              {t.myStories.uploadSubtitle}
             </p>
           </div>
           <button
@@ -263,13 +258,13 @@ export default function UploadStoryModal() {
           ) : stats && (
             <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between text-sm">
               <span className="text-gray-600">
-                {lng === "es" ? "Historias:" : "Stories:"}{" "}
+                {t.myStories.storiesCount}{" "}
                 <span className="font-medium">{stats.totalStories} / {stats.maxStories === -1 ? "∞" : stats.maxStories}</span>
               </span>
               {/* Only show daily limit if there is one (not -1 unlimited) */}
               {!isPremium && stats.dailyLimit !== -1 && (
                 <span className="text-gray-500">
-                  {lng === "es" ? "Hoy:" : "Today:"}{" "}
+                  {t.myStories.todayCount}{" "}
                   <span className="font-medium">{stats.storiesProcessedToday} / {stats.dailyLimit}</span>
                 </span>
               )}
@@ -281,20 +276,16 @@ export default function UploadStoryModal() {
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
               <h3 className="font-medium text-yellow-800 mb-1">
                 {stats.maxStories !== -1 && stats.totalStories >= stats.maxStories
-                  ? (lng === "es" ? "Límite de historias alcanzado" : "Story limit reached")
-                  : (lng === "es" ? "Límite diario alcanzado" : "Daily limit reached")}
+                  ? t.myStories.storyLimitReached
+                  : t.myStories.dailyLimitReached}
               </h3>
               <p className="text-sm text-yellow-700">
                 {stats.maxStories !== -1 && stats.totalStories >= stats.maxStories
-                  ? (lng === "es"
-                      ? `Has alcanzado el máximo de ${stats.maxStories} historias.`
-                      : `You've reached the maximum of ${stats.maxStories} stories.`)
-                  : (lng === "es"
-                      ? "Has usado tu límite diario de subidas. ¡Intenta de nuevo mañana!"
-                      : "You've used your daily upload limit. Try again tomorrow!")}
+                  ? t.myStories.storyLimitMessage.replace("{max}", String(stats.maxStories))
+                  : t.myStories.dailyLimitMessage}
                 {!isPremium && (
                   <a href={`/${lng}/premium`} className="ml-1 text-yellow-800 underline hover:no-underline">
-                    {lng === "es" ? "Mejora a Premium" : "Upgrade to Premium"}
+                    {t.myStories.upgradeToPremium}
                   </a>
                 )}
               </p>
@@ -305,12 +296,15 @@ export default function UploadStoryModal() {
             <>
               {/* Content Type Selector - badge buttons */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
                   {t.myStories.contentType}
+                  <span className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 transition-opacity z-10">
+                      {t.myStories.contentTypeDescription}
+                    </span>
+                  </span>
                 </label>
-                <p className="text-xs text-gray-500 mb-2">
-                  {t.myStories.contentTypeDescription}
-                </p>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { value: "auto", label: t.myStories.contentTypeAuto },
@@ -343,10 +337,49 @@ export default function UploadStoryModal() {
                 </p>
               </div>
 
+              {/* Processing Mode Selector - badge buttons */}
+              <div className="mb-4">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                  {t.myStories.processingMode}
+                  <span className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 transition-opacity z-10">
+                      {t.myStories.processingModeDescription}
+                    </span>
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "both" as const, label: t.myStories.processingModeBoth },
+                    { value: "original_only" as const, label: t.myStories.processingModeOriginal },
+                    { value: "rewritten_only" as const, label: t.myStories.processingModeRewritten },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setProcessingMode(option.value)}
+                      disabled={isUploading}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        processingMode === option.value
+                          ? "bg-blue-500 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      } disabled:opacity-50`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {processingMode === "both" && t.myStories.processingModeHintBoth}
+                  {processingMode === "original_only" && t.myStories.processingModeHintOriginal}
+                  {processingMode === "rewritten_only" && t.myStories.processingModeHintRewritten}
+                </p>
+              </div>
+
               {/* Story content input area */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {lng === "es" ? "Contenido de la historia" : "Story content"}
+                  {t.myStories.storyContent}
                 </label>
 
                 {/* File uploaded state - show file info with remove option */}
@@ -360,7 +393,7 @@ export default function UploadStoryModal() {
                         <div>
                           <p className="font-medium text-green-800">{uploadedFileName}</p>
                           <p className="text-sm text-green-600">
-                            {content.length.toLocaleString()} {lng === "es" ? "caracteres" : "characters"}
+                            {content.length.toLocaleString()} {t.myStories.characters}
                           </p>
                         </div>
                       </div>
@@ -368,7 +401,7 @@ export default function UploadStoryModal() {
                         onClick={handleRemoveFile}
                         disabled={isUploading}
                         className="p-2 text-green-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                        title={lng === "es" ? "Eliminar archivo" : "Remove file"}
+                        title={t.myStories.removeFile}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -389,9 +422,7 @@ export default function UploadStoryModal() {
                     </div>
                     {isOverLimit && (
                       <p className="text-xs text-red-600 mt-2">
-                        {lng === "es"
-                          ? "El archivo excede el límite de caracteres. Por favor usa un archivo más corto."
-                          : "File exceeds character limit. Please use a shorter file."}
+                        {t.myStories.fileExceedsLimit}
                       </p>
                     )}
                   </div>
@@ -424,10 +455,10 @@ export default function UploadStoryModal() {
                     <div className="text-gray-500">
                       <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm font-medium">
-                        {lng === "es" ? "Arrastra un archivo aquí o haz clic" : "Drop a file here or click to browse"}
+                        {t.myStories.dropFileHere}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        {lng === "es" ? "Soporta: .txt, .html, .rtf" : "Supports: .txt, .html, .rtf"}
+                        {t.myStories.supportedFormats}
                       </p>
                     </div>
                   </div>
@@ -438,7 +469,7 @@ export default function UploadStoryModal() {
                   <div className="flex items-center gap-3 mb-3">
                     <div className="flex-1 h-px bg-gray-200" />
                     <span className="text-xs text-gray-400 uppercase">
-                      {lng === "es" ? "o pega tu texto" : "or paste your text"}
+                      {t.myStories.orPasteText}
                     </span>
                     <div className="flex-1 h-px bg-gray-200" />
                   </div>
@@ -481,16 +512,12 @@ export default function UploadStoryModal() {
                 {!isPremium && inputMode !== "file" && (
                   <p className="text-xs text-gray-500 mt-1">
                     {stats?.isFirstStoryThisMonth ? (
-                      lng === "es"
-                        ? `Primera historia del mes: hasta ${maxLength.toLocaleString()} caracteres gratis.`
-                        : `First story this month: up to ${maxLength.toLocaleString()} characters free.`
+                      t.myStories.firstStoryBonus.replace("{max}", maxLength.toLocaleString())
                     ) : (
                       <>
-                        {lng === "es"
-                          ? `Límite gratuito: ${maxLength.toLocaleString()} caracteres.`
-                          : `Free tier: ${maxLength.toLocaleString()} characters.`}{" "}
+                        {t.myStories.freeTierLimit.replace("{max}", maxLength.toLocaleString())}{" "}
                         <a href={`/${lng}/premium`} className="text-blue-600 hover:underline">
-                          {lng === "es" ? "Mejora para más" : "Upgrade for more"}
+                          {t.myStories.upgradeForMore}
                         </a>
                       </>
                     )}
@@ -505,7 +532,7 @@ export default function UploadStoryModal() {
                 className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3"
               >
                 {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {lng === "es" ? "Opciones avanzadas" : "Advanced options"}
+                {t.myStories.advancedOptions}
               </button>
 
               {/* Advanced fields */}
@@ -516,14 +543,14 @@ export default function UploadStoryModal() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t.myStories.storyTitle}
                       <span className="text-gray-400 font-normal ml-2">
-                        ({lng === "es" ? "opcional - se auto-detectará" : "optional - will be auto-detected"})
+                        ({t.myStories.titleOptional})
                       </span>
                     </label>
                     <input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder={lng === "es" ? "Dejar vacío para auto-detectar" : "Leave empty to auto-detect"}
+                      placeholder={t.myStories.titlePlaceholder}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                       disabled={isUploading}
                     />
@@ -532,15 +559,15 @@ export default function UploadStoryModal() {
                   {/* Description field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {lng === "es" ? "Descripción" : "Description"}
+                      {t.myStories.descriptionLabel}
                       <span className="text-gray-400 font-normal ml-2">
-                        ({lng === "es" ? "opcional - se generará automáticamente" : "optional - will be auto-generated"})
+                        ({t.myStories.descriptionOptional})
                       </span>
                     </label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder={lng === "es" ? "Una breve descripción de tu historia..." : "A brief description of your story..."}
+                      placeholder={t.myStories.descriptionPlaceholder}
                       rows={2}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                       disabled={isUploading}

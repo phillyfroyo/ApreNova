@@ -92,7 +92,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, content, sourceLanguage, description } = body;
+    const { title, content, sourceLanguage, description, processingMode: rawProcessingMode } = body;
+    const VALID_PROCESSING_MODES = ["original_only", "rewritten_only", "both"];
+    const processingMode = VALID_PROCESSING_MODES.includes(rawProcessingMode) ? rawProcessingMode : "both";
 
     // DEBUG: Log the content structure to see how lines are separated
     const contentLines = content?.split('\n').slice(0, 30) || [];
@@ -190,6 +192,7 @@ export async function POST(req: NextRequest) {
         description: description || null,
         sourceLanguage: finalSourceLanguage,
         rawContent: content,
+        processingMode,
         status: "PROCESSING",
         visibility: "PRIVATE",
         updatedAt: new Date(),

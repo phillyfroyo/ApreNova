@@ -177,6 +177,7 @@ model UserStory {
   status            UserStoryStatus     @default(PROCESSING)
   processingProgress Json?
   visibility        StoryVisibility     @default(PRIVATE)
+  processingMode    String?             // "original_only" | "rewritten_only" | "both"
   rawContent        String
   cancelledAt       DateTime?           // Set when user cancels upload - pipeline checks this before each chapter
   createdAt         DateTime            @default(now())
