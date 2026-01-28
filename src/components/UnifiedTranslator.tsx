@@ -373,7 +373,6 @@ useEffect(() => {
       target.closest('[data-audio-control]') ||          // Any audio control element
       target.closest('[data-translation-control]')       // Any translation control element
     ) {
-      console.log('🎯 UnifiedTranslator: Exempting audio/translation control - not closing translation');
       return; // Never close translation for these elements
     }
     

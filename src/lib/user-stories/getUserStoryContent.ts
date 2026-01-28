@@ -101,8 +101,6 @@ export async function getUserStoryContent(
   lng: Language
 ) {
   try {
-    console.log(`[getUserStoryContent] Fetching: storyId=${userStoryId}, level=${level}, chapter=${chapter}, page=${page}`);
-
     // Fetch the story and verify ownership or public visibility
     const story = await prisma.userStory.findFirst({
       where: {
@@ -121,7 +119,6 @@ export async function getUserStoryContent(
     });
 
     if (!story) {
-      console.log(`[getUserStoryContent] Story not found or access denied`);
       throw new Error("Story not found or access denied");
     }
 
@@ -135,10 +132,7 @@ export async function getUserStoryContent(
       },
     });
 
-    console.log(`[getUserStoryContent] Level data: status=${levelData?.status}, hasContent=${!!levelData?.content}`);
-
     if (!levelData || levelData.status !== "READY") {
-      console.log(`[getUserStoryContent] Level content not ready: status=${levelData?.status}`);
       throw new Error("Level content not ready");
     }
 
@@ -146,14 +140,6 @@ export async function getUserStoryContent(
 
     const chapterNum = parseInt(chapter);
     const pageNum = parseInt(page);
-
-    // Debug: log available chapters and pages
-    const availableChapters = Object.keys(levelContent.chapters || {});
-    const availablePages = levelContent.chapters?.[chapterNum]
-      ? Object.keys(levelContent.chapters[chapterNum].pages || {})
-      : [];
-    console.log(`[getUserStoryContent] Available chapters: [${availableChapters.join(', ')}], pages in ch${chapterNum}: [${availablePages.join(', ')}]`);
-
     const pageData = levelContent.chapters?.[chapterNum]?.pages?.[pageNum];
 
     if (pageData) {
@@ -180,7 +166,6 @@ export async function getUserStoryContent(
 
       // Infer structure type for navigation labels
       const structureType = inferStructureType(story.storyType, levelContent);
-      console.log(`[getUserStoryContent] Page has ${hasStanzas ? 'stanzas' : 'lines'}: ${hasStanzas ? pageData.stanzas!.length + ' stanzas' : lines.length + ' lines'}, structureType=${structureType}`);
 
       return {
         storySlug: story.slug,

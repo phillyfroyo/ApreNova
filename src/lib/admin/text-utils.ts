@@ -397,14 +397,6 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
 
   let text = processNode(doc.body, true);  // body is a block element
 
-  // DEBUG: Log extracted text structure
-  const debugLines = text.split('\n').slice(0, 30);
-  console.log('[extractTextFromHTML] First 30 lines of extracted text:');
-  debugLines.forEach((line, i) => {
-    const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-    console.log(`  ${i + 1}: "${display}"`);
-  });
-
   // Clean up whitespace - behavior depends on preserveWhitespace option
   if (preserveWhitespace) {
     // For poetry: preserve ALL whitespace exactly

@@ -107,14 +107,6 @@ export default function UploadStoryModal() {
       if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
         const result = extractTextFromHTML(text, { preserveWhitespace: true });
         text = result.text;
-
-        // DEBUG: Log extracted text to see whitespace preservation
-        const debugLines = text.split('\n').slice(0, 50);
-        console.log('[UploadStoryModal] HTML extraction result (first 50 lines):');
-        debugLines.forEach((line, i) => {
-          const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-          console.log(`  ${i + 1}: "${display}"`);
-        });
       }
 
       // RTF basic handling - strip RTF codes

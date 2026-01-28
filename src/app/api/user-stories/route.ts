@@ -96,14 +96,6 @@ export async function POST(req: NextRequest) {
     const VALID_PROCESSING_MODES = ["original_only", "rewritten_only", "both"];
     const processingMode = VALID_PROCESSING_MODES.includes(rawProcessingMode) ? rawProcessingMode : "both";
 
-    // DEBUG: Log the content structure to see how lines are separated
-    const contentLines = content?.split('\n').slice(0, 30) || [];
-    console.log('[API/user-stories POST] Content structure (first 30 lines):');
-    contentLines.forEach((line: string, i: number) => {
-      const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 60);
-      console.log(`  ${i + 1}: "${display}"`);
-    });
-
     // Validate required fields - only content is required now
     if (!content) {
       return NextResponse.json(

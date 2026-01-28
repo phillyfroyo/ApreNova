@@ -244,27 +244,6 @@ function StartReadingButtons({
   const rewrittenCompletedChapters = rewrittenStream && Array.isArray(rewrittenStream.chapters)
     ? rewrittenStream.chapters.length : 0;
 
-  // DEBUG: Log stream info - TODO: Remove after debugging
-  console.log('[StartReadingButtons] Debug:', {
-    storyId: storyData?.id,
-    totalChapters,
-    userLevel,
-    detectedLevel,
-    hasRewritten: !!rewrittenStream,
-    originalStream: originalStream ? {
-      level: originalStream.level,
-      levelStatus: originalStream.levelStatus,
-      chaptersCount: originalStream.chapters?.length
-    } : null,
-    rewrittenStream: rewrittenStream ? {
-      level: rewrittenStream.level,
-      levelStatus: rewrittenStream.levelStatus,
-      chaptersCount: rewrittenStream.chapters?.length
-    } : null,
-    originalReady,
-    rewrittenReady,
-  });
-
   // Prefetch page 1 of each level as soon as it becomes ready
   // Prefetches both the Next.js route and the API data so navigation + render is near-instant
   const prefetchedLevelsRef = useRef<Set<string>>(new Set());
@@ -633,17 +612,8 @@ export default function FloatingProgressWidget() {
     };
   }, [progress.stepLabel, displayedStepLabel, isAnimating]);
 
-  // Debug logging for render decisions
-  console.log("[FloatingProgressWidget] Render check:", {
-    isUploading,
-    progressStage: progress.stage,
-    willReturnNull: !isUploading && progress.stage === "idle",
-    willShowSuccessBanner: progress.stage === "complete",
-  });
-
   // Don't render if not uploading
   if (!isUploading && progress.stage === "idle") {
-    console.log("[FloatingProgressWidget] Returning null - not uploading and idle");
     return null;
   }
 

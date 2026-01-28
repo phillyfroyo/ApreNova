@@ -674,7 +674,6 @@ export default function StoryLayoutWithAzureTTS({
       // Priority 2: Stanza-level detection for poems, or per-line for prose
       const clickY = e.clientY;
       const isPoemWithStanzas = !!document.querySelector('[data-stanza-number]');
-      console.log(`[handleGlobalClick] isPoemWithStanzas=${isPoemWithStanzas}, stanzaEls=${document.querySelectorAll('[data-stanza-number]').length}`);
 
       if (isPoemWithStanzas) {
         // Find which stanza was clicked
@@ -683,24 +682,33 @@ export default function StoryLayoutWithAzureTTS({
           const rect = stanzaEl.getBoundingClientRect();
           if (clickY >= rect.top && clickY < rect.bottom) {
             const stanzaIdx = parseInt(stanzaEl.getAttribute('data-stanza-number') || '0') - 1;
-
-            // If already open, just update target line (don't toggle closed)
             const isAlreadyOpen = showStanzaEmojis[stanzaIdx];
-            if (!isAlreadyOpen) {
-              // Close all other stanzas, open this one
-              setShowStanzaEmojis({ [stanzaIdx]: true });
-            }
 
             // Find which line within stanza was clicked
             const textEls = stanzaEl.querySelectorAll('[data-text-content]');
+            let clickedOnTextLine = false;
             for (const textEl of Array.from(textEls)) {
               const textRect = textEl.getBoundingClientRect();
               if (clickY >= textRect.top && clickY < textRect.bottom) {
+                clickedOnTextLine = true;
                 const lineIndex = parseInt(textEl.getAttribute('data-text-content') || '-1');
                 if (lineIndex >= 0) {
                   setActiveStanzaLine(prev => ({ ...prev, [stanzaIdx]: lineIndex }));
                 }
                 break;
+              }
+            }
+
+            if (clickedOnTextLine) {
+              // Clicked on a text line - open if not open, keep open if already open
+              if (!isAlreadyOpen) {
+                setShowStanzaEmojis({ [stanzaIdx]: true });
+              }
+            } else {
+              // Clicked on blank space within stanza - close if open
+              if (isAlreadyOpen) {
+                setShowStanzaEmojis({});
+                setStanzaAITranslation({});
               }
             }
             return;
@@ -1021,9 +1029,6 @@ export default function StoryLayoutWithAzureTTS({
           {(() => {
             const isPoemType = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
             const isScriptType = storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue';
-
-            // DEBUG: Log rendering path to diagnose stanza emoji behavior
-            console.log(`[StoryLayout] Render path: storyType=${storyType}, isPoemType=${isPoemType}, stanzas=${stanzas?.length ?? 'none'}, sentences=${sentences.length}, willUseStanzaPath=${!!(stanzas && stanzas.length > 0 && isPoemType)}`);
 
             // Helper to render a single line
             // When isInsideStanza=true, emoji row and static translation are handled at stanza level
