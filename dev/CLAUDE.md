@@ -2,6 +2,45 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## CRITICAL: Commercial-Grade Architecture Standards
+
+**This is a commercial application. Every edit, feature, and restructure must follow industry best practices.**
+
+### Before Writing Code, Always:
+
+1. **Identify the Single Source of Truth** - Before implementing any feature, ask: "Where is the canonical implementation for this logic?" If it exists, use it. If it doesn't, create one in a dedicated module.
+
+2. **Check for Shared Pipelines** - Many features in this app are shared between user and admin portals. Before modifying backend logic, verify which entry points consume it.
+
+3. **Avoid Logic Fragmentation** - Never duplicate transformation logic across files. If the same algorithm runs in multiple places, consolidate it into one module and have others import from there.
+
+4. **Enforce Data Contracts** - Use TypeScript interfaces as contracts between modules. Define canonical types in one place (e.g., `types.ts`) and import everywhere.
+
+5. **Keep Files Under 400 Lines** - Files over 400 lines become hard to debug. When approaching this limit, split into logical sub-modules with clear responsibilities.
+
+6. **Use Barrel Exports** - Create `index.ts` files that export public APIs. This makes refactoring easier and keeps imports clean.
+
+### Anti-Patterns to Avoid:
+
+- **Scattered Detection Logic** - Example: We had stanza detection in 6+ places (text-preprocessor, level-processor, rewriting, text-processing, etc.). Now consolidated in `src/lib/poem-processing/`.
+
+- **Implicit Dependencies** - If Module A transforms data that Module B expects in a certain format, make that contract explicit with shared types.
+
+- **Deep Nesting Without Contracts** - Multi-stage pipelines (parse → detect → rewrite → translate → build) need clear interfaces between each stage.
+
+### Key Shared Modules:
+
+| Module | Purpose | Used By |
+|--------|---------|---------|
+| `src/lib/poem-processing/` | Canonical stanza detection | User pipeline, Admin pipeline, Rewriting |
+| `src/lib/story-processing/` | Detection, translation, content building | Both portals |
+| `src/lib/user-stories/` | User upload orchestration | User portal API routes |
+| `src/lib/admin/` | Admin upload orchestration | Admin portal API routes |
+
+---
+
 ## Development Commands
 
 - `npm run dev` - Start development server on http://localhost:3000

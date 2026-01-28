@@ -406,11 +406,6 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Debug: check if line looks like it might be a thematic marker
-    if (/^[IVXLC]+\.\s+[A-Z]/.test(line)) {
-      console.log(`[detectThematicSectionMarkers] Potential marker at line ${i}: "${line}"`);
-    }
-
     const match = line.match(thematicPattern);
     if (match) {
       const romanNumeral = match[1];
@@ -420,7 +415,6 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
       // Verify this looks like a thematic section (not just "I. SUCCESS.")
       // Thematic sections are typically short (1-4 words) and general concepts
       const wordCount = sectionTitle.split(/\s+/).length;
-      console.log(`[detectThematicSectionMarkers] Match: "${line}" -> title="${sectionTitle}", words=${wordCount}, len=${sectionTitle.length}`);
       if (wordCount <= 4 && sectionTitle.length <= 30) {
         markers.push({
           lineIndex: i,
@@ -429,14 +423,10 @@ function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
           title: sectionTitle,
           fullMatch: line,
         });
-        console.log(`[detectThematicSectionMarkers] ADDED marker: "${line}"`);
-      } else {
-        console.log(`[detectThematicSectionMarkers] REJECTED (too long): "${line}"`);
       }
     }
   }
 
-  console.log(`[detectThematicSectionMarkers] Found ${markers.length} thematic markers`);
   return markers;
 }
 
@@ -450,14 +440,9 @@ function detectChapterMarkers(lines: string[], options: DetectChapterOptions = {
     // When structureType is explicitly anthology, use thematic markers even if there's only 1
     // (user explicitly selected poetry type, so we trust their judgment)
     if (thematicMarkers.length >= 1) {
-      console.log(`[detectChapterMarkers] Using ${thematicMarkers.length} thematic section(s) for anthology`);
       return thematicMarkers;
     }
     // Fall through to standard detection if no thematic sections found
-    console.log(`[detectChapterMarkers] No thematic sections found, falling back to standard detection`);
-    // Log first 10 non-empty lines for debugging
-    const previewLines = lines.filter(l => l.trim()).slice(0, 10);
-    console.log(`[detectChapterMarkers] First 10 lines: ${previewLines.map(l => `"${l.substring(0, 40)}"`).join(', ')}`);
   }
 
   // Roman numeral mapping (extended for longer works - up to 100)
@@ -757,16 +742,6 @@ function splitIntoChapters(
 
     const rawText = contentLines.join('\n').trim();
 
-    // DEBUG: Log first chapter content structure
-    if (i === 0) {
-      const firstLines = rawText.split('\n').slice(0, 20);
-      console.log(`[splitIntoChapters] DEBUG: First chapter raw content (first 20 lines):`);
-      firstLines.forEach((line, idx) => {
-        const display = line.trim() === '' ? '[EMPTY]' : line.substring(0, 50);
-        console.log(`  ${idx}: "${display}"`);
-      });
-    }
-
     chapters.push({
       number: marker.number,
       title: marker.title,
@@ -999,22 +974,8 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   const preserveWhitespace = isKnownPoetry || isAutoDetect;
   const normalized = preserveWhitespace ? normalizeWhitespacePreserveIndent(noAsterisks) : normalizeWhitespace(noAsterisks);
 
-  if (preserveWhitespace) {
-    console.log(`[preprocessText] Preserving whitespace (structureType=${options.structureType || 'auto'}, isKnownPoetry=${isKnownPoetry}, isAutoDetect=${isAutoDetect})`);
-  }
-
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
-
-  // DEBUG: Log lines around first chapter marker to check whitespace preservation
-  const debugStartIdx = lines.findIndex(l => /^I\.\s*(LIFE|LOVE|NATURE)/i.test(l.trim()));
-  if (debugStartIdx > -1) {
-    console.log(`[preprocessText] DEBUG: Lines around first chapter marker (index ${debugStartIdx}):`);
-    for (let i = Math.max(0, debugStartIdx - 2); i < Math.min(lines.length, debugStartIdx + 15); i++) {
-      const display = lines[i].trim() === '' ? '[EMPTY]' : lines[i].substring(0, 50);
-      console.log(`  ${i}: "${display}"`);
-    }
-  }
 
   // Step 7: Detect and remove back matter
   const backMatterStart = detectBackMatterStart(lines);
@@ -1033,15 +994,10 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
 
   if (options.structureType && options.structureType !== "auto") {
     detectedStructureType = options.structureType;
-    console.log(`[preprocessText] Using specified structure type: ${detectedStructureType}`);
   } else {
     // Auto-detect structure type from content
     const structureAnalysis = analyzeContentStructure(lines.join('\n'));
     detectedStructureType = structureAnalysis.structureType;
-    console.log(`[preprocessText] Auto-detected structure type: ${detectedStructureType} (confidence: ${structureAnalysis.confidence})`);
-    if (structureAnalysis.thematicSections.length > 0) {
-      console.log(`[preprocessText] Found thematic sections: ${structureAnalysis.thematicSections.slice(0, 5).join(', ')}${structureAnalysis.thematicSections.length > 5 ? '...' : ''}`);
-    }
   }
 
   // Step 8: Detect chapter markers (passing structure type for anthology-aware detection)
@@ -1058,10 +1014,6 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   // For anthologies and epics, preserve markers (e.g., "I. LIFE.") in the content
   const preserveMarkers = detectedStructureType === "anthology" || detectedStructureType === "epic";
   let chapters = splitIntoChapters(lines, markers, { preserveMarkers });
-
-  if (preserveMarkers) {
-    console.log(`[preprocessText] Preserving chapter markers in content for ${detectedStructureType} structure`);
-  }
 
   // Step 11: Filter out chapters that are mostly empty or look like boilerplate
   chapters = chapters.filter(chapter => {
@@ -1086,10 +1038,6 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   const lineBreakStyleForNormalization: LineBreakStyle = isPoetryStructure
     ? "intentional"
     : detectLineBreakStyle(chapters.map(ch => ch.rawText).join('\n\n'));
-
-  if (isPoetryStructure) {
-    console.log(`[preprocessText] Forcing "intentional" line break style for ${detectedStructureType} to preserve vertical spacing`);
-  }
 
   // Normalize each chapter's rawText based on determined style
   chapters = chapters.map(ch => ({
@@ -1160,7 +1108,18 @@ export function quickClean(rawText: string): string {
 // ============================================
 // POEM STANZA DETECTION
 // ============================================
+// NOTE: The canonical implementation is now in @/lib/poem-processing
+// This file provides backward compatibility for existing imports
 
+import {
+  detectStanzas as detectStanzasNew,
+  type AnnotatedPoemLine,
+} from "@/lib/poem-processing";
+
+/**
+ * Legacy type for backward compatibility.
+ * New code should use AnnotatedPoemLine from @/lib/poem-processing
+ */
 export interface StanzaMarkedLine {
   text: string;
   stanzaNumber: number;
@@ -1169,52 +1128,24 @@ export interface StanzaMarkedLine {
 
 /**
  * Detect stanza breaks in poetry.
- * A stanza break is defined as one or more empty lines between text lines.
- * Returns lines with stanza numbers assigned.
+ *
+ * @deprecated Use detectStanzas from @/lib/poem-processing instead.
+ * This function now delegates to the canonical implementation.
  *
  * @param lines - Array of text lines (can include empty lines)
  * @returns Array of StanzaMarkedLine with stanza numbers and break markers
  */
 export function detectStanzas(lines: string[]): StanzaMarkedLine[] {
-  const result: StanzaMarkedLine[] = [];
-  let currentStanza = 1;
-  let lastWasContent = false;
-  let pendingBlankCount = 0;  // Track number of consecutive blank lines
+  // Delegate to the canonical implementation in poem-processing
+  const text = lines.join('\n');
+  const result = detectStanzasNew(text, { method: 'adaptive' });
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (trimmed === '') {
-      // Empty line - count consecutive blanks
-      if (lastWasContent) {
-        pendingBlankCount++;
-      }
-    } else {
-      // Content line
-      if (pendingBlankCount > 0) {
-        // Add stanza break markers for each blank line to preserve vertical spacing
-        // First blank = stanza break and stanza number increment
-        // Additional blanks = extra spacing (rendered as additional breaks)
-        for (let i = 0; i < pendingBlankCount; i++) {
-          result.push({
-            text: '',
-            stanzaNumber: i === 0 ? currentStanza : currentStanza + 1,
-            isStanzaBreak: true
-          });
-        }
-        currentStanza++;
-        pendingBlankCount = 0;
-      }
-      result.push({
-        text: line,  // Preserve original whitespace (indentation) for poetry
-        stanzaNumber: currentStanza,
-        isStanzaBreak: false
-      });
-      lastWasContent = true;
-    }
-  }
-
-  return result;
+  // Convert to legacy format
+  return result.annotatedLines.map((line: AnnotatedPoemLine) => ({
+    text: line.text,
+    stanzaNumber: line.stanzaNumber,
+    isStanzaBreak: line.isStanzaBreak,
+  }));
 }
 
 // ============================================

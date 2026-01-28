@@ -9,15 +9,31 @@ export {
   quickClean,
   normalizeLineBreaks,
   detectLineBreakStyle,
-  // Poem/script parsing utilities
-  detectStanzas,
+  // Script parsing utilities
   parseScriptLine,
   extractSpeakerNames,
-  type StanzaMarkedLine,
   type ParsedScriptLine,
 } from "@/lib/admin/text-preprocessor";
 
 export { cleanText, parseChaptersFromText } from "@/lib/admin/text-utils";
+
+// NEW: Stanza detection from the canonical poem-processing module
+// This is THE single source of truth for all stanza detection
+export {
+  detectStanzas,
+  toMetadataMap,
+  toTextLines,
+  groupLinesIntoStanzas,
+  type StanzaDetectionResult,
+  type AnnotatedPoemLine,
+  type StanzaDetectorConfig,
+  type PoemLineMetadata,
+  type PoemLineMetadataMap,
+} from "@/lib/poem-processing";
+
+// Legacy type alias for backward compatibility
+// New code should use AnnotatedPoemLine from poem-processing
+export type { AnnotatedPoemLine as StanzaMarkedLine } from "@/lib/poem-processing";
 
 // ============================================================================
 // CONTENT STRUCTURE TYPES
@@ -379,9 +395,6 @@ export function detectSectionBoundaries(lines: string[]): DetectedSection[] {
     });
   }
 
-  console.log(`[detectSectionBoundaries] Found ${sections.length} sections:`,
-    sections.map(s => `"${s.number}. ${s.title}"`).join(', '));
-
   return sections;
 }
 
@@ -456,7 +469,6 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
     // Check if preamble has actual content (not just blank lines)
     const hasContent = preambleLines.some(line => line.trim().length > 0);
     if (hasContent) {
-      console.log(`[detectPoemBoundaries] Including ${firstPoemMarkerIndex} preamble lines before first poem`);
       // Prepend preamble to the first poem
       poems[0] = {
         ...poems[0],
@@ -566,14 +578,9 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
           endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
           lines: allLines,
         });
-      } else {
-        console.log(`[detectPoemBoundaries] Skipping dangling headers with no content: ${pendingHeaders.map(h => h.title).join(', ')}`);
       }
     }
 
-    console.log(`[detectPoemBoundaries] Found ${poems.length} markers, merged to ${mergedPoems.length} poems:`,
-      mergedPoems.slice(0, 5).map(p => `"${p.title.slice(0, 25)}"`).join(', ') +
-      (mergedPoems.length > 5 ? '...' : ''));
     return mergedPoems;
   }
 
@@ -1243,8 +1250,6 @@ export function buildContentStructureWithMetadata(
     return preserveIndent ? line.trimEnd() : line.trim();
   };
 
-  console.log(`[BuildContent] Building structure with type: ${structureType}, ${chaptersData.length} chapters`);
-
   chaptersData.forEach((chapter, chapterIndex) => {
     const pages: Record<number, PageContent> = {};
 
@@ -1286,9 +1291,25 @@ export function buildContentStructureWithMetadata(
           lines.push(storyLine);
         }
 
-        // Store page with poem tracking metadata
+        // Group lines by stanzaNumber to build nested stanzas array
+        // This enables stanza-level emoji interactions for anthology poems
+        const stanzaGroups = new Map<number, StoryLine[]>();
+        for (const line of lines) {
+          const stanzaNum = line.stanzaNumber ?? 0;
+          if (!stanzaGroups.has(stanzaNum)) {
+            stanzaGroups.set(stanzaNum, []);
+          }
+          stanzaGroups.get(stanzaNum)!.push(line);
+        }
+
+        // Convert to nested array, sorted by stanza number
+        const stanzaNumbers = Array.from(stanzaGroups.keys()).sort((a, b) => a - b);
+        const stanzas: StoryLine[][] = stanzaNumbers.map(num => stanzaGroups.get(num)!);
+
+        // Store page with poem tracking metadata AND nested stanzas
         pages[pIdx + 1] = {
-          lines,
+          lines,  // Keep for backward compatibility
+          stanzas: stanzas.length > 1 ? stanzas : undefined,  // Only include if multiple stanzas
           poemNumber: pageData.poemNumber,
           poemTitle: pageData.poemTitle,
           isFirstPageOfPoem: pageData.isFirstPageOfPoem,
@@ -1483,18 +1504,10 @@ export function parseChapters(
 
   const detectedStructureType = preprocessed.stats.structureType;
 
-  console.log(`[parseChapters] Preprocessing found ${preprocessed.chapters.length} chapters, structureType=${detectedStructureType}`);
-
   // If preprocessing found chapters (1 or more), use those with full metadata
   // IMPORTANT: Use rawText from chapters, NOT cleanedFullText (which has --- Chapter X --- markers)
   if (preprocessed.chapters.length >= 1) {
     const hasMultiple = preprocessed.chapters.length > 1;
-    console.log(`[parseChapters] Using ${preprocessed.chapters.length} preprocessed chapter(s), hasChapters=${hasMultiple}`);
-
-    // Log first chapter preview for debugging
-    const firstChapter = preprocessed.chapters[0];
-    const preview = firstChapter.rawText.substring(0, 200).replace(/\n/g, '\\n');
-    console.log(`[parseChapters] First chapter preview: "${preview}..."`);
 
     return {
       hasChapters: hasMultiple,
@@ -1512,14 +1525,11 @@ export function parseChapters(
 
   // Fallback: preprocessing found 0 chapters (shouldn't happen normally)
   // Try the simpler parseChaptersFromText for common chapter markers
-  console.log(`[parseChapters] FALLBACK: No chapters from preprocessing, trying parseChaptersFromText`);
   const preserveWhitespace = detectedStructureType === "anthology" || detectedStructureType === "epic";
   const cleanedText = adminCleanText(text, { preserveWhitespace });
   const parsedChapters = parseChaptersFromText(cleanedText);
 
   if (parsedChapters.length > 1) {
-    // Fallback parser found chapters
-    console.log(`[parseChapters] FALLBACK: Found ${parsedChapters.length} chapters via parseChaptersFromText`);
     return {
       hasChapters: true,
       chapters: parsedChapters.map((chText, idx) => ({
@@ -1534,7 +1544,6 @@ export function parseChapters(
   }
 
   // No chapters detected - return as single chapter
-  console.log(`[parseChapters] FALLBACK: Single chapter, no markers found`);
   return {
     hasChapters: false,
     chapters: [{

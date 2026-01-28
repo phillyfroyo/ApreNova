@@ -31,8 +31,7 @@ import {
   ChapterContent,
   PageContent,
   PoemInfo,
-  // Poem and script parsing
-  detectStanzas,
+  // Script parsing (poems now use poem-processing module)
   parseScriptLine,
   extractSpeakerNames,
   // Chunking for large chapters
@@ -45,6 +44,13 @@ import {
   getRetryDelay,
   RETRY_CONFIG,
 } from "@/lib/story-processing";
+
+// NEW: Single source of truth for stanza detection
+import {
+  detectStanzas,
+  toMetadataMap,
+  toTextLines,
+} from "@/lib/poem-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 import { StoryType } from "@/types/story";
 
@@ -120,28 +126,22 @@ export function preprocessChapterForStoryType(
   const lineMetadata = new Map<number, LineMetadata>();
   const speakerNames: string[] = [];
 
-  // Handle poems
+  // Handle poems - use the new poem-processing module (single source of truth)
   if (storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic') {
-    const lines = chapterText.split('\n');
-    const stanzaMarked = detectStanzas(lines);
+    // Use the canonical stanza detector from poem-processing module
+    const stanzaResult = detectStanzas(chapterText, { method: 'adaptive' });
 
-    const processedLines: string[] = [];
-    stanzaMarked.forEach((markedLine, idx) => {
+    // Convert to the format expected by the rest of the pipeline
+    const processedLines = toTextLines(stanzaResult);
+    const metadataMap = toMetadataMap(stanzaResult);
+
+    // Copy to the lineMetadata map expected by this function
+    metadataMap.forEach((meta, idx) => {
       lineMetadata.set(idx, {
-        stanzaNumber: markedLine.stanzaNumber,
-        isStanzaBreak: markedLine.isStanzaBreak,
+        stanzaNumber: meta.stanzaNumber,
+        isStanzaBreak: meta.isStanzaBreak,
       });
-      processedLines.push(markedLine.text);
     });
-
-    // DEBUG: Log blank line preservation in preprocessed poem
-    const blankCount = processedLines.filter(l => l === '').length;
-    const contentCount = processedLines.filter(l => l !== '').length;
-    console.log(`[preprocessChapterForStoryType] Poem: ${contentCount} content lines, ${blankCount} blank lines, ${processedLines.length} total`);
-    if (blankCount > 0) {
-      const firstBlanks = processedLines.slice(0, 20).map((l, i) => l === '' ? i : null).filter(x => x !== null).slice(0, 5);
-      console.log(`[preprocessChapterForStoryType] First blank positions in first 20 lines: ${firstBlanks.join(', ')}`);
-    }
 
     return { processedLines, lineMetadata, speakerNames };
   }
@@ -229,7 +229,6 @@ async function rewriteChapterWithChunking(
 
   // For poetry: use stanza-by-stanza rewriting to guarantee stanza structure preservation
   if (isPoetry) {
-    console.log(`[RewriteChapter] Using stanza-by-stanza rewriting for poetry`);
     const stanzaResult = await rewritePoemByStanza(
       chapterText,
       detectedLevel,
@@ -424,7 +423,6 @@ export function parseStoryContent(
     const poetryTypes = ["poem", "song-lyrics", "epic"];
     if (poetryTypes.includes(options.storyType)) {
       effectiveStructureType = options.storyType === "epic" ? "epic" : "anthology";
-      console.log(`[parseStoryContent] Inferred structureType=${effectiveStructureType} from storyType=${options.storyType}`);
     }
   }
 
@@ -432,10 +430,6 @@ export function parseStoryContent(
   // quickClean's normalizeWhitespace strips leading spaces which destroys poem formatting
   const isPoetry = effectiveStructureType === "anthology" || effectiveStructureType === "epic";
   const contentToProcess = isPoetry ? rawContent : quickClean(rawContent);
-
-  if (isPoetry) {
-    console.log(`[parseStoryContent] Skipping quickClean for poetry to preserve whitespace`);
-  }
 
   // Parse chapters, passing structure type for proper marker handling
   // preprocessText inside parseChapters will do the detailed cleaning

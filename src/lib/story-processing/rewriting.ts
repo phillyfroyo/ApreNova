@@ -201,25 +201,13 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
  * @returns Array of stanzas, where each stanza is an array of lines
  */
 export function splitIntoStanzas(text: string): string[][] {
-  const lines = text.split('\n');
-  const stanzaMarked = detectStanzas(lines);
+  // Use the new stanza detector which takes a string
+  const result = detectStanzas(text, { method: 'adaptive' });
 
-  // Group lines by stanzaNumber
-  const stanzasMap = new Map<number, string[]>();
-
-  for (const marked of stanzaMarked) {
-    // Skip stanza break markers (empty lines between stanzas)
-    if (marked.isStanzaBreak) continue;
-
-    if (!stanzasMap.has(marked.stanzaNumber)) {
-      stanzasMap.set(marked.stanzaNumber, []);
-    }
-    stanzasMap.get(marked.stanzaNumber)!.push(marked.text);
-  }
-
-  // Convert to array, sorted by stanza number
-  const stanzaNumbers = Array.from(stanzasMap.keys()).sort((a, b) => a - b);
-  return stanzaNumbers.map(num => stanzasMap.get(num)!);
+  // Return the stanzas as arrays of text strings
+  return result.stanzas.map(stanza =>
+    stanza.map(line => line.text)
+  );
 }
 
 /**
@@ -245,8 +233,8 @@ export function splitIntoStanzasWithSpacing(text: string): {
   stanzas: string[][];
   blankLinesBefore: number[];  // How many blank lines before each stanza (first is leading blanks)
 } {
-  const lines = text.split('\n');
-  const stanzaMarked = detectStanzas(lines);
+  // Use the new stanza detector
+  const result = detectStanzas(text, { method: 'adaptive' });
 
   const stanzas: string[][] = [];
   const blankLinesBefore: number[] = [];
@@ -255,12 +243,13 @@ export function splitIntoStanzasWithSpacing(text: string): {
   let blankCount = 0;
   let lastStanzaNum = -1;
 
-  for (const marked of stanzaMarked) {
-    if (marked.isStanzaBreak) {
+  // Process annotated lines to track blank spacing
+  for (const annotated of result.annotatedLines) {
+    if (annotated.isStanzaBreak) {
       blankCount++;
     } else {
       // New stanza started?
-      if (marked.stanzaNumber !== lastStanzaNum) {
+      if (annotated.stanzaNumber !== lastStanzaNum) {
         // Save previous stanza if exists
         if (currentStanza.length > 0) {
           stanzas.push(currentStanza);
@@ -269,9 +258,9 @@ export function splitIntoStanzasWithSpacing(text: string): {
         blankLinesBefore.push(blankCount);
         currentStanza = [];
         blankCount = 0;
-        lastStanzaNum = marked.stanzaNumber;
+        lastStanzaNum = annotated.stanzaNumber;
       }
-      currentStanza.push(marked.text);
+      currentStanza.push(annotated.text);
     }
   }
 
