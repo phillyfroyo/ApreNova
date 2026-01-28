@@ -919,8 +919,39 @@ export function buildSingleChapterContent(
         lines.push(storyLine);
       }
 
+      // Build stanzas array from lines with stanzaNumber metadata
+      // This provides the nested structure for stanza-level poem rendering
+      let stanzas: StoryLine[][] | undefined = undefined;
+
+      if (lines.length > 0) {
+        const stanzaGroups: StoryLine[][] = [];
+        let currentStanza: StoryLine[] = [];
+        let currentStanzaNum = lines[0].stanzaNumber ?? 1;
+
+        for (const line of lines) {
+          const lineStanzaNum = line.stanzaNumber ?? currentStanzaNum;
+          if (lineStanzaNum !== currentStanzaNum && currentStanza.length > 0) {
+            // New stanza - push current and start new
+            stanzaGroups.push(currentStanza);
+            currentStanza = [];
+            currentStanzaNum = lineStanzaNum;
+          }
+          currentStanza.push(line);
+        }
+        // Push final stanza
+        if (currentStanza.length > 0) {
+          stanzaGroups.push(currentStanza);
+        }
+
+        // Only set stanzas if we have multiple stanzas or stanza metadata exists
+        if (stanzaGroups.length > 0) {
+          stanzas = stanzaGroups;
+        }
+      }
+
       pages[pIdx + 1] = {
         lines,
+        stanzas,
         poemNumber: pageData.poemNumber,
         poemTitle: pageData.poemTitle,
         isFirstPageOfPoem: pageData.isFirstPageOfPoem,

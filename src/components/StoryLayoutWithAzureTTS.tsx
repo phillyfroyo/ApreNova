@@ -127,6 +127,11 @@ export default function StoryLayoutWithAzureTTS({
   const [showEmojiButtons, setShowEmojiButtons] = useState<Record<number, boolean>>({});
   const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
+  // Stanza-level state for poem emoji interactions
+  const [showStanzaEmojis, setShowStanzaEmojis] = useState<Record<number, boolean>>({});
+  const [activeStanzaLine, setActiveStanzaLine] = useState<Record<number, number>>({});
+  const [stanzaAITranslation, setStanzaAITranslation] = useState<Record<number, { text: string; loading: boolean }>>({});
+  const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
   const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
@@ -637,13 +642,16 @@ export default function StoryLayoutWithAzureTTS({
         pause();
         setActiveAudio(null);
         setShowEmojiButtons({});
+        setShowStanzaEmojis({});
         return;
       }
 
       const hasAnyEmojiButtons = Object.values(showEmojiButtons).some(Boolean);
-      if (activeAudio && !activeAudio.isPlaying && hasAnyEmojiButtons) {
+      const hasAnyStanzaEmojis = Object.values(showStanzaEmojis).some(Boolean);
+      if (activeAudio && !activeAudio.isPlaying && (hasAnyEmojiButtons || hasAnyStanzaEmojis)) {
         setActiveAudio(null);
         setShowEmojiButtons({});
+        setShowStanzaEmojis({});
         return;
       }
 
@@ -663,35 +671,66 @@ export default function StoryLayoutWithAzureTTS({
         return;
       }
 
-      // Priority 2: Find which line was clicked and toggle emoji visibility for that line
-      // Tapping between lines should activate the line ABOVE the tapped area
-      const allTextContents = document.querySelectorAll('[data-text-content]');
+      // Priority 2: Stanza-level detection for poems, or per-line for prose
       const clickY = e.clientY;
+      const isPoemWithStanzas = !!document.querySelector('[data-stanza-number]');
+      console.log(`[handleGlobalClick] isPoemWithStanzas=${isPoemWithStanzas}, stanzaEls=${document.querySelectorAll('[data-stanza-number]').length}`);
+
+      if (isPoemWithStanzas) {
+        // Find which stanza was clicked
+        const allStanzas = document.querySelectorAll('[data-stanza-number]');
+        for (const stanzaEl of Array.from(allStanzas)) {
+          const rect = stanzaEl.getBoundingClientRect();
+          if (clickY >= rect.top && clickY < rect.bottom) {
+            const stanzaIdx = parseInt(stanzaEl.getAttribute('data-stanza-number') || '0') - 1;
+
+            // If already open, just update target line (don't toggle closed)
+            const isAlreadyOpen = showStanzaEmojis[stanzaIdx];
+            if (!isAlreadyOpen) {
+              // Close all other stanzas, open this one
+              setShowStanzaEmojis({ [stanzaIdx]: true });
+            }
+
+            // Find which line within stanza was clicked
+            const textEls = stanzaEl.querySelectorAll('[data-text-content]');
+            for (const textEl of Array.from(textEls)) {
+              const textRect = textEl.getBoundingClientRect();
+              if (clickY >= textRect.top && clickY < textRect.bottom) {
+                const lineIndex = parseInt(textEl.getAttribute('data-text-content') || '-1');
+                if (lineIndex >= 0) {
+                  setActiveStanzaLine(prev => ({ ...prev, [stanzaIdx]: lineIndex }));
+                }
+                break;
+              }
+            }
+            return;
+          }
+        }
+        // Click was outside all stanzas — close all
+        setShowStanzaEmojis({});
+        setStanzaAITranslation({});
+        return;
+      }
+
+      // Per-line detection for prose/scripts
+      const allTextContents = document.querySelectorAll('[data-text-content]');
 
       // Build array of line boundaries using the TEXT CONTENT position (not the container)
-      // This is more accurate because the container includes the emoji row above the text
       const lineBounds = Array.from(allTextContents).map((el) => {
         const rect = (el as HTMLElement).getBoundingClientRect();
         const index = parseInt(el.getAttribute('data-text-content') || '-1');
         return {
           element: el as HTMLElement,
-          top: rect.top,      // Top of the actual text
-          bottom: rect.bottom, // Bottom of the actual text
+          top: rect.top,
+          bottom: rect.bottom,
           index
         };
       });
 
-      // Line N owns: from its text TOP down to the next line's text TOP
-      // This ensures that clicking anywhere ABOVE a line's text activates the line ABOVE
-      // The dividing point is where each line's text begins
       for (let i = 0; i < lineBounds.length; i++) {
         const line = lineBounds[i];
         const nextLine = lineBounds[i + 1];
-
-        // Top boundary: start from where this line's text begins
-        // This ensures tapping ABOVE the first line does NOT activate it
         const effectiveTop = line.top;
-        // Bottom boundary: extends to where the next line's text begins
         const effectiveBottom = nextLine ? nextLine.top : Infinity;
 
         if (clickY >= effectiveTop && clickY < effectiveBottom) {
@@ -708,7 +747,7 @@ export default function StoryLayoutWithAzureTTS({
 
     document.addEventListener('click', handleGlobalClick);
     return () => document.removeEventListener('click', handleGlobalClick);
-  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, activeTranslations, pause, hasSelectedWords, clearAllWordSelections]);
+  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, showStanzaEmojis, activeTranslations, pause, hasSelectedWords, clearAllWordSelections]);
 
   const renderProgressBar = (audio: ActiveAudio) => {
     const percent = audio.duration > 0 ? (audio.progress / audio.duration) * 100 : 0;
@@ -983,7 +1022,11 @@ export default function StoryLayoutWithAzureTTS({
             const isPoemType = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
             const isScriptType = storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue';
 
+            // DEBUG: Log rendering path to diagnose stanza emoji behavior
+            console.log(`[StoryLayout] Render path: storyType=${storyType}, isPoemType=${isPoemType}, stanzas=${stanzas?.length ?? 'none'}, sentences=${sentences.length}, willUseStanzaPath=${!!(stanzas && stanzas.length > 0 && isPoemType)}`);
+
             // Helper to render a single line
+            // When isInsideStanza=true, emoji row and static translation are handled at stanza level
             const renderLine = (s: StoryLine, lineIndex: number, isInsideStanza: boolean = false) => {
               // Check if this is a stanza break (poem) - render as simple visual space
               if (s.isStanzaBreak) {
@@ -1067,7 +1110,8 @@ export default function StoryLayoutWithAzureTTS({
                   )}
 
                   <div className={`flex flex-col w-full ${isScriptType && s.speaker ? 'pl-4' : ''} ${(isPoemType || isInsideStanza) ? '' : 'space-y-2'}`}>
-                    {/* Horizontal emoji + audio bar row - collapses for poems when not active */}
+                    {/* Emoji row: skip for stanza poems (handled at stanza level) */}
+                    {!isInsideStanza && (
                     <div className={`flex items-center gap-1 justify-start px-2 transition-all duration-200 ${
                       showEmojiButtons[lineIndex] ? 'h-auto opacity-100' : ((isPoemType || isInsideStanza) ? 'h-0 overflow-hidden opacity-0' : 'opacity-0 pointer-events-none')
                     }`}>
@@ -1176,6 +1220,7 @@ export default function StoryLayoutWithAzureTTS({
                         ) : null}
                       </div>
                     </div>
+                    )}
                   </div>
 
                   {/* Text content - ensure consistent left alignment */}
@@ -1192,12 +1237,236 @@ export default function StoryLayoutWithAzureTTS({
                       sentenceIndex={lineIndex}
                       contextSentences={sentences}
                     />
+                    {/* Per-line static translation: skip for stanza poems (handled at stanza level) */}
+                    {!isInsideStanza && (
                     <p
                       ref={el => { translationRefs.current[lineIndex] = el; }}
                       className="translation hidden text-muted-foreground text-sm text-left absolute z-10 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm mt-1"
                     >
                       {s[typedLang]}
                     </p>
+                    )}
+                  </div>
+                </div>
+              );
+            };
+
+            // Helper to render stanza-level emoji row (replaces per-line emoji rows for poems)
+            const renderStanzaEmojiRow = (
+              stanzaIdx: number,
+              linesInStanza: { line: StoryLine; lineIndex: number }[],
+              stanza: StoryLine[]
+            ) => {
+              // Find if any line in this stanza has a word selection
+              const lineWithSelection = linesInStanza.find(
+                ({ lineIndex }) => wordSelections[lineIndex]
+              );
+              const hasSelection = !!lineWithSelection;
+              const targetLineIndex = activeStanzaLine[stanzaIdx] ?? linesInStanza[0]?.lineIndex ?? 0;
+              const targetLine = linesInStanza.find(l => l.lineIndex === targetLineIndex)?.line || stanza[0];
+
+              // Check if any line in this stanza has active audio
+              const stanzaHasAudio = linesInStanza.some(({ lineIndex }) => activeAudio?.index === lineIndex);
+
+              const handleStanzaPlay = (isSlow: boolean) => {
+                if (lineWithSelection) {
+                  handlePlay(lineWithSelection.lineIndex, isSlow, lineWithSelection.line[oppositeLang]);
+                } else {
+                  // Play full stanza concatenated with period-space for natural TTS pauses
+                  const fullStanzaText = stanza
+                    .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
+                    .map(l => l[oppositeLang])
+                    .join('. ');
+                  handlePlay(linesInStanza[0].lineIndex, isSlow, fullStanzaText);
+                }
+              };
+
+              const handleStanzaTranslate = async () => {
+                if (lineWithSelection) {
+                  // Translate selected words via per-line UnifiedTranslator
+                  if (manualTranslateFunctions[lineWithSelection.lineIndex]) {
+                    manualTranslateFunctions[lineWithSelection.lineIndex]();
+                  }
+                } else {
+                  // Translate full stanza via API
+                  const stanzaText = stanza
+                    .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
+                    .map(l => l[oppositeLang])
+                    .join('\n');
+                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true } }));
+                  try {
+                    const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'es' : 'en'}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        phrase: stanzaText,
+                        sentence: stanzaText,
+                        level: currentLevel,
+                        context: { previous: '', current: stanzaText, next: '' },
+                      }),
+                    });
+                    const data = await res.json();
+                    setStanzaAITranslation(prev => ({
+                      ...prev,
+                      [stanzaIdx]: { text: data.translations?.primary || data.translation || '', loading: false }
+                    }));
+                  } catch {
+                    setStanzaAITranslation(prev => ({
+                      ...prev,
+                      [stanzaIdx]: { text: 'Translation failed', loading: false }
+                    }));
+                  }
+                }
+              };
+
+              const isOpen = showStanzaEmojis[stanzaIdx];
+              const aiTranslation = stanzaAITranslation[stanzaIdx];
+
+              return (
+                <div key={`stanza-emoji-${stanzaIdx}`}>
+                  {/* Stanza emoji row */}
+                  <div className={`flex items-center gap-1 justify-start px-2 transition-all duration-200 ${
+                    isOpen ? 'h-auto opacity-100' : 'h-0 overflow-hidden opacity-0'
+                  }`}>
+                    <button
+                      onClick={() => handleStanzaPlay(false)}
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
+                      data-audio-control="speaker"
+                      disabled={playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow}
+                      title={hasSelection ? 'Play selected words' : 'Play full stanza'}
+                    >
+                      {playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow ? (
+                        <Loader2 className="animate-spin h-5 w-5" />
+                      ) : (
+                        <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>🔊</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleStanzaPlay(true)}
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow
+                          ? 'opacity-50 cursor-not-allowed'
+                          : ''
+                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
+                      data-audio-control="turtle"
+                      disabled={playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow}
+                      title={hasSelection ? 'Play selected words slowly' : 'Play full stanza slowly'}
+                    >
+                      {playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow ? (
+                        <Loader2 className="animate-spin h-5 w-5" />
+                      ) : (
+                        <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>🐢</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPreloadedMessages(null);
+                        const stanzaText = stanza
+                          .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
+                          .map(l => l[oppositeLang])
+                          .join('\n');
+                        const selectedText = lineWithSelection
+                          ? lineWithSelection.line[oppositeLang].slice(
+                              wordSelections[lineWithSelection.lineIndex]!.start,
+                              wordSelections[lineWithSelection.lineIndex]!.end
+                            )
+                          : undefined;
+                        setTutorContext({
+                          lineIndex: targetLineIndex,
+                          fullLine: stanzaText,
+                          selectedText,
+                        });
+                        setIsStoryTutorOpen(true);
+                      }}
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        hasSelection ? 'bg-blue-100' : 'bg-transparent'
+                      }`}
+                      title={hasSelection ? 'Ask tutor about selection' : 'Ask tutor about this stanza'}
+                    >
+                      <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>💬</span>
+                    </button>
+                    <button
+                      onClick={handleStanzaTranslate}
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        hasSelection ? 'bg-blue-100' : 'bg-transparent'
+                      }`}
+                      data-translation-control="translate"
+                      title={hasSelection ? 'Translate selection' : 'Translate full stanza'}
+                    >
+                      <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>友</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const el = stanzaTranslationRefs.current[stanzaIdx];
+                        if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
+                      }}
+                      className="inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded"
+                      data-translation-control="pencil"
+                      title="Toggle stanza translation"
+                    >
+                      <span className="text-lg leading-none">✍️</span>
+                    </button>
+                    {/* Audio progress bar */}
+                    <div className="relative flex-1 flex items-center h-[30px] ml-3">
+                      {stanzaHasAudio && activeAudio ? (
+                        <>
+                          {renderProgressBar(activeAudio)}
+                          <button
+                            onClick={() => {
+                              stop();
+                              setActiveAudio(null);
+                            }}
+                            className="ml-2 text-xl hover:scale-110 transition z-10"
+                            data-audio-control="close"
+                          >
+                            ✖️
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* AI translation result (友 full stanza) */}
+                  {aiTranslation && (
+                    <div className="px-2 mb-1">
+                      {aiTranslation.loading ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <Loader2 className="animate-spin h-4 w-4" />
+                          <span>Translating stanza...</span>
+                        </div>
+                      ) : (
+                        <div className="relative text-sm text-muted-foreground bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm">
+                          <button
+                            onClick={() => setStanzaAITranslation(prev => {
+                              const next = { ...prev };
+                              delete next[stanzaIdx];
+                              return next;
+                            })}
+                            className="absolute top-0 right-1 text-gray-400 hover:text-gray-600 text-xs"
+                            data-translation-control="close"
+                          >
+                            ✕
+                          </button>
+                          <div className="pr-4 whitespace-pre-line">{aiTranslation.text}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Static stanza translation (✍️ pencil) */}
+                  <div
+                    ref={el => { stanzaTranslationRefs.current[stanzaIdx] = el; }}
+                    className="hidden px-2 mb-1 text-muted-foreground text-sm bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md py-1 shadow-sm"
+                  >
+                    {stanza
+                      .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
+                      .map((line, idx) => (
+                        <p key={idx}>{line[typedLang]}</p>
+                      ))}
                   </div>
                 </div>
               );
@@ -1206,19 +1475,28 @@ export default function StoryLayoutWithAzureTTS({
             // NESTED STANZAS: Render stanzas with visual gaps between them
             if (stanzas && stanzas.length > 0 && isPoemType) {
               let globalLineIndex = 0;
-              return stanzas.map((stanza, stanzaIdx) => (
-                <div
-                  key={`stanza-${stanzaIdx}`}
-                  className="w-full mb-6"
-                  data-stanza-number={stanzaIdx + 1}
-                >
-                  {stanza.map((line) => {
-                    const currentIndex = globalLineIndex;
-                    globalLineIndex++;
-                    return renderLine(line, currentIndex, true);
-                  })}
-                </div>
-              ));
+              return stanzas.map((stanza, stanzaIdx) => {
+                const stanzaStartIndex = globalLineIndex;
+                const linesInStanza = stanza.map((line) => {
+                  const currentIndex = globalLineIndex;
+                  globalLineIndex++;
+                  return { line, lineIndex: currentIndex };
+                });
+                return (
+                  <div
+                    key={`stanza-${stanzaIdx}`}
+                    className="w-full mb-6"
+                    data-stanza-number={stanzaIdx + 1}
+                    data-stanza-start={stanzaStartIndex}
+                    data-stanza-end={globalLineIndex - 1}
+                  >
+                    {renderStanzaEmojiRow(stanzaIdx, linesInStanza, stanza)}
+                    {linesInStanza.map(({ line, lineIndex }) =>
+                      renderLine(line, lineIndex, true)
+                    )}
+                  </div>
+                );
+              });
             }
 
             // FLAT SENTENCES: Use renderLine helper for prose, scripts, and legacy poem content
