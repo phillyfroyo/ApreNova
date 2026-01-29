@@ -1,6 +1,6 @@
 // src/components/StoryLoadingSkeleton.tsx
 // Shared loading skeleton for story reader pages
-// Used by loading.tsx files and StreamingStoryReader component
+// Used by loading.tsx files
 
 interface StoryLoadingSkeletonProps {
   message?: string;
