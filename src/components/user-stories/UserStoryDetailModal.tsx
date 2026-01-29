@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { Badge, Button } from "@/components/ui";
-import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
@@ -44,7 +44,8 @@ type UserStoryDetailModalProps = {
 };
 
 // Display status can differ from database status
-type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED" | "INCOMPLETE";
+// CANCELLED with readable content shows as "Ready" (more user-friendly)
+type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
 
 // Map display status to translation key in myStories section
 const statusTranslationKeys: Record<DisplayStatus, string> = {
@@ -53,7 +54,6 @@ const statusTranslationKeys: Record<DisplayStatus, string> = {
   FAILED: "failed",
   PARTIAL: "partial",
   CANCELLED: "cancelled",
-  INCOMPLETE: "incomplete",
 };
 
 const statusConfig: Record<DisplayStatus, {
@@ -90,12 +90,6 @@ const statusConfig: Record<DisplayStatus, {
     icon: XCircle,
     color: "text-gray-600",
     bg: "bg-gray-100",
-    animate: false,
-  },
-  INCOMPLETE: {
-    icon: AlertTriangle,
-    color: "text-orange-600",
-    bg: "bg-orange-100",
     animate: false,
   },
 };
@@ -258,9 +252,13 @@ export default function UserStoryDetailModal({
     });
   const hasReadableChapters = readyLevels.length > 0;
 
-  // Compute display status: CANCELLED with readable chapters shows as INCOMPLETE
+  // Compute display status: CANCELLED with readable chapters shows as READY (more inviting)
+  // We'll show a separate "Partial" indicator for these stories
   const displayStatus: DisplayStatus =
-    story.status === "CANCELLED" && hasReadableChapters ? "INCOMPLETE" : story.status;
+    story.status === "CANCELLED" && hasReadableChapters ? "READY" : story.status;
+
+  // Track if this is a partial story (cancelled but has readable content)
+  const isPartialStory = story.status === "CANCELLED" && hasReadableChapters;
 
   const statusInfo = statusConfig[displayStatus];
   const StatusIcon = statusInfo.icon;
@@ -347,6 +345,13 @@ export default function UserStoryDetailModal({
                     <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.animate ? "animate-spin" : ""}`} />
                     {statusLabel}
                   </span>
+                  {/* Partial indicator for cancelled stories with readable content */}
+                  {isPartialStory && (
+                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {t(typedLang, "myStories", "partial")}
+                    </span>
+                  )}
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                     {typedLang === "es" ? "Mi Historia" : "My Story"}
                   </span>
@@ -543,12 +548,12 @@ export default function UserStoryDetailModal({
                   </div>
                 )}
 
-                {/* Cancelled/Incomplete status message */}
+                {/* Cancelled/Partial status message */}
                 {story.status === "CANCELLED" && (
                   <div className={`${hasReadableChapters ? "bg-orange-50" : "bg-gray-50"} rounded-lg p-4 mb-6`}>
                     <p className={`${hasReadableChapters ? "text-orange-700" : "text-gray-700"} text-sm`}>
                       {hasReadableChapters
-                        ? t(typedLang, "myStories", "incompleteMessage")
+                        ? t(typedLang, "myStories", "partialMessage")
                         : t(typedLang, "myStories", "cancelledMessage")}
                     </p>
                   </div>

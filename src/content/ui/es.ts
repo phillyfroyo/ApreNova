@@ -340,11 +340,10 @@ myStories: {
   waiting: "Esperando",
   storyTooShort: "La historia es muy corta. Por favor proporciona al menos 100 caracteres.",
   storyTooLong: "La historia excede la longitud máxima.",
-  // Cancelled/Incomplete status
+  // Cancelled/Partial status
   cancelled: "Cancelada",
-  incomplete: "Incompleta",
   cancelledMessage: "La carga de esta historia fue cancelada antes de que se completaran los capítulos.",
-  incompleteMessage: "La carga de esta historia fue cancelada. Solo algunos capítulos están disponibles para leer.",
+  partialMessage: "Esta historia fue cancelada durante la carga. Algunos capítulos están disponibles para leer.",
   // Content type selection
   contentType: "Tipo de contenido",
   contentTypeDescription: "Esto nos ayuda a formatear tu historia correctamente.",

@@ -3,7 +3,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { Clock, CheckCircle, AlertCircle, Loader2, XCircle, AlertTriangle } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle, Loader2, XCircle } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 
@@ -20,8 +20,9 @@ interface UserStoryCardProps {
 }
 
 // Display status can differ from database status
-// e.g., CANCELLED with readable chapters shows as "Incomplete"
-type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED" | "INCOMPLETE";
+// Card shows "Ready" for cancelled stories with readable content (more inviting)
+// Detail modal shows "Partial" indicator for those stories
+type DisplayStatus = "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
 
 // Map display status to translation key in myStories section
 const statusTranslationKeys: Record<DisplayStatus, string> = {
@@ -30,7 +31,6 @@ const statusTranslationKeys: Record<DisplayStatus, string> = {
   FAILED: "failed",
   PARTIAL: "partial",
   CANCELLED: "cancelled",
-  INCOMPLETE: "incomplete",
 };
 
 const statusConfig: Record<DisplayStatus, {
@@ -69,12 +69,6 @@ const statusConfig: Record<DisplayStatus, {
     bg: "bg-gray-100",
     animate: false,
   },
-  INCOMPLETE: {
-    icon: AlertTriangle,
-    color: "text-orange-500",
-    bg: "bg-orange-100",
-    animate: false,
-  },
 };
 
 export default function UserStoryCard({
@@ -86,9 +80,11 @@ export default function UserStoryCard({
   lang = "en",
   onClick,
 }: UserStoryCardProps) {
-  // Compute display status: CANCELLED with readable chapters shows as INCOMPLETE
+  // Compute display status for card badge:
+  // - CANCELLED with readable content shows as "Ready" (more inviting on card)
+  // - Detail modal will show "Partial" indicator for these stories
   const displayStatus: DisplayStatus =
-    status === "CANCELLED" && hasReadableChapters ? "INCOMPLETE" : status;
+    status === "CANCELLED" && hasReadableChapters ? "READY" : status;
 
   const statusInfo = statusConfig[displayStatus];
   const StatusIcon = statusInfo.icon;
