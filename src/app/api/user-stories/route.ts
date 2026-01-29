@@ -92,9 +92,13 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, content, sourceLanguage, description, processingMode: rawProcessingMode } = body;
+    const { title, content, sourceLanguage, description, processingMode: rawProcessingMode, rawHtml, sourceFormat: rawSourceFormat } = body;
     const VALID_PROCESSING_MODES = ["original_only", "rewritten_only", "both"];
     const processingMode = VALID_PROCESSING_MODES.includes(rawProcessingMode) ? rawProcessingMode : "both";
+
+    // Validate sourceFormat if provided
+    const VALID_SOURCE_FORMATS = ["html", "txt", "rtf", "md"];
+    const sourceFormat = VALID_SOURCE_FORMATS.includes(rawSourceFormat) ? rawSourceFormat : null;
 
     // Validate required fields - only content is required now
     if (!content) {
@@ -185,6 +189,9 @@ export async function POST(req: NextRequest) {
         sourceLanguage: finalSourceLanguage,
         rawContent: content,
         processingMode,
+        // Source format tracking for robust stanza detection
+        rawHtml: sourceFormat === "html" ? rawHtml : null,
+        sourceFormat,
         status: "PROCESSING",
         visibility: "PRIVATE",
         updatedAt: new Date(),

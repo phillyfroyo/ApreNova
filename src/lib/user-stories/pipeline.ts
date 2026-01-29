@@ -402,6 +402,10 @@ async function processAllLevels(
     userId: string;
     levels: { id: string; level: string }[];
     storyType?: string | null;
+    /** Source file format for robust stanza detection */
+    sourceFormat?: string | null;
+    /** Raw HTML content (only for HTML uploads) */
+    rawHtml?: string | null;
   },
   levelsToProcess: Set<string>,
   sourceLanguage: "en" | "es",
@@ -456,6 +460,8 @@ async function processAllLevels(
         storyType: story.storyType as StoryType | null, // For poem/script preprocessing
         structureType, // Pass for anthology-aware incremental build
         hasChapters, // For content metadata
+        sourceFormat: story.sourceFormat as "html" | "txt" | "rtf" | "md" | null | undefined,
+        rawHtml: story.rawHtml,
       });
 
       if (translateResult.success) {
@@ -506,6 +512,8 @@ async function processAllLevels(
           storyType: story.storyType as StoryType | null, // For poetry-specific rewrite handling
           structureType, // Pass for anthology-aware incremental build
           hasChapters, // For content metadata
+          sourceFormat: story.sourceFormat as "html" | "txt" | "rtf" | "md" | null | undefined,
+          rawHtml: story.rawHtml,
         });
 
         if (streamingResult.success) {
@@ -618,6 +626,9 @@ export async function processUserStory(storyId: string): Promise<void> {
       sourceLanguage: true,
       storyType: true, // Needed for poetry-specific rewrite handling
       processingMode: true,
+      // Source format info for robust stanza detection
+      sourceFormat: true,
+      rawHtml: true,
       UserStoryLevel: {
         select: {
           id: true,
@@ -744,7 +755,7 @@ export async function processUserStory(storyId: string): Promise<void> {
 
     // Step 6: Process all levels (NEW PHASED APPROACH)
     const { allSucceeded, anySucceeded } = await processAllLevels(
-      { ...storyWithLevels, storyType },
+      { ...storyWithLevels, storyType, sourceFormat: story.sourceFormat, rawHtml: story.rawHtml },
       levelsToProcess,
       sourceLanguage,
       detectedLevel

@@ -179,6 +179,8 @@ model UserStory {
   visibility        StoryVisibility     @default(PRIVATE)
   processingMode    String?             // "original_only" | "rewritten_only" | "both"
   rawContent        String
+  rawHtml           String?             // Original HTML (only for .html/.htm uploads)
+  sourceFormat      String?             // "html" | "txt" | "rtf" | "md"
   cancelledAt       DateTime?           // Set when user cancels upload - pipeline checks this before each chapter
   createdAt         DateTime            @default(now())
   updatedAt         DateTime

@@ -898,29 +898,147 @@ function detectBackMatterStart(lines: string[]): number {
 /**
  * Remove Gutenberg front matter markers from the beginning
  * These often appear before the actual story front matter
+ *
+ * Improved strategy:
+ * 1. Scan sections looking for metadata patterns (not just the first 5)
+ * 2. DON'T break on first non-match - metadata can be interspersed
+ * 3. Stop when we find actual content (thematic headers, chapter markers, substantial prose)
  */
 function removeGutenbergFrontMatter(text: string): string {
-  // Split by double newlines and check if first sections are Gutenberg boilerplate
+  // Split by double newlines and scan for metadata sections
   const sections = text.split(/\n\n+/);
-  let startIndex = 0;
 
-  for (let i = 0; i < Math.min(5, sections.length); i++) {
+  // Patterns for Gutenberg metadata (front matter to remove)
+  const metadataPatterns = [
+    // Project Gutenberg header/footer markers
+    /^The Project Gutenberg (EBook|eBook|Ebook|e-book) of/i,
+    /^\*{3}\s*START OF (THE |THIS )?(PROJECT )?GUTENBERG/i,
+    /^\*{3}\s*END OF (THE |THIS )?(PROJECT )?GUTENBERG/i,
+    // Book metadata fields (short sections with label: value format)
+    /^Title:\s*.+/i,
+    /^Author:\s*.+/i,
+    /^Editor:\s*.+/i,
+    /^Illustrator:\s*.+/i,
+    /^Translator:\s*.+/i,
+    /^Release Date:\s*.+/i,
+    /^Posting Date:\s*.+/i,
+    /^Last Updated:\s*.+/i,
+    /^Language:\s*.+/i,
+    /^Character set encoding:\s*.+/i,
+    /^Credits?:\s*.+/i,
+    /^Produced by\s*.+/i,
+    /^E-?text prepared by/i,
+    /^Note:\s*.+/i,
+    // Transcriber notes and edition info
+    /^Transcriber['']?s?\s*[Nn]ote/i,
+    /^\[?Most recently updated:/i,
+    /^This (e-?book|edition) (is|was)/i,
+    // Copyright and license
+    /^Copyright\s+\d{4}/i,
+    /^Public [Dd]omain/i,
+    // URLs and file info
+    /^https?:\/\//i,
+    /^www\./i,
+    /^\*{3}\s*$/,  // Standalone asterisk dividers
+  ];
+
+  // Patterns that indicate we've reached ACTUAL CONTENT (stop removing)
+  const contentPatterns = [
+    // Thematic section headers for anthologies: "I. LIFE.", "II. LOVE."
+    /^([IVXLC]+)\.\s+([A-Z][A-Z\s,'".\-—–]+)\.?\s*$/,
+    // Chapter/book markers
+    /^(CHAPTER|Chapter|BOOK|Book|PART|Part|CANTO|Canto)\s+/i,
+    // Roman numeral alone (poem number): "I.", "II."
+    /^[IVXLC]+\.?\s*$/,
+    // ALL CAPS poem titles (3-50 chars, at least 2 capital letters)
+    /^[A-Z][A-Z\s,.'"-]{2,48}\.?\s*$/,
+    // Content that looks like actual prose/poetry (long lines, sentence structure)
+  ];
+
+  // Helper: check if a section looks like metadata
+  const isMetadata = (section: string): boolean => {
+    const trimmed = section.trim();
+    if (!trimmed) return true; // Empty sections are metadata
+
+    // Check against metadata patterns
+    for (const pattern of metadataPatterns) {
+      if (pattern.test(trimmed)) return true;
+    }
+
+    // Short sections (under 200 chars) that look like bibliographic info
+    if (trimmed.length < 200) {
+      // Contains common metadata keywords
+      if (/\b(copyright|license|edition|published|printed|transcrib|ebook|e-book|gutenberg)\b/i.test(trimmed)) {
+        return true;
+      }
+      // Looks like a label:value pair on a single line
+      if (/^[A-Za-z\s]{2,20}:\s*.+$/.test(trimmed) && !trimmed.includes('\n')) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Helper: check if a section looks like actual content
+  const isContent = (section: string): boolean => {
+    const trimmed = section.trim();
+    if (!trimmed) return false;
+
+    // Check content patterns
+    for (const pattern of contentPatterns) {
+      if (pattern.test(trimmed)) return true;
+    }
+
+    // Multiple lines of substantial text (likely prose/poetry content)
+    const lines = trimmed.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length >= 3) {
+      const avgLineLength = trimmed.length / lines.length;
+      // If we have 3+ lines averaging 20+ chars, likely content
+      if (avgLineLength >= 20) return true;
+    }
+
+    // Single long line (100+ chars) that's not metadata
+    if (trimmed.length >= 100 && !isMetadata(section)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Scan sections to find where content starts
+  let contentStartIndex = 0;
+  let consecutiveMetadata = 0;
+
+  // Allow scanning up to 30 sections (generous for poetry anthologies with lots of front matter)
+  for (let i = 0; i < Math.min(30, sections.length); i++) {
     const section = sections[i].trim();
-    if (
-      /^The Project Gutenberg EBook of/i.test(section) ||
-      /^\*{3}\s*START OF (THE |THIS )?PROJECT GUTENBERG/i.test(section) ||
-      /^Produced by .+ from/i.test(section) ||
-      /^Release Date:/i.test(section) ||
-      /^\[?Most recently updated:/i.test(section)
-    ) {
-      startIndex = i + 1;
-    } else {
+
+    if (isContent(section)) {
+      // Found actual content - this is where the story/poems start
+      contentStartIndex = i;
       break;
+    }
+
+    if (isMetadata(section)) {
+      consecutiveMetadata++;
+      contentStartIndex = i + 1; // Skip this metadata section
+    } else {
+      // Ambiguous section - if we've seen metadata, treat as continuation
+      // If we haven't seen any metadata yet, might be content starting
+      if (consecutiveMetadata === 0) {
+        // No metadata seen yet, this might be content
+        contentStartIndex = i;
+        break;
+      }
+      // Otherwise, keep scanning (could be an oddly formatted metadata section)
     }
   }
 
-  if (startIndex > 0) {
-    return sections.slice(startIndex).join('\n\n').trim();
+  if (contentStartIndex > 0) {
+    const result = sections.slice(contentStartIndex).join('\n\n').trim();
+    console.log(`[removeGutenbergFrontMatter] Removed ${contentStartIndex} front matter sections`);
+    return result;
   }
 
   return text.trim();

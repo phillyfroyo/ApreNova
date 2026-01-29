@@ -50,6 +50,8 @@ import {
   detectStanzas,
   toMetadataMap,
   toTextLines,
+  getStanzaParser,
+  type SourceFormat,
 } from "@/lib/poem-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 import { StoryType } from "@/types/story";
@@ -104,17 +106,34 @@ interface CostContext {
 // ============================================================================
 
 /**
+ * Options for format-aware preprocessing
+ */
+export interface PreprocessOptions {
+  /** Source file format for robust stanza detection */
+  sourceFormat?: SourceFormat | null;
+  /** Raw HTML content (only for HTML uploads) */
+  rawHtml?: string | null;
+}
+
+/**
  * Preprocess chapter text based on story type to extract line metadata.
  * - For poems: Detects stanza breaks and assigns stanza numbers
  * - For scripts: Extracts speaker names, annotations, and stage directions
  *
+ * NEW: When sourceFormat and rawHtml are provided (from HTML uploads),
+ * uses semantic <p> tag parsing instead of ratio-based heuristics.
+ * This provides much more accurate stanza detection for sources like
+ * Project Gutenberg where empty <p> tags mark stanza boundaries.
+ *
  * @param chapterText - The chapter text to preprocess
  * @param storyType - The detected story type (poem, tv-script, movie-script, etc.)
+ * @param options - Optional format info for robust stanza detection
  * @returns Object with processed lines and metadata map
  */
 export function preprocessChapterForStoryType(
   chapterText: string,
-  storyType: StoryType | null | undefined
+  storyType: StoryType | null | undefined,
+  options?: PreprocessOptions
 ): {
   /** Lines to translate (speaker names removed for scripts) */
   processedLines: string[];
@@ -126,7 +145,7 @@ export function preprocessChapterForStoryType(
   const lineMetadata = new Map<number, LineMetadata>();
   const speakerNames: string[] = [];
 
-  // Handle poems - use the new poem-processing module (single source of truth)
+  // Handle poems - use format-specific parser when available
   if (storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic') {
     // DEBUG: Log sample of input to stanza detector to trace spacing
     const debugLines = chapterText.split('\n').slice(0, 30);
@@ -148,8 +167,21 @@ export function preprocessChapterForStoryType(
       console.log(`  ${i}: ${display}`);
     });
 
-    // Use the canonical stanza detector from poem-processing module
-    const stanzaResult = detectStanzas(chapterText, { method: 'adaptive' });
+    // Use format-specific parser if source format info is available
+    // This enables semantic HTML parsing for Gutenberg-style sources
+    let stanzaResult;
+    if (options?.sourceFormat || options?.rawHtml) {
+      const { content, parse, parserType } = getStanzaParser(chapterText, {
+        sourceFormat: options.sourceFormat,
+        rawHtml: options.rawHtml,
+      });
+      console.log(`[PreprocessChapter] Using ${parserType} parser (sourceFormat: ${options.sourceFormat || 'unknown'})`);
+      stanzaResult = parse(content);
+    } else {
+      // Fallback to adaptive stanza detection (legacy behavior)
+      console.log(`[PreprocessChapter] No source format info, using adaptive stanza detection`);
+      stanzaResult = detectStanzas(chapterText, { method: 'adaptive' });
+    }
 
     // Convert to the format expected by the rest of the pipeline
     const processedLines = toTextLines(stanzaResult);
@@ -609,6 +641,10 @@ export interface TranslateParams {
   structureType?: "prose" | "anthology" | "epic" | "script";
   /** Whether the story has multiple chapters (for content metadata) */
   hasChapters: boolean;
+  /** Source file format for robust stanza detection */
+  sourceFormat?: SourceFormat | null;
+  /** Raw HTML content (only for HTML uploads) */
+  rawHtml?: string | null;
 }
 
 export interface TranslateResult {
@@ -627,7 +663,7 @@ export interface TranslateResult {
 export async function translateLevelChapters(
   params: TranslateParams
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters } = params;
+  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters, sourceFormat, rawHtml } = params;
 
   const ctx: CostContext = { storyId, userId };
   const tracker = new LevelProgressTracker(levelId, chapters.length);
@@ -673,9 +709,11 @@ export async function translateLevelChapters(
       // The chapter count should only increment AFTER content is written to the database
 
       // Preprocess for story type (poems: stanzas, scripts: speakers)
+      // Pass source format info for robust HTML stanza detection
       const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
         chapterText,
-        storyType
+        storyType,
+        { sourceFormat, rawHtml }
       );
 
       // Translate the processed lines (with chunking for large chapters, artistic handling for poetry)
@@ -1016,6 +1054,10 @@ export interface StreamingLevelParams {
   structureType?: "prose" | "anthology" | "epic" | "script";
   /** Whether the story has multiple chapters */
   hasChapters: boolean;
+  /** Source file format for robust stanza detection */
+  sourceFormat?: SourceFormat | null;
+  /** Raw HTML content (only for HTML uploads) */
+  rawHtml?: string | null;
 }
 
 export interface StreamingLevelResult {
@@ -1144,7 +1186,7 @@ async function translateChaptersConsumer(
   params: StreamingLevelParams,
   queue: StreamingChapterQueue
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters } = params;
+  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters, sourceFormat, rawHtml } = params;
 
   const ctx: CostContext = { storyId, userId };
   const totalChapters = chapters.length;
@@ -1203,9 +1245,12 @@ async function translateChaptersConsumer(
     try {
       // Preprocess for story type (poems: stanzas, scripts: speakers)
       // This extracts metadata from the REWRITTEN content
+      // Note: For rewritten content, we don't have HTML anymore (it was plain text after rewrite)
+      // So we pass sourceFormat but not rawHtml for the streaming consumer
       const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
         content,
-        storyType
+        storyType,
+        { sourceFormat, rawHtml: null } // rawHtml is not applicable after rewrite
       );
 
       // Call Claude to translate (with chunking for large chapters, artistic handling for poetry)

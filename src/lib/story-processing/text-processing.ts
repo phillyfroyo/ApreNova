@@ -725,12 +725,20 @@ export function paginateAnthologyPoems(
     let poemPageCount = 0;
 
     // Helper to add a page for this poem
+    // Skips pages that have no actual content (only blank lines)
     const addPage = (
       srcLines: string[],
       transLines: string[],
       pageMeta: Map<number, LineMetadata>,
       isFirst: boolean
     ) => {
+      // Check if page has any actual content (non-blank lines)
+      const hasContent = srcLines.some(line => line.trim() !== '');
+      if (!hasContent) {
+        // Skip empty pages - don't add them
+        return;
+      }
+
       pages.push({
         sourceLines: srcLines,
         translatedLines: transLines,

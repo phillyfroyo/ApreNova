@@ -22,3 +22,18 @@ export {
   toTextLines,
   groupLinesIntoStanzas,
 } from './stanza-detector';
+
+// Format-specific parsers (for robust HTML stanza detection)
+export type {
+  SourceFormat,
+  FormatParserOptions,
+  StanzaParserSelection,
+} from './format-parsers';
+
+export {
+  getStanzaParser,
+  parseHtmlForStanzas,
+  parseTextForStanzas,
+  HtmlStanzaParser,
+  TextStanzaParser,
+} from './format-parsers';

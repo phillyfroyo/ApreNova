@@ -121,6 +121,10 @@ interface StartUploadOptions {
   description?: string;
   structureType?: "auto" | "prose" | "anthology" | "epic" | "script";
   processingMode?: "original_only" | "rewritten_only" | "both";
+  /** Original HTML content (only for .html/.htm uploads) for semantic stanza detection */
+  rawHtml?: string;
+  /** Source file format: "html" | "txt" | "rtf" | "md" */
+  sourceFormat?: "html" | "txt" | "rtf" | "md";
 }
 
 interface StoryUploadContextType {
@@ -562,7 +566,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const startUpload = useCallback(async (options: StartUploadOptions) => {
-    const { content, title: optionalTitle, sourceLanguage, description, structureType, processingMode } = options;
+    const { content, title: optionalTitle, sourceLanguage, description, structureType, processingMode, rawHtml, sourceFormat } = options;
     const controller = new AbortController();
     setAbortController(controller);
     setIsUploading(true);
@@ -615,6 +619,8 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           description,
           structureType: structureType || "auto",
           processingMode: processingMode || "both",
+          rawHtml,
+          sourceFormat,
         }),
         // Intentionally NOT using signal here - see cancelRequestedRef handling below
       });

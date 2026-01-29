@@ -50,6 +50,10 @@ export default function UploadStoryModal() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Source format tracking for robust stanza detection
+  const [rawHtml, setRawHtml] = useState<string | undefined>();
+  const [sourceFormat, setSourceFormat] = useState<"html" | "txt" | "rtf" | "md">("txt");
+
   // Fetch user stats when modal opens
   useEffect(() => {
     if (showUploadModal && session?.user) {
@@ -90,6 +94,8 @@ export default function UploadStoryModal() {
       setError("");
       setUploadedFileName(null);
       setIsDragging(false);
+      setRawHtml(undefined);
+      setSourceFormat("txt");
     }
   }, [showUploadModal]);
 
@@ -103,15 +109,30 @@ export default function UploadStoryModal() {
       let text = await file.text();
       const fileName = file.name.toLowerCase();
 
-      // Convert HTML to plain text, preserving whitespace for poetry
-      if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
+      // Detect and store source format for robust stanza detection
+      const isHtmlFile = fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html";
+      const isRtfFile = fileName.endsWith(".rtf") || file.type === "application/rtf";
+      const isMdFile = fileName.endsWith(".md") || file.type === "text/markdown";
+
+      // Set source format based on file type
+      if (isHtmlFile) {
+        setSourceFormat("html");
+        // Preserve original HTML for semantic stanza detection in pipeline
+        setRawHtml(text);
+        // Extract text for preview/validation only
         const result = extractTextFromHTML(text, { preserveWhitespace: true });
         text = result.text;
-      }
-
-      // RTF basic handling - strip RTF codes
-      if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
+      } else if (isRtfFile) {
+        setSourceFormat("rtf");
+        setRawHtml(undefined);
+        // RTF basic handling - strip RTF codes
         text = stripRTF(text);
+      } else if (isMdFile) {
+        setSourceFormat("md");
+        setRawHtml(undefined);
+      } else {
+        setSourceFormat("txt");
+        setRawHtml(undefined);
       }
 
       setContent(text);
@@ -152,6 +173,8 @@ export default function UploadStoryModal() {
     setUploadedFileName(null);
     setContent("");
     setError("");
+    setRawHtml(undefined);
+    setSourceFormat("txt");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -159,9 +182,11 @@ export default function UploadStoryModal() {
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    // If user starts typing, clear any uploaded file reference
+    // If user starts typing, clear any uploaded file reference and reset format
     if (uploadedFileName) {
       setUploadedFileName(null);
+      setRawHtml(undefined);
+      setSourceFormat("txt");
     }
   };
 
@@ -210,6 +235,8 @@ export default function UploadStoryModal() {
       description: description.trim() || undefined,
       structureType: structureType,
       processingMode: processingMode,
+      rawHtml: rawHtml,
+      sourceFormat: sourceFormat,
     });
   };
 

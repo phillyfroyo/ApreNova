@@ -100,7 +100,9 @@ function analyzeBlankLinePattern(lines: string[]): {
     blankLines,
     contentFollowedBySingleBlank,
     visualSpacingRatio,
-    isVisualSpacingPattern: visualSpacingRatio > 0.7,
+    // Threshold lowered from 0.7 to 0.6 to catch Gutenberg HTML visual spacing
+    // patterns that vary between chapters (e.g., 70.3% vs 68.2%)
+    isVisualSpacingPattern: visualSpacingRatio > 0.6,
   };
 }
 
