@@ -1,11 +1,13 @@
 // src/app/[lng]/my-stories/[storyId]/[level]/[chapter]/[page]/page.tsx
+// Unified reader page for user stories
+// Handles both complete content and in-progress stories with pending chapters
 
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
-import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
+import UserStoryReader from "@/components/user-stories/UserStoryReader";
 import type { Language } from "@/types/i18n";
 import {
   getUserStoryContent,
@@ -61,12 +63,21 @@ export default async function UserStoryReaderPage({
     lng as Language
   );
 
-  const hasLines = story?.lines && story.lines.length > 0;
-  const hasStanzas = story?.stanzas && story.stanzas.length > 0;
-  console.log(`[UserStoryReaderPage] Story result: hasStory=${!!story}, hasLines=${hasLines}, hasStanzas=${hasStanzas}, linesCount=${story?.lines?.length}`);
+  // Story not found at all
+  if (!story) {
+    console.log(`[UserStoryReaderPage] Story not found`);
+    return notFound();
+  }
 
-  if (!story || (!hasLines && !hasStanzas)) {
-    console.log(`[UserStoryReaderPage] No story content, returning notFound`);
+  const hasLines = story.lines && story.lines.length > 0;
+  const hasStanzas = story.stanzas && story.stanzas.length > 0;
+  const isPending = story.chapterPending || story.levelPending;
+
+  console.log(`[UserStoryReaderPage] Story result: hasLines=${hasLines}, hasStanzas=${hasStanzas}, isPending=${isPending}, isProcessing=${story.isProcessing}`);
+
+  // If not pending and no content, return 404
+  if (!isPending && !hasLines && !hasStanzas) {
+    console.log(`[UserStoryReaderPage] No content and not pending, returning notFound`);
     return notFound();
   }
 
@@ -77,19 +88,26 @@ export default async function UserStoryReaderPage({
       : story.titleEn || story.title;
 
   return (
-    <StoryLayoutWithAzureTTS
-      title={title || "My Story"}
+    <UserStoryReader
+      storyId={storyId}
       storySlug={story.storySlug}
-      sentences={story.lines}
+      title={title || "My Story"}
+      lines={story.lines}
       stanzas={story.stanzas}
-      initialLevel={level}
+      level={level}
+      chapter={parseInt(chapter)}
+      page={parseInt(page)}
       storyMap={storyMap}
-      isUserStory={true}
-      userStoryId={storyId}
       availableLevels={availableLevels}
       storyType={story.storyType}
       detectedLevel={story.detectedLevel}
       structureType={story.structureType}
+      lng={lng as Language}
+      isProcessing={story.isProcessing}
+      chapterPending={story.chapterPending}
+      levelPending={story.levelPending}
+      availableChapters={story.availableChapters}
+      totalChapters={story.totalChapters}
     />
   );
 }

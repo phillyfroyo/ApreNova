@@ -14,6 +14,46 @@ const DEFAULT_CONFIG: StanzaDetectorConfig = {
   method: 'adaptive',
 };
 
+// Patterns for detecting poem/stanza boundaries in anthology collections
+// These are used as fallback when blank-line detection fails (e.g., Gutenberg visual spacing)
+const PATTERNS = {
+  // Roman numeral only (I., II., III., etc.) - poem number within section
+  ROMAN_NUMERAL: /^([IVXLC]+)\.\s*$/,
+  // Section header (I. LIFE., II. LOVE.) - thematic sections
+  SECTION_HEADER: /^([IVXLC]+)\.\s+([A-Z][A-Z\s,'".\-—–]+)\.?\s*$/,
+  // ALL CAPS title (SUCCESS., BEQUEST.) - poem titles
+  CAPS_TITLE: /^[A-Z][A-Z\s,'".\-—–]{2,}\.?\s*$/,
+  // Editorial note in brackets [Published in...]
+  EDITORIAL_NOTE: /^\s*\[.*\]\s*$/,
+};
+
+/**
+ * Detect if a line is a structural poem/stanza marker.
+ * Returns the type of marker or null if not a marker.
+ */
+function detectStructuralMarker(line: string): 'section' | 'poem' | 'title' | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Section headers take priority (I. LIFE.)
+  if (PATTERNS.SECTION_HEADER.test(trimmed)) {
+    return 'section';
+  }
+
+  // Roman numeral alone (I., II.) - poem number
+  if (PATTERNS.ROMAN_NUMERAL.test(trimmed)) {
+    return 'poem';
+  }
+
+  // ALL CAPS title (SUCCESS., BEQUEST.)
+  // Only if it's relatively short (under 50 chars) to avoid matching long content lines
+  if (trimmed.length < 50 && PATTERNS.CAPS_TITLE.test(trimmed)) {
+    return 'title';
+  }
+
+  return null;
+}
+
 /**
  * Analyze blank line patterns to determine if content uses visual spacing.
  * Visual spacing pattern: >70% of content lines followed by exactly 1 blank.
@@ -138,6 +178,11 @@ export function detectStanzas(
     `threshold: ${threshold}`
   );
 
+  // For visual spacing patterns (Gutenberg-style), check if we have structural markers
+  // that can help identify stanza/poem boundaries
+  const useStructuralMarkers = analysis.isVisualSpacingPattern;
+  let structuralMarkersFound = 0;
+
   // Build annotated lines and group into stanzas
   const annotatedLines: AnnotatedPoemLine[] = [];
   const stanzas: AnnotatedPoemLine[][] = [];
@@ -145,6 +190,7 @@ export function detectStanzas(
   let currentStanzaLines: AnnotatedPoemLine[] = [];
   let consecutiveBlanks = 0;
   let lastWasContent = false;
+  let pendingBlanks: { sourceIndex: number }[] = [];
 
   lines.forEach((line, sourceIndex) => {
     const isBlank = line.trim() === '';
@@ -152,18 +198,32 @@ export function detectStanzas(
     if (isBlank) {
       if (lastWasContent) {
         consecutiveBlanks++;
+        pendingBlanks.push({ sourceIndex });
       }
       // Don't add blank lines yet - wait to see if it's a stanza break
     } else {
       // Content line encountered
-      if (consecutiveBlanks >= threshold && lastWasContent) {
+      const structuralMarker = useStructuralMarkers ? detectStructuralMarker(line) : null;
+
+      // Determine if this is a stanza break:
+      // 1. Consecutive blanks >= threshold (traditional method), OR
+      // 2. Structural marker detected (section header, poem number, title)
+      //    - But only if we have SOME blanks before it (to avoid breaking mid-stanza)
+      const isBlankBasedBreak = consecutiveBlanks >= threshold && lastWasContent;
+      const isStructuralBreak = structuralMarker && consecutiveBlanks > 0 && lastWasContent;
+
+      if (isBlankBasedBreak || isStructuralBreak) {
+        if (isStructuralBreak && !isBlankBasedBreak) {
+          structuralMarkersFound++;
+        }
+
         // This is a stanza break - add break markers for visual spacing
-        for (let i = 0; i < consecutiveBlanks; i++) {
+        for (const pending of pendingBlanks) {
           annotatedLines.push({
             text: '',
             stanzaNumber: currentStanza,
             isStanzaBreak: true,
-            sourceIndex: sourceIndex - consecutiveBlanks + i,
+            sourceIndex: pending.sourceIndex,
           });
         }
 
@@ -176,17 +236,18 @@ export function detectStanzas(
       } else if (consecutiveBlanks > 0 && consecutiveBlanks < threshold) {
         // Blanks below threshold - these are visual spacing, not stanza breaks
         // Still add them as break markers but DON'T increment stanza
-        for (let i = 0; i < consecutiveBlanks; i++) {
+        for (const pending of pendingBlanks) {
           annotatedLines.push({
             text: '',
             stanzaNumber: currentStanza,
             isStanzaBreak: true,
-            sourceIndex: sourceIndex - consecutiveBlanks + i,
+            sourceIndex: pending.sourceIndex,
           });
         }
       }
 
       consecutiveBlanks = 0;
+      pendingBlanks = [];
 
       // Add the content line
       const annotatedLine: AnnotatedPoemLine = {
@@ -207,9 +268,12 @@ export function detectStanzas(
   }
 
   // Log results
+  const detectionMethod = structuralMarkersFound > 0
+    ? `${config.method}+structural(${structuralMarkersFound})`
+    : config.method;
   console.log(
     `[StanzaDetector] Result: ${stanzas.length} stanzas, ` +
-    `${annotatedLines.length} annotated lines`
+    `${annotatedLines.length} annotated lines (method: ${detectionMethod})`
   );
 
   // Log stanza sizes for debugging

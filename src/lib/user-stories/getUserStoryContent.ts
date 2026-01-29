@@ -89,8 +89,35 @@ function inferStructureType(
   }
 }
 
+/** Result type for getUserStoryContent */
+export interface UserStoryContentResult {
+  // Content data
+  storySlug: string;
+  storyId: string;
+  title: string;
+  titleEs?: string | null;
+  titleEn?: string | null;
+  level: number;
+  chapter: number;
+  page: number;
+  hasChapters: boolean;
+  lines: StoryLine[];
+  stanzas?: StoryLine[][];
+  isUserStory: true;
+  storyType: string | null;
+  detectedLevel: string | null;
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  // Status info for handling pending content
+  isProcessing?: boolean;
+  chapterPending?: boolean;
+  levelPending?: boolean;
+  availableChapters?: number[];
+  totalChapters?: number;
+}
+
 /**
  * Get content for a user story from the database
+ * Now supports reading during processing with pending state info
  */
 export async function getUserStoryContent(
   userStoryId: string,
@@ -99,7 +126,7 @@ export async function getUserStoryContent(
   chapter: string,
   page: string,
   lng: Language
-) {
+): Promise<UserStoryContentResult | null> {
   try {
     // Fetch the story and verify ownership or public visibility
     const story = await prisma.userStory.findFirst({
@@ -119,10 +146,10 @@ export async function getUserStoryContent(
     });
 
     if (!story) {
-      throw new Error("Story not found or access denied");
+      return null; // Story not found
     }
 
-    // Fetch the level content
+    // Fetch the level content with processing progress
     const levelData = await prisma.userStoryLevel.findUnique({
       where: {
         userStoryId_level: {
@@ -130,80 +157,124 @@ export async function getUserStoryContent(
           level,
         },
       },
+      select: {
+        status: true,
+        content: true,
+        processingProgress: true,
+      },
     });
 
-    if (!levelData || levelData.status !== "READY") {
-      throw new Error("Level content not ready");
-    }
-
-    const levelContent = levelData.content as unknown as LevelContent;
-
-    const chapterNum = parseInt(chapter);
-    const pageNum = parseInt(page);
-    const pageData = levelContent.chapters?.[chapterNum]?.pages?.[pageNum];
-
-    if (pageData) {
-      // Handle both flat lines and nested stanzas (for poems)
-      const hasStanzas = !!pageData.stanzas && pageData.stanzas.length > 0;
-      const hasLines = !!pageData.lines && pageData.lines.length > 0;
-
-      // Flatten stanzas to lines for backwards compatibility with page component
-      // while also passing the stanzas structure for poem-aware rendering
-      let lines: StoryLine[] = [];
-      if (hasStanzas) {
-        // Flatten stanzas into lines array, preserving stanza metadata
-        lines = pageData.stanzas!.flatMap((stanza, stanzaIdx) =>
-          stanza.map((line, lineIdx) => ({
-            ...line,
-            stanzaNumber: line.stanzaNumber ?? (stanzaIdx + 1),
-            // Mark last line of each stanza (except the last stanza) as having a break after
-            isStanzaBreak: lineIdx === stanza.length - 1 && stanzaIdx < pageData.stanzas!.length - 1,
-          }))
-        );
-      } else if (hasLines) {
-        lines = pageData.lines!;
-      }
-
-      // Infer structure type for navigation labels
-      const structureType = inferStructureType(story.storyType, levelContent);
-
+    // Level doesn't exist yet
+    if (!levelData) {
       return {
         storySlug: story.slug,
         storyId: story.id,
         title: story.title,
         titleEs: story.titleEs,
         titleEn: story.titleEn,
-        level: levelContent.level,
-        chapter: chapterNum,
-        page: pageNum,
-        hasChapters: levelContent.hasChapters,
-        lines,
-        stanzas: hasStanzas ? pageData.stanzas : undefined,
+        level: 0,
+        chapter: parseInt(chapter),
+        page: parseInt(page),
+        hasChapters: false,
+        lines: [],
         isUserStory: true,
         storyType: story.storyType,
         detectedLevel: story.detectedLevel,
-        structureType,
+        isProcessing: true,
+        levelPending: true,
+        availableChapters: [],
+        totalChapters: 0,
       };
-    } else {
-      throw new Error(`Page not found: chapter ${chapterNum}, page ${pageNum}`);
     }
+
+    const isProcessing = levelData.status === "PROCESSING" || levelData.status === "PENDING";
+    const levelContent = levelData.content as unknown as LevelContent | null;
+    const progress = levelData.processingProgress as { totalChapters?: number } | null;
+
+    // Get available chapters from content
+    const availableChapters = levelContent?.chapters
+      ? Object.keys(levelContent.chapters).map(Number).sort((a, b) => a - b)
+      : [];
+    const totalChapters = progress?.totalChapters || availableChapters.length;
+
+    const chapterNum = parseInt(chapter);
+    const pageNum = parseInt(page);
+
+    // Check if chapter is available
+    if (!levelContent?.chapters?.[chapterNum]) {
+      // Chapter not available yet
+      return {
+        storySlug: story.slug,
+        storyId: story.id,
+        title: story.title,
+        titleEs: story.titleEs,
+        titleEn: story.titleEn,
+        level: levelContent?.level || 0,
+        chapter: chapterNum,
+        page: pageNum,
+        hasChapters: levelContent?.hasChapters ?? (totalChapters > 1),
+        lines: [],
+        isUserStory: true,
+        storyType: story.storyType,
+        detectedLevel: story.detectedLevel,
+        structureType: inferStructureType(story.storyType, levelContent || undefined),
+        isProcessing,
+        chapterPending: true,
+        availableChapters,
+        totalChapters,
+      };
+    }
+
+    const pageData = levelContent.chapters[chapterNum]?.pages?.[pageNum];
+
+    if (!pageData) {
+      // Page not found in this chapter
+      return null;
+    }
+
+    // Handle both flat lines and nested stanzas (for poems)
+    const hasStanzas = !!pageData.stanzas && pageData.stanzas.length > 0;
+    const hasLines = !!pageData.lines && pageData.lines.length > 0;
+
+    // Flatten stanzas to lines for backwards compatibility with page component
+    let lines: StoryLine[] = [];
+    if (hasStanzas) {
+      lines = pageData.stanzas!.flatMap((stanza, stanzaIdx) =>
+        stanza.map((line, lineIdx) => ({
+          ...line,
+          stanzaNumber: line.stanzaNumber ?? (stanzaIdx + 1),
+          isStanzaBreak: lineIdx === stanza.length - 1 && stanzaIdx < pageData.stanzas!.length - 1,
+        }))
+      );
+    } else if (hasLines) {
+      lines = pageData.lines!;
+    }
+
+    const structureType = inferStructureType(story.storyType, levelContent);
+
+    return {
+      storySlug: story.slug,
+      storyId: story.id,
+      title: story.title,
+      titleEs: story.titleEs,
+      titleEn: story.titleEn,
+      level: levelContent.level,
+      chapter: chapterNum,
+      page: pageNum,
+      hasChapters: levelContent.hasChapters,
+      lines,
+      stanzas: hasStanzas ? pageData.stanzas : undefined,
+      isUserStory: true,
+      storyType: story.storyType,
+      detectedLevel: story.detectedLevel,
+      structureType,
+      isProcessing,
+      availableChapters,
+      totalChapters,
+    };
   } catch (err) {
     console.error(`Failed to load user story content:`, err);
-    return {
-      storySlug: "",
-      storyId: userStoryId,
-      title: "Error",
-      level: parseInt(level.replace("l", "")),
-      chapter: parseInt(chapter),
-      page: parseInt(page),
-      hasChapters: false,
-      lines: [
-        { en: "Content not available.", es: "Contenido no disponible." },
-      ],
-      isUserStory: true,
-      storyType: null,
-      detectedLevel: null,
-    };
+    return null;
   }
 }
 
@@ -261,7 +332,8 @@ export async function getUserStoryMap(
       },
     });
 
-    if (!levelData || levelData.status !== "READY") {
+    // Allow reading during PROCESSING (content is built incrementally) or when READY
+    if (!levelData || (levelData.status !== "READY" && levelData.status !== "PROCESSING")) {
       return { hasChapters: false, chapters: [] };
     }
 

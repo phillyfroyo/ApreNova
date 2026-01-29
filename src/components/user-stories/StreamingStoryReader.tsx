@@ -363,7 +363,7 @@ export default function StreamingStoryReader({
             .filter(c => c.status === "ready")
             .pop();
           if (lastReady) {
-            router.push(`/${lng}/my-stories/${storyId}/${level}/stream/${lastReady.chapter}/1`);
+            router.push(`/${lng}/my-stories/${storyId}/${level}/${lastReady.chapter}/1`);
           }
         }}
         lng={lng}

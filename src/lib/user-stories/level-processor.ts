@@ -128,6 +128,26 @@ export function preprocessChapterForStoryType(
 
   // Handle poems - use the new poem-processing module (single source of truth)
   if (storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic') {
+    // DEBUG: Log sample of input to stanza detector to trace spacing
+    const debugLines = chapterText.split('\n').slice(0, 30);
+    const consecutiveBlankRuns: number[] = [];
+    let currentRun = 0;
+    for (const line of debugLines) {
+      if (line.trim() === '') {
+        currentRun++;
+      } else {
+        if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+        currentRun = 0;
+      }
+    }
+    if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+    console.log(`[PreprocessChapter] DEBUG - Input to stanza detector (first 30 lines):`);
+    console.log(`[PreprocessChapter] Consecutive blank runs in first 30 lines: [${consecutiveBlankRuns.join(', ')}]`);
+    debugLines.forEach((l, i) => {
+      const display = l.trim() === '' ? '(blank)' : l.slice(0, 50);
+      console.log(`  ${i}: ${display}`);
+    });
+
     // Use the canonical stanza detector from poem-processing module
     const stanzaResult = detectStanzas(chapterText, { method: 'adaptive' });
 
@@ -142,6 +162,16 @@ export function preprocessChapterForStoryType(
         isStanzaBreak: meta.isStanzaBreak,
       });
     });
+
+    // DEBUG: Log stanza numbers in metadata
+    const stanzaNumCounts = new Map<number, number>();
+    lineMetadata.forEach((meta) => {
+      if (!meta.isStanzaBreak && meta.stanzaNumber !== undefined) {
+        const count = stanzaNumCounts.get(meta.stanzaNumber) || 0;
+        stanzaNumCounts.set(meta.stanzaNumber, count + 1);
+      }
+    });
+    console.log(`[PreprocessChapter] DEBUG - Stanza number distribution: ${Array.from(stanzaNumCounts.entries()).slice(0, 10).map(([n, c]) => `${n}:${c}`).join(', ')}...`);
 
     return { processedLines, lineMetadata, speakerNames };
   }
@@ -570,12 +600,15 @@ export interface TranslateParams {
   userId: string;
   levelId: string;
   level: string;
+  storySlug: string;
   chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   /** Story type for special preprocessing (poems, scripts) */
   storyType?: StoryType | null;
   /** Structure type for anthology pagination */
   structureType?: "prose" | "anthology" | "epic" | "script";
+  /** Whether the story has multiple chapters (for content metadata) */
+  hasChapters: boolean;
 }
 
 export interface TranslateResult {
@@ -594,7 +627,7 @@ export interface TranslateResult {
 export async function translateLevelChapters(
   params: TranslateParams
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType, structureType } = params;
+  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters } = params;
 
   const ctx: CostContext = { storyId, userId };
   const tracker = new LevelProgressTracker(levelId, chapters.length);
@@ -629,15 +662,15 @@ export async function translateLevelChapters(
       const chapter = chapters[i];
       const chapterText = chapter.text;
 
-      // Update story-level progress with chapter info
+      // Update story-level progress with chapter info (shows which chapter is being worked on)
       await updateStoryProgress(storyId, "translating_chapter", {
         chapterCurrent: i + 1,
         chapterTotal: chapters.length,
         currentLevel: level,
       });
 
-      // Update level-specific progress
-      await tracker.updateTranslationProgress(i + 1);
+      // NOTE: Don't update level progress here - wait until chapter is complete
+      // The chapter count should only increment AFTER content is written to the database
 
       // Preprocess for story type (poems: stanzas, scripts: speakers)
       const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
@@ -725,8 +758,8 @@ export async function translateLevelChapters(
         });
       }
 
-      // Build chapter content immediately for streaming reader consistency
-      // This ensures "Start Reading" shows the same pagination as the final content
+      // Build chapter content immediately and write directly to content field
+      // This is the single source of truth - same content used for reading during and after processing
       const builtChapter = buildSingleChapterContent(
         filteredSourceLines,
         filteredTranslatedLines,
@@ -738,14 +771,24 @@ export async function translateLevelChapters(
       console.log(`[TranslateLevelChapters] Built chapter ${i + 1}: ${Object.keys(builtChapter.pages).length} pages` +
         (builtChapter.poems ? `, ${builtChapter.poems.length} poems` : ""));
 
-      // Update progress with built pages for streaming reader
-      await tracker.updateTranslationProgress(i + 1, {
-        sourceLines: filteredSourceLines,
-        translatedLines: filteredTranslatedLines,
-        builtPages: builtChapter.pages as any, // Convert PageContent to BuiltPageContent
-        poems: builtChapter.poems,
-        metadata: chapter.metadata,
-      });
+      // Write chapter directly to the content field (single source of truth)
+      await tracker.updateChapterContent(
+        i + 1, // 1-based chapter number
+        {
+          pages: builtChapter.pages as any,
+          metadata: chapter.metadata,
+          poems: builtChapter.poems,
+        },
+        {
+          storySlug,
+          level: levelStringToNumber(level),
+          hasChapters,
+          structureType: structureType || "prose",
+        }
+      );
+
+      // Also update progress tracker for UI progress display
+      await tracker.updateTranslationProgress(i + 1);
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -963,6 +1006,7 @@ export interface StreamingLevelParams {
   userId: string;
   levelId: string;
   level: string;
+  storySlug: string;
   chapters: ParsedChapter[];
   sourceLanguage: "en" | "es";
   detectedLevel: string;
@@ -970,6 +1014,8 @@ export interface StreamingLevelParams {
   storyType?: StoryType | null;
   /** Structure type for anthology pagination */
   structureType?: "prose" | "anthology" | "epic" | "script";
+  /** Whether the story has multiple chapters */
+  hasChapters: boolean;
 }
 
 export interface StreamingLevelResult {
@@ -1098,7 +1144,7 @@ async function translateChaptersConsumer(
   params: StreamingLevelParams,
   queue: StreamingChapterQueue
 ): Promise<TranslateResult> {
-  const { storyId, userId, levelId, level, chapters, sourceLanguage, storyType, structureType } = params;
+  const { storyId, userId, levelId, level, storySlug, chapters, sourceLanguage, storyType, structureType, hasChapters } = params;
 
   const ctx: CostContext = { storyId, userId };
   const totalChapters = chapters.length;
@@ -1151,8 +1197,8 @@ async function translateChaptersConsumer(
       currentLevel: level,
     });
 
-    // Update level-specific progress
-    await tracker.updateTranslationProgress(chaptersProcessed + 1);
+    // NOTE: Don't update level progress here - wait until chapter is complete
+    // The chapter count should only increment AFTER content is written to the database
 
     try {
       // Preprocess for story type (poems: stanzas, scripts: speakers)
@@ -1210,8 +1256,8 @@ async function translateChaptersConsumer(
 
       queue.markTranslateComplete(chapterIndex, processedChapter);
 
-      // Build chapter content immediately for streaming reader consistency
-      // This ensures "Start Reading" shows the same pagination as the final content
+      // Build chapter content immediately and write directly to content field
+      // This is the single source of truth - same content used for reading during and after processing
       const builtChapter = buildSingleChapterContent(
         filteredSourceLines,
         filteredTranslatedLines,
@@ -1223,14 +1269,24 @@ async function translateChaptersConsumer(
       console.log(`[StreamingConsumer] Built chapter ${chapterIndex + 1}: ${Object.keys(builtChapter.pages).length} pages` +
         (builtChapter.poems ? `, ${builtChapter.poems.length} poems` : ""));
 
-      // Update progress with built pages for streaming reader
-      await tracker.updateTranslationProgress(chaptersProcessed + 1, {
-        sourceLines: filteredSourceLines,
-        translatedLines: filteredTranslatedLines,
-        builtPages: builtChapter.pages as any, // Convert PageContent to BuiltPageContent
-        poems: builtChapter.poems,
-        metadata,
-      });
+      // Write chapter directly to the content field (single source of truth)
+      await tracker.updateChapterContent(
+        chapterIndex + 1, // 1-based chapter number
+        {
+          pages: builtChapter.pages as any,
+          metadata,
+          poems: builtChapter.poems,
+        },
+        {
+          storySlug,
+          level: levelStringToNumber(level),
+          hasChapters,
+          structureType: structureType || "prose",
+        }
+      );
+
+      // Also update progress tracker for UI progress display
+      await tracker.updateTranslationProgress(chaptersProcessed + 1);
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);
@@ -1355,8 +1411,10 @@ export async function processLevel(
     userId,
     levelId,
     level,
+    storySlug,
     chapters: rewriteResult.chapters,
     sourceLanguage,
+    hasChapters,
   });
 
   if (!translateResult.success) {

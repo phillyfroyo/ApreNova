@@ -5,7 +5,7 @@ import { useStoryUpload, StreamProgress, StoryUploadData } from "@/contexts/Stor
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
-import { setPrefetchData, readStreamCacheKey } from "@/lib/user-stories/prefetch-cache";
+// Note: prefetch-cache no longer used for reader prefetching (unified reader uses server-side data)
 import { StreamSelector } from "./StreamSelector";
 
 // Minimum duration for displaying each step label (ms)
@@ -230,19 +230,23 @@ function StartReadingButtons({
 
   // Check if each stream is ready for reading
   // Ready = has levelStatus "PROCESSING" AND at least 1 completed chapter
+  // Use currentChapter (completed count) since chapters array may be empty with new incremental content writing
   const originalReady = originalStream?.levelStatus === "PROCESSING" &&
-    Array.isArray(originalStream.chapters) && originalStream.chapters.length > 0;
+    (originalStream.currentChapter > 0 || (Array.isArray(originalStream.chapters) && originalStream.chapters.length > 0));
   const rewrittenReady = rewrittenStream?.levelStatus === "PROCESSING" &&
-    Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0;
+    (rewrittenStream.currentChapter > 0 || (Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0));
 
   // Get total chapters for display (prefer originalStream, fall back to rewrittenStream, then progress)
   const totalChapters = originalStream?.totalChapters || rewrittenStream?.totalChapters || progress.totalChapters || 0;
 
   // Get completed chapters for each stream
-  const originalCompletedChapters = originalStream && Array.isArray(originalStream.chapters)
-    ? originalStream.chapters.length : 0;
-  const rewrittenCompletedChapters = rewrittenStream && Array.isArray(rewrittenStream.chapters)
-    ? rewrittenStream.chapters.length : 0;
+  // Prefer currentChapter (reliable count) over chapters.length (may be empty with incremental content)
+  const originalCompletedChapters = originalStream
+    ? (originalStream.currentChapter || (Array.isArray(originalStream.chapters) ? originalStream.chapters.length : 0))
+    : 0;
+  const rewrittenCompletedChapters = rewrittenStream
+    ? (rewrittenStream.currentChapter || (Array.isArray(rewrittenStream.chapters) ? rewrittenStream.chapters.length : 0))
+    : 0;
 
   // Prefetch page 1 of each level as soon as it becomes ready
   // Prefetches both the Next.js route and the API data so navigation + render is near-instant
@@ -256,18 +260,7 @@ function StartReadingButtons({
       if (!prefetchedLevelsRef.current.has(level)) {
         prefetchedLevelsRef.current.add(level);
         // Prefetch the Next.js route (JS bundle + RSC payload)
-        router.prefetch(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
-        // Prefetch the actual page content API data and cache for the reader
-        fetch(`/api/user-stories/${storyData.id}/read-stream?level=${level}&chapter=1&page=1`, {
-          credentials: "include",
-        })
-          .then((res) => res.ok ? res.json() : null)
-          .then((data) => {
-            if (data) {
-              setPrefetchData(readStreamCacheKey(storyData.id!, level, 1, 1), data);
-            }
-          })
-          .catch(() => {}); // Silently ignore prefetch errors
+        router.prefetch(`/${lng}/my-stories/${storyData.id}/${level}/1/1`);
       }
     }
   }, [storyData?.id, originalReady, rewrittenReady, originalStream?.level, rewrittenStream?.level, lng, router]);
@@ -288,7 +281,7 @@ function StartReadingButtons({
     onStartReading();
     // Modal stays open showing loading spinner until navigation completes
     // (pathname change detected in useEffect above triggers onMinimize)
-    router.push(`/${lng}/my-stories/${storyData.id}/${level}/stream/1/1`);
+    router.push(`/${lng}/my-stories/${storyData.id}/${level}/1/1`);
   };
 
   // Button styles - smaller, with color

@@ -1,29 +1,19 @@
 // src/app/api/user-stories/[storyId]/cancel/route.ts
-// Handles cancellation of story uploads, cleaning up incomplete chapters
+// Handles cancellation of story uploads
+// Now much simpler since content is built incrementally to the content field
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { buildContentStructureWithMetadata } from "@/lib/story-processing";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
 }
 
-// Types for processing progress structure
-interface ProcessingProgressData {
-  stage?: "rewriting" | "translating" | "complete";
-  totalChapters?: number;
-  completedData?: {
-    sourceLines: string[];
-    translatedLines: string[];
-  }[];
-  rewriteData?: {
-    originalLines: string[];
-    rewrittenLines: string[];
-  }[];
+interface LevelContent {
+  chapters?: Record<string, unknown>;
 }
 
 // POST: Cancel story upload
@@ -70,65 +60,30 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     console.log(`[CancelStory] Cancelling story ${storyId} with ${story.UserStoryLevel.length} levels`);
 
-    // Determine structureType from storyType for proper anthology pagination
-    let structureType: "prose" | "anthology" | "epic" | "script" = "prose";
-    if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
-      structureType = "anthology";
-    } else if (story.storyType === 'epic') {
-      structureType = "epic";
-    } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
-      structureType = "script";
-    }
-
     let totalCompleteChapters = 0;
-    const levelUpdates: { levelId: string; content: any; status: "READY" | "FAILED" }[] = [];
+    const levelUpdates: { levelId: string; status: "READY" | "FAILED" }[] = [];
 
-    // Process each level to salvage complete chapters
+    // Process each level - content is already built incrementally, just check what's there
     for (const level of story.UserStoryLevel) {
-      const progress = level.processingProgress as ProcessingProgressData | null;
+      const content = level.content as LevelContent | null;
+      const chapterCount = content?.chapters ? Object.keys(content.chapters).length : 0;
 
-      // Check if level has any completed chapter data
-      const completedData = progress?.completedData || [];
+      console.log(`[CancelStory] Level ${level.level}: ${chapterCount} chapters in content`);
 
-      // Filter to only chapters that have both source AND translated lines
-      const completeChapters = completedData.filter(
-        (ch) => ch.sourceLines?.length > 0 && ch.translatedLines?.length > 0
-      );
-
-      console.log(`[CancelStory] Level ${level.level}: ${completedData.length} chapters in progress, ${completeChapters.length} complete`);
-
-      if (completeChapters.length > 0) {
-        // Build content structure from complete chapters
-        // Note: We need to convert level string (e.g., "A2") to number for buildContentStructure
-        const levelNum = levelStringToNumber(level.level);
-
-        const content = buildContentStructureWithMetadata(
-          story.slug,
-          levelNum,
-          completeChapters.length > 1, // hasChapters: true if more than 1 chapter
-          completeChapters as any, // Cast to allow partial data
-          story.sourceLanguage as "en" | "es",
-          { structureType } // Pass structureType for proper anthology pagination
-        );
-
+      if (chapterCount > 0) {
+        // Level has content - mark as READY (content already in correct format)
         levelUpdates.push({
           levelId: level.id,
-          content,
           status: "READY",
         });
-
-        totalCompleteChapters += completeChapters.length;
+        totalCompleteChapters += chapterCount;
       } else if (level.status === "READY") {
-        // Level was already complete, count its chapters
-        const existingContent = level.content as { chapters?: Record<string, any> } | null;
-        if (existingContent?.chapters) {
-          totalCompleteChapters += Object.keys(existingContent.chapters).length;
-        }
+        // Level was already complete
+        totalCompleteChapters += chapterCount;
       } else {
-        // No complete chapters for this level - mark as FAILED
+        // No content for this level - mark as FAILED
         levelUpdates.push({
           levelId: level.id,
-          content: {},
           status: "FAILED",
         });
       }
@@ -144,7 +99,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             await tx.userStoryLevel.update({
               where: { id: update.levelId },
               data: {
-                content: update.content,
                 status: update.status,
                 processingProgress: Prisma.DbNull, // Clear processing progress
               },
@@ -178,7 +132,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       success: true,
       message: "Story upload cancelled",
       completeChapters: totalCompleteChapters,
-      // The UI will determine "Cancelled" vs "Incomplete" based on completeChapters
     });
   } catch (error: any) {
     console.error("[API/user-stories/[storyId]/cancel] POST error:", {
@@ -190,17 +143,4 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
-
-// Helper to convert level string (e.g., "A2", "B1") to number
-function levelStringToNumber(level: string): number {
-  const levelMap: Record<string, number> = {
-    A1: 1,
-    A2: 2,
-    B1: 3,
-    B2: 4,
-    C1: 5,
-    C2: 6,
-  };
-  return levelMap[level] || 3; // Default to B1 (3) if unknown
 }

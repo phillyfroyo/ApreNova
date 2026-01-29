@@ -319,7 +319,9 @@ export class LevelProgressTracker {
   }
 
   /**
-   * Update progress during translation
+   * Update progress during translation.
+   * Now content is written directly to content field via updateChapterContent(),
+   * so this method just tracks progress for the UI (chapter counts).
    */
   async updateTranslationProgress(
     currentChapter: number,
@@ -329,17 +331,97 @@ export class LevelProgressTracker {
       this.translationData.push(chapterData);
     }
 
+    // For progress tracking, use currentChapter as the count of completed chapters
+    // (since we call this after each chapter completes)
+    const chaptersCompleted = currentChapter;
+
     // Merge to preserve rewrite data in streaming mode
     await this.mergeProgress({
       stage: "translating",
       currentChapter,
-      completedData: this.translationData,
-      chaptersCompleted: this.translationData.map((_, idx) => idx),
+      // Keep completedData for backward compat, but it may be empty if using updateChapterContent
+      completedData: this.translationData.length > 0 ? this.translationData : undefined,
+      chaptersCompleted: Array.from({ length: chaptersCompleted }, (_, i) => i),
       translateProgress: {
         currentChapter,
-        chaptersCompleted: this.translationData.length,
+        chaptersCompleted,
       },
     });
+  }
+
+  /**
+   * Write a completed chapter directly to the content field.
+   * This provides a single source of truth - the same content is used for
+   * both "read while uploading" and after processing completes.
+   *
+   * @param chapterNumber - 1-based chapter number
+   * @param chapterContent - The built chapter content (pages, metadata, poems)
+   * @param contentMetadata - Level-wide metadata (storySlug, level, hasChapters, structureType)
+   */
+  async updateChapterContent(
+    chapterNumber: number,
+    chapterContent: {
+      pages: Record<number, BuiltPageContent>;
+      metadata?: { number: number; title: string; subtitle?: string };
+      poems?: PoemInfo[];
+    },
+    contentMetadata: {
+      storySlug: string;
+      level: number;
+      hasChapters: boolean;
+      structureType?: "prose" | "anthology" | "epic" | "script";
+    }
+  ): Promise<void> {
+    try {
+      // Read existing content to merge with new chapter
+      const level = await prisma.userStoryLevel.findUnique({
+        where: { id: this.levelId },
+        select: { content: true },
+      });
+
+      if (!level) {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateChapterContent`);
+        return;
+      }
+
+      // Get existing content or initialize new structure
+      const existingContent = (level.content as any) || {
+        storySlug: contentMetadata.storySlug,
+        level: contentMetadata.level,
+        hasChapters: contentMetadata.hasChapters,
+        structureType: contentMetadata.structureType,
+        chapters: {},
+      };
+
+      // Merge the new chapter into existing content
+      const updatedContent = {
+        ...existingContent,
+        // Ensure metadata is set (in case this is the first chapter)
+        storySlug: contentMetadata.storySlug,
+        level: contentMetadata.level,
+        hasChapters: contentMetadata.hasChapters,
+        structureType: contentMetadata.structureType,
+        chapters: {
+          ...existingContent.chapters,
+          [chapterNumber]: chapterContent,
+        },
+      };
+
+      await prisma.userStoryLevel.update({
+        where: { id: this.levelId },
+        data: {
+          content: updatedContent as any,
+        },
+      });
+
+      console.log(`[LevelProgressTracker] Updated content with chapter ${chapterNumber} (${Object.keys(chapterContent.pages).length} pages)`);
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateChapterContent`);
+        return;
+      }
+      throw error;
+    }
   }
 
   /**

@@ -1294,13 +1294,21 @@ export function buildContentStructureWithMetadata(
         // Group lines by stanzaNumber to build nested stanzas array
         // This enables stanza-level emoji interactions for anthology poems
         const stanzaGroups = new Map<number, StoryLine[]>();
+        let linesWithStanzaNum = 0;
+        let linesWithoutStanzaNum = 0;
         for (const line of lines) {
           const stanzaNum = line.stanzaNumber ?? 0;
+          if (line.stanzaNumber !== undefined) {
+            linesWithStanzaNum++;
+          } else {
+            linesWithoutStanzaNum++;
+          }
           if (!stanzaGroups.has(stanzaNum)) {
             stanzaGroups.set(stanzaNum, []);
           }
           stanzaGroups.get(stanzaNum)!.push(line);
         }
+        console.log(`[BuildContent] DEBUG - Page ${pIdx + 1}: ${lines.length} lines, ${linesWithStanzaNum} with stanzaNumber, ${linesWithoutStanzaNum} without, ${stanzaGroups.size} stanza groups`);
 
         // Convert to nested array, sorted by stanza number
         const stanzaNumbers = Array.from(stanzaGroups.keys()).sort((a, b) => a - b);
@@ -1309,7 +1317,7 @@ export function buildContentStructureWithMetadata(
         // Store page with poem tracking metadata AND nested stanzas
         pages[pIdx + 1] = {
           lines,  // Keep for backward compatibility
-          stanzas: stanzas.length > 1 ? stanzas : undefined,  // Only include if multiple stanzas
+          stanzas: stanzas.length > 0 ? stanzas : undefined,  // Include stanzas if any exist
           poemNumber: pageData.poemNumber,
           poemTitle: pageData.poemTitle,
           isFirstPageOfPoem: pageData.isFirstPageOfPoem,

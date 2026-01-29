@@ -450,10 +450,12 @@ async function processAllLevels(
         userId: story.userId,
         levelId: detectedLevelRecord.id,
         level: detectedLevel,
+        storySlug: story.slug,
         chapters: originalChapters,
         sourceLanguage,
         storyType: story.storyType as StoryType | null, // For poem/script preprocessing
         structureType, // Pass for anthology-aware incremental build
+        hasChapters, // For content metadata
       });
 
       if (translateResult.success) {
@@ -497,11 +499,13 @@ async function processAllLevels(
           userId: story.userId,
           levelId: levelRecord.id,
           level,
+          storySlug: story.slug,
           chapters: originalChapters,
           sourceLanguage,
           detectedLevel,
           storyType: story.storyType as StoryType | null, // For poetry-specific rewrite handling
           structureType, // Pass for anthology-aware incremental build
+          hasChapters, // For content metadata
         });
 
         if (streamingResult.success) {

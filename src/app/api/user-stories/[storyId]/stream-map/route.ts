@@ -1,13 +1,12 @@
 // src/app/api/user-stories/[storyId]/stream-map/route.ts
 // Provides navigation structure for streaming reader
-// Returns which chapters are available vs still processing
+// Now uses the content field directly (single source of truth)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import { paginateLines } from "@/lib/story-processing/text-processing";
-import type { ProcessingProgress, ChapterTranslationData } from "@/lib/user-stories/progress-tracker";
+import type { ProcessingProgress } from "@/lib/user-stories/progress-tracker";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
@@ -97,7 +96,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const levelData = story.UserStoryLevel[0];
 
     // If level doesn't exist yet, return empty but valid response
-    // This happens when user clicks "Read While Uploading" before the level record is created
     if (!levelData) {
       return NextResponse.json({
         hasChapters: false,
@@ -105,18 +103,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         totalChapters: 0,
         completedChapters: 0,
         isProcessing: true,
-        levelPending: true, // Signal that level is being prepared
+        levelPending: true,
       });
     }
 
     const progress = levelData.processingProgress as ProcessingProgress | null;
     const isProcessing = levelData.status === "PROCESSING" || levelData.status === "PENDING";
+    const content = levelData.content as unknown as LevelContent | null;
 
-    // If level is READY, serve complete map from finalized content
-    if (levelData.status === "READY" && levelData.content) {
-      const content = levelData.content as unknown as LevelContent;
-      const chapters: ChapterInfo[] = [];
+    // Build chapter list from content field (single source of truth)
+    const chapters: ChapterInfo[] = [];
+    const totalChapters = progress?.totalChapters || 0;
 
+    if (content && content.chapters) {
       const chapterKeys = Object.keys(content.chapters)
         .map(Number)
         .sort((a, b) => a - b);
@@ -133,87 +132,45 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           title: chapterData.metadata?.title,
           subtitle: chapterData.metadata?.subtitle,
           status: "ready",
-          // Include poem info for anthology navigation
           poems: chapterData.poems,
         });
       }
-
-      return NextResponse.json({
-        hasChapters: content.hasChapters,
-        chapters,
-        totalChapters: chapters.length,
-        completedChapters: chapters.length,
-        isProcessing: false,
-        // Include structure type for UI labels
-        structureType: content.structureType,
-      });
     }
 
-    // Story is still processing - build map from completedData
-    const completedData = progress?.completedData || [];
-    const totalChapters = progress?.totalChapters || completedData.length;
-    const completedChapters = completedData.length;
+    const completedChapters = chapters.length;
 
-    const chapters: ChapterInfo[] = [];
-
-    // Add completed chapters with page counts
-    for (let i = 0; i < completedChapters; i++) {
-      const chapterData = completedData[i] as ChapterTranslationData;
-
-      // Use pre-built pages if available (ensures consistent pagination with final content)
-      let pageCount: number;
-      let poems: PoemInfo[] | undefined;
-
-      if (chapterData.builtPages) {
-        pageCount = Object.keys(chapterData.builtPages).length;
-        poems = chapterData.poems;
-      } else {
-        // Fallback: Legacy pagination for older in-progress stories
-        const sourcePages = paginateLines(chapterData.sourceLines);
-        const translatedPages = paginateLines(chapterData.translatedLines);
-        pageCount = Math.max(sourcePages.length, translatedPages.length);
+    // Add pending chapters (if we know the total)
+    if (totalChapters > completedChapters) {
+      for (let i = completedChapters; i < totalChapters; i++) {
+        chapters.push({
+          chapter: i + 1,
+          pages: [],
+          status: "pending",
+        });
       }
-
-      chapters.push({
-        chapter: i + 1,
-        pages: Array.from({ length: pageCount }, (_, idx) => idx + 1),
-        title: chapterData.metadata?.title,
-        subtitle: chapterData.metadata?.subtitle,
-        status: "ready",
-        poems, // Include poem info for anthology navigation
-      });
     }
 
-    // Add pending chapters (no page info yet)
-    for (let i = completedChapters; i < totalChapters; i++) {
-      chapters.push({
-        chapter: i + 1,
-        pages: [], // Unknown until processed
-        status: "pending",
-      });
-    }
-
-    // Infer structureType from storyType for in-progress stories
-    let inferredStructureType: "prose" | "anthology" | "epic" | "script" | undefined;
-    if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
-      inferredStructureType = "anthology";
-    } else if (story.storyType === 'epic') {
-      inferredStructureType = "epic";
-    } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
-      inferredStructureType = "script";
+    // Get structure type from content or infer from storyType
+    let structureType = content?.structureType;
+    if (!structureType) {
+      if (story.storyType === 'poem' || story.storyType === 'song-lyrics') {
+        structureType = "anthology";
+      } else if (story.storyType === 'epic') {
+        structureType = "epic";
+      } else if (story.storyType === 'movie-script' || story.storyType === 'tv-script' || story.storyType === 'dialogue') {
+        structureType = "script";
+      }
     }
 
     return NextResponse.json({
-      hasChapters: totalChapters > 1,
+      hasChapters: content?.hasChapters ?? (totalChapters > 1),
       chapters,
-      totalChapters,
+      totalChapters: Math.max(totalChapters, completedChapters),
       completedChapters,
       isProcessing,
-      // Include current processing state for UI
       currentStage: progress?.stage,
       currentChapter: progress?.currentChapter,
-      // Include structure type for UI labels
-      structureType: inferredStructureType,
+      structureType,
     });
 
   } catch (error: any) {

@@ -203,10 +203,10 @@ export default function StoryLayoutWithAzureTTS({
   // Handle different URL structures:
   // System stories: /lng/stories/{slug}/{level}/ch1/page-1
   // User stories:   /lng/my-stories/{id}/{level}/{chapter}/{page}
-  // Streaming:      /lng/my-stories/{id}/{level}/stream/{chapter}/{page}
-  const isStreamingRoute = pathParts[5] === "stream";
-  const rawChapter = isStreamingRoute ? pathParts[6] : pathParts[5];
-  const rawPage = isStreamingRoute ? pathParts[7] : pathParts[6];
+  // Legacy streaming (redirects): /lng/my-stories/{id}/{level}/stream/{chapter}/{page}
+  const isLegacyStreamingRoute = pathParts[5] === "stream";
+  const rawChapter = isLegacyStreamingRoute ? pathParts[6] : pathParts[5];
+  const rawPage = isLegacyStreamingRoute ? pathParts[7] : pathParts[6];
 
   // Parse chapter number (handles both "ch1" format and plain "1" format)
   const currentChapter = rawChapter || "ch1";
@@ -220,12 +220,9 @@ export default function StoryLayoutWithAzureTTS({
     : parseInt(currentPage) || 1;
 
   // Helper function to generate navigation URLs
-  // Preserves /stream/ segment when on streaming reader route
+  // Always uses unified reader path (no /stream/ segment)
   const getNavigationUrl = (level: string, chapter: number, page: number) => {
     if (isUserStory && userStoryId) {
-      if (isStreamingRoute) {
-        return `/${typedLang}/my-stories/${userStoryId}/${level}/stream/${chapter}/${page}`;
-      }
       return `/${typedLang}/my-stories/${userStoryId}/${level}/${chapter}/${page}`;
     }
     return `/${typedLang}/stories/${storySlug}/${level}/ch${chapter}/page-${page}`;

@@ -397,6 +397,28 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
 
   let text = processNode(doc.body, true);  // body is a block element
 
+  // DEBUG: Log consecutive blank line runs in extracted text
+  if (preserveWhitespace) {
+    const lines = text.split('\n').slice(0, 50);
+    const consecutiveBlankRuns: number[] = [];
+    let currentRun = 0;
+    for (const line of lines) {
+      if (line.trim() === '') {
+        currentRun++;
+      } else {
+        if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+        currentRun = 0;
+      }
+    }
+    if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+    console.log(`[extractTextFromHTML] DEBUG - Consecutive blank runs in first 50 lines: [${consecutiveBlankRuns.join(', ')}]`);
+    console.log(`[extractTextFromHTML] First 20 lines sample:`);
+    lines.slice(0, 20).forEach((l, i) => {
+      const display = l.trim() === '' ? '(blank)' : l.slice(0, 50);
+      console.log(`  ${i}: ${display}`);
+    });
+  }
+
   // Clean up whitespace - behavior depends on preserveWhitespace option
   if (preserveWhitespace) {
     // For poetry: preserve ALL whitespace exactly

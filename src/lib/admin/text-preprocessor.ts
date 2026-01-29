@@ -974,6 +974,21 @@ export function preprocessText(rawText: string, options: PreprocessOptions = {})
   const preserveWhitespace = isKnownPoetry || isAutoDetect;
   const normalized = preserveWhitespace ? normalizeWhitespacePreserveIndent(noAsterisks) : normalizeWhitespace(noAsterisks);
 
+  // DEBUG: Log consecutive blank line runs after normalization
+  const debugLines = normalized.split('\n').slice(0, 50);
+  const consecutiveBlankRuns: number[] = [];
+  let currentRun = 0;
+  for (const line of debugLines) {
+    if (line.trim() === '') {
+      currentRun++;
+    } else {
+      if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+      currentRun = 0;
+    }
+  }
+  if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+  console.log(`[preprocessText] DEBUG - After normalization, consecutive blank runs: [${consecutiveBlankRuns.join(', ')}]`);
+
   // Step 6: Split into lines for chapter detection
   let lines = normalized.split('\n');
 
