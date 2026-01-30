@@ -136,7 +136,21 @@ export default function StoryLayoutWithAzureTTS({
   // Stanza-level state for poem emoji interactions
   const [showStanzaEmojis, setShowStanzaEmojis] = useState<Record<number, boolean>>({});
   const [activeStanzaLine, setActiveStanzaLine] = useState<Record<number, number>>({});
-  const [stanzaAITranslation, setStanzaAITranslation] = useState<Record<number, { text: string; loading: boolean }>>({});
+  const [stanzaAITranslation, setStanzaAITranslation] = useState<Record<number, {
+    text: string;
+    loading: boolean;
+    isStatic?: boolean; // true if using pre-existing translation (no GPT call)
+    selectedWord?: string; // the word/phrase that was translated
+    enhancedTranslation?: {
+      contextTranslation?: string;
+      isDerivative?: boolean;
+      rootWord?: string;
+      rootTranslation?: string;
+      otherCommonTranslations?: string[];
+    };
+    otherTranslations?: string[]; // for phrases
+  }>>({});
+  const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
   const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
@@ -913,20 +927,29 @@ export default function StoryLayoutWithAzureTTS({
         };
       });
 
-      for (let i = 0; i < lineBounds.length; i++) {
-        const line = lineBounds[i];
-        const nextLine = lineBounds[i + 1];
-        const effectiveTop = line.top;
-        const effectiveBottom = nextLine ? nextLine.top : Infinity;
+      // Check if click is directly on a text line
+      let clickedOnTextLine = false;
+      let clickedLineIndex = -1;
 
-        if (clickY >= effectiveTop && clickY < effectiveBottom) {
-          if (line.index >= 0) {
-            setShowEmojiButtons(prev => ({
-              ...prev,
-              [line.index]: !prev[line.index]
-            }));
-          }
-          return;
+      for (const line of lineBounds) {
+        if (clickY >= line.top && clickY < line.bottom) {
+          clickedOnTextLine = true;
+          clickedLineIndex = line.index;
+          break;
+        }
+      }
+
+      if (clickedOnTextLine && clickedLineIndex >= 0) {
+        // Clicked on a text line - open if not open, keep open if already open
+        const isAlreadyOpen = showEmojiButtons[clickedLineIndex];
+        if (!isAlreadyOpen) {
+          setShowEmojiButtons({ [clickedLineIndex]: true });
+        }
+      } else {
+        // Clicked on blank space - close any open emoji rows
+        const hasAnyOpen = Object.values(showEmojiButtons).some(Boolean);
+        if (hasAnyOpen) {
+          setShowEmojiButtons({});
         }
       }
     };
@@ -1376,6 +1399,7 @@ export default function StoryLayoutWithAzureTTS({
                         className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
                         }`}
+                        data-translation-control="gpt"
                         title="Translate"
                       >
                         <span className={`text-lg leading-none ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>友</span>
@@ -1417,6 +1441,7 @@ export default function StoryLayoutWithAzureTTS({
                   <div className={`w-full px-2 relative ${isScriptType && s.speaker ? 'pl-4' : ''}`} data-text-content={lineIndex}>
                     <UnifiedTranslator
                       sentence={s[oppositeLang]}
+                      staticTranslation={s[typedLang]}
                       enabled={!isAnyDropdownOpen && !menuOpen}
                       readOnlyMode={translationMode === "free"}
                       autoTriggerAll={premiumTriggers[lineIndex] || false}
@@ -1437,12 +1462,22 @@ export default function StoryLayoutWithAzureTTS({
                     />
                     {/* Per-line static translation: skip for stanza poems (handled at stanza level) */}
                     {!isInsideStanza && (
-                    <p
+                    <div
                       ref={el => { translationRefs.current[lineIndex] = el; }}
-                      className="translation hidden text-muted-foreground text-sm text-left absolute z-10 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm mt-1"
+                      className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-[15px] relative"
                     >
-                      {s[typedLang]}
-                    </p>
+                      <button
+                        onClick={() => {
+                          const el = translationRefs.current[lineIndex];
+                          if (el) el.classList.add("hidden");
+                        }}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+                        data-translation-control="close"
+                      >
+                        ✕
+                      </button>
+                      <span className="text-lg font-medium text-gray-900 pr-6" style={{ wordSpacing: '0.15em' }}>{s[typedLang]}</span>
+                    </div>
                     )}
                   </div>
                 </div>
@@ -1506,57 +1541,165 @@ export default function StoryLayoutWithAzureTTS({
 
               const handleStanzaTranslate = async () => {
                 console.log('[StanzaTranslate] hasSelection:', hasSelection, 'linesWithSelection:', linesWithSelection.length);
-                if (hasSelection) {
-                  // Translate all selected text across lines via API
-                  const selectedText = getSelectedText();
-                  console.log('[StanzaTranslate] Translating selected text:', selectedText);
-                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true } }));
-                  try {
-                    const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'es' : 'en'}`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        phrase: selectedText,
-                        sentence: selectedText,
-                        level: currentLevel,
-                        context: { previous: '', current: selectedText, next: '' },
-                      }),
-                    });
-                    const data = await res.json();
-                    setStanzaAITranslation(prev => ({
-                      ...prev,
-                      [stanzaIdx]: { text: data.translations?.primary || data.translation || '', loading: false }
-                    }));
-                  } catch {
-                    setStanzaAITranslation(prev => ({
-                      ...prev,
-                      [stanzaIdx]: { text: 'Translation failed', loading: false }
-                    }));
+
+                // Helper to check if a line is fully selected
+                const isLineFullySelected = (line: StoryLine, lineIndex: number): boolean => {
+                  const sel = wordSelections[lineIndex];
+                  if (!sel) return false;
+                  const lineText = line[oppositeLang] || '';
+                  const words = lineText.trimStart().split(/\s+/).filter(w => w);
+                  return sel.start === 0 && sel.end === words.length - 1;
+                };
+
+                // Helper to get static translation for selected lines
+                const getStaticTranslation = (): string => {
+                  return linesWithSelection
+                    .filter(({ line, lineIndex }) => isLineFullySelected(line, lineIndex))
+                    .map(({ line }) => line[typedLang] || '')
+                    .join('\n');
+                };
+
+                // Check if all selected lines are fully selected (use static translation)
+                const allLinesFullySelected = hasSelection &&
+                  linesWithSelection.every(({ line, lineIndex }) => isLineFullySelected(line, lineIndex));
+
+                // Determine what text we're about to translate
+                const getTextToTranslate = (): string => {
+                  if (!hasSelection) {
+                    // Full stanza
+                    return stanza
+                      .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
+                      .map(l => l[typedLang])
+                      .join('\n');
+                  } else if (allLinesFullySelected) {
+                    // Full line(s) selected
+                    return getStaticTranslation();
+                  } else {
+                    // Partial selection
+                    return getSelectedText().replace(/[.,!?;:()"]+/g, "");
                   }
+                };
+
+                // Check if translation is already showing for the same content - toggle off
+                const existingTranslation = stanzaAITranslation[stanzaIdx];
+                if (existingTranslation && !existingTranslation.loading) {
+                  const textToTranslate = getTextToTranslate();
+                  const isStatic = !hasSelection || allLinesFullySelected;
+
+                  // For static translations, compare the text directly
+                  // For GPT translations, compare the selectedWord
+                  const isSameTranslation = isStatic
+                    ? existingTranslation.isStatic && existingTranslation.text === textToTranslate
+                    : !existingTranslation.isStatic && existingTranslation.selectedWord === textToTranslate;
+
+                  if (isSameTranslation) {
+                    // Toggle off - close the translation
+                    setStanzaAITranslation(prev => {
+                      const next = { ...prev };
+                      delete next[stanzaIdx];
+                      return next;
+                    });
+                    return;
+                  }
+                }
+
+                if (!hasSelection) {
+                  // No selection = full stanza → use static translation (no GPT)
+                  const staticTranslation = stanza
+                    .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
+                    .map(l => l[typedLang])
+                    .join('\n');
+                  setStanzaAITranslation(prev => ({
+                    ...prev,
+                    [stanzaIdx]: { text: staticTranslation, loading: false, isStatic: true }
+                  }));
+                } else if (allLinesFullySelected) {
+                  // Full line(s) selected → use static translation (no GPT)
+                  const staticTranslation = getStaticTranslation();
+                  setStanzaAITranslation(prev => ({
+                    ...prev,
+                    [stanzaIdx]: { text: staticTranslation, loading: false, isStatic: true }
+                  }));
                 } else {
-                  // Translate full stanza via API
-                  const stanzaText = stanza
+                  // Partial selection (less than full line) → call GPT with rich translation logic
+                  const selectedText = getSelectedText();
+                  const cleanText = selectedText.replace(/[.,!?;:()"]+/g, "");
+                  const wordCount = cleanText.split(/\s+/).filter(w => w).length;
+                  const isSingleWord = wordCount === 1;
+
+                  console.log('[StanzaTranslate] Partial selection, calling GPT:', { selectedText, cleanText, isSingleWord });
+                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true, selectedWord: cleanText } }));
+
+                  // Build context from stanza
+                  const stanzaContext = stanza
                     .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
                     .map(l => l[oppositeLang])
-                    .join('\n');
-                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true } }));
+                    .join(' ');
+
                   try {
-                    const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'es' : 'en'}`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        phrase: stanzaText,
-                        sentence: stanzaText,
-                        level: currentLevel,
-                        context: { previous: '', current: stanzaText, next: '' },
-                      }),
-                    });
-                    const data = await res.json();
-                    setStanzaAITranslation(prev => ({
-                      ...prev,
-                      [stanzaIdx]: { text: data.translations?.primary || data.translation || '', loading: false }
-                    }));
-                  } catch {
+                    if (isSingleWord) {
+                      // Single word → use translate-word endpoint for rich info
+                      const res = await fetch(`/api/translate-word?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          word: cleanText,
+                          sentence: stanzaContext,
+                          level: currentLevel,
+                          context: { previous: '', current: stanzaContext, next: '' },
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.error) throw new Error(data.error);
+
+                      setStanzaAITranslation(prev => ({
+                        ...prev,
+                        [stanzaIdx]: {
+                          text: data.contextTranslation || data.translations?.[0] || '',
+                          loading: false,
+                          isStatic: false,
+                          selectedWord: cleanText,
+                          enhancedTranslation: data.contextTranslation ? {
+                            contextTranslation: data.contextTranslation,
+                            isDerivative: data.isDerivative,
+                            rootWord: data.rootWord,
+                            rootTranslation: data.rootTranslation,
+                            otherCommonTranslations: data.otherCommonTranslations,
+                          } : undefined,
+                        }
+                      }));
+                    } else {
+                      // Multi-word phrase → use translate-phrase endpoint
+                      const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          phrase: cleanText,
+                          sentence: stanzaContext,
+                          level: currentLevel,
+                          context: { previous: '', current: stanzaContext, next: '' },
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.error) throw new Error(data.error);
+
+                      const primaryTranslation = data.translations?.primary || data.translations?.[0] || '';
+                      const otherTranslations = data.translations?.otherCommonTranslations ||
+                        (Array.isArray(data.translations) ? data.translations.slice(1) : []);
+
+                      setStanzaAITranslation(prev => ({
+                        ...prev,
+                        [stanzaIdx]: {
+                          text: primaryTranslation,
+                          loading: false,
+                          isStatic: false,
+                          selectedWord: cleanText,
+                          otherTranslations: otherTranslations.length > 0 ? otherTranslations : undefined,
+                        }
+                      }));
+                    }
+                  } catch (err) {
+                    console.error('[StanzaTranslate] GPT error:', err);
                     setStanzaAITranslation(prev => ({
                       ...prev,
                       [stanzaIdx]: { text: 'Translation failed', loading: false }
@@ -1674,52 +1817,219 @@ export default function StoryLayoutWithAzureTTS({
               );
             };
 
+            // Helper to fetch example sentences for stanza translations
+            const fetchStanzaExample = async (translation: string, selectedWord: string, stanza: StoryLine[]) => {
+              const isSpanishSource = oppositeLang === 'es';
+              const sourceWord = isSpanishSource ? selectedWord : translation;
+              const targetWord = isSpanishSource ? translation : selectedWord;
+
+              // Toggle off if already showing
+              if (stanzaExampleMap[translation]) {
+                setStanzaExampleMap(prev => {
+                  const updated = { ...prev };
+                  delete updated[translation];
+                  return updated;
+                });
+                return;
+              }
+
+              try {
+                const payload = {
+                  spanishWord: isSpanishSource ? sourceWord : targetWord,
+                  englishWord: isSpanishSource ? targetWord : sourceWord,
+                  originalSentence: stanza
+                    .filter((l: StoryLine) => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
+                    .map((l: StoryLine) => l[oppositeLang])
+                    .join(' '),
+                  level: currentLevel,
+                };
+
+                const res = await fetch(`/api/example-sentence?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                });
+
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                setStanzaExampleMap(prev => ({
+                  ...prev,
+                  [translation]: {
+                    english: data.english,
+                    spanish: data.spanish,
+                  },
+                }));
+              } catch (err) {
+                console.error('[StanzaExample] Failed to fetch example:', err);
+              }
+            };
+
             // Helper to render stanza translations (appears below stanza text, doesn't push content)
             const renderStanzaTranslations = (
               stanzaIdx: number,
               stanza: StoryLine[]
             ) => {
               const aiTranslation = stanzaAITranslation[stanzaIdx];
+              const showSpanishFirst = typedLang === 'en';
 
               return (
                 <div key={`stanza-translations-${stanzaIdx}`}>
-                  {/* AI translation result (友 full stanza) */}
+                  {/* AI translation result (友 full stanza) - matches UnifiedTranslator bubble style */}
                   {aiTranslation && (
-                    <div className="px-2 mt-1">
-                      {aiTranslation.loading ? (
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Loader2 className="animate-spin h-4 w-4" />
-                          <span>Translating stanza...</span>
-                        </div>
-                      ) : (
-                        <div className="relative text-sm text-muted-foreground bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md px-2 py-1 shadow-sm">
-                          <button
-                            onClick={() => setStanzaAITranslation(prev => {
-                              const next = { ...prev };
-                              delete next[stanzaIdx];
-                              return next;
-                            })}
-                            className="absolute top-0 right-1 text-gray-400 hover:text-gray-600 text-xs"
-                            data-translation-control="close"
-                          >
-                            ✕
-                          </button>
-                          <div className="pr-4 whitespace-pre-line">{aiTranslation.text}</div>
-                        </div>
-                      )}
+                    <div className="px-2 -mt-1">
+                      <div className="bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 -ml-[7px]">
+                        {aiTranslation.loading ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-semibold">{t(typedLang, "translator", "translating")}…</span>
+                            <span className="animate-pulse text-lg">🧠</span>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-left relative">
+                            <p className="font-semibold">{t(typedLang, "translator", "translation")}:</p>
+
+                            {/* Enhanced single word translation with root word info */}
+                            {aiTranslation.enhancedTranslation ? (
+                              <>
+                                <div className="text-lg font-medium text-gray-900 mt-1" style={{ wordSpacing: '0.15em' }}>
+                                  <span className="font-medium">{aiTranslation.selectedWord}</span> = {aiTranslation.enhancedTranslation.contextTranslation}
+                                </div>
+
+                                {aiTranslation.enhancedTranslation.isDerivative && aiTranslation.enhancedTranslation.rootWord && (
+                                  <div className="mt-3">
+                                    <p className="font-semibold text-sm text-gray-700">Root word:</p>
+                                    <div className="text-sm text-gray-800">
+                                      <span className="font-medium">{aiTranslation.enhancedTranslation.rootWord}</span> = {aiTranslation.enhancedTranslation.rootTranslation}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {aiTranslation.enhancedTranslation.otherCommonTranslations && aiTranslation.enhancedTranslation.otherCommonTranslations.length > 0 && (
+                                  <>
+                                    <p className="font-normal mt-2">
+                                      <span className="font-bold italic text-gray-800">{aiTranslation.selectedWord}</span>
+                                      {" "}{t(typedLang, "translator", "otherCommonUses")}:
+                                    </p>
+                                    <ul className="list-disc list-inside">
+                                      {aiTranslation.enhancedTranslation.otherCommonTranslations.map((trans, i) => {
+                                        const hasExample = !!stanzaExampleMap[trans];
+                                        return (
+                                          <li key={i}>
+                                            <button
+                                              onClick={() => fetchStanzaExample(trans, aiTranslation.selectedWord || '', stanza)}
+                                              className="text-blue-600 hover:underline"
+                                            >
+                                              {trans}
+                                            </button>
+                                            {hasExample && (
+                                              <div className="ml-2 mt-1 text-sm">
+                                                {showSpanishFirst ? (
+                                                  <>
+                                                    <p className="text-gray-900">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                                    <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <p className="text-gray-900">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                                    <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                                  </>
+                                                )}
+                                              </div>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  </>
+                                )}
+                              </>
+                            ) : aiTranslation.otherTranslations && aiTranslation.otherTranslations.length > 0 ? (
+                              /* Phrase translation with other meanings */
+                              <>
+                                <div className="text-lg font-medium text-gray-900 mt-1" style={{ wordSpacing: '0.15em' }}>
+                                  {aiTranslation.text}
+                                </div>
+                                <p className="font-normal mt-2">
+                                  <span className="font-bold italic text-gray-800">{aiTranslation.selectedWord}</span>
+                                  {" "}{t(typedLang, "translator", "otherCommonUses")}:
+                                </p>
+                                <ul className="list-disc list-inside">
+                                  {aiTranslation.otherTranslations.map((trans, i) => {
+                                    const hasExample = !!stanzaExampleMap[trans];
+                                    return (
+                                      <li key={i}>
+                                        <button
+                                          onClick={() => fetchStanzaExample(trans, aiTranslation.selectedWord || '', stanza)}
+                                          className="text-blue-600 hover:underline"
+                                        >
+                                          {trans}
+                                        </button>
+                                        {hasExample && (
+                                          <div className="ml-2 mt-1 text-sm">
+                                            {showSpanishFirst ? (
+                                              <>
+                                                <p className="text-gray-900">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <p className="text-gray-900">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                              </>
+                                            )}
+                                          </div>
+                                        )}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </>
+                            ) : (
+                              /* Simple translation (static or no extra info) */
+                              <div className="text-lg font-medium text-gray-900 mt-1 whitespace-pre-line pr-6" style={{ wordSpacing: '0.15em' }}>
+                                {aiTranslation.text}
+                              </div>
+                            )}
+
+                            <button
+                              onClick={() => setStanzaAITranslation(prev => {
+                                const next = { ...prev };
+                                delete next[stanzaIdx];
+                                return next;
+                              })}
+                              className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 text-sm"
+                              data-translation-control="close"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
                   {/* Static stanza translation (✍️ pencil) */}
                   <div
                     ref={el => { stanzaTranslationRefs.current[stanzaIdx] = el; }}
-                    className="hidden px-2 mt-1 text-muted-foreground text-sm bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md py-1 shadow-sm"
+                    className="hidden px-2 mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 -ml-[7px] relative"
                   >
-                    {stanza
-                      .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
-                      .map((line, idx) => (
-                        <p key={idx}>{line[typedLang]}</p>
-                      ))}
+                    <button
+                      onClick={() => {
+                        const el = stanzaTranslationRefs.current[stanzaIdx];
+                        if (el) el.classList.add("hidden");
+                      }}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+                      data-translation-control="close"
+                    >
+                      ✕
+                    </button>
+                    <div className="text-lg font-medium text-gray-900 whitespace-pre-line pr-6" style={{ wordSpacing: '0.15em' }}>
+                      {stanza
+                        .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
+                        .map((line, idx) => (
+                          <p key={idx}>{line[typedLang]}</p>
+                        ))}
+                    </div>
                   </div>
                 </div>
               );

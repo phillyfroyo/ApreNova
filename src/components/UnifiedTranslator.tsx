@@ -9,6 +9,7 @@ import type { Language } from "@/types/i18n";
 
 interface Props {
   sentence: string;
+  staticTranslation?: string; // Pre-existing translation to use when full line is selected (avoids GPT call)
   enabled?: boolean;
   autoTriggerAll?: boolean | number;
   readOnlyMode?: boolean; // 🍌 NEW: disables real GPT fetch
@@ -26,7 +27,7 @@ interface Props {
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
+export default function UnifiedTranslator({ sentence, staticTranslation, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
   // Extract leading whitespace for poetry indentation
   const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
   const contentWithoutLeading = sentence.trimStart();
@@ -196,10 +197,11 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   
   // Update the ref whenever dependencies change
   triggerManualTranslationRef.current = () => {
-    // If translations are already showing, hide them (toggle off)
-    if (translations.length > 0 || error) {
+    // If translations are already showing or loading, hide them (toggle off)
+    if (translations.length > 0 || loading || error) {
       setTranslations([]);
       setEnhancedTranslation(null);
+      setLoading(false);
       setError("");
       return;
     }
@@ -212,15 +214,32 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
       return;
     }
 
+    // Check if full line is being translated (use static translation if available)
+    const isFullLine = (start: number, end: number) => start === 0 && end === words.length - 1;
+
     if (startIdx !== null && endIdx !== null) {
-      // Words already highlighted, just fetch
-      fetchTranslation(startIdx, endIdx);
+      // Words already highlighted
+      if (isFullLine(startIdx, endIdx) && staticTranslation) {
+        // Use static translation for full line
+        setTranslations([staticTranslation]);
+        setEnhancedTranslation(null);
+      } else {
+        // Partial selection - call GPT
+        fetchTranslation(startIdx, endIdx);
+      }
     } else {
-      // Set indices and start loading together - React 18 batches into single render
+      // No selection - translate full line
       setStartIdx(0);
       setEndIdx(words.length - 1);
-      setLoading(true);
-      fetchTranslation(0, words.length - 1);
+      if (staticTranslation) {
+        // Use static translation for full line
+        setTranslations([staticTranslation]);
+        setEnhancedTranslation(null);
+      } else {
+        // No static translation available - call GPT
+        setLoading(true);
+        fetchTranslation(0, words.length - 1);
+      }
     }
   };
 
@@ -463,12 +482,21 @@ useEffect(() => {
       <div
   ref={tooltipRef}
   style={sentenceWidth ? { width: sentenceWidth } : undefined}
-  className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50"
+  className="mt-1 -ml-[15px] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative"
   data-tooltip
 >
-        {error && <div className="text-sm text-red-500">{error}</div>}
+        {/* Close button */}
+        <button
+          onClick={clearSelection}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+          data-translation-control="close"
+        >
+          ✕
+        </button>
 
-        <div className="text-sm text-left">
+        {error && <div className="text-sm text-red-500 pr-6">{error}</div>}
+
+        <div className="text-sm text-left pr-6">
           {loading && (
             <div className="flex items-center gap-2 mb-2">
               <span className="font-semibold">{t(currentLang, "translator", "translating")}…</span>
@@ -482,7 +510,7 @@ useEffect(() => {
               {enhancedTranslation && startIdx === endIdx ? (
                 <>
                   <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
-                  <div className="text-lg font-medium text-gray-900">
+                  <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
                     <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.contextTranslation}
                   </div>
 
@@ -540,7 +568,7 @@ useEffect(() => {
                 /* Legacy format for phrases and fallback */
                 <>
                   <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
-                  <div className="text-lg font-medium text-gray-900">
+                  <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
                     {translations[0]}
                   </div>
 
