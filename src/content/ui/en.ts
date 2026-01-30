@@ -420,12 +420,7 @@ storiesMetadata: {
   "secretos-del-desierto": {
     title: "Secrets of the Desert",
     description: "The past comes alive among the desert dunes.",
-  },
-        "poems-by-emily-dickinson": {
-    title: "Poems by Emily Dickinson",
-    description: "Emily Dickinson's verses explore themes of success, life, and the human condition with profound insight. Through her delicate yet powerful words, she captures the essence of fleeting triumphs and enduring struggles.",
-  },
-},
+  },},
 
 };
 
