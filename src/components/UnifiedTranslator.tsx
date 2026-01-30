@@ -19,17 +19,20 @@ interface Props {
   // Context for better translations
   sentenceIndex?: number;
   contextSentences?: Array<{ es: string; en: string }>;
+  // Cross-line stanza selection support
+  externalSelection?: { start: number; end: number } | null; // Parent can force a selection range
+  onWordClick?: (wordIndex: number) => void; // Notify parent of word clicks for cross-line coordination
 }
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences }: Props) {
+export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
   // Extract leading whitespace for poetry indentation
   const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
   const contentWithoutLeading = sentence.trimStart();
   const words = contentWithoutLeading.split(" ");
-  const [startIdx, setStartIdx] = useState<number | null>(null);
-  const [endIdx, setEndIdx] = useState<number | null>(null);
+  const [internalStartIdx, setInternalStartIdx] = useState<number | null>(null);
+  const [internalEndIdx, setInternalEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
   const [enhancedTranslation, setEnhancedTranslation] = useState<{
@@ -41,21 +44,29 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
+  // Use external selection if provided, otherwise use internal state
+  const startIdx = externalSelection !== undefined ? externalSelection?.start ?? null : internalStartIdx;
+  const endIdx = externalSelection !== undefined ? externalSelection?.end ?? null : internalEndIdx;
+  // Setters that work with internal state (used when no external selection)
+  const setStartIdx = setInternalStartIdx;
+  const setEndIdx = setInternalEndIdx;
+
   // Notify parent of translation state changes
   useEffect(() => {
     const hasActiveTranslation = translations.length > 0 || loading || error !== "";
     onTranslationStateChange?.(hasActiveTranslation);
   }, [translations.length, loading, error]); // Removed onTranslationStateChange from deps
 
-  // Notify parent of selection changes
+  // Notify parent of selection changes (only for internal selections, not external)
   useEffect(() => {
-    if (startIdx !== null && endIdx !== null) {
-      onSelectionChange?.({ start: startIdx, end: endIdx });
+    if (externalSelection !== undefined) return; // External selection managed by parent
+    if (internalStartIdx !== null && internalEndIdx !== null) {
+      onSelectionChange?.({ start: internalStartIdx, end: internalEndIdx });
     } else {
       onSelectionChange?.(null);
     }
-  }, [startIdx, endIdx]); // Removed onSelectionChange from deps to prevent infinite loop
+  }, [internalStartIdx, internalEndIdx, externalSelection]); // Removed onSelectionChange from deps to prevent infinite loop
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -243,6 +254,14 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
 
   const handleClick = (index: number) => {
   if (!enabled) return;
+
+  // Notify parent of word click for cross-line stanza selection
+  onWordClick?.(index);
+
+  // If using external selection, let parent handle all selection logic
+  if (externalSelection !== undefined) {
+    return;
+  }
 
   // Clear any existing translations when selecting new words
   setTranslations([]);

@@ -127,6 +127,12 @@ export default function StoryLayoutWithAzureTTS({
   const [showEmojiButtons, setShowEmojiButtons] = useState<Record<number, boolean>>({});
   const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
+  // Track pending cross-line selection within a stanza: { stanzaIdx, lineIndex, wordIndex }
+  const [pendingStanzaSelection, setPendingStanzaSelection] = useState<{
+    stanzaIdx: number;
+    lineIndex: number;
+    wordIndex: number;
+  } | null>(null);
   // Stanza-level state for poem emoji interactions
   const [showStanzaEmojis, setShowStanzaEmojis] = useState<Record<number, boolean>>({});
   const [activeStanzaLine, setActiveStanzaLine] = useState<Record<number, number>>({});
@@ -268,6 +274,179 @@ export default function StoryLayoutWithAzureTTS({
       setShowEmojiButtons(prev => ({ ...prev, [index]: true }));
     }
   }, []);
+
+  // Handle word click for cross-line stanza selection
+  // Preserves the nuanced highlight behavior from UnifiedTranslator:
+  // 1. First click: select single word
+  // 2. Click same single word again: deselect
+  // 3. Click outside current selection: expand
+  // 4. Click inside selection (not edges): shrink from right
+  // 5. Click at start edge when multi-word: shrink from left
+  const handleStanzaWordClick = useCallback((
+    stanzaIdx: number,
+    lineIndex: number,
+    wordIndex: number,
+    linesInStanza: { line: StoryLine; lineIndex: number }[]
+  ) => {
+    // Helper: convert (lineIdx, wordIdx) to global word index within stanza
+    const toGlobalIdx = (lineIdx: number, wordIdx: number): number => {
+      let globalIdx = 0;
+      for (const { line, lineIndex: li } of linesInStanza) {
+        const lineText = line[oppositeLang] || '';
+        const words = lineText.trimStart().split(/\s+/).filter(w => w);
+        if (li === lineIdx) {
+          return globalIdx + wordIdx;
+        }
+        globalIdx += words.length;
+      }
+      return globalIdx;
+    };
+
+    // Helper: convert global word index to (lineIdx, wordIdx)
+    const fromGlobalIdx = (globalIdx: number): { lineIdx: number; wordIdx: number } | null => {
+      let cumulative = 0;
+      for (const { line, lineIndex: li } of linesInStanza) {
+        const lineText = line[oppositeLang] || '';
+        const words = lineText.trimStart().split(/\s+/).filter(w => w);
+        if (globalIdx < cumulative + words.length) {
+          return { lineIdx: li, wordIdx: globalIdx - cumulative };
+        }
+        cumulative += words.length;
+      }
+      return null;
+    };
+
+    // Helper: get total word count for a line
+    const getWordCount = (line: StoryLine): number => {
+      const lineText = line[oppositeLang] || '';
+      return lineText.trimStart().split(/\s+/).filter(w => w).length;
+    };
+
+    // Helper: get total word count for entire stanza
+    const getTotalWords = (): number => {
+      return linesInStanza.reduce((sum, { line }) => sum + getWordCount(line), 0);
+    };
+
+    // Helper: build per-line selections from global range
+    const buildSelectionsFromGlobalRange = (globalStart: number, globalEnd: number): Record<number, { start: number; end: number } | null> => {
+      const newSelections: Record<number, { start: number; end: number } | null> = {};
+      let cumulative = 0;
+
+      for (const { line, lineIndex: li } of linesInStanza) {
+        const wordCount = getWordCount(line);
+        const lineStart = cumulative;
+        const lineEnd = cumulative + wordCount - 1;
+
+        if (globalEnd < lineStart || globalStart > lineEnd) {
+          // Line not in selection range
+          newSelections[li] = null;
+        } else {
+          // Line overlaps with selection
+          const localStart = Math.max(0, globalStart - lineStart);
+          const localEnd = Math.min(wordCount - 1, globalEnd - lineStart);
+          newSelections[li] = { start: localStart, end: localEnd };
+        }
+        cumulative += wordCount;
+      }
+      return newSelections;
+    };
+
+    // Helper: get current global selection range from wordSelections state
+    const getCurrentGlobalRange = (): { start: number; end: number } | null => {
+      let globalStart: number | null = null;
+      let globalEnd: number | null = null;
+      let cumulative = 0;
+
+      for (const { line, lineIndex: li } of linesInStanza) {
+        const wordCount = getWordCount(line);
+        const sel = wordSelections[li];
+        if (sel) {
+          const lineGlobalStart = cumulative + sel.start;
+          const lineGlobalEnd = cumulative + sel.end;
+          if (globalStart === null || lineGlobalStart < globalStart) {
+            globalStart = lineGlobalStart;
+          }
+          if (globalEnd === null || lineGlobalEnd > globalEnd) {
+            globalEnd = lineGlobalEnd;
+          }
+        }
+        cumulative += wordCount;
+      }
+
+      if (globalStart !== null && globalEnd !== null) {
+        return { start: globalStart, end: globalEnd };
+      }
+      return null;
+    };
+
+    // If clicking in a different stanza, reset and start new selection
+    if (pendingStanzaSelection && pendingStanzaSelection.stanzaIdx !== stanzaIdx) {
+      // Clear old selections from previous stanza
+      const clearedSelections: Record<number, { start: number; end: number } | null> = {};
+      linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
+
+      setPendingStanzaSelection({ stanzaIdx, lineIndex, wordIndex });
+      setWordSelections({ ...clearedSelections, [lineIndex]: { start: wordIndex, end: wordIndex } });
+      setShowStanzaEmojis({ [stanzaIdx]: true });
+      return;
+    }
+
+    // Get current global selection
+    const currentRange = getCurrentGlobalRange();
+    const clickedGlobalIdx = toGlobalIdx(lineIndex, wordIndex);
+
+    // If no current selection, start one
+    if (!currentRange) {
+      setPendingStanzaSelection({ stanzaIdx, lineIndex, wordIndex });
+      setWordSelections(prev => ({ ...prev, [lineIndex]: { start: wordIndex, end: wordIndex } }));
+      setShowStanzaEmojis({ [stanzaIdx]: true });
+      return;
+    }
+
+    const { start: globalStart, end: globalEnd } = currentRange;
+
+    // Same single word clicked again -> deselect
+    if (globalStart === clickedGlobalIdx && globalEnd === clickedGlobalIdx) {
+      const clearedSelections: Record<number, { start: number; end: number } | null> = {};
+      linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
+      setWordSelections(prev => ({ ...prev, ...clearedSelections }));
+      setPendingStanzaSelection(null);
+      setShowStanzaEmojis({});
+      return;
+    }
+
+    // Click outside current selection -> expand
+    if (clickedGlobalIdx < globalStart || clickedGlobalIdx > globalEnd) {
+      const newStart = Math.min(globalStart, clickedGlobalIdx);
+      const newEnd = Math.max(globalEnd, clickedGlobalIdx);
+      const newSelections = buildSelectionsFromGlobalRange(newStart, newEnd);
+      setWordSelections(prev => ({ ...prev, ...newSelections }));
+      setPendingStanzaSelection(null);
+      return;
+    }
+
+    // Click inside selection (not at edges) -> shrink from right
+    if (clickedGlobalIdx > globalStart && clickedGlobalIdx < globalEnd) {
+      const newSelections = buildSelectionsFromGlobalRange(globalStart, clickedGlobalIdx);
+      setWordSelections(prev => ({ ...prev, ...newSelections }));
+      setPendingStanzaSelection(null);
+      return;
+    }
+
+    // Click at start edge when multi-word -> shrink from left
+    if (clickedGlobalIdx === globalStart && globalStart !== globalEnd) {
+      const newSelections = buildSelectionsFromGlobalRange(globalStart + 1, globalEnd);
+      setWordSelections(prev => ({ ...prev, ...newSelections }));
+      setPendingStanzaSelection(null);
+      return;
+    }
+
+    // Fallback: deselect
+    const clearedSelections: Record<number, { start: number; end: number } | null> = {};
+    linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
+    setWordSelections(prev => ({ ...prev, ...clearedSelections }));
+    setPendingStanzaSelection(null);
+  }, [pendingStanzaSelection, oppositeLang, wordSelections]);
 
   const handleManualTranslate = useCallback((index: number, translateFn: () => void) => {
     setManualTranslateFunctions(prev => ({ ...prev, [index]: translateFn }));
@@ -466,7 +645,9 @@ export default function StoryLayoutWithAzureTTS({
   }, [session, storySlug, currentLevel, chapterNumber, pageNumber, sentences, oppositeLang]);
 
   // Enhanced TTS play function
-  const handlePlay = async (index: number, isSlow: boolean, text: string) => {
+  // handlePlay: plays TTS for given text
+  // skipWordSelection: when true, don't apply wordSelections slicing (used for pre-extracted cross-line text)
+  const handlePlay = async (index: number, isSlow: boolean, text: string, skipWordSelection: boolean = false) => {
     setTtsError(null);
 
     // If clicking the same line and mode, toggle play/pause
@@ -522,8 +703,8 @@ export default function StoryLayoutWithAzureTTS({
         stageDirectionForTTS
       );
 
-      // Check if there's a word selection for this sentence
-      const wordSelection = wordSelections[index];
+      // Check if there's a word selection for this sentence (skip if text was pre-extracted)
+      const wordSelection = skipWordSelection ? undefined : wordSelections[index];
 
       // Always use playTTSSegment which handles both word selection and slow speed comma logic
       await playTTSSegment(request, wordSelection || undefined);
@@ -1029,7 +1210,16 @@ export default function StoryLayoutWithAzureTTS({
 
             // Helper to render a single line
             // When isInsideStanza=true, emoji row and static translation are handled at stanza level
-            const renderLine = (s: StoryLine, lineIndex: number, isInsideStanza: boolean = false) => {
+            // stanzaContext provides info for cross-line selection within stanzas
+            const renderLine = (
+              s: StoryLine,
+              lineIndex: number,
+              isInsideStanza: boolean = false,
+              stanzaContext?: {
+                stanzaIdx: number;
+                linesInStanza: { line: StoryLine; lineIndex: number }[];
+              }
+            ) => {
               // Check if this is a stanza break (poem) - render as simple visual space
               if (s.isStanzaBreak) {
                 return (
@@ -1087,7 +1277,7 @@ export default function StoryLayoutWithAzureTTS({
               const lineSpacing = (isPoemType || isInsideStanza) ? "my-0" : "my-6";
 
               return (
-                <div key={lineIndex} className={`${lineSpacing} w-full`} data-sentence-index={lineIndex}>
+                <div key={lineIndex} className={`${lineSpacing} w-full relative`} data-sentence-index={lineIndex}>
                   {/* Speaker name for scripts */}
                   {isScriptType && s.speaker && (
                     <div className="px-2 mb-1">
@@ -1111,12 +1301,11 @@ export default function StoryLayoutWithAzureTTS({
                     </div>
                   )}
 
-                  <div className={`flex flex-col w-full ${isScriptType && s.speaker ? 'pl-4' : ''} ${(isPoemType || isInsideStanza) ? '' : 'space-y-2'}`}>
-                    {/* Emoji row: skip for stanza poems (handled at stanza level) */}
-                    {!isInsideStanza && (
-                    <div className={`flex items-center gap-1 justify-start px-2 transition-all duration-200 ${
-                      showEmojiButtons[lineIndex] ? 'h-auto opacity-100' : ((isPoemType || isInsideStanza) ? 'h-0 overflow-hidden opacity-0' : 'opacity-0 pointer-events-none')
-                    }`}>
+                  {/* Emoji row: skip for stanza poems (handled at stanza level) - overlays space above line */}
+                  {!isInsideStanza && (
+                  <div className={`absolute left-0 right-0 -top-8 flex items-center gap-1 justify-start px-2 transition-opacity duration-200 z-10 ${
+                    showEmojiButtons[lineIndex] ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  }`}>
                       {/* Enhanced emoji buttons with loading states and selection indicators */}
                       <button
                         onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
@@ -1222,11 +1411,10 @@ export default function StoryLayoutWithAzureTTS({
                         ) : null}
                       </div>
                     </div>
-                    )}
-                  </div>
+                  )}
 
                   {/* Text content - ensure consistent left alignment */}
-                  <div className="w-full px-2 relative" data-text-content={lineIndex}>
+                  <div className={`w-full px-2 relative ${isScriptType && s.speaker ? 'pl-4' : ''}`} data-text-content={lineIndex}>
                     <UnifiedTranslator
                       sentence={s[oppositeLang]}
                       enabled={!isAnyDropdownOpen && !menuOpen}
@@ -1238,6 +1426,14 @@ export default function StoryLayoutWithAzureTTS({
                       onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
                       sentenceIndex={lineIndex}
                       contextSentences={sentences}
+                      // Cross-line selection for stanzas: parent controls selection
+                      externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
+                      onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(
+                        stanzaContext.stanzaIdx,
+                        lineIndex,
+                        wordIdx,
+                        stanzaContext.linesInStanza
+                      ) : undefined}
                     />
                     {/* Per-line static translation: skip for stanza poems (handled at stanza level) */}
                     {!isInsideStanza && (
@@ -1259,35 +1455,83 @@ export default function StoryLayoutWithAzureTTS({
               linesInStanza: { line: StoryLine; lineIndex: number }[],
               stanza: StoryLine[]
             ) => {
-              // Find if any line in this stanza has a word selection
-              const lineWithSelection = linesInStanza.find(
+              // Gather all lines with selections and build the complete selected text
+              const linesWithSelection = linesInStanza.filter(
                 ({ lineIndex }) => wordSelections[lineIndex]
               );
-              const hasSelection = !!lineWithSelection;
+              const hasSelection = linesWithSelection.length > 0;
               const targetLineIndex = activeStanzaLine[stanzaIdx] ?? linesInStanza[0]?.lineIndex ?? 0;
-              const targetLine = linesInStanza.find(l => l.lineIndex === targetLineIndex)?.line || stanza[0];
+
+              // Build the complete selected text across all lines
+              const getSelectedText = (): string => {
+                if (!hasSelection) return '';
+
+                const selectedParts: string[] = [];
+                console.log('[StanzaSelection] Building text from', linesWithSelection.length, 'lines with selections');
+                for (const { line, lineIndex } of linesWithSelection) {
+                  const sel = wordSelections[lineIndex];
+                  if (sel) {
+                    const lineText = line[oppositeLang] || '';
+                    const words = lineText.trimStart().split(/\s+/).filter(w => w);
+                    const selectedWords = words.slice(sel.start, sel.end + 1);
+                    console.log('[StanzaSelection] Line', lineIndex, ': sel=', sel, 'words=', selectedWords);
+                    selectedParts.push(selectedWords.join(' '));
+                  }
+                }
+                const result = selectedParts.join(' ');
+                console.log('[StanzaSelection] Complete text:', result);
+                return result;
+              };
 
               // Check if any line in this stanza has active audio
               const stanzaHasAudio = linesInStanza.some(({ lineIndex }) => activeAudio?.index === lineIndex);
 
               const handleStanzaPlay = (isSlow: boolean) => {
-                if (lineWithSelection) {
-                  handlePlay(lineWithSelection.lineIndex, isSlow, lineWithSelection.line[oppositeLang]);
+                console.log('[StanzaPlay] hasSelection:', hasSelection, 'linesWithSelection:', linesWithSelection.length);
+                if (hasSelection) {
+                  // Play all selected text across lines (skip word selection slicing - text is pre-extracted)
+                  const selectedText = getSelectedText();
+                  console.log('[StanzaPlay] Playing selected text:', selectedText);
+                  // Use first selected line's index for audio tracking
+                  handlePlay(linesWithSelection[0].lineIndex, isSlow, selectedText, true);
                 } else {
                   // Play full stanza concatenated with period-space for natural TTS pauses
                   const fullStanzaText = stanza
                     .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
                     .map(l => l[oppositeLang])
                     .join('. ');
-                  handlePlay(linesInStanza[0].lineIndex, isSlow, fullStanzaText);
+                  handlePlay(linesInStanza[0].lineIndex, isSlow, fullStanzaText, true);
                 }
               };
 
               const handleStanzaTranslate = async () => {
-                if (lineWithSelection) {
-                  // Translate selected words via per-line UnifiedTranslator
-                  if (manualTranslateFunctions[lineWithSelection.lineIndex]) {
-                    manualTranslateFunctions[lineWithSelection.lineIndex]();
+                console.log('[StanzaTranslate] hasSelection:', hasSelection, 'linesWithSelection:', linesWithSelection.length);
+                if (hasSelection) {
+                  // Translate all selected text across lines via API
+                  const selectedText = getSelectedText();
+                  console.log('[StanzaTranslate] Translating selected text:', selectedText);
+                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true } }));
+                  try {
+                    const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'es' : 'en'}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        phrase: selectedText,
+                        sentence: selectedText,
+                        level: currentLevel,
+                        context: { previous: '', current: selectedText, next: '' },
+                      }),
+                    });
+                    const data = await res.json();
+                    setStanzaAITranslation(prev => ({
+                      ...prev,
+                      [stanzaIdx]: { text: data.translations?.primary || data.translation || '', loading: false }
+                    }));
+                  } catch {
+                    setStanzaAITranslation(prev => ({
+                      ...prev,
+                      [stanzaIdx]: { text: 'Translation failed', loading: false }
+                    }));
                   }
                 } else {
                   // Translate full stanza via API
@@ -1322,13 +1566,12 @@ export default function StoryLayoutWithAzureTTS({
               };
 
               const isOpen = showStanzaEmojis[stanzaIdx];
-              const aiTranslation = stanzaAITranslation[stanzaIdx];
 
               return (
                 <div key={`stanza-emoji-${stanzaIdx}`}>
-                  {/* Stanza emoji row */}
-                  <div className={`flex items-center gap-1 justify-start px-2 transition-all duration-200 ${
-                    isOpen ? 'h-auto opacity-100' : 'h-0 overflow-hidden opacity-0'
+                  {/* Stanza emoji row - overlays space above stanza, doesn't push content */}
+                  <div className={`absolute left-0 right-0 -top-8 flex items-center gap-1 justify-start px-2 transition-opacity duration-200 z-10 ${
+                    isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}>
                     <button
                       onClick={() => handleStanzaPlay(false)}
@@ -1371,12 +1614,8 @@ export default function StoryLayoutWithAzureTTS({
                           .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
                           .map(l => l[oppositeLang])
                           .join('\n');
-                        const selectedText = lineWithSelection
-                          ? lineWithSelection.line[oppositeLang].slice(
-                              wordSelections[lineWithSelection.lineIndex]!.start,
-                              wordSelections[lineWithSelection.lineIndex]!.end
-                            )
-                          : undefined;
+                        // Get cross-line selected text
+                        const selectedText = hasSelection ? getSelectedText() : undefined;
                         setTutorContext({
                           lineIndex: targetLineIndex,
                           fullLine: stanzaText,
@@ -1431,10 +1670,22 @@ export default function StoryLayoutWithAzureTTS({
                       ) : null}
                     </div>
                   </div>
+                </div>
+              );
+            };
 
+            // Helper to render stanza translations (appears below stanza text, doesn't push content)
+            const renderStanzaTranslations = (
+              stanzaIdx: number,
+              stanza: StoryLine[]
+            ) => {
+              const aiTranslation = stanzaAITranslation[stanzaIdx];
+
+              return (
+                <div key={`stanza-translations-${stanzaIdx}`}>
                   {/* AI translation result (友 full stanza) */}
                   {aiTranslation && (
-                    <div className="px-2 mb-1">
+                    <div className="px-2 mt-1">
                       {aiTranslation.loading ? (
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Loader2 className="animate-spin h-4 w-4" />
@@ -1462,7 +1713,7 @@ export default function StoryLayoutWithAzureTTS({
                   {/* Static stanza translation (✍️ pencil) */}
                   <div
                     ref={el => { stanzaTranslationRefs.current[stanzaIdx] = el; }}
-                    className="hidden px-2 mb-1 text-muted-foreground text-sm bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md py-1 shadow-sm"
+                    className="hidden px-2 mt-1 text-muted-foreground text-sm bg-white/95 backdrop-blur-sm border border-gray-200 rounded-md py-1 shadow-sm"
                   >
                     {stanza
                       .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
@@ -1487,15 +1738,16 @@ export default function StoryLayoutWithAzureTTS({
                 return (
                   <div
                     key={`stanza-${stanzaIdx}`}
-                    className="w-full mb-6"
+                    className="w-full mb-6 relative"
                     data-stanza-number={stanzaIdx + 1}
                     data-stanza-start={stanzaStartIndex}
                     data-stanza-end={globalLineIndex - 1}
                   >
                     {renderStanzaEmojiRow(stanzaIdx, linesInStanza, stanza)}
                     {linesInStanza.map(({ line, lineIndex }) =>
-                      renderLine(line, lineIndex, true)
+                      renderLine(line, lineIndex, true, { stanzaIdx, linesInStanza })
                     )}
+                    {renderStanzaTranslations(stanzaIdx, stanza)}
                   </div>
                 );
               });
