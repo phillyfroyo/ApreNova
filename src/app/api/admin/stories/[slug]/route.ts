@@ -46,6 +46,7 @@ function serializeAttribution(attr: StoryAttribution): string {
     if (attr.sourceEdition.editor) seParts.push(`editor: "${escapeJsString(attr.sourceEdition.editor)}"`);
     seParts.push(`isPublicDomain: ${attr.sourceEdition.isPublicDomain}`);
     if (attr.sourceEdition.publicDomainNote) seParts.push(`publicDomainNote: "${escapeJsString(attr.sourceEdition.publicDomainNote)}"`);
+    if (attr.sourceEdition.source) seParts.push(`source: "${escapeJsString(attr.sourceEdition.source)}"`);
     if (attr.sourceEdition.url) seParts.push(`url: "${escapeJsString(attr.sourceEdition.url)}"`);
     if (attr.sourceEdition.notes) seParts.push(`notes: "${escapeJsString(attr.sourceEdition.notes)}"`);
     parts.push(`sourceEdition: { ${seParts.join(", ")} }`);

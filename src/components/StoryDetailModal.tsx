@@ -327,7 +327,7 @@ export default function StoryDetailModal({
             </button>
 
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-full overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
@@ -348,12 +348,29 @@ export default function StoryDetailModal({
               <div className="flex-1 md:overflow-y-auto p-6 md:p-8">
                 {/* Story Type Badge */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    story.type === "poem" || story.type === "song-lyrics"
+                      ? "bg-purple-100 text-purple-700"
+                      : story.type === "novel" || story.type === "short-story"
+                      ? "bg-blue-100 text-blue-700"
+                      : story.type === "fable" || story.type === "folktale" || story.type === "myth" || story.type === "legend"
+                      ? "bg-amber-100 text-amber-700"
+                      : story.type === "epic"
+                      ? "bg-rose-100 text-rose-700"
+                      : story.type === "movie-script" || story.type === "tv-script"
+                      ? "bg-cyan-100 text-cyan-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
                     {STORY_TYPE_LABELS[story.type]?.[typedLang] || story.type}
                   </span>
                   {story.origin.isOriginal && (
                     <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                       {typedLang === "es" ? "Original de Cuentana" : "Cuentana Original"}
+                    </span>
+                  )}
+                  {!story.origin.isOriginal && attribution?.sourceEdition?.source === "gutenberg" && (
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                      Project Gutenberg
                     </span>
                   )}
                   {story.targetAudience && story.targetAudience !== "all" && (
@@ -407,12 +424,39 @@ export default function StoryDetailModal({
                       const cefrLevel = toCEFR(lvl);
                       const colorClass = CEFR_BADGE_COLORS[cefrLevel] || "bg-gray-100 text-gray-800";
                       return (
-                        <span
+                        <button
                           key={idx}
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass}`}
+                          onClick={async () => {
+                            // Check for bookmark at this level first
+                            const bookmarkResponse = await fetch(
+                              `/api/story-bookmark?storySlug=${encodeURIComponent(story.slug)}`
+                            );
+
+                            if (bookmarkResponse.ok) {
+                              const data = await bookmarkResponse.json();
+                              if (data.bookmark && toCEFR(data.bookmark.level) === cefrLevel) {
+                                // Bookmark exists at this level - resume from bookmark
+                                const url = getStoryUrl(
+                                  story.slug,
+                                  data.bookmark.level,
+                                  data.bookmark.chapter,
+                                  data.bookmark.page,
+                                  typedLang
+                                );
+                                router.push(url);
+                                return;
+                              }
+                            }
+
+                            // No bookmark at this level - start from beginning
+                            const url = getStoryUrl(story.slug, cefrLevel, 1, 1, typedLang);
+                            router.push(url);
+                          }}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass} cursor-pointer hover:scale-105 transition-transform`}
+                          title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
                         >
                           {getCEFRLabel(cefrLevel, typedLang)}
-                        </span>
+                        </button>
                       );
                     })}
                   </div>

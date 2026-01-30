@@ -1,7 +1,7 @@
 // src/lib/admin/attribution-helpers.ts
 // Helper types and functions for admin form handling of story attribution
 
-import type { StoryAttribution, AuthorInfo, SourceEdition, TranslatorInfo, RightsStatement } from "@/types/story";
+import type { StoryAttribution, AuthorInfo, SourceEdition, TranslatorInfo, RightsStatement, DigitalLibrarySource } from "@/types/story";
 
 /**
  * Flat form-friendly attribution structure for admin forms.
@@ -25,6 +25,7 @@ export interface FormAttribution {
   sourcePublicationYear?: string;
   sourceEditor?: string;
   sourceUrl?: string;
+  source?: DigitalLibrarySource;       // Digital library source (gutenberg, wikisource, etc.)
   sourceNotes?: string;
   sourceIsPublicDomain: boolean;
   sourcePublicDomainNote?: string;
@@ -84,6 +85,7 @@ export function attributionToForm(attr: StoryAttribution): FormAttribution {
     sourcePublicationYear: attr.sourceEdition?.publicationYear?.toString(),
     sourceEditor: attr.sourceEdition?.editor,
     sourceUrl: attr.sourceEdition?.url,
+    source: attr.sourceEdition?.source,
     sourceNotes: attr.sourceEdition?.notes,
     sourceIsPublicDomain: attr.sourceEdition?.isPublicDomain ?? true,
     sourcePublicDomainNote: attr.sourceEdition?.publicDomainNote,
@@ -123,12 +125,13 @@ export function formToAttribution(form: FormAttribution): StoryAttribution {
     note: form.authorNote || undefined,
   };
 
-  const sourceEdition: SourceEdition | undefined = form.sourceTitle || form.sourcePublisher || form.sourceUrl ? {
+  const sourceEdition: SourceEdition | undefined = form.sourceTitle || form.sourcePublisher || form.sourceUrl || form.source ? {
     title: form.sourceTitle || undefined,
     publisher: form.sourcePublisher || undefined,
     publicationYear: form.sourcePublicationYear ? parseInt(form.sourcePublicationYear) : undefined,
     editor: form.sourceEditor || undefined,
     url: form.sourceUrl || undefined,
+    source: form.source || undefined,
     notes: form.sourceNotes || undefined,
     isPublicDomain: form.sourceIsPublicDomain,
     publicDomainNote: form.sourcePublicDomainNote || undefined,

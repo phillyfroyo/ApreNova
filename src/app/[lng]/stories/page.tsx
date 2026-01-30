@@ -45,6 +45,7 @@ interface UserStory {
   sourceLanguage: string;
   status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
   detectedLevel?: string | null;
+  storyType?: string | null;
   createdAt?: string;
   cancelledAt?: string | null;
   levels: UserStoryLevel[];
@@ -107,6 +108,9 @@ function StoriesPageContent() {
   const storyParam = searchParams.get("story");
   const [detailStorySlug, setDetailStorySlug] = useState<string | null>(storyParam);
 
+  // Source filter from URL (for "See all" links)
+  const sourceFilter = searchParams.get("source"); // "cuentana", "gutenberg", or "classics"
+
   // Sync URL param with state
   useEffect(() => {
     setDetailStorySlug(storyParam);
@@ -115,15 +119,27 @@ function StoriesPageContent() {
   // Open detail modal and update URL
   const openDetailModal = (slug: string) => {
     setDetailStorySlug(slug);
-    // Update URL without full navigation (shallow routing)
-    window.history.pushState({}, "", `/${typedLang}/stories?story=${slug}`);
+    // Update URL without full navigation (shallow routing), preserve source filter
+    const params = new URLSearchParams();
+    params.set("story", slug);
+    if (sourceFilter) params.set("source", sourceFilter);
+    window.history.pushState({}, "", `/${typedLang}/stories?${params.toString()}`);
   };
 
   // Close detail modal and update URL
   const closeDetailModal = () => {
     setDetailStorySlug(null);
-    // Remove query param from URL
-    window.history.pushState({}, "", `/${typedLang}/stories`);
+    // Remove story param from URL, preserve source filter
+    if (sourceFilter) {
+      window.history.pushState({}, "", `/${typedLang}/stories?source=${sourceFilter}`);
+    } else {
+      window.history.pushState({}, "", `/${typedLang}/stories`);
+    }
+  };
+
+  // Clear source filter (back to main stories view)
+  const clearSourceFilter = () => {
+    router.push(`/${typedLang}/stories`);
   };
 
   // Filter state
@@ -134,14 +150,21 @@ function StoriesPageContent() {
 
   // User stories state
   const [userStories, setUserStories] = useState<UserStory[]>([]);
+  const [userStoriesLoading, setUserStoriesLoading] = useState(true);
   const [selectedUserStory, setSelectedUserStory] = useState<UserStory | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { lastConfirmedAt, lastCancelledAt } = useStoryUpload();
 
   // Fetch user stories
   useEffect(() => {
+    if (sessionStatus === "loading") {
+      // Still checking auth, keep loading state
+      return;
+    }
+
     if (!session?.user?.id) {
       setUserStories([]);
+      setUserStoriesLoading(false);
       return;
     }
 
@@ -152,8 +175,10 @@ function StoriesPageContent() {
           const data = await res.json();
           setUserStories(data.stories || []);
         }
+        setUserStoriesLoading(false);
       } catch (error) {
         console.error("Error fetching user stories:", error);
+        setUserStoriesLoading(false);
       }
     };
 
@@ -168,7 +193,7 @@ function StoriesPageContent() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [session?.user?.id, lastConfirmedAt, lastCancelledAt]);
+  }, [session?.user?.id, sessionStatus, lastConfirmedAt, lastCancelledAt]);
 
   const handleUserStoryDelete = (storyId: string) => {
     setUserStories((prev) => prev.filter((s) => s.id !== storyId));
@@ -184,8 +209,8 @@ function StoriesPageContent() {
   // Get authors list
   const authors = getUniqueAuthors();
 
-  // Filter stories by all criteria
-  const filteredStories = STORY_METADATA.filter(story => {
+  // Helper to check if story passes filter criteria
+  const passesFilters = (story: typeof STORY_METADATA[0]) => {
     // Never show archived stories to users
     if (story.isArchived) {
       return false;
@@ -219,7 +244,23 @@ function StoriesPageContent() {
 
     // AND logic between filter categories
     return matchesTags && matchesType && matchesAuthor;
-  });
+  };
+
+  // Filter stories by all criteria
+  const filteredStories = STORY_METADATA.filter(passesFilters);
+
+  // Separate stories into categories
+  const cuentanaOriginals = filteredStories.filter(story => story.origin.isOriginal);
+  const gutenbergStories = filteredStories.filter(story =>
+    !story.origin.isOriginal &&
+    'attribution' in story.origin &&
+    story.origin.attribution.sourceEdition?.source === 'gutenberg'
+  );
+  // Other external stories (not Gutenberg, not originals)
+  const otherExternalStories = filteredStories.filter(story =>
+    !story.origin.isOriginal &&
+    (!('attribution' in story.origin) || story.origin.attribution.sourceEdition?.source !== 'gutenberg')
+  );
 
   const toggleTag = (tag: StoryTag) => {
     setSelectedTags(prev =>
@@ -316,10 +357,6 @@ useEffect(() => {
 </div>
 
 <div className="mt-4 mb-4 px-4">
-  <h2 className="text-xl font-semibold text-left">
-    {t(typedLang, "stories", "storiesAll")}
-  </h2>
-
   {/* Filter Panel */}
   <AnimatePresence>
     {showFilters && (
@@ -446,26 +483,23 @@ useEffect(() => {
   </AnimatePresence>
 </div>
 
-{/* My Stories Section - only show if user has stories */}
-{userStories.length > 0 && (
+{/* My Stories Section - only show if user has stories and not viewing a source filter */}
+{userStories.length > 0 && !sourceFilter && (
   <div className="mb-6 px-4">
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-xl font-semibold flex items-center gap-2">
         <span>📚</span>
         {typedLang === "es" ? "Mis Historias" : "My Stories"}
+        <span className="text-sm font-normal text-gray-500">({userStories.length})</span>
       </h2>
-      <Link
-        href={`/${typedLang}/my-stories`}
-        className="text-sm text-purple-600 hover:text-purple-800 font-medium"
-      >
-        {typedLang === "es" ? "Ver todas" : "View all"}
-      </Link>
     </div>
     <div
       style={{
         display: "flex",
         gap: "1rem",
         overflowX: "auto",
+        paddingLeft: "1rem",
+        paddingRight: "1rem",
         paddingTop: "0.75rem",
         paddingBottom: "0.75rem",
         scrollbarWidth: "none",
@@ -473,7 +507,7 @@ useEffect(() => {
       }}
       className="hide-scrollbar"
     >
-      {userStories.map((story) => (
+      {userStories.slice(0, 8).map((story) => (
         <UserStoryCard
           key={story.id}
           id={story.id}
@@ -489,46 +523,249 @@ useEffect(() => {
   </div>
 )}
 
-    <div style={{ position: "relative" }}>
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          gap: "1.5rem",
-          overflowX: "auto",
-          paddingLeft: "1rem",
-          paddingRight: "1rem",
-          paddingTop: "0.75rem",
-          paddingBottom: "0.75rem",
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-        >
-         {filteredStories.length === 0 ? (
-           <div className="w-full text-center py-8 text-gray-500">
-             {typedLang === "es" ? "No hay historias con estos filtros" : "No stories match these filters"}
-           </div>
-         ) : (
-           filteredStories.map((story, i) => {
-             // Find the original index in STORY_METADATA for the modal
-             const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
-             return (
-               <StoryCard
-                 key={story.slug}
-                 index={originalIndex}
-                 title={getStoryTitle(typedLang, story.slug)}
-                 image={story.image}
-                 onClick={() => {
-                   openDetailModal(story.slug);
-                 }}
-               />
-             );
-           })
-         )}
+    {/* Admin Stories - wait until we know user stories status to prevent layout shift */}
+    {!userStoriesLoading ? (
+      <>
+        {/* Show message if no stories match filters */}
+        {filteredStories.length === 0 && !sourceFilter && (
+          <div className="w-full text-center py-8 text-gray-500">
+            {typedLang === "es" ? "No hay historias con estos filtros" : "No stories match these filters"}
+          </div>
+        )}
+
+        {/* Full Grid View when source filter is active */}
+        {sourceFilter ? (
+          <div className="mb-6 px-4">
+            {/* Header with back button */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={clearSourceFilter}
+                className="text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                {typedLang === "es" ? "Volver" : "Back"}
+              </button>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                {sourceFilter === "cuentana" && (
+                  <>
+                    <span>🎨</span>
+                    {typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals"}
+                  </>
+                )}
+                {sourceFilter === "gutenberg" && (
+                  <>
+                    <span>📖</span>
+                    {typedLang === "es" ? "La Colección Project Gutenberg" : "The Project Gutenberg Collection"}
+                  </>
+                )}
+                {sourceFilter === "classics" && (
+                  <>
+                    <span>📖</span>
+                    {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
+                  </>
+                )}
+                <span className="text-sm font-normal text-gray-500">
+                  ({sourceFilter === "cuentana" ? cuentanaOriginals.length : sourceFilter === "gutenberg" ? gutenbergStories.length : otherExternalStories.length})
+                </span>
+              </h2>
+            </div>
+
+            {/* Grid of all stories in this category */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2">
+              {(sourceFilter === "cuentana" ? cuentanaOriginals : sourceFilter === "gutenberg" ? gutenbergStories : otherExternalStories).map((story) => {
+                const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                return (
+                  <StoryCard
+                    key={story.slug}
+                    index={originalIndex}
+                    title={getStoryTitle(typedLang, story.slug)}
+                    image={story.image}
+                    onClick={() => openDetailModal(story.slug)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Normal Row View - Cuentana Originals */}
+            {cuentanaOriginals.length > 0 && (
+              <div className="mb-6 px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>🎨</span>
+                    {typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals"}
+                    <span className="text-sm font-normal text-gray-500">({cuentanaOriginals.length})</span>
+                  </h2>
+                  {cuentanaOriginals.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=cuentana`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "1rem",
+                    paddingRight: "1rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {cuentanaOriginals.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Normal Row View - Project Gutenberg Collection */}
+            {gutenbergStories.length > 0 && (
+              <div className="mb-6 px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>📖</span>
+                    {typedLang === "es" ? "La Colección Project Gutenberg" : "The Project Gutenberg Collection"}
+                    <span className="text-sm font-normal text-gray-500">({gutenbergStories.length})</span>
+                  </h2>
+                  {gutenbergStories.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=gutenberg`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "1rem",
+                    paddingRight: "1rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {gutenbergStories.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Normal Row View - Other External Stories */}
+            {otherExternalStories.length > 0 && (
+              <div className="mb-6 px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>📖</span>
+                    {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
+                    <span className="text-sm font-normal text-gray-500">({otherExternalStories.length})</span>
+                  </h2>
+                  {otherExternalStories.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=classics`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "1rem",
+                    paddingRight: "1rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {otherExternalStories.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    ) : (
+      // Loading skeleton for admin stories while waiting for user stories status
+      <div className="mb-6 px-8">
+        {[1, 2, 3].map((row) => (
+          <div
+            key={row}
+            style={{
+              display: "flex",
+              gap: "1rem",
+              paddingTop: row === 1 ? "0.75rem" : "0",
+              paddingBottom: "0.75rem",
+              overflow: "hidden",
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: "160px",
+                  flexShrink: 0,
+                }}
+              >
+                <div className="w-full aspect-[2/3] rounded-xl bg-gray-200/60 animate-pulse" />
+                <div className="h-4 bg-gray-200/60 rounded mt-2 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
-    </div> {/* Close scroll wrapper */}
+    )}
 
       {/* New large story detail modal with URL state */}
       <StoryDetailModal

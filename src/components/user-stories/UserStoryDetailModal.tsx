@@ -11,6 +11,8 @@ import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 import { useUserLevel } from "@/hooks/useUserLevel";
+import { STORY_TYPE_LABELS } from "@/lib/stories";
+import type { StoryType } from "@/types/story";
 
 interface UserStoryLevel {
   level: string;
@@ -29,6 +31,7 @@ interface UserStory {
   thumbnailUrl: string | null;
   sourceLanguage: string;
   detectedLevel?: string | null;
+  storyType?: string | null;
   status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
   cancelledAt?: string | null;
   levels: UserStoryLevel[];
@@ -314,7 +317,7 @@ export default function UserStoryDetailModal({
             </button>
 
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-full overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
@@ -341,6 +344,7 @@ export default function UserStoryDetailModal({
               <div className="flex-1 md:overflow-y-auto p-6 md:p-8">
                 {/* Status Badge */}
                 <div className="flex flex-wrap items-center gap-2 mb-3">
+                  {/* Status first */}
                   <span className={`px-3 py-1 ${statusInfo.bg} ${statusInfo.color} rounded-full text-xs font-medium flex items-center gap-1.5`}>
                     <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.animate ? "animate-spin" : ""}`} />
                     {statusLabel}
@@ -350,6 +354,24 @@ export default function UserStoryDetailModal({
                     <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
                       {t(typedLang, "myStories", "partial")}
+                    </span>
+                  )}
+                  {/* Story Type Badge */}
+                  {story.storyType && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      story.storyType === "poem" || story.storyType === "song-lyrics"
+                        ? "bg-purple-100 text-purple-700"
+                        : story.storyType === "novel" || story.storyType === "short-story"
+                        ? "bg-blue-100 text-blue-700"
+                        : story.storyType === "fable" || story.storyType === "folktale" || story.storyType === "myth" || story.storyType === "legend"
+                        ? "bg-amber-100 text-amber-700"
+                        : story.storyType === "epic"
+                        ? "bg-rose-100 text-rose-700"
+                        : story.storyType === "movie-script" || story.storyType === "tv-script"
+                        ? "bg-cyan-100 text-cyan-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {STORY_TYPE_LABELS[story.storyType as StoryType]?.[typedLang] || story.storyType}
                     </span>
                   )}
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { StoryType, ContentStructureType } from "@/types/story";
+import type { StoryType, ContentStructureType, DigitalLibrarySource } from "@/types/story";
 import type { StoryData } from "../../types";
 import { FormAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 import {
@@ -1422,19 +1422,39 @@ export function Step3Metadata({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Source URL (Gutenberg, Wikisource, etc.)</label>
-                <input
-                  type="text"
-                  value={storyData.attribution.sourceUrl ?? ""}
-                  onChange={(e) =>
-                    updateStoryData({
-                      attribution: { ...storyData.attribution!, sourceUrl: e.target.value || undefined },
-                    })
-                  }
-                  placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Digital Library Source</label>
+                  <select
+                    value={storyData.attribution.source ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, source: (e.target.value || undefined) as "gutenberg" | "wikisource" | "archive-org" | "other" | undefined },
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="">None / Not Applicable</option>
+                    <option value="gutenberg">Project Gutenberg</option>
+                    <option value="wikisource">Wikisource</option>
+                    <option value="archive-org">Internet Archive</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Source URL</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourceUrl ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourceUrl: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Edition Notes</label>

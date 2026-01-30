@@ -98,20 +98,27 @@ export default function UserStoryCard({
   const validThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith("blob:") ? thumbnailUrl : null;
 
   return (
-    <motion.div
-      layoutId={`user-story-${id}`}
-      onClick={onClick}
-      whileHover={
-        typeof window !== "undefined" &&
-        window.matchMedia("(hover: hover)").matches
-          ? { scale: 1.05 }
-          : undefined
-      }
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`rounded-xl overflow-hidden w-40 flex-shrink-0 scroll-snap-align-start cursor-pointer ${
-        isCancelledWithNoChapters ? "opacity-60" : ""
-      }`}
+    <div
+      style={{
+        width: "160px",
+        flexShrink: 0,
+        scrollSnapAlign: "start",
+      }}
     >
+      <motion.div
+        layoutId={`user-story-${id}`}
+        onClick={onClick}
+        whileHover={
+          typeof window !== "undefined" &&
+          window.matchMedia("(hover: hover)").matches
+            ? { scale: 1.05 }
+            : undefined
+        }
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className={`rounded-xl overflow-hidden w-full cursor-pointer ${
+          isCancelledWithNoChapters ? "opacity-60" : ""
+        }`}
+      >
       <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden bg-gray-100">
         {validThumbnailUrl ? (
           <Image
@@ -146,5 +153,6 @@ export default function UserStoryCard({
         {title}
       </p>
     </motion.div>
+    </div>
   );
 }

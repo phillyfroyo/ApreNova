@@ -212,6 +212,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     image: "/images/aventura-thumbnail.png",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
+    isArchived: true,
     type: "short-story",
     origin: { isOriginal: true },
     tags: ["adventure","mystery","friendship","suspenseful","heartwarming"],
@@ -247,13 +248,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     targetAudience: "all",
   },  {
     slug: "poems-by-emily-dickinson",
-    image: "/images/poems-by-emily-dickinson-thumbnail-3000.jpeg",
+    image: "/images/poems-by-emily-dickinson-thumbnail-9798.jpeg",
     levels: ["A2", "C1"],
     type: "poem",
-    origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems", editor: "Mabel Loomis Todd and T. W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, making her works public domain." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "United States", genres: ["poetry"] } },
+    origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems", editor: "Mabel Loomis Todd and T. W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, making her works public domain.", source: "gutenberg", url: "https://www.gutenberg.org/ebooks/12242" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "United States", genres: ["poetry"] } },
     targetAudience: "all",
     structureType: "anthology",
     originalLevel: "C1",
+    tags: []
   },
 ];
 

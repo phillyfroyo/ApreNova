@@ -71,6 +71,10 @@ export type AuthorInfo = {
 // ============================================
 // SOURCE EDITION (the edition being ingested)
 // ============================================
+
+// Known digital library sources
+export type DigitalLibrarySource = "gutenberg" | "wikisource" | "archive-org" | "other";
+
 export type SourceEdition = {
   title?: string;                      // Edition title
   publisher?: string;                  // Publisher name
@@ -79,6 +83,7 @@ export type SourceEdition = {
   isPublicDomain: boolean;             // Is this edition public domain?
   publicDomainNote?: string;           // e.g., "Published before 1929"
   url?: string;                        // URL if from online source (Gutenberg, Wikisource)
+  source?: DigitalLibrarySource;       // Digital library source (gutenberg, wikisource, etc.)
   notes?: string;                      // e.g., "facsimile of 19th-century edition"
 };
 
