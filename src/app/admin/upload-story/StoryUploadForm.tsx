@@ -51,8 +51,6 @@ const initialStoryData: StoryData = {
   uploadedFileName: null,
   // Extracted annotations
   extractedAnnotations: [],
-  // Original level (shows "(Original)" in level selector)
-  originalLevel: null,
 };
 
 export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFormProps) {
@@ -142,6 +140,9 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
       setIsProcessing(false);
     }
     setCurrentStep(step);
+
+    // Scroll to top when changing steps
+    window.scrollTo(0, 0);
 
     // Save progress when changing steps (non-blocking)
     if (step > 1 || updatedData.rawText) {
@@ -2049,36 +2050,6 @@ function Step3Metadata({
             For poetry collections with thematic sections (like &quot;I. LIFE.&quot;), select Poetry Anthology.
           </p>
         </div>
-
-        {/* Original Level - only show for non-original content */}
-        {!storyData.isOriginal && (
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Original Level
-              <span
-                className="ml-2 text-gray-400 cursor-help"
-                title="Which level contains the unmodified source text? This level will show '(Original)' in the reader."
-              >
-                ℹ️
-              </span>
-            </label>
-            <select
-              value={storyData.originalLevel || "auto"}
-              onChange={(e) => updateStoryData({ originalLevel: e.target.value === "auto" ? null : parseInt(e.target.value) })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="auto">Auto (highest level)</option>
-              <option value="1">Level 1 (A1 - Beginner)</option>
-              <option value="2">Level 2 (A2 - Elementary)</option>
-              <option value="3">Level 3 (B1 - Intermediate)</option>
-              <option value="4">Level 4 (B2 - Upper Intermediate)</option>
-              <option value="5">Level 5 (C1 - Advanced)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              For public domain works, the highest level typically contains the original unmodified text.
-            </p>
-          </div>
-        )}
 
         {/* Target Audience */}
         <div>
@@ -4317,8 +4288,8 @@ function Step7Preview({
           // Structure type for pagination (only send if explicitly set, not "auto")
           structureType: storyData.structureType !== "auto" ? storyData.structureType : undefined,
           // Original level - shows "(Original)" in level selector
-          // Default to highest completed level if not explicitly set
-          originalLevel: storyData.originalLevel || Math.max(...completedLevels),
+          // Uses the detected level from Step 2 (the CEFR level of the input text)
+          originalLevel: storyData.detectedLevel || Math.max(...completedLevels),
         }),
       });
 

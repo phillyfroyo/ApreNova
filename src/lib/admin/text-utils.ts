@@ -158,6 +158,7 @@ export function parseChaptersFromText(text: string): string[] {
 
   if (!matches || matches.length <= 1) {
     // No chapter markers or only one - treat as single chapter
+    // Preserve internal whitespace but trim leading/trailing for consistency
     return [text.trim()];
   }
 
@@ -189,9 +190,14 @@ export function parseChaptersFromText(text: string): string[] {
   // Add chapters WITHOUT their headers
   // The chapter markers are used for splitting but should not be in content
   // (headers are metadata, not content - they would get translated incorrectly)
+  // IMPORTANT: Preserve leading/trailing blank lines for proper line alignment
   for (let i = 1; i < parts.length; i++) {
-    if (parts[i]?.trim()) {
-      chapters.push(parts[i].trim());
+    const chapterContent = parts[i] || '';
+    // Only skip completely empty chapters, but preserve whitespace in non-empty ones
+    if (chapterContent.trim()) {
+      // Trim only trailing whitespace to normalize chapter endings,
+      // but preserve leading whitespace (blank lines at start of chapter)
+      chapters.push(chapterContent.replace(/\s+$/, ''));
     }
   }
 

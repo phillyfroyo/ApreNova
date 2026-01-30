@@ -22,8 +22,16 @@ export function Step6Paginate({
     return trimmed === "PAGE" || trimmed === "---PAGE---" || trimmed === "[PAGE]" || trimmed === "PAGE BREAK";
   }).length;
 
-  // Check if anthology auto-pagination is active
-  const isAnthology = storyData.structureType === "anthology";
+  // Check if anthology/poetry auto-pagination is active
+  // When structureType is "auto", use the detected structure from preprocessing
+  const effectiveStructureType = storyData.structureType === "auto"
+    ? storyData.parsedResult?.stats?.structureType
+    : storyData.structureType;
+
+  // Anthology gets per-poem pagination
+  const isAnthology = effectiveStructureType === "anthology" ||
+                      storyData.storyType === "poem" ||
+                      storyData.storyType === "song-lyrics";
 
   const estimatedPages = hasPageMarkers
     ? pageMarkerCount + 1

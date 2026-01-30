@@ -190,6 +190,13 @@ export function useTranslationPipeline({
           throw new Error("Cancelled");
         }
 
+        // Determine if content is poetry for specialized translation prompts
+        const isPoetry = storyData.storyType === "poem" ||
+                         storyData.storyType === "song-lyrics" ||
+                         storyData.storyType === "epic" ||
+                         storyData.structureType === "anthology" ||
+                         storyData.structureType === "epic";
+
         const response = await fetch("/api/admin/translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -198,6 +205,7 @@ export function useTranslationPipeline({
             fromLanguage: storyData.sourceLanguage,
             level,
             slug: storyData.slug || undefined,  // For cost tracking
+            isPoetry,  // For poetry-specific translation (rhyme, rhythm, etc.)
           }),
           signal: timeoutController.signal,
         });
@@ -340,10 +348,23 @@ export function useTranslationPipeline({
   // ============================================
 
   const buildTranslatedText = useCallback((translatedChapters: string[]): string => {
-    // Don't add chapter dividers here - the translated text already contains
-    // translated chapter markers (e.g., "--- Capítulo N ---") from the source
-    return translatedChapters.join("\n\n");
-  }, []);
+    // Add chapter dividers when reassembling translated chapters
+    // The source chapters had markers stripped by parseChaptersFromText,
+    // so we need to add the translated markers back (Capítulo for Spanish output)
+    const targetLang = storyData.sourceLanguage === "en" ? "es" : "en";
+    const chapterLabel = targetLang === "es" ? "Capítulo" : "Chapter";
+
+    return translatedChapters
+      .map((chapter, index) => {
+        // Only add marker if we have multiple chapters
+        if (translatedChapters.length > 1) {
+          // Use single \n after marker - chapter content already has any leading whitespace it needs
+          return `--- ${chapterLabel} ${index + 1} ---\n${chapter}`;
+        }
+        return chapter;
+      })
+      .join("\n\n");
+  }, [storyData.sourceLanguage]);
 
   const saveTranslationProgress = useCallback((
     level: number,
@@ -352,7 +373,11 @@ export function useTranslationPipeline({
   ) => {
     const fullTranslatedText = buildTranslatedText(translatedChapters);
     // Preserve whitespace for anthology/poetry content
-    const preserveWhitespace = storyData.structureType === "anthology";
+    const preserveWhitespace = storyData.storyType === "poem" ||
+          storyData.storyType === "song-lyrics" ||
+          storyData.storyType === "epic" ||
+          storyData.structureType === "anthology" ||
+          storyData.structureType === "epic";
     accumulator[level] = {
       ...accumulator[level],
       translatedText: cleanText(fullTranslatedText, { preserveWhitespace }),
@@ -472,7 +497,11 @@ export function useTranslationPipeline({
           currentChapterRef.current = 0;
           const translatedText = await translateChunk(sourceText, level);
           // Preserve whitespace for anthology/poetry content
-          const preserveWhitespace = storyData.structureType === "anthology";
+          const preserveWhitespace = storyData.storyType === "poem" ||
+          storyData.storyType === "song-lyrics" ||
+          storyData.storyType === "epic" ||
+          storyData.structureType === "anthology" ||
+          storyData.structureType === "epic";
           accumulator[level] = {
             ...accumulator[level],
             translatedText: cleanText(translatedText, { preserveWhitespace }),

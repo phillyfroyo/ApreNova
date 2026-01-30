@@ -9,7 +9,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, fromLanguage, level, slug } = await req.json();
+    const { text, fromLanguage, level, slug, isPoetry } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
@@ -30,11 +30,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Use the shared translation function with cost tracking
+    // Pass isPoetry flag for poetry-specific translation prompts (rhyme, rhythm, etc.)
     const result: TranslationResult = await translateText(
       text,
       fromLanguage as "en" | "es",
       level,
-      { adminStorySlug: slug }
+      { adminStorySlug: slug, isPoetry: isPoetry === true }
     );
 
     return NextResponse.json({

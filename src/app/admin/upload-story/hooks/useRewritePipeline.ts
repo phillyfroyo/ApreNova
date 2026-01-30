@@ -155,7 +155,9 @@ export function useRewritePipeline({
       throw new Error("Cancelled");
     }
 
-    const isPoetry = ["poem", "song-lyrics", "epic"].includes(storyData.storyType);
+    const isPoetry = ["poem", "song-lyrics", "epic"].includes(storyData.storyType) ||
+                     storyData.structureType === "anthology" ||
+                     storyData.structureType === "epic";
 
     const response = await fetch("/api/admin/rewrite-level", {
       method: "POST",
@@ -289,7 +291,11 @@ export function useRewritePipeline({
     try {
       if (level === storyData.detectedLevel || mode === "use-original") {
         // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.structureType === "anthology";
+        const preserveWhitespace = storyData.storyType === "poem" ||
+          storyData.storyType === "song-lyrics" ||
+          storyData.storyType === "epic" ||
+          storyData.structureType === "anthology" ||
+          storyData.structureType === "epic";
         accumulator[level] = {
           sourceText: cleanText(storyData.rawText, { preserveWhitespace }),
           translatedText: "",
@@ -359,7 +365,11 @@ export function useRewritePipeline({
           .join("\n\n");
 
         // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.structureType === "anthology";
+        const preserveWhitespace = storyData.storyType === "poem" ||
+          storyData.storyType === "song-lyrics" ||
+          storyData.storyType === "epic" ||
+          storyData.structureType === "anthology" ||
+          storyData.structureType === "epic";
         accumulator[level] = {
           sourceText: cleanText(fullRewrittenText, { preserveWhitespace }),
           translatedText: "",
@@ -371,7 +381,11 @@ export function useRewritePipeline({
         return true;
       } else {
         // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.structureType === "anthology";
+        const preserveWhitespace = storyData.storyType === "poem" ||
+          storyData.storyType === "song-lyrics" ||
+          storyData.storyType === "epic" ||
+          storyData.structureType === "anthology" ||
+          storyData.structureType === "epic";
         const rewrittenText = await rewriteChunk(cleanText(storyData.rawText, { preserveWhitespace }), level);
         accumulator[level] = {
           sourceText: cleanText(rewrittenText, { preserveWhitespace }),
