@@ -273,31 +273,19 @@ export function splitIntoStanzasWithSpacing(text: string): {
 }
 
 /**
- * Join stanzas back into text, preserving the original blank line spacing.
+ * Join stanzas back into text with normalized spacing.
+ * Uses exactly 1 blank line between stanzas for consistent formatting.
  *
  * @param stanzas - Array of stanzas, each stanza is array of lines
- * @param blankLinesBefore - Number of blank lines before each stanza
- * @returns Text with preserved vertical spacing
+ * @param _blankLinesBefore - Ignored (kept for API compatibility)
+ * @returns Text with normalized vertical spacing (1 blank line between stanzas)
  */
-export function joinStanzasWithSpacing(stanzas: string[][], blankLinesBefore: number[]): string {
-  const parts: string[] = [];
-
-  for (let i = 0; i < stanzas.length; i++) {
-    const blanks = blankLinesBefore[i] || 0;
-    const stanzaText = stanzas[i].join('\n');
-
-    if (i === 0) {
-      // First stanza - add leading blanks if any
-      parts.push('\n'.repeat(blanks) + stanzaText);
-    } else {
-      // Subsequent stanzas - add blank lines before
-      // At minimum 1 blank line between stanzas
-      const spacing = Math.max(1, blanks);
-      parts.push('\n'.repeat(spacing) + stanzaText);
-    }
-  }
-
-  return parts.join('\n');
+export function joinStanzasWithSpacing(stanzas: string[][], _blankLinesBefore: number[]): string {
+  // Join lines within each stanza with single newlines
+  // Join stanzas with double newlines (1 blank line between)
+  return stanzas
+    .map(stanza => stanza.join('\n'))
+    .join('\n\n');
 }
 
 /**

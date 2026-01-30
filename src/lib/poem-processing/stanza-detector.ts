@@ -219,13 +219,14 @@ export function detectStanzas(
           structuralMarkersFound++;
         }
 
-        // This is a stanza break - add break markers for visual spacing
-        for (const pending of pendingBlanks) {
+        // This is a stanza break - add exactly ONE break marker for UI spacing
+        // (regardless of how many consecutive blanks triggered it)
+        if (pendingBlanks.length > 0) {
           annotatedLines.push({
             text: '',
             stanzaNumber: currentStanza,
             isStanzaBreak: true,
-            sourceIndex: pending.sourceIndex,
+            sourceIndex: pendingBlanks[0].sourceIndex,
           });
         }
 
@@ -236,16 +237,9 @@ export function detectStanzas(
         }
         currentStanza++;
       } else if (consecutiveBlanks > 0 && consecutiveBlanks < threshold) {
-        // Blanks below threshold - these are visual spacing, not stanza breaks
-        // Still add them as break markers but DON'T increment stanza
-        for (const pending of pendingBlanks) {
-          annotatedLines.push({
-            text: '',
-            stanzaNumber: currentStanza,
-            isStanzaBreak: true,
-            sourceIndex: pending.sourceIndex,
-          });
-        }
+        // Blanks below threshold - these are visual spacing (HTML artifacts), not stanza breaks
+        // Don't add them to annotatedLines - the stanza structure is preserved via stanzaNumber
+        // This prevents extra h-6 spacers from rendering in the UI for Gutenberg-style HTML
       }
 
       consecutiveBlanks = 0;
