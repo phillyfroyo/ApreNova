@@ -236,7 +236,19 @@ export default function MyStoriesPage() {
           </button>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto py-3 px-1 scrollbar-hide">
+        <div className="flex flex-wrap gap-4 py-3">
+          {/* Add new story card - at the front */}
+          {stats && (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              style={{ width: "160px", flexShrink: 0 }}
+              className="aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
+            >
+              <Plus className="w-8 h-8 text-gray-400" />
+              <span className="text-sm text-gray-500">Add Story</span>
+            </button>
+          )}
+
           {stories.map((story) => (
             <UserStoryCard
               key={story.id}
@@ -249,17 +261,6 @@ export default function MyStoriesPage() {
               onClick={() => handleStoryClick(story)}
             />
           ))}
-
-          {/* Add new story card */}
-          {stats && (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="w-40 flex-shrink-0 aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
-            >
-              <Plus className="w-8 h-8 text-gray-400" />
-              <span className="text-sm text-gray-500">Add Story</span>
-            </button>
-          )}
         </div>
       )}
 

@@ -16,6 +16,8 @@ interface UserStoryCardProps {
   hasReadableChapters?: boolean;
   /** Language for translations */
   lang?: Language;
+  /** If true, card fills its container width (for grid layouts). If false, uses fixed 160px width (for horizontal scroll). */
+  fillContainer?: boolean;
   onClick: () => void;
 }
 
@@ -78,6 +80,7 @@ export default function UserStoryCard({
   status,
   hasReadableChapters = false,
   lang = "en",
+  fillContainer = false,
   onClick,
 }: UserStoryCardProps) {
   // Compute display status for card badge:
@@ -99,7 +102,7 @@ export default function UserStoryCard({
 
   return (
     <div
-      style={{
+      style={fillContainer ? {} : {
         width: "160px",
         flexShrink: 0,
         scrollSnapAlign: "start",
@@ -125,7 +128,7 @@ export default function UserStoryCard({
             src={validThumbnailUrl}
             alt={title}
             fill
-            sizes="160px"
+            sizes={fillContainer ? "(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw" : "160px"}
             className="object-cover rounded-xl"
           />
         ) : (
