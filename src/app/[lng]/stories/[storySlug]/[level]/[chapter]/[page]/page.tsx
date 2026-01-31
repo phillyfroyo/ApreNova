@@ -58,6 +58,7 @@ export default async function Page({ params }: { params: Promise<{ lng: string; 
       title={getStoryTitle(lng, storySlug)}
       storySlug={storySlug}
       sentences={story.lines}
+      stanzas={story.stanzas}
       initialLevel={cefrLevel}
       storyMap={storyMap}
       availableLevels={storyMeta.levels}

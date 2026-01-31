@@ -105,6 +105,7 @@ export interface GeneratedStoryContent {
   level: number;
   hasChapters: boolean;
   chapters: Record<number, StoryChapter>;
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface StoryMetadataInput {
@@ -268,17 +269,21 @@ export function generateContentFileTS(content: GeneratedStoryContent): string {
     chaptersObj[parseInt(chapterNum)] = { pages: pagesObj };
   }
 
+  // Build content object, including structureType if not prose
+  const contentObj: Record<string, unknown> = {
+    storySlug: content.storySlug,
+    level: content.level,
+    hasChapters: content.hasChapters,
+    chapters: chaptersObj,
+  };
+
+  // Include structureType if not prose (prose is the default)
+  if (content.structureType && content.structureType !== "prose") {
+    contentObj.structureType = content.structureType;
+  }
+
   // Format the content object as TypeScript
-  const contentStr = JSON.stringify(
-    {
-      storySlug: content.storySlug,
-      level: content.level,
-      hasChapters: content.hasChapters,
-      chapters: chaptersObj,
-    },
-    null,
-    2
-  );
+  const contentStr = JSON.stringify(contentObj, null, 2);
 
   // Convert JSON to TypeScript export
   return `export const levelContent = ${contentStr};\n`;
@@ -320,7 +325,8 @@ export function generateChapterIndexTS(
   storySlug: string,
   level: number,
   hasChapters: boolean,
-  chapterCount: number
+  chapterCount: number,
+  structureType?: "prose" | "anthology" | "epic" | "script"
 ): string {
   const imports: string[] = [];
   const exports: string[] = [];
@@ -330,13 +336,18 @@ export function generateChapterIndexTS(
     exports.push(`  ${i}: { pages: ch${i}.pages },`);
   }
 
+  // Include structureType if not prose (prose is the default)
+  const structureTypeLine = structureType && structureType !== "prose"
+    ? `\n  structureType: "${structureType}" as const,`
+    : "";
+
   return `// Auto-generated index file for split chapter format
 ${imports.join("\n")}
 
 export const levelContent = {
   storySlug: "${storySlug}",
   level: ${level},
-  hasChapters: ${hasChapters},
+  hasChapters: ${hasChapters},${structureTypeLine}
   chapters: {
 ${exports.join("\n")}
   },

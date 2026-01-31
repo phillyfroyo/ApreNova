@@ -28,10 +28,9 @@ export function Step6Paginate({
     ? storyData.parsedResult?.stats?.structureType
     : storyData.structureType;
 
-  // Anthology gets per-poem pagination
-  const isAnthology = effectiveStructureType === "anthology" ||
-                      storyData.storyType === "poem" ||
-                      storyData.storyType === "song-lyrics";
+  // Anthology gets per-poem pagination (based on structure, not story type)
+  const isAnthology = effectiveStructureType === "anthology";
+
 
   const estimatedPages = hasPageMarkers
     ? pageMarkerCount + 1

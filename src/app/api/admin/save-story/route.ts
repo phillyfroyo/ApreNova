@@ -100,8 +100,10 @@ export async function POST(req: NextRequest) {
 
     for (const levelData of levels) {
       // Clean the text before parsing
-      const cleanedEn = cleanText(levelData.en);
-      const cleanedEs = cleanText(levelData.es);
+      // Preserve whitespace for anthology/epic content (stanza breaks matter)
+      const preserveWhitespace = structureType === "anthology" || structureType === "epic";
+      const cleanedEn = cleanText(levelData.en, { preserveWhitespace });
+      const cleanedEs = cleanText(levelData.es, { preserveWhitespace });
 
       // Validate line counts match
       const enLineCount = cleanedEn.split("\n").filter(l => l.trim()).length;
@@ -338,7 +340,8 @@ export async function POST(req: NextRequest) {
         slug,
         levelData.level,
         levelData.hasChapters || false,
-        levelData.chapterCount
+        levelData.chapterCount,
+        structureType  // Pass structureType for anthology/epic navigation labels
       );
       const indexResult = await writeChapterIndexFile(slug, levelData.level, indexContent);
       splitFileResults.push(indexResult);

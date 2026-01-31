@@ -190,12 +190,12 @@ export function useTranslationPipeline({
           throw new Error("Cancelled");
         }
 
-        // Determine if content is poetry for specialized translation prompts
-        const isPoetry = storyData.storyType === "poem" ||
-                         storyData.storyType === "song-lyrics" ||
-                         storyData.storyType === "epic" ||
-                         storyData.structureType === "anthology" ||
-                         storyData.structureType === "epic";
+        // Determine if content is poetry based on STRUCTURE (not storyType which is cosmetic)
+        // When structureType is "auto", use the detected structure from preprocessing
+        const effectiveStructure = storyData.structureType === "auto"
+          ? storyData.parsedResult?.stats?.structureType
+          : storyData.structureType;
+        const isPoetry = effectiveStructure === "anthology" || effectiveStructure === "epic";
 
         const response = await fetch("/api/admin/translate", {
           method: "POST",
@@ -372,12 +372,11 @@ export function useTranslationPipeline({
     accumulator: Record<number, LevelContent>
   ) => {
     const fullTranslatedText = buildTranslatedText(translatedChapters);
-    // Preserve whitespace for anthology/poetry content
-    const preserveWhitespace = storyData.storyType === "poem" ||
-          storyData.storyType === "song-lyrics" ||
-          storyData.storyType === "epic" ||
-          storyData.structureType === "anthology" ||
-          storyData.structureType === "epic";
+    // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
+    const effectiveStructure = storyData.structureType === "auto"
+      ? storyData.parsedResult?.stats?.structureType
+      : storyData.structureType;
+    const preserveWhitespace = effectiveStructure === "anthology" || effectiveStructure === "epic";
     accumulator[level] = {
       ...accumulator[level],
       translatedText: cleanText(fullTranslatedText, { preserveWhitespace }),
@@ -496,12 +495,11 @@ export function useTranslationPipeline({
           // Single chapter case
           currentChapterRef.current = 0;
           const translatedText = await translateChunk(sourceText, level);
-          // Preserve whitespace for anthology/poetry content
-          const preserveWhitespace = storyData.storyType === "poem" ||
-          storyData.storyType === "song-lyrics" ||
-          storyData.storyType === "epic" ||
-          storyData.structureType === "anthology" ||
-          storyData.structureType === "epic";
+          // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
+          const effectiveStructure = storyData.structureType === "auto"
+            ? storyData.parsedResult?.stats?.structureType
+            : storyData.structureType;
+          const preserveWhitespace = effectiveStructure === "anthology" || effectiveStructure === "epic";
           accumulator[level] = {
             ...accumulator[level],
             translatedText: cleanText(translatedText, { preserveWhitespace }),

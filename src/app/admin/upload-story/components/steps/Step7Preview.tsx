@@ -65,6 +65,11 @@ export function Step7Preview({
         ? { isOriginal: true as const }
         : { isOriginal: false as const, attribution: formToAttribution(storyData.attribution!) };
 
+      // Resolve effective structure type - use detected type when "auto" is selected
+      const effectiveStructureType = storyData.structureType === "auto"
+        ? storyData.parsedResult?.stats?.structureType
+        : storyData.structureType;
+
       const response = await fetch("/api/admin/save-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,8 +86,8 @@ export function Step7Preview({
           origin,
           tags: storyData.tags,
           targetAudience: storyData.targetAudience,
-          // Structure type for pagination (only send if explicitly set, not "auto")
-          structureType: storyData.structureType !== "auto" ? storyData.structureType : undefined,
+          // Structure type for pagination - use detected type when "auto"
+          structureType: effectiveStructureType,
         }),
       });
 

@@ -155,9 +155,12 @@ export function useRewritePipeline({
       throw new Error("Cancelled");
     }
 
-    const isPoetry = ["poem", "song-lyrics", "epic"].includes(storyData.storyType) ||
-                     storyData.structureType === "anthology" ||
-                     storyData.structureType === "epic";
+    // Determine if content is poetry based on STRUCTURE (not storyType which is cosmetic)
+    // When structureType is "auto", use the detected structure from preprocessing
+    const effectiveStructure = storyData.structureType === "auto"
+      ? storyData.parsedResult?.stats?.structureType
+      : storyData.structureType;
+    const isPoetry = effectiveStructure === "anthology" || effectiveStructure === "epic";
 
     const response = await fetch("/api/admin/rewrite-level", {
       method: "POST",
@@ -290,12 +293,11 @@ export function useRewritePipeline({
 
     try {
       if (level === storyData.detectedLevel || mode === "use-original") {
-        // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.storyType === "poem" ||
-          storyData.storyType === "song-lyrics" ||
-          storyData.storyType === "epic" ||
-          storyData.structureType === "anthology" ||
-          storyData.structureType === "epic";
+        // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
+        const effectiveStructure = storyData.structureType === "auto"
+          ? storyData.parsedResult?.stats?.structureType
+          : storyData.structureType;
+        const preserveWhitespace = effectiveStructure === "anthology" || effectiveStructure === "epic";
         accumulator[level] = {
           sourceText: cleanText(storyData.rawText, { preserveWhitespace }),
           translatedText: "",
@@ -364,14 +366,13 @@ export function useRewritePipeline({
           })
           .join("\n\n");
 
-        // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.storyType === "poem" ||
-          storyData.storyType === "song-lyrics" ||
-          storyData.storyType === "epic" ||
-          storyData.structureType === "anthology" ||
-          storyData.structureType === "epic";
+        // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
+        const effectiveStructureForSave = storyData.structureType === "auto"
+          ? storyData.parsedResult?.stats?.structureType
+          : storyData.structureType;
+        const preserveWhitespaceForSave = effectiveStructureForSave === "anthology" || effectiveStructureForSave === "epic";
         accumulator[level] = {
-          sourceText: cleanText(fullRewrittenText, { preserveWhitespace }),
+          sourceText: cleanText(fullRewrittenText, { preserveWhitespace: preserveWhitespaceForSave }),
           translatedText: "",
           status: "done",
           mode,
@@ -380,15 +381,14 @@ export function useRewritePipeline({
         setChapterProgress(null);
         return true;
       } else {
-        // Preserve whitespace for anthology/poetry content
-        const preserveWhitespace = storyData.storyType === "poem" ||
-          storyData.storyType === "song-lyrics" ||
-          storyData.storyType === "epic" ||
-          storyData.structureType === "anthology" ||
-          storyData.structureType === "epic";
-        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText, { preserveWhitespace }), level);
+        // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
+        const effectiveStructureSingle = storyData.structureType === "auto"
+          ? storyData.parsedResult?.stats?.structureType
+          : storyData.structureType;
+        const preserveWhitespaceSingle = effectiveStructureSingle === "anthology" || effectiveStructureSingle === "epic";
+        const rewrittenText = await rewriteChunk(cleanText(storyData.rawText, { preserveWhitespace: preserveWhitespaceSingle }), level);
         accumulator[level] = {
-          sourceText: cleanText(rewrittenText, { preserveWhitespace }),
+          sourceText: cleanText(rewrittenText, { preserveWhitespace: preserveWhitespaceSingle }),
           translatedText: "",
           status: "done",
           mode,
