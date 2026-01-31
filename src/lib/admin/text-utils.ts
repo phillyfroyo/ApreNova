@@ -239,6 +239,36 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
   // Remove script and style elements
   doc.querySelectorAll("script, style, noscript").forEach(el => el.remove());
 
+  // Remove Table of Contents tables (Gutenberg pattern: tables with many internal links)
+  // These tables contain TOC entries that would otherwise be extracted as content
+  doc.querySelectorAll("table").forEach(table => {
+    const internalLinks = table.querySelectorAll("a.pginternal, a[href^='#']");
+    const rows = table.querySelectorAll("tr");
+    // If table has many internal links (>10) relative to rows, it's likely a TOC
+    if (internalLinks.length > 10 && internalLinks.length >= rows.length * 0.5) {
+      console.log(`[extractTextFromHTML] Removing TOC table: ${internalLinks.length} links in ${rows.length} rows`);
+      table.remove();
+    }
+  });
+
+  // Also remove elements explicitly marked as TOC
+  doc.querySelectorAll('[id*="contents" i], [id*="toc" i], [class*="toc" i]').forEach(el => {
+    // Don't remove if it's just a link/anchor
+    if (el.tagName.toLowerCase() !== 'a') {
+      console.log(`[extractTextFromHTML] Removing TOC element: <${el.tagName.toLowerCase()}> id="${el.id}"`);
+      el.remove();
+    }
+  });
+
+  // Remove "Contents" heading that precedes TOC (now orphaned after table removal)
+  doc.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(heading => {
+    const text = heading.textContent?.trim().toLowerCase() || "";
+    if (text === "contents" || text === "table of contents") {
+      console.log(`[extractTextFromHTML] Removing Contents heading: "${heading.textContent?.trim()}"`);
+      heading.remove();
+    }
+  });
+
   const annotations: ExtractedAnnotation[] = [];
   let annotationIndex = 0;
 
@@ -357,8 +387,11 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
       const isLineBreak = lineBreakElements.includes(tagName);
 
       // Paragraph-like elements need special handling
-      const paragraphElements = ["p", "div", "blockquote", "pre"];
+      const paragraphElements = ["p", "div", "blockquote"];
       const isParagraph = paragraphElements.includes(tagName);
+
+      // PRE tags need special handling - preserve internal whitespace/newlines
+      const isPreformatted = tagName === "pre";
 
       // Block elements where whitespace text nodes should be ignored
       const blockElements = ["body", "div", "section", "article", "main", "header", "footer", ...paragraphElements, ...lineBreakElements];
@@ -366,11 +399,31 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
 
       let content = "";
       el.childNodes.forEach(child => {
-        content += processNode(child, isBlock);
+        content += processNode(child, isBlock && !isPreformatted);
       });
 
       if (tagName === "br") {
         return "\n";
+      }
+
+      // For PRE tags, preserve all internal whitespace including newlines
+      // This is critical for Gutenberg poetry where poems are in <pre> tags
+      // Use markers to protect newlines from being collapsed in post-processing
+      if (isPreformatted) {
+        // Clean up the content but preserve internal structure
+        const lines = content.split('\n');
+        const nonEmptyLines = lines.filter(l => l.trim().length > 0);
+        if (nonEmptyLines.length === 0) {
+          return "\n"; // Empty pre tag
+        }
+        // Use a marker to protect PRE newlines from collapse
+        // These will be restored after the whitespace normalization
+        const PRE_NEWLINE = "\x00PRENL\x00";
+        const PRE_START = "\x00PRESTART\x00";  // Marker for start of PRE block
+        const protectedContent = content.trim().replace(/\n/g, PRE_NEWLINE);
+        // Use PRE_START marker to ensure a line break before PRE content
+        // This prevents H2 title from merging with first line of poem
+        return PRE_START + protectedContent + "\n\n";
       }
 
       // For paragraph elements, check if they have actual content
@@ -390,8 +443,17 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
         return trimmedContent + "\n";
       }
 
-      // Headers and list items get single newlines
-      if (isLineBreak && trimmedContent) {
+      // Headers need DOUBLE line breaks before and after for chapter detection
+      // This ensures "BOOK I. INSCRIPTIONS" appears on its own line, separated from content
+      // Use a marker to protect the header boundary from collapse
+      const isHeader = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tagName);
+      if (isHeader && trimmedContent) {
+        const HEADER_BREAK = "\x00HEADBRK\x00";
+        return HEADER_BREAK + trimmedContent + HEADER_BREAK;
+      }
+
+      // List items and table rows get single newlines
+      if (isLineBreak && !isHeader && trimmedContent) {
         return "\n" + trimmedContent + "\n";
       }
 
@@ -402,6 +464,26 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
   };
 
   let text = processNode(doc.body, true);  // body is a block element
+
+  // DEBUG: Log raw extraction to diagnose content issues
+  const rawLines = text.split('\n');
+  const preTagCount = (html.match(/<pre[\s>]/gi) || []).length;
+  console.log(`[extractTextFromHTML] DEBUG - Raw extraction stats:`);
+  console.log(`  - Total lines extracted: ${rawLines.length}`);
+  console.log(`  - PRE tags in source HTML: ${preTagCount}`);
+  console.log(`  - First 30 non-blank lines:`);
+  rawLines.filter(l => l.trim()).slice(0, 30).forEach((l, i) => {
+    console.log(`    ${i}: ${l.slice(0, 80)}${l.length > 80 ? '...' : ''}`);
+  });
+  // Check if we have actual poem content (lines starting with spaces - indented verse)
+  const indentedLines = rawLines.filter(l => /^\s{2,}\S/.test(l));
+  console.log(`  - Indented lines (verse content): ${indentedLines.length}`);
+  if (indentedLines.length > 0) {
+    console.log(`  - Sample indented lines:`);
+    indentedLines.slice(0, 5).forEach((l, i) => {
+      console.log(`    ${i}: "${l.slice(0, 60)}..."`);
+    });
+  }
 
   // DEBUG: Log consecutive blank line runs in extracted text
   if (preserveWhitespace) {
@@ -449,6 +531,9 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
     const SECTION_BREAK_MARKER = "\x00SECTION\x00";  // 4+ blank lines → section break
     const POEM_BREAK_MARKER = "\x00POEM\x00";        // 3 blank lines → poem break
     const STANZA_BREAK_MARKER = "\x00STANZA\x00";    // 2 blank lines → stanza break
+    const PRE_NEWLINE_MARKER = "\x00PRENL\x00";
+    const PRE_START_MARKER = "\x00PRESTART\x00";
+    const HEADER_BREAK_MARKER = "\x00HEADBRK\x00";
     text = text
       .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
       .replace(/\n /g, "\n")               // Remove space after newline
@@ -460,6 +545,9 @@ export function extractTextFromHTML(html: string, options: HTMLExtractionOptions
       .replace(new RegExp(SECTION_BREAK_MARKER, 'g'), "\n\n\n\n")  // Restore section breaks (3 blank lines)
       .replace(new RegExp(POEM_BREAK_MARKER, 'g'), "\n\n\n")       // Restore poem breaks (2 blank lines)
       .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")       // Restore stanza breaks (1 blank line)
+      .replace(new RegExp(HEADER_BREAK_MARKER, 'g'), "\n\n")       // Headers get blank line before/after
+      .replace(new RegExp(PRE_START_MARKER, 'g'), "\n\n")          // PRE start = blank line before content
+      .replace(new RegExp(PRE_NEWLINE_MARKER, 'g'), "\n")          // Restore PRE tag newlines
       .trim();
   }
 

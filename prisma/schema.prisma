@@ -306,3 +306,33 @@ model DeletedUserStory {
 
   @@index([userId])
 }
+
+// ============================================================================
+// ALGORITHM TEST FILES
+// Used by Dev Tools to test text processing algorithms with persistent test files
+// ============================================================================
+
+model AlgorithmTestFile {
+  id              String   @id @default(cuid())
+
+  // Folder organization
+  fileType        String   // "html" | "txt" | "rtf" | "md"
+  storyType       String   // "anthology" | "prose" | "epic" | "script"
+
+  // File data
+  fileName        String   // Original uploaded filename
+  rawContent      String   @db.Text // Full untruncated content
+  fileSizeBytes   Int
+
+  // Processing results (JSON, updated when algorithm runs)
+  lastProcessedAt DateTime?
+  processingResult Json?
+
+  // Metadata
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([fileType, storyType, fileName])
+  @@index([fileType, storyType])
+}
