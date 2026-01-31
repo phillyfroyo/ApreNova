@@ -1,7 +1,7 @@
 // src/app/admin/upload-story/components/dev-tools/StoryTypePicker.tsx
 // Grid of story type cards for SU TP Algorithms
 
-import type { StoryType, FileType } from "@/lib/story-processing/text-processors";
+import type { StoryType, FileType } from "@/lib/text-processing";
 
 interface StoryTypePickerProps {
   fileType: FileType;
@@ -48,21 +48,21 @@ export function StoryTypePicker({
 }: StoryTypePickerProps) {
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="mb-4 text-gray-600 hover:text-gray-900 flex items-center gap-2"
-      >
-        <span>←</span>
-        <span>Back to File Types</span>
-      </button>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        <button onClick={onBack} className="hover:text-blue-600 hover:underline">
+          SU TP Algorithms
+        </button>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">{FILE_TYPE_LABELS[fileType]}</span>
+      </div>
 
       {/* Header */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
-          {FILE_TYPE_LABELS[fileType]} Files
+          Select Story Type
         </h3>
-        <p className="text-sm text-gray-500">Select a story type</p>
+        <p className="text-sm text-gray-500">Choose a content type for {FILE_TYPE_LABELS[fileType]} files</p>
       </div>
 
       {/* Story type grid */}

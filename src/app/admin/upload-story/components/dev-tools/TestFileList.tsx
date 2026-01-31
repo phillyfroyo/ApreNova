@@ -2,7 +2,7 @@
 // List of test files with drag-drop upload
 
 import { useState, useCallback } from "react";
-import type { FileType, StoryType } from "@/lib/story-processing/text-processors";
+import type { FileType, StoryType } from "@/lib/text-processing";
 
 export interface TestFile {
   id: string;
@@ -10,10 +10,10 @@ export interface TestFile {
   storyType?: string;
   fileName: string;
   fileSizeBytes: number;
-  lastProcessedAt: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt?: string;
+  results?: { createdAt: string }[];
 }
 
 interface TestFileListProps {
@@ -22,6 +22,7 @@ interface TestFileListProps {
   files: TestFile[];
   onSelectFile: (file: TestFile) => void;
   onBack: () => void;
+  onBackToFileTypes: () => void;
   onUpload: (file: File) => Promise<void>;
   onRefresh: () => void;
   isLoading: boolean;
@@ -61,30 +62,46 @@ export function TestFileList({
   files,
   onSelectFile,
   onBack,
+  onBackToFileTypes,
   onUpload,
   onRefresh,
   isLoading,
 }: TestFileListProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => {
+      const next = prev + 1;
+      if (next === 1) setIsDragging(true);
+      return next;
+    });
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    setDragCounter((prev) => {
+      const next = prev - 1;
+      if (next === 0) setIsDragging(false);
+      return next;
+    });
   }, []);
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      setDragCounter(0);
       setIsDragging(false);
       setUploadError(null);
 
@@ -123,20 +140,24 @@ export function TestFileList({
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        className="mb-4 text-gray-600 hover:text-gray-900 flex items-center gap-2"
-      >
-        <span>←</span>
-        <span>Back to Story Types</span>
-      </button>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        <button onClick={onBackToFileTypes} className="hover:text-blue-600 hover:underline">
+          SU TP Algorithms
+        </button>
+        <span>/</span>
+        <button onClick={onBack} className="hover:text-blue-600 hover:underline">
+          {FILE_TYPE_LABELS[fileType]}
+        </button>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">{STORY_TYPE_LABELS[storyType]}</span>
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
-            {FILE_TYPE_LABELS[fileType]} / {STORY_TYPE_LABELS[storyType]}
+            {STORY_TYPE_LABELS[storyType]} Files
           </h3>
           <p className="text-sm text-gray-500">
             {files.length} test file{files.length !== 1 ? "s" : ""}
@@ -159,6 +180,7 @@ export function TestFileList({
               ? "border-blue-500 bg-blue-50"
               : "border-gray-300 hover:border-blue-500"
           } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
+          onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -216,9 +238,9 @@ export function TestFileList({
                 <div className="text-sm text-gray-500 flex items-center gap-3 mt-1">
                   <span>{formatBytes(file.fileSizeBytes)}</span>
                   <span>Created {formatDate(file.createdAt)}</span>
-                  {file.lastProcessedAt && (
+                  {file.results && file.results.length > 0 && (
                     <span className="text-green-600">
-                      Processed {formatDate(file.lastProcessedAt)}
+                      Processed {formatDate(file.results[0].createdAt)}
                     </span>
                   )}
                 </div>

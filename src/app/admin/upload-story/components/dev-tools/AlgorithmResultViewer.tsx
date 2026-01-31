@@ -1,7 +1,7 @@
 // src/app/admin/upload-story/components/dev-tools/AlgorithmResultViewer.tsx
 // Display algorithm processing results with stats, chapters, and extracted text
 
-import type { ProcessingResult } from "@/lib/story-processing/text-processors";
+import type { ProcessingResult } from "@/lib/text-processing";
 
 interface AlgorithmResultViewerProps {
   result: ProcessingResult & { processingTimeMs?: number };

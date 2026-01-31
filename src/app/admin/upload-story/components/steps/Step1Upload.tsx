@@ -10,7 +10,7 @@ import {
   isAcceptedFile,
   SUPPORTED_FILE_TYPES,
   type ExtractedAnnotation,
-} from "@/lib/admin/text-utils";
+} from "@/lib/text-processing";
 
 interface Step1UploadProps {
   storyData: StoryData;

@@ -4,16 +4,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  processFile,
+  processText,
   type FileType,
-  type StoryType,
-} from "@/lib/story-processing/text-processors";
+  type ContentType,
+} from "@/lib/text-processing";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// POST: Run algorithm on file and store result
+// POST: Run algorithm on file and store result in AlgorithmTestResult table
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -32,24 +32,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Run the processing algorithm
     const startTime = Date.now();
-    const result = processFile(
-      file.rawContent,
-      file.fileType as FileType,
-      file.storyType as StoryType
-    );
+    const result = processText(file.rawContent, {
+      fileType: file.fileType as FileType,
+      contentType: file.storyType as ContentType,
+    });
     const processingTimeMs = Date.now() - startTime;
 
-    // Store the result - serialize as JSON-compatible object
-    const processingResultJson = JSON.parse(JSON.stringify({
-      ...result,
-      processingTimeMs,
-    }));
+    // Store the result in the new results table
+    const processingResultJson = JSON.parse(JSON.stringify(result));
 
-    const updated = await prisma.algorithmTestFile.update({
-      where: { id },
+    const testResult = await prisma.algorithmTestResult.create({
       data: {
-        lastProcessedAt: new Date(),
-        processingResult: processingResultJson,
+        fileId: id,
+        result: processingResultJson,
+        processingTimeMs,
       },
     });
 
@@ -57,11 +53,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       processingTimeMs,
       result,
-      file: {
-        id: updated.id,
-        fileName: updated.fileName,
-        lastProcessedAt: updated.lastProcessedAt,
-      },
+      resultId: testResult.id,
+      createdAt: testResult.createdAt,
     });
   } catch (error) {
     console.error("[algorithm-test-files/[id]/process] POST error:", error);

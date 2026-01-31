@@ -1,7 +1,7 @@
 // src/app/admin/upload-story/components/dev-tools/FileTypePicker.tsx
 // Grid of file type cards for SU TP Algorithms
 
-import type { FileType } from "@/lib/story-processing/text-processors";
+import type { FileType } from "@/lib/text-processing";
 
 interface FileTypePickerProps {
   onSelect: (fileType: FileType) => void;

@@ -12,7 +12,7 @@ import {
   stripRTF,
   isAcceptedFile,
   SUPPORTED_FILE_TYPES,
-} from "@/lib/admin/text-utils";
+} from "@/lib/text-processing";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
 

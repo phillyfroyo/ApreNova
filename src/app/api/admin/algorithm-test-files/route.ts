@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { FileType, StoryType } from "@/lib/story-processing/text-processors";
+import type { FileType, StoryType } from "@/lib/text-processing";
 
 // GET: List test files (filtered by fileType and storyType)
 export async function GET(request: NextRequest) {
@@ -25,11 +25,18 @@ export async function GET(request: NextRequest) {
         storyType: true,
         fileName: true,
         fileSizeBytes: true,
-        lastProcessedAt: true,
         notes: true,
         createdAt: true,
         updatedAt: true,
-        // Don't include rawContent or processingResult in list (too large)
+        // Include latest result for display
+        results: {
+          select: {
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        // Don't include rawContent in list (too large)
       },
       orderBy: { createdAt: "desc" },
     });

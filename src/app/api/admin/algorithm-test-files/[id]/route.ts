@@ -8,13 +8,19 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET: Get full file with content
+// GET: Get full file with content and results history
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
     const file = await prisma.algorithmTestFile.findUnique({
       where: { id },
+      include: {
+        results: {
+          orderBy: { createdAt: "desc" },
+          take: 10, // Limit to last 10 results
+        },
+      },
     });
 
     if (!file) {
@@ -72,12 +78,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH: Update file notes
+// PATCH: Update file (notes, fileName)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { notes } = body;
+    const { notes, fileName } = body;
 
     const file = await prisma.algorithmTestFile.findUnique({
       where: { id },
@@ -90,15 +96,41 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // If renaming, check for conflicts
+    if (fileName && fileName !== file.fileName) {
+      const existing = await prisma.algorithmTestFile.findUnique({
+        where: {
+          fileType_storyType_fileName: {
+            fileType: file.fileType,
+            storyType: file.storyType,
+            fileName,
+          },
+        },
+      });
+
+      if (existing) {
+        return NextResponse.json(
+          { error: `A file named "${fileName}" already exists in this category` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Build update data
+    const updateData: { notes?: string | null; fileName?: string } = {};
+    if (notes !== undefined) updateData.notes = notes;
+    if (fileName) updateData.fileName = fileName;
+
     const updated = await prisma.algorithmTestFile.update({
       where: { id },
-      data: { notes },
+      data: updateData,
     });
 
     return NextResponse.json({
       success: true,
       file: {
         id: updated.id,
+        fileName: updated.fileName,
         notes: updated.notes,
         updatedAt: updated.updatedAt,
       },

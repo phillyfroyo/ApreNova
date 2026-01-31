@@ -2,17 +2,88 @@
 // Shared text processing utilities for stories
 // Used by both admin and user story pipelines
 
-// Re-export the admin text preprocessing utilities
-// These are already well-tested and used in production
+// ============================================================================
+// NEW: Re-export from unified text-processing module
+// This is now the SINGLE SOURCE OF TRUTH for text processing
+// ============================================================================
+export {
+  // Main processing function
+  processText,
+  processFile, // Deprecated alias for backward compatibility
+  // Types
+  type FileType,
+  type ContentType,
+  type ProcessingOptions,
+  type ProcessingResult,
+  type PreprocessedText,
+  type ExtractionResult,
+  type ExtractedAnnotation,
+  type DetectedChapter,
+  type LineBreakStyle,
+  type StructureAnalysis,
+  // File extractors
+  extractText,
+  extractTextFromHTML,
+  extractTextFromHTMLServer,
+  extractTextFromRTF,
+  stripRTF,
+  extractTextFromTxt,
+  extractTextFromMd,
+  detectFileType,
+  detectFileTypeFromName,
+  detectFileTypeFromMime,
+  isAcceptedFile,
+  SUPPORTED_FILE_TYPES,
+  // Content processors
+  processContent,
+  preprocessAnthology,
+  preprocessProse,
+  preprocessEpic,
+  preprocessScript,
+  detectContentType,
+  getStructureAnalysis,
+  analyzeContentStructure,
+  parseScriptLine,
+  extractSpeakerNames,
+  detectEditorialNotes,
+  getContentTypeLabel,
+  CONTENT_TYPES,
+  // Shared utilities
+  detectLineBreakStyle,
+  normalizeLineBreaks,
+  normalizeWhitespace,
+  normalizeWhitespacePreserveIndent,
+  getLineBreakStyleDescription,
+  removeLineNumbers,
+  removePageMarkers,
+  removeFootnoteIndicators,
+  removeAsteriskDividers,
+  runAllCleanup,
+  removeGutenbergFrontMatter,
+  detectBackMatterStart,
+  extractBackMatter,
+  detectThematicSectionMarkers,
+  detectChapterMarkers,
+  filterOutTOCMarkers,
+  splitIntoChapters,
+  extractFrontMatter,
+  getFileTypeLabel,
+  FILE_TYPES,
+  STORY_TYPES,
+  type StoryType,
+  type ParsedScriptLine,
+  type ChapterMarker,
+  type EditorialNote,
+  type ExtractionOptions,
+} from "@/lib/text-processing";
+
+// ============================================================================
+// LEGACY: Re-exports from admin modules for backward compatibility
+// These are now deprecated - use the unified text-processing module instead
+// ============================================================================
 export {
   preprocessText,
   quickClean,
-  normalizeLineBreaks,
-  detectLineBreakStyle,
-  // Script parsing utilities
-  parseScriptLine,
-  extractSpeakerNames,
-  type ParsedScriptLine,
 } from "@/lib/admin/text-preprocessor";
 
 export { cleanText, parseChaptersFromText } from "@/lib/admin/text-utils";

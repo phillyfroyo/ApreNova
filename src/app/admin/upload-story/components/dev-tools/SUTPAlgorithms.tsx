@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { FileType, StoryType } from "@/lib/story-processing/text-processors";
+import type { FileType, StoryType } from "@/lib/text-processing";
 import { FileTypePicker } from "./FileTypePicker";
 import { StoryTypePicker } from "./StoryTypePicker";
 import { TestFileList, type TestFile } from "./TestFileList";
@@ -18,18 +18,24 @@ type NavState =
   | { level: "fileView"; fileType: FileType; storyType: StoryType; fileId: string };
 
 // API response types
+interface TestResult {
+  id: string;
+  result: unknown;
+  processingTimeMs: number | null;
+  createdAt: string;
+}
+
 interface TestFileFull {
   id: string;
   fileType: string;
   storyType: string;
   fileName: string;
   fileSizeBytes: number;
-  lastProcessedAt: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
   rawContent: string;
-  processingResult: unknown;
+  results: TestResult[];
 }
 
 export function SUTPAlgorithms() {
@@ -201,6 +207,25 @@ export function SUTPAlgorithms() {
     await fetchFiles(navState.fileType, navState.storyType);
   };
 
+  // Rename handler
+  const handleRename = async (newName: string) => {
+    if (!currentFile) return;
+
+    const res = await fetch(`/api/admin/algorithm-test-files/${currentFile.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName: newName }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Rename failed");
+    }
+
+    // Refresh file to get new name
+    await fetchFile(currentFile.id);
+  };
+
   // Get file counts for pickers
   const getFileTypeCounts = () => {
     const counts: Record<FileType, number> = { html: 0, txt: 0, rtf: 0, md: 0 };
@@ -229,7 +254,7 @@ export function SUTPAlgorithms() {
         </h2>
         <p className="text-sm text-gray-500">
           Test Story Upload Text Processing algorithms with persistent test files.
-          Changes to algorithms in <code className="bg-gray-100 px-1 py-0.5 rounded">text-processors.ts</code> will
+          Changes to algorithms in <code className="bg-gray-100 px-1 py-0.5 rounded">src/lib/text-processing/</code> will
           affect both the upload pipeline and tests here.
         </p>
       </div>
@@ -269,6 +294,7 @@ export function SUTPAlgorithms() {
             files={files}
             onSelectFile={handleSelectFile}
             onBack={handleBackToStoryTypes}
+            onBackToFileTypes={handleBackToFileTypes}
             onUpload={handleUpload}
             onRefresh={() => fetchFiles(navState.fileType, navState.storyType)}
             isLoading={isLoading}
@@ -279,8 +305,11 @@ export function SUTPAlgorithms() {
           <TestFileViewer
             file={currentFile as never}
             onBack={handleBackToFileList}
+            onBackToFileTypes={handleBackToFileTypes}
+            onBackToStoryTypes={handleBackToStoryTypes}
             onRunAlgorithm={handleRunAlgorithm}
             onDelete={handleDelete}
+            onRename={handleRename}
             isProcessing={isProcessing}
           />
         )}

@@ -324,15 +324,31 @@ model AlgorithmTestFile {
   rawContent      String   @db.Text // Full untruncated content
   fileSizeBytes   Int
 
-  // Processing results (JSON, updated when algorithm runs)
-  lastProcessedAt DateTime?
-  processingResult Json?
-
   // Metadata
   notes           String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Relations
+  results         AlgorithmTestResult[]
+
   @@unique([fileType, storyType, fileName])
   @@index([fileType, storyType])
+}
+
+model AlgorithmTestResult {
+  id              String   @id @default(cuid())
+  fileId          String
+
+  // Processing output
+  result          Json     // The full ProcessingResult
+  processingTimeMs Int?    // How long the algorithm took
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+
+  // Relations
+  file            AlgorithmTestFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId, createdAt])
 }
