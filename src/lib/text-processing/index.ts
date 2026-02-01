@@ -103,6 +103,11 @@ export {
   extractSpeakerNames,
   // Editorial notes
   detectEditorialNotes,
+  // Poem detection (SINGLE SOURCE OF TRUTH - used by pagination and Dev Tools)
+  countPoems,
+  detectPoemBoundaries,
+  isPoemTitleLine,
+  type DetectedPoem,
   // Labels
   getContentTypeLabel,
   CONTENT_TYPES,
@@ -145,6 +150,30 @@ export {
   splitIntoChapters,
   extractFrontMatter,
 } from './shared/chapter-detection';
+
+export {
+  // Section detection (anthology thematic sections like "I. LIFE.")
+  detectSectionBoundaries,
+  type DetectedSection,
+} from './shared/section-detection';
+
+export {
+  // Anthology pagination (poem-aware pagination with poem tracking)
+  paginateAnthologyPoems,
+  ANTHOLOGY_MAX_LINES_PER_PAGE,
+  type AnthologyPaginationResult,
+} from './shared/anthology-pagination';
+
+// Re-export poem detection patterns for consumers that need them directly
+export {
+  POEM_TITLE_PATTERN,
+  NUMBERED_POEM_PATTERN,
+  SECTION_HEADER_PATTERN,
+  isSectionHeader,
+} from './shared/poem-detection';
+
+// Re-export types from types.ts that are used by pagination
+export type { PoemInfo, LineMetadata } from './types';
 
 // ============================================================================
 // MAIN PROCESSING FUNCTION

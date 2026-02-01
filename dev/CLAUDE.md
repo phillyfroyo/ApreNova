@@ -34,10 +34,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Module | Purpose | Used By |
 |--------|---------|---------|
+| `src/lib/text-processing/` | **SINGLE SOURCE OF TRUTH** for all text processing | Admin uploads, User uploads, Dev Tools |
 | `src/lib/poem-processing/` | Canonical stanza detection | User pipeline, Admin pipeline, Rewriting |
 | `src/lib/story-processing/` | Detection, translation, content building | Both portals |
 | `src/lib/user-stories/` | User upload orchestration | User portal API routes |
 | `src/lib/admin/` | Admin upload orchestration | Admin portal API routes |
+
+---
+
+## CRITICAL: Dev Tools Must Use Production Algorithms
+
+**The Admin Dev Tools (SU TP Algorithms testing system) must use 100% the same code as the production upload pipelines.**
+
+### Why This Matters:
+- Dev Tools exist to test and validate the **actual algorithms** that will process user uploads
+- If Dev Tools use different code, testing is meaningless - you're testing code that won't run in production
+- This has caused bugs before: separate `countPoems()` implementations gave different results
+
+### The Rule:
+1. **NEVER write new algorithm functions specifically for Dev Tools**
+2. **ALWAYS import from the unified `src/lib/text-processing/` module**
+3. **If an algorithm doesn't exist for Dev Tools to use, add it to the shared module first**
+
+### Architecture:
+```
+src/lib/text-processing/           ← SINGLE SOURCE OF TRUTH
+├── index.ts                        ← Main entry: processText()
+├── file-extractors/                ← HTML, RTF, TXT, MD extraction
+├── content-processors/             ← Anthology, Prose, Epic, Script processing
+│   └── anthology-processor.ts      ← Re-exports countPoems from shared
+└── shared/
+    ├── poem-detection.ts           ← detectPoemBoundaries(), countPoems()
+    ├── chapter-detection.ts        ← Chapter/section boundary detection
+    ├── whitespace.ts               ← Line break handling
+    └── cleanup.ts                  ← Footnotes, line numbers, etc.
+```
+
+### Consumers (All Use Same Code):
+1. **Admin Upload Pipeline** - `src/app/admin/upload-story/`
+2. **User Upload Pipeline** - `src/components/user-stories/UploadStoryModal.tsx`
+3. **Dev Tools** - `src/app/admin/upload-story/components/dev-tools/`
+
+### Example - Wrong vs Right:
+
+**WRONG** (creates untested code path):
+```typescript
+// In AlgorithmResultViewer.tsx
+function countPoemsForDevTools(text: string) {
+  // Custom implementation just for Dev Tools
+  return text.split('\n').filter(isPoemTitle).length;
+}
+```
+
+**RIGHT** (uses production algorithm):
+```typescript
+// In AlgorithmResultViewer.tsx
+import { countPoems } from "@/lib/text-processing";
+// Uses exact same algorithm as production uploads
+const poemCount = countPoems(chapterText);
+```
 
 ---
 

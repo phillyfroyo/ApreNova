@@ -32,6 +32,9 @@ import {
   extractFrontMatter,
 } from '../shared/chapter-detection';
 
+// Import countPoems for internal use in preprocessAnthology
+import { countPoems as countPoemsInternal } from '../shared/poem-detection';
+
 // ============================================================================
 // STRUCTURE ANALYSIS (The Emily Dickinson Algorithm - Part 1)
 // ============================================================================
@@ -205,6 +208,19 @@ export function detectEditorialNotes(lines: string[]): EditorialNote[] {
 }
 
 // ============================================================================
+// RE-EXPORT POEM DETECTION FROM SHARED MODULE
+// ============================================================================
+
+// Re-export countPoems from shared module for backward compatibility
+// The actual implementation is in shared/poem-detection.ts
+// This ensures the SAME algorithm is used by:
+// 1. Dev Tools (SU TP Algorithms)
+// 2. Admin upload pipeline
+// 3. User upload pipeline
+// 4. Anthology pagination
+export { countPoems, detectPoemBoundaries, isPoemTitleLine, type DetectedPoem } from '../shared/poem-detection';
+
+// ============================================================================
 // ANTHOLOGY PREPROCESSING (The Emily Dickinson Algorithm - Full Pipeline)
 // ============================================================================
 
@@ -215,7 +231,8 @@ export function detectEditorialNotes(lines: string[]): EditorialNote[] {
  * 1. Structure Detection - analyzeContentStructure() detects thematic sections
  * 2. Chapter Detection - detectChapterMarkers() with anthology-aware mode finds "I. LIFE.", "II. LOVE."
  * 3. Whitespace Preservation - normalizeLineBreaks("intentional") preserves indentation and blank lines
- * 4. The stanza detection happens downstream in poem-processing module
+ * 4. Poem counting for pagination planning
+ * 5. The stanza detection happens downstream in poem-processing module
  */
 export function preprocessAnthology(
   rawText: string,
@@ -285,6 +302,9 @@ export function preprocessAnthology(
     })
     .join('\n\n');
 
+  // Step 12: Count poems for pagination planning
+  const poemCount = countPoemsInternal(cleanedFullText);
+
   return {
     frontMatter,
     backMatter,
@@ -297,6 +317,7 @@ export function preprocessAnthology(
       footnoteIndicatorsRemoved: cleanupStats.footnoteIndicatorsRemoved,
       asteriskDividersRemoved: cleanupStats.asteriskDividersRemoved,
       chaptersDetected: chapters.length,
+      poemCount,
       backMatterRemoved,
       lineBreakStyle,
       structureType,

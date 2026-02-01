@@ -13,6 +13,9 @@ export { preprocessProse } from './prose-processor';
 export { preprocessEpic } from './epic-processor';
 export { preprocessScript, parseScriptLine, extractSpeakerNames } from './script-processor';
 
+// Re-export poem detection from anthology-processor (which re-exports from shared/poem-detection)
+export { countPoems, detectPoemBoundaries, isPoemTitleLine, type DetectedPoem } from './anthology-processor';
+
 // ============================================================================
 // CONTENT TYPE DETECTION
 // ============================================================================

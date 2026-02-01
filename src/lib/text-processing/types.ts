@@ -87,6 +87,7 @@ export interface PreprocessedText {
     footnoteIndicatorsRemoved: number;
     asteriskDividersRemoved: number;
     chaptersDetected: number;
+    poemCount?: number; // Number of poems detected (for anthologies)
     backMatterRemoved: boolean;
     lineBreakStyle: LineBreakStyle;
     structureType: ContentType;
@@ -198,4 +199,60 @@ export interface EditorialNote {
   lineIndex: number;
   text: string;
   type: "publication" | "biographical" | "annotation";
+}
+
+// ============================================================================
+// POEM INFO (for anthology navigation)
+// ============================================================================
+
+/**
+ * Poem metadata for anthology navigation
+ */
+export interface PoemInfo {
+  number: number;                // 1-based poem number within collection
+  title: string;                 // Poem title or Roman numeral
+  startPage: number;             // First page of this poem (1-based)
+  endPage: number;               // Last page of this poem (1-based)
+  pageCount: number;             // Total pages this poem spans
+}
+
+// ============================================================================
+// LINE METADATA (for poems and scripts)
+// ============================================================================
+
+/**
+ * Line metadata for poems and scripts.
+ * Stored separately during processing, then merged into StoryLine.
+ */
+export interface LineMetadata {
+  // Poem support
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
+  // Script support
+  speaker?: string;
+  speakerAnnotation?: string;
+  stageDirection?: string;
+  isStageDirectionOnly?: boolean;
+}
+
+// ============================================================================
+// DETECTED SECTION (for anthology section boundaries)
+// ============================================================================
+
+/**
+ * Represents a section/collection within an anthology.
+ */
+export interface DetectedSection {
+  /** Section number (from Roman numeral) */
+  number: string;
+  /** Section title (e.g., "LIFE", "LOVE") */
+  title: string;
+  /** Full header line (e.g., "I. LIFE.") */
+  header: string;
+  /** Line index where section starts (including header) */
+  startLine: number;
+  /** Line index where section ends (exclusive) */
+  endLine: number;
+  /** Content lines (including header) */
+  lines: string[];
 }

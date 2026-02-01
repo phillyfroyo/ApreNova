@@ -55,13 +55,32 @@ export function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
   // Note: \s* instead of \s+ to handle typos like "BOOKXXXV" (no space)
   const bookThematicPattern = /^BOOK\s*([IVXLC]+)\.?\s*(?:\.?\s*(.+))?$/i;
 
+  // Pattern 3: [COLLECTION] marker injected by HTML extractor (Blake style)
+  // This handles cases where collection headers look identical to poem titles
+  // but are identified by HTML structure (no poem content following the header)
+  const collectionMarkerPattern = /^\[COLLECTION\]\s*(.+)$/i;
+
   const markers: ChapterMarker[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Try Dickinson-style thematic pattern first
+    // Try [COLLECTION] marker first (injected by HTML extractor)
+    const collectionMatch = line.match(collectionMarkerPattern);
+    if (collectionMatch) {
+      const title = collectionMatch[1].trim();
+      markers.push({
+        lineIndex: i,
+        type: 'thematic',
+        number: markers.length + 1,
+        title,
+        fullMatch: line,
+      });
+      continue;
+    }
+
+    // Try Dickinson-style thematic pattern
     const thematicMatch = line.match(thematicPattern);
     if (thematicMatch) {
       const romanNumeral = thematicMatch[1];
@@ -131,7 +150,11 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
     if (thematicMarkers.length >= 1) {
       return thematicMarkers;
     }
-    // Fall through to standard detection if no thematic sections found
+    // No thematic sections found - for anthologies, return empty to treat as single collection
+    // Don't fall through to standard detection which would incorrectly detect
+    // standalone Roman numerals (I, II) within poems as chapter markers
+    console.log('[detectChapterMarkers] Anthology with no thematic sections - treating as single collection');
+    return [];
   }
 
   // First pass: look for EXPLICIT chapter markers only
@@ -286,13 +309,30 @@ export function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): 
   // Strategy 1: Look for a repeated marker number
   // If we see BOOK I in the TOC and BOOK I again in the content,
   // the second occurrence is the real one.
+  // BUT: If markers before the duplicate all have substantial content,
+  // they're not TOC entries - they're legitimately repeated section names
+  // (e.g., Dickinson has "I. LIFE." three times, each with different poems)
   const markerNumbers = markers.map(m => m.number);
   const firstDuplicate = markerNumbers.findIndex((num, idx) =>
     markerNumbers.indexOf(num) !== idx
   );
 
   if (firstDuplicate > 0) {
-    // We have duplicates! The first occurrence of each is TOC.
+    // Check if markers BEFORE the duplicate have substantial content
+    // If so, they're real chapters, not TOC entries
+    const markersBeforeDuplicate = contentBetween.slice(0, firstDuplicate);
+    const allHaveSubstantialContent = markersBeforeDuplicate.every(
+      content => content >= CHAPTER_CONTENT_THRESHOLD
+    );
+
+    if (allHaveSubstantialContent) {
+      // These are real chapters with repeated names (like Dickinson's 3 books)
+      // Don't filter anything
+      console.log(`[filterOutTOCMarkers] Duplicate markers found but all have substantial content - keeping all ${markers.length} markers`);
+      return markers;
+    }
+
+    // We have duplicates with minimal content before them - likely a TOC
     // Find where the duplicate chapter numbers start
     const firstNum = markers[firstDuplicate].number;
     const firstRealIndex = markers.findIndex((m, idx) =>

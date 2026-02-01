@@ -158,6 +158,184 @@ function removeTOC(html: string): string {
 }
 
 // ============================================================================
+// COLLECTION HEADER DETECTION
+// ============================================================================
+
+/**
+ * Detect collection headers in HTML by analyzing structure.
+ *
+ * A collection header is an <h2> (or similar) that is followed by:
+ * - Another <h2> with no substantial content between them (just images/whitespace)
+ * - OR only contains images/decorative elements before the next header
+ *
+ * This handles cases like Blake's "Songs of Innocence" where collection titles
+ * look identical to poem titles in the text, but structurally have no poem
+ * content immediately following them.
+ *
+ * We inject a special marker [COLLECTION: Title] that chapter detection can recognize.
+ */
+function detectAndMarkCollectionHeaders(html: string): string {
+  // Find all chapter divs with h2 headers
+  // Pattern: <div class="chapter">...<h2>TITLE</h2>...content...</div>
+  const chapterPattern = /<div[^>]*class="[^"]*chapter[^"]*"[^>]*>([\s\S]*?)<\/div><!--\s*end\s*chapter\s*-->/gi;
+
+  // Extract chapter blocks
+  const chapters: { fullMatch: string; title: string; hasPoem: boolean }[] = [];
+  let match;
+
+  while ((match = chapterPattern.exec(html)) !== null) {
+    const content = match[1];
+    const fullMatch = match[0];
+
+    // Extract title from h2
+    const h2Match = content.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+    if (!h2Match) continue;
+
+    const title = h2Match[1].replace(/<[^>]+>/g, '').trim();
+
+    // Check if this chapter has actual poem content (not just images)
+    // Look for <p class="poem">, <pre>, or substantial text content
+    const hasPoem = /<p[^>]*class="[^"]*poem[^"]*"[^>]*>/i.test(content) ||
+                    /<pre[^>]*>/i.test(content) ||
+                    // Check for substantial text after the h2 (excluding img tags)
+                    ((): boolean => {
+                      const afterH2 = content.slice(content.indexOf('</h2>') + 5);
+                      const textOnly = afterH2.replace(/<[^>]+>/g, '').trim();
+                      return textOnly.length > 50; // More than 50 chars of actual text
+                    })();
+
+    chapters.push({ fullMatch, title, hasPoem });
+  }
+
+  // Now identify collection headers: headers with no poem content
+  // that are followed by headers with poem content
+  let result = html;
+
+  for (let i = 0; i < chapters.length; i++) {
+    const chapter = chapters[i];
+
+    // If this chapter has no poem AND is followed by a chapter with poems,
+    // it's likely a collection header
+    if (!chapter.hasPoem) {
+      const nextWithPoem = chapters.slice(i + 1).find(c => c.hasPoem);
+      if (nextWithPoem) {
+        // This is a collection header - inject marker into the h2
+        const markedH2 = chapter.fullMatch.replace(
+          /<h2([^>]*)>([\s\S]*?)<\/h2>/i,
+          `<h2$1>[COLLECTION] $2</h2>`
+        );
+        result = result.replace(chapter.fullMatch, markedH2);
+      }
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
+// POEM MARKER INJECTION
+// ============================================================================
+
+/**
+ * Detect poems in HTML by analyzing structure and inject [POEM] markers.
+ *
+ * This handles anthology formats where poems have Title Case titles in <h2> tags
+ * (like Whitman's "One's-Self I Sing", "As I Ponder'd in Silence").
+ *
+ * Structure detected:
+ * - <div class="chapter"> containing <h2> with title and <pre> with poem content
+ * - <h2> followed by <pre> or <p class="poem">
+ *
+ * We inject [POEM] before the title so poem detection can find boundaries.
+ * This runs AFTER collection detection, so collection headers are already marked.
+ */
+function detectAndMarkPoems(html: string): string {
+  let result = html;
+
+  // Pattern 1: <div class="chapter"> with <h2> title and <pre> content (Whitman style)
+  // This is very reliable - the HTML structure explicitly marks poems
+  const chapterPoemPattern = /<div[^>]*class="[^"]*chapter[^"]*"[^>]*>([\s\S]*?)<\/div><!--\s*end\s*chapter\s*-->/gi;
+
+  result = result.replace(chapterPoemPattern, (fullMatch, content) => {
+    // Skip if this is already marked as a collection
+    if (/\[COLLECTION\]/i.test(content)) {
+      return fullMatch;
+    }
+
+    // Check if this has poem content (pre tag or substantial text)
+    const hasPreContent = /<pre[^>]*>/i.test(content);
+    const hasPoemClass = /<p[^>]*class="[^"]*poem[^"]*"[^>]*>/i.test(content);
+
+    if (hasPreContent || hasPoemClass) {
+      // Extract the h2 title
+      const h2Match = content.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      if (h2Match) {
+        const titleContent = h2Match[1];
+        // Skip if title is ALL CAPS (already detected by text-based detection)
+        // or if it's a BOOK/PART marker (chapter, not poem)
+        const titleText = titleContent.replace(/<[^>]+>/g, '').trim();
+        const isAllCaps = titleText === titleText.toUpperCase() && titleText.length > 3;
+        const isBookMarker = /^(BOOK|PART|CANTO|ACT|SCENE)\s/i.test(titleText);
+
+        if (!isAllCaps && !isBookMarker && titleText.length > 0) {
+          // Inject [POEM] marker as a separate div with the title text (no nested tags)
+          // Use the clean titleText to avoid whitespace issues
+          const markedContent = content.replace(
+            /<h2([^>]*)>([\s\S]*?)<\/h2>/i,
+            `<div class="poem-marker">[POEM] ${titleText}</div><h2$1>$2</h2>`
+          );
+          return fullMatch.replace(content, markedContent);
+        }
+      }
+    }
+
+    return fullMatch;
+  });
+
+  // Pattern 2: Standalone <h2> followed by <pre> (without chapter div wrapper)
+  // Less common but handle it for robustness
+  result = result.replace(
+    /<h2([^>]*)>((?:(?!\[POEM\])[\s\S])*?)<\/h2>(\s*)<pre/gi,
+    (match, attrs, title, space) => {
+      const titleText = title.replace(/<[^>]+>/g, '').trim();
+      const isAllCaps = titleText === titleText.toUpperCase() && titleText.length > 3;
+      const isBookMarker = /^(BOOK|PART|CANTO|ACT|SCENE)\s/i.test(titleText);
+      const isCollection = /\[COLLECTION\]/i.test(title);
+
+      if (!isAllCaps && !isBookMarker && !isCollection && titleText.length > 0) {
+        return `<h2${attrs}>[POEM] ${title}</h2>${space}<pre`;
+      }
+      return match;
+    }
+  );
+
+  // Pattern 3: <h3> tags as poem titles (Baudelaire and similar anthology styles)
+  // These are typically poem titles - inject markers unless they're structural markers
+  // Handles both <h3>Title</h3> immediately followed by content AND cases with whitespace/other elements between
+  result = result.replace(
+    /<h3([^>]*)>([\s\S]*?)<\/h3>/gi,
+    (match, attrs, title) => {
+      const titleText = title.replace(/<[^>]+>/g, '').trim();
+      // Skip if already marked, or if ALL CAPS (handled by text detection), or too short
+      const isAllCaps = titleText === titleText.toUpperCase() && titleText.length > 3;
+      const isAlreadyMarked = /\[POEM\]/i.test(title);
+      const isBookMarker = /^(BOOK|PART|CANTO|ACT|SCENE)\s/i.test(titleText);
+      // Skip Roman numerals (I, II, III, etc.) - these are often sub-sections within poems, not poem titles
+      const isRomanNumeral = /^[IVXLC]+\.?$/.test(titleText);
+      // Skip very short titles that are likely structural (e.g., single letters)
+      const isTooShort = titleText.length <= 2;
+
+      if (!isAllCaps && !isAlreadyMarked && !isBookMarker && !isRomanNumeral && !isTooShort) {
+        return `<div class="poem-marker">[POEM] ${titleText}</div><h3${attrs}>${title}</h3>`;
+      }
+      return match;
+    }
+  );
+
+  return result;
+}
+
+// ============================================================================
 // MAIN EXTRACTION
 // ============================================================================
 
@@ -191,6 +369,12 @@ export function extractTextFromHTML(
 
   let text = html;
 
+  // Step 0: Detect and mark collection headers before losing HTML structure
+  text = detectAndMarkCollectionHeaders(text);
+
+  // Step 0b: Detect and mark poems (Title Case titles in chapter divs with pre content)
+  text = detectAndMarkPoems(text);
+
   // Step 1: Remove script and style elements
   text = text.replace(/<script[\s\S]*?<\/script>/gi, '');
   text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
@@ -213,6 +397,14 @@ export function extractTextFromHTML(
     // Mark PRE content to preserve newlines
     const protectedContent = stripped.trim().replace(/\n/g, MARKERS.PRE_NEWLINE);
     return MARKERS.PRE_START + protectedContent + '\n\n';
+  });
+
+  // Step 5b: Convert poem-marker divs to have their own lines
+  // These were injected by detectAndMarkPoems() and need to stay on separate lines
+  text = text.replace(/<div[^>]*class="[^"]*poem-marker[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, (_, content) => {
+    const stripped = content.replace(/<[^>]+>/g, '').trim();
+    if (!stripped) return '';
+    return MARKERS.HEADER_BREAK + stripped + MARKERS.HEADER_BREAK;
   });
 
   // Step 6: Convert headers to have blank lines before/after

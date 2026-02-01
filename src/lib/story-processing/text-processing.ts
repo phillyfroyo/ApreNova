@@ -1,9 +1,23 @@
 // src/lib/story-processing/text-processing.ts
 // Shared text processing utilities for stories
 // Used by both admin and user story pipelines
+//
+// NOTE: This file is now a THIN WRAPPER that re-exports from the unified
+// text-processing module. All algorithms live in src/lib/text-processing/.
 
 // ============================================================================
-// NEW: Re-export from unified text-processing module
+// IMPORTS FOR LOCAL USE
+// These are imported for use within this file's remaining functions
+// ============================================================================
+import {
+  type PoemInfo,
+  type LineMetadata,
+  paginateAnthologyPoems,
+} from "@/lib/text-processing";
+
+// ============================================================================
+// RE-EXPORTS FROM UNIFIED TEXT-PROCESSING MODULE
+// All algorithms now live in @/lib/text-processing/ - this file is a thin wrapper
 // This is now the SINGLE SOURCE OF TRUTH for text processing
 // ============================================================================
 export {
@@ -75,6 +89,25 @@ export {
   type ChapterMarker,
   type EditorialNote,
   type ExtractionOptions,
+  // Poem detection (SINGLE SOURCE OF TRUTH)
+  detectPoemBoundaries,
+  isPoemTitleLine,
+  isSectionHeader,
+  countPoems,
+  type DetectedPoem,
+  POEM_TITLE_PATTERN,
+  NUMBERED_POEM_PATTERN,
+  SECTION_HEADER_PATTERN,
+  // Section detection
+  detectSectionBoundaries,
+  type DetectedSection,
+  // Anthology pagination
+  paginateAnthologyPoems,
+  type AnthologyPaginationResult,
+  ANTHOLOGY_MAX_LINES_PER_PAGE,
+  // Types
+  type PoemInfo,
+  type LineMetadata,
 } from "@/lib/text-processing";
 
 // ============================================================================
@@ -138,16 +171,7 @@ export interface PageContent {
   isContinuation?: boolean;      // True if poem continues from previous page
 }
 
-/**
- * Poem metadata for anthology navigation
- */
-export interface PoemInfo {
-  number: number;                // 1-based poem number within collection
-  title: string;                 // Poem title or Roman numeral
-  startPage: number;             // First page of this poem (1-based)
-  endPage: number;               // Last page of this poem (1-based)
-  pageCount: number;             // Total pages this poem spans
-}
+// NOTE: PoemInfo is now imported and re-exported from @/lib/text-processing
 
 // Type guard to check if content has stanzas (poem) or lines (prose)
 export function hasStanzas(content: PageContent): content is PageContent & { stanzas: StoryLine[][] } {
@@ -319,620 +343,14 @@ function isPoemContent(lineMetadata?: Map<number, LineMetadata>): boolean {
 
 // ============================================================================
 // POEM-AWARE PAGINATION (for anthologies)
+// NOTE: All poem detection and pagination functions are now imported from
+// @/lib/text-processing - this is the SINGLE SOURCE OF TRUTH.
+// The following imports are re-exported for backward compatibility:
+// - detectPoemBoundaries, isPoemTitleLine, isSectionHeader, countPoems
+// - detectSectionBoundaries, DetectedSection
+// - paginateAnthologyPoems, AnthologyPaginationResult, ANTHOLOGY_MAX_LINES_PER_PAGE
+// - POEM_TITLE_PATTERN, NUMBERED_POEM_PATTERN, SECTION_HEADER_PATTERN
 // ============================================================================
-
-/**
- * Pattern for poem titles within an anthology section.
- * Matches ALL CAPS text that's 3-60 chars, may end with period.
- * Examples: "SUCCESS.", "THE SOUL SELECTS", "I. HOPE"
- */
-const POEM_TITLE_PATTERN = /^[A-Z][A-Z\s,.'"-]{2,58}\.?\s*$/;
-
-/**
- * Pattern for numbered poem markers (I., II., III., 1., 2., etc.)
- * These are standalone markers that indicate poem boundaries.
- */
-const NUMBERED_POEM_PATTERN = /^([IVXLC]+\.|\d+\.)\s*$/;
-
-/**
- * Pattern for SECTION headers in anthologies.
- * Matches "I. LIFE.", "II. LOVE.", "III. NATURE.", etc.
- * Format: Roman numeral + period + space + ALL CAPS title
- */
-const SECTION_HEADER_PATTERN = /^([IVXLC]+)\.\s+([A-Z][A-Z\s,.'"-]+)\.?\s*$/;
-
-/**
- * Check if a line looks like a poem title or marker.
- *
- * Detection methods:
- * 1. Numbered markers: "I.", "II.", "1.", "2." (standalone)
- * 2. ALL CAPS titles: "SUCCESS.", "THE SOUL SELECTS"
- * 3. Roman numeral with title: "I. HOPE" (handled by ALL CAPS pattern)
- *
- * Excludes SECTION headers like "I. LIFE." which have their own detection.
- */
-function isPoemTitleLine(line: string): boolean {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.length > 60) return false;
-
-  // EXCLUDE section headers (like "I. LIFE.", "II. LOVE.") - these are chapter markers, not poems
-  if (SECTION_HEADER_PATTERN.test(trimmed)) return false;
-
-  // Check for numbered poems (standalone "I.", "II.", "1.", etc.)
-  // Min length is 2 chars (e.g., "I.")
-  if (trimmed.length >= 2 && NUMBERED_POEM_PATTERN.test(trimmed)) return true;
-
-  // Check for ALL CAPS titles (need at least 3 chars for meaningful title)
-  if (trimmed.length >= 3 && POEM_TITLE_PATTERN.test(trimmed)) {
-    // Exclude lines that are clearly not titles:
-    // - Lines with lowercase letters
-    // - Lines that are purely punctuation
-    if (/[a-z]/.test(trimmed)) return false;
-    if (trimmed.replace(/[^A-Z]/g, '').length < 2) return false;
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Check if a line is a section header (like "I. LIFE.", "II. LOVE.")
- */
-function isSectionHeader(line: string): boolean {
-  const trimmed = line.trim();
-  return SECTION_HEADER_PATTERN.test(trimmed);
-}
-
-/**
- * Represents a section/collection within an anthology.
- */
-export interface DetectedSection {
-  /** Section number (from Roman numeral) */
-  number: string;
-  /** Section title (e.g., "LIFE", "LOVE") */
-  title: string;
-  /** Full header line (e.g., "I. LIFE.") */
-  header: string;
-  /** Line index where section starts (including header) */
-  startLine: number;
-  /** Line index where section ends (exclusive) */
-  endLine: number;
-  /** Content lines (including header) */
-  lines: string[];
-}
-
-/**
- * Detect section/collection boundaries in an anthology.
- * Sections are marked by headers like "I. LIFE.", "II. LOVE.", "III. NATURE."
- *
- * @param lines - Array of text lines
- * @returns Array of detected sections
- */
-export function detectSectionBoundaries(lines: string[]): DetectedSection[] {
-  const sections: DetectedSection[] = [];
-  let currentSectionStart = -1;
-  let currentHeader = "";
-  let currentNumber = "";
-  let currentTitle = "";
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (isSectionHeader(trimmed)) {
-      // Found a new section header
-      if (currentSectionStart >= 0) {
-        // Close previous section
-        sections.push({
-          number: currentNumber,
-          title: currentTitle,
-          header: currentHeader,
-          startLine: currentSectionStart,
-          endLine: i,
-          lines: lines.slice(currentSectionStart, i),
-        });
-      }
-
-      // Parse the header
-      const match = trimmed.match(SECTION_HEADER_PATTERN);
-      currentNumber = match?.[1] || "";
-      currentTitle = match?.[2]?.replace(/\.$/, "").trim() || "";
-      currentHeader = trimmed;
-      currentSectionStart = i;
-    }
-  }
-
-  // Don't forget the last section
-  if (currentSectionStart >= 0) {
-    sections.push({
-      number: currentNumber,
-      title: currentTitle,
-      header: currentHeader,
-      startLine: currentSectionStart,
-      endLine: lines.length,
-      lines: lines.slice(currentSectionStart),
-    });
-  }
-
-  // If no sections detected, treat entire content as one section
-  if (sections.length === 0 && lines.length > 0) {
-    sections.push({
-      number: "1",
-      title: "Poems",
-      header: "",
-      startLine: 0,
-      endLine: lines.length,
-      lines: lines,
-    });
-  }
-
-  return sections;
-}
-
-/**
- * Represents a single poem within an anthology section.
- */
-export interface DetectedPoem {
-  /** Title line of the poem */
-  title: string;
-  /** Line index where poem starts (including title) */
-  startLine: number;
-  /** Line index where poem ends (exclusive) */
-  endLine: number;
-  /** Content lines (including title) */
-  lines: string[];
-}
-
-/**
- * Detect poem boundaries within a chapter/section text.
- * Returns an array of poems, each with title and content.
- *
- * Detection strategy:
- * 1. First, try to find explicit poem markers (Roman numerals, ALL CAPS titles)
- * 2. If no markers found, fall back to double blank lines as separators
- * 3. If still no boundaries, treat entire chapter as one poem
- */
-export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
-  const poems: DetectedPoem[] = [];
-  let currentPoemStart = -1;
-  let currentTitle = "";
-  let firstPoemMarkerIndex = -1;
-
-  // First pass: detect explicit poem markers
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (isPoemTitleLine(trimmed)) {
-      // Track the first poem marker index for preamble handling
-      if (firstPoemMarkerIndex < 0) {
-        firstPoemMarkerIndex = i;
-      }
-      // Found a new poem title/marker
-      if (currentPoemStart >= 0) {
-        // Close previous poem
-        poems.push({
-          title: currentTitle,
-          startLine: currentPoemStart,
-          endLine: i,
-          lines: lines.slice(currentPoemStart, i),
-        });
-      }
-      currentPoemStart = i;
-      currentTitle = trimmed;
-    }
-  }
-
-  // Don't forget the last poem
-  if (currentPoemStart >= 0) {
-    poems.push({
-      title: currentTitle,
-      startLine: currentPoemStart,
-      endLine: lines.length,
-      lines: lines.slice(currentPoemStart),
-    });
-  }
-
-  // Handle preamble: if there's content before the first poem marker, include it
-  // This captures section headers like "I. LIFE." that precede the first poem
-  if (firstPoemMarkerIndex > 0 && poems.length > 0) {
-    const preambleLines = lines.slice(0, firstPoemMarkerIndex);
-    // Check if preamble has actual content (not just blank lines)
-    const hasContent = preambleLines.some(line => line.trim().length > 0);
-    if (hasContent) {
-      // Prepend preamble to the first poem
-      poems[0] = {
-        ...poems[0],
-        startLine: 0,
-        lines: [...preambleLines, ...poems[0].lines],
-      };
-    }
-  }
-
-  // If explicit markers found, post-process to merge header-only entries
-  if (poems.length > 0) {
-    // Merge strategy:
-    // - Section headers (like "I. LIFE.") attach to following poem
-    // - Roman numerals (like "I.", "II.") START a new poem - they don't cascade
-    // - Poem titles with content finalize the current poem
-    const mergedPoems: DetectedPoem[] = [];
-    let pendingHeaders: DetectedPoem[] = [];
-
-    for (let i = 0; i < poems.length; i++) {
-      const poem = poems[i];
-      // Count non-blank content lines (excluding the title line itself)
-      const contentLines = poem.lines.filter((line, idx) => {
-        if (idx === 0) return false; // Skip title line
-        return line.trim() !== '';
-      });
-
-      const isRomanMarker = /^[IVXLC]+\.?\s*$/.test(poem.title);
-      const isSectionHeader = /^[IVXLC]+\.\s+[A-Z]/.test(poem.title); // "I. LIFE."
-      // Only treat as header-only if it has very few content lines AND is not a substantial entry
-      const isHeaderOnly = contentLines.length <= 1;
-
-      if (isRomanMarker) {
-        // Roman numeral starts a NEW poem sequence
-        // First, check if pending already has a Roman numeral - if so, finalize pending
-        const pendingHasRoman = pendingHeaders.some(h => /^[IVXLC]+\.?\s*$/.test(h.title));
-        if (pendingHasRoman && pendingHeaders.length > 0) {
-          // Finalize pending as a standalone poem (has Roman but no content title)
-          const allLines = pendingHeaders.flatMap(h => h.lines);
-          mergedPoems.push({
-            title: pendingHeaders[pendingHeaders.length - 1].title,
-            startLine: pendingHeaders[0].startLine,
-            endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
-            lines: allLines,
-          });
-          pendingHeaders = [];
-        }
-        // Add this Roman numeral to pending
-        pendingHeaders.push(poem);
-
-      } else if (isSectionHeader && isHeaderOnly) {
-        // Section header like "I. LIFE." - can prefix following poems
-        // If we have pending with Roman numeral, finalize first
-        if (pendingHeaders.length > 0) {
-          const allLines = pendingHeaders.flatMap(h => h.lines);
-          mergedPoems.push({
-            title: pendingHeaders[pendingHeaders.length - 1].title,
-            startLine: pendingHeaders[0].startLine,
-            endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
-            lines: allLines,
-          });
-          pendingHeaders = [];
-        }
-        pendingHeaders.push(poem);
-
-      } else if (isHeaderOnly && !isRomanMarker) {
-        // Non-Roman header with few content lines - add to pending
-        pendingHeaders.push(poem);
-
-      } else {
-        // This is an actual poem with content - finalize with pending headers
-        if (pendingHeaders.length > 0) {
-          const allLines = pendingHeaders.flatMap(h => h.lines);
-          mergedPoems.push({
-            title: poem.title, // Use the content poem's title
-            startLine: pendingHeaders[0].startLine,
-            endLine: poem.endLine,
-            lines: [...allLines, ...poem.lines],
-          });
-          pendingHeaders = [];
-        } else {
-          mergedPoems.push(poem);
-        }
-      }
-    }
-
-    // Finalize any leftover pending headers
-    // BUT: Don't create standalone poems for Roman numerals with no content
-    // These are headers for poems in the next section and should be skipped
-    if (pendingHeaders.length > 0) {
-      // Check if pending has any actual content (not just numerals and blanks)
-      const allLines = pendingHeaders.flatMap(h => h.lines);
-      const hasActualContent = allLines.some((line, idx) => {
-        const trimmed = line.trim();
-        // Skip first line of each header (it's the title)
-        // Check for actual content lines (not blank, not just Roman numerals)
-        if (!trimmed) return false;
-        if (NUMBERED_POEM_PATTERN.test(trimmed)) return false;
-        if (POEM_TITLE_PATTERN.test(trimmed) && trimmed.length < 10) return false;
-        return true;
-      });
-
-      // Only create a poem if there's actual content, not just dangling headers
-      if (hasActualContent) {
-        mergedPoems.push({
-          title: pendingHeaders[pendingHeaders.length - 1].title,
-          startLine: pendingHeaders[0].startLine,
-          endLine: pendingHeaders[pendingHeaders.length - 1].endLine,
-          lines: allLines,
-        });
-      }
-    }
-
-    return mergedPoems;
-  }
-
-  // Fallback: detect poem boundaries using double blank lines
-  // (two or more consecutive blank lines = poem separator)
-
-  let poemStart = 0;
-  let consecutiveBlanks = 0;
-  let poemNumber = 0;
-
-  // Skip leading blank lines
-  while (poemStart < lines.length && lines[poemStart].trim() === '') {
-    poemStart++;
-  }
-
-  for (let i = poemStart; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-
-    if (trimmed === '') {
-      consecutiveBlanks++;
-    } else {
-      // If we had 2+ blank lines, this is a new poem
-      if (consecutiveBlanks >= 2 && i > poemStart) {
-        // Find where content actually ended (skip trailing blanks)
-        let endLine = i - consecutiveBlanks;
-        if (endLine > poemStart) {
-          poemNumber++;
-          poems.push({
-            title: `Poem ${poemNumber}`,
-            startLine: poemStart,
-            endLine: endLine,
-            lines: lines.slice(poemStart, endLine),
-          });
-          poemStart = i;
-        }
-      }
-      consecutiveBlanks = 0;
-    }
-  }
-
-  // Add the last poem
-  if (poemStart < lines.length) {
-    // Find actual end (skip trailing blanks)
-    let endLine = lines.length;
-    while (endLine > poemStart && lines[endLine - 1].trim() === '') {
-      endLine--;
-    }
-    if (endLine > poemStart) {
-      poemNumber++;
-      poems.push({
-        title: poemNumber > 0 ? `Poem ${poemNumber}` : "",
-        startLine: poemStart,
-        endLine: endLine,
-        lines: lines.slice(poemStart, endLine),
-      });
-    }
-  }
-
-  // If double-blank detection found poems, return them
-  if (poems.length > 1) {
-    return poems;
-  }
-
-  // Final fallback: treat entire chapter as one poem
-  if (lines.length > 0) {
-    poems.push({
-      title: "",
-      startLine: 0,
-      endLine: lines.length,
-      lines: lines,
-    });
-  }
-
-  return poems;
-}
-
-/**
- * Maximum lines per page for anthology poems.
- * Set high enough that most poems fit on a single page.
- * Each poem starts on its own page; only very long poems span multiple pages.
- */
-const ANTHOLOGY_MAX_LINES_PER_PAGE = 50;
-
-/**
- * Result of anthology pagination - includes poem tracking for navigation
- */
-interface AnthologyPaginationResult {
-  pages: Array<{
-    sourceLines: string[];
-    translatedLines: string[];
-    lineMetadata: Map<number, LineMetadata>;
-    poemNumber: number;           // 1-based poem number
-    poemTitle: string;            // Poem title
-    isFirstPageOfPoem: boolean;   // True if first page of this poem
-    isContinuation: boolean;      // True if continues from previous page
-  }>;
-  poems: PoemInfo[];  // Poem metadata for navigation
-}
-
-/**
- * Paginate poems for anthology structure with poem tracking.
- * - Poems can span multiple pages (max 30 lines per page)
- * - Long poems split at stanza breaks (blank lines)
- * - Each page tracks which poem it belongs to
- * - Returns poem metadata for navigation dropdowns
- *
- * @param sourceLines - Source language lines
- * @param translatedLines - Translated lines (parallel array)
- * @param lineMetadata - Optional metadata for each line
- * @returns Pages with poem tracking and poem info for navigation
- */
-export function paginateAnthologyPoems(
-  sourceLines: string[],
-  translatedLines: string[],
-  lineMetadata?: Map<number, LineMetadata>
-): AnthologyPaginationResult {
-  // Detect poem boundaries from source lines
-  const detectedPoems = detectPoemBoundaries(sourceLines);
-
-  const pages: AnthologyPaginationResult["pages"] = [];
-  const poemInfoList: PoemInfo[] = [];
-
-  for (let poemIdx = 0; poemIdx < detectedPoems.length; poemIdx++) {
-    const poem = detectedPoems[poemIdx];
-    const poemNumber = poemIdx + 1;
-    const poemSourceLines = poem.lines;
-    const poemTranslatedLines = translatedLines.slice(poem.startLine, poem.endLine);
-
-    // Get metadata for this poem's lines (adjust indices)
-    const poemMetadata = new Map<number, LineMetadata>();
-    if (lineMetadata) {
-      for (let i = poem.startLine; i < poem.endLine; i++) {
-        const meta = lineMetadata.get(i);
-        if (meta) {
-          poemMetadata.set(i - poem.startLine, meta);
-        }
-      }
-    }
-
-    // Track pages for this poem
-    const poemStartPage = pages.length + 1;
-    let poemPageCount = 0;
-
-    // Helper to add a page for this poem
-    // Skips pages that have no actual content (only blank lines)
-    const addPage = (
-      srcLines: string[],
-      transLines: string[],
-      pageMeta: Map<number, LineMetadata>,
-      isFirst: boolean
-    ) => {
-      // Check if page has any actual content (non-blank lines)
-      const hasContent = srcLines.some(line => line.trim() !== '');
-      if (!hasContent) {
-        // Skip empty pages - don't add them
-        return;
-      }
-
-      pages.push({
-        sourceLines: srcLines,
-        translatedLines: transLines,
-        lineMetadata: pageMeta,
-        poemNumber,
-        poemTitle: poem.title,
-        isFirstPageOfPoem: isFirst,
-        isContinuation: !isFirst,
-      });
-      poemPageCount++;
-    };
-
-    // If poem fits on one page, add it as-is
-    if (poemSourceLines.length <= ANTHOLOGY_MAX_LINES_PER_PAGE) {
-      addPage(poemSourceLines, poemTranslatedLines, poemMetadata, true);
-    } else {
-      // Poem is too long - split at stanza breaks (blank lines)
-      const blankLineIndices: number[] = [];
-      for (let i = 0; i < poemSourceLines.length; i++) {
-        if (poemSourceLines[i].trim() === '') {
-          blankLineIndices.push(i);
-        }
-      }
-
-      let pageStart = 0;
-      let isFirstPage = true;
-
-      // If no blank lines, just split at max lines
-      if (blankLineIndices.length === 0) {
-        while (pageStart < poemSourceLines.length) {
-          const end = Math.min(pageStart + ANTHOLOGY_MAX_LINES_PER_PAGE, poemSourceLines.length);
-          const pageMetadata = new Map<number, LineMetadata>();
-          for (let i = pageStart; i < end; i++) {
-            const meta = poemMetadata.get(i);
-            if (meta) {
-              pageMetadata.set(i - pageStart, meta);
-            }
-          }
-          addPage(
-            poemSourceLines.slice(pageStart, end),
-            poemTranslatedLines.slice(pageStart, end),
-            pageMetadata,
-            isFirstPage
-          );
-          isFirstPage = false;
-          pageStart = end;
-        }
-      } else {
-        // Split at stanza breaks, respecting max lines
-        let lastBreakInPage = -1;
-
-        for (let i = 0; i < poemSourceLines.length; i++) {
-          const linesInPage = i - pageStart;
-
-          // Track blank lines as potential break points
-          if (poemSourceLines[i].trim() === '') {
-            lastBreakInPage = i;
-          }
-
-          // Check if we've exceeded max lines or reached end
-          if (linesInPage >= ANTHOLOGY_MAX_LINES_PER_PAGE || i === poemSourceLines.length - 1) {
-            let pageEnd: number;
-
-            if (i === poemSourceLines.length - 1) {
-              pageEnd = poemSourceLines.length;
-            } else if (lastBreakInPage > pageStart) {
-              pageEnd = lastBreakInPage + 1;
-            } else {
-              pageEnd = pageStart + ANTHOLOGY_MAX_LINES_PER_PAGE;
-            }
-
-            const pageMetadata = new Map<number, LineMetadata>();
-            for (let j = pageStart; j < pageEnd; j++) {
-              const meta = poemMetadata.get(j);
-              if (meta) {
-                pageMetadata.set(j - pageStart, meta);
-              }
-            }
-
-            addPage(
-              poemSourceLines.slice(pageStart, pageEnd),
-              poemTranslatedLines.slice(pageStart, pageEnd),
-              pageMetadata,
-              isFirstPage
-            );
-            isFirstPage = false;
-            pageStart = pageEnd;
-            lastBreakInPage = -1;
-            i = pageStart - 1;
-          }
-        }
-
-        // Handle any remaining lines
-        if (pageStart < poemSourceLines.length) {
-          const pageMetadata = new Map<number, LineMetadata>();
-          for (let j = pageStart; j < poemSourceLines.length; j++) {
-            const meta = poemMetadata.get(j);
-            if (meta) {
-              pageMetadata.set(j - pageStart, meta);
-            }
-          }
-          addPage(
-            poemSourceLines.slice(pageStart),
-            poemTranslatedLines.slice(pageStart),
-            pageMetadata,
-            isFirstPage
-          );
-        }
-      }
-    }
-
-    // Record poem info for navigation
-    poemInfoList.push({
-      number: poemNumber,
-      title: poem.title || `Poem ${poemNumber}`,
-      startPage: poemStartPage,
-      endPage: poemStartPage + poemPageCount - 1,
-      pageCount: poemPageCount,
-    });
-  }
-
-  return { pages, poems: poemInfoList };
-}
 
 // ============================================================================
 // SINGLE CHAPTER BUILD (for incremental building during streaming)
@@ -1255,20 +673,7 @@ export function buildContentStructure(
 // EXTENDED CONTENT STRUCTURE BUILDING (with line metadata for poems/scripts)
 // ============================================================================
 
-/**
- * Line metadata for poems and scripts.
- * Stored separately during processing, then merged into StoryLine.
- */
-export interface LineMetadata {
-  // Poem support
-  stanzaNumber?: number;
-  isStanzaBreak?: boolean;
-  // Script support
-  speaker?: string;
-  speakerAnnotation?: string;
-  stageDirection?: string;
-  isStageDirectionOnly?: boolean;
-}
+// NOTE: LineMetadata is now imported and re-exported from @/lib/text-processing
 
 /**
  * Extended chapter data that includes line-level metadata.
