@@ -52,7 +52,8 @@ export function detectThematicSectionMarkers(lines: string[]): ChapterMarker[] {
   const thematicPattern = /^([IVXLC]+)\.\s+([A-Z][A-Z\s,'".\-—–]+)\.?\s*$/;
 
   // Pattern 2: BOOK X. TITLE format (Whitman style): "BOOK I. INSCRIPTIONS"
-  const bookThematicPattern = /^BOOK\s+([IVXLC]+)\.?\s*(?:\.?\s*(.+))?$/i;
+  // Note: \s* instead of \s+ to handle typos like "BOOKXXXV" (no space)
+  const bookThematicPattern = /^BOOK\s*([IVXLC]+)\.?\s*(?:\.?\s*(.+))?$/i;
 
   const markers: ChapterMarker[] = [];
 
@@ -183,7 +184,8 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
 
     // Pattern 3: "BOOK ONE", "PART I", "CANTO III", etc. (structural markers)
     // Also handles "BOOK I. INSCRIPTIONS" format (period + space + title)
-    const bookMatch = line.match(/^(BOOK|PART|CANTO|ACT|SCENE)\s+(\d+|[IVXLC]+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN)\.?(?:\s*[:\-—–.\s]\s*(.+))?$/i);
+    // Note: \s* to handle typos like "BOOKXXXV" (no space between BOOK and numeral)
+    const bookMatch = line.match(/^(BOOK|PART|CANTO|ACT|SCENE)\s*(\d+|[IVXLC]+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN)\.?(?:\s*[:\-—–.\s]\s*(.+))?$/i);
     if (bookMatch) {
       const numStr = bookMatch[2].toUpperCase();
       const num = WORD_TO_NUMBER[numStr] || ROMAN_TO_ARABIC[numStr] || parseInt(numStr) || explicitMarkers.length + 1;
