@@ -138,8 +138,6 @@ export {
 export {
   // Gutenberg
   extractFrontMatter,
-  extractTitleFromFrontMatter,
-  extractTitleFromGutenbergHeader, // deprecated - use extractFrontMatter + extractTitleFromFrontMatter
   removeGutenbergFrontMatter,
   detectBackMatterStart,
   extractBackMatter,

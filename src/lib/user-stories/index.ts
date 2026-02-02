@@ -10,10 +10,12 @@ export {
 
 // Metadata generation
 export {
-  extractOrGenerateTitle,
   generateDescription,
+  generateAllMetadata,
   type TitleResult,
   type DescriptionResult,
+  type BatchedMetadataResult,
+  type BatchedMetadataOptions,
 } from "./metadata";
 
 // Level processing

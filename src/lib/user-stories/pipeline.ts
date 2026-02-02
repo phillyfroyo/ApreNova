@@ -18,14 +18,8 @@ import { USER_STORY_LIMITS } from "./limits";
 
 // Modular imports
 import {
-  extractOrGenerateTitle,
-  generateDescription,
-  generateHook,
   detectStoryType,
-  detectTargetAudience,
-  extractTags,
   generateAllMetadata,
-  type BatchedMetadataResult,
 } from "./metadata";
 import {
   parseStoryContent,
@@ -107,124 +101,6 @@ async function detectAndSaveLanguage(
   }
   await apiDelay();
   return sourceLanguage;
-}
-
-/**
- * Step 2: Generate title if not provided
- */
-async function generateTitleIfNeeded(
-  ctx: CostContext,
-  currentTitle: string,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  const isDefaultTitle =
-    currentTitle === "Untitled Story" || currentTitle === "Historia sin título";
-
-  if (!isDefaultTitle) return;
-
-  const titles = await extractOrGenerateTitle(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: {
-      title: titles.title,
-      titleEs: titles.titleEs,
-      titleEn: titles.titleEn,
-    },
-  });
-  await apiDelay();
-}
-
-/**
- * Step 3: Generate description if not provided
- */
-async function generateDescriptionIfNeeded(
-  ctx: CostContext,
-  currentDescription: string | null,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  if (currentDescription) return;
-
-  const descriptions = await generateDescription(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: {
-      description: descriptions.description,
-      descriptionEs: descriptions.descriptionEs,
-      descriptionEn: descriptions.descriptionEn,
-    },
-  });
-  await apiDelay();
-}
-
-/**
- * Step 3.5: Generate hook/teaser
- */
-async function generateAndSaveHook(
-  ctx: CostContext,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  const hookResult = await generateHook(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: {
-      hook: hookResult.hook,
-      hookEs: hookResult.hookEs,
-      hookEn: hookResult.hookEn,
-    },
-  });
-  await apiDelay();
-}
-
-/**
- * Step 3.6: Detect story type
- */
-async function detectAndSaveStoryType(
-  ctx: CostContext,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  const storyType = await detectStoryType(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: { storyType },
-  });
-  await apiDelay();
-}
-
-/**
- * Step 3.7: Detect target audience
- */
-async function detectAndSaveTargetAudience(
-  ctx: CostContext,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  const targetAudience = await detectTargetAudience(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: { targetAudience },
-  });
-  await apiDelay();
-}
-
-/**
- * Step 3.8: Extract tags
- * @deprecated Use generateAndSaveAllMetadata for batched API calls
- */
-async function extractAndSaveTags(
-  ctx: CostContext,
-  rawContent: string,
-  sourceLanguage: "en" | "es"
-): Promise<void> {
-  const tags = await extractTags(rawContent, sourceLanguage, ctx);
-  await prisma.userStory.update({
-    where: { id: ctx.storyId },
-    data: { tags },
-  });
-  await apiDelay();
 }
 
 /**

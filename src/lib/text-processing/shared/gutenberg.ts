@@ -210,51 +210,6 @@ export function extractFrontMatter(text: string): FrontMatterResult {
   return { frontMatter: '', content: text.trim(), removed: false };
 }
 
-/**
- * Extract the book title from Project Gutenberg front matter.
- * Looks for "Title: ..." line or "The Project Gutenberg eBook of ..." pattern.
- *
- * @deprecated Use AI for title extraction instead - send front matter to AI and let it find/generate the title.
- *             This algorithmic approach is unreliable for edge cases. See metadata.ts for the AI-based approach.
- *
- * @param frontMatter - The front matter text (from extractFrontMatter)
- * @returns The extracted title or null if not found
- */
-export function extractTitleFromFrontMatter(frontMatter: string): string | null {
-  if (!frontMatter) return null;
-
-  const lines = frontMatter.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Prefer "Title: <TITLE>" format - it's cleaner
-    const titleMatch = trimmed.match(/^Title:\s*(.+)$/i);
-    if (titleMatch) {
-      return titleMatch[1].trim();
-    }
-  }
-
-  // Fall back to "The Project Gutenberg eBook of <TITLE>" pattern
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const ebookMatch = trimmed.match(/^The Project Gutenberg (?:EBook|eBook|Ebook|e-book) of (.+)$/i);
-    if (ebookMatch) {
-      return ebookMatch[1].trim();
-    }
-  }
-
-  return null;
-}
-
-/**
- * @deprecated Use extractTitleFromFrontMatter with extractFrontMatter instead
- */
-export function extractTitleFromGutenbergHeader(text: string): string | null {
-  const { frontMatter } = extractFrontMatter(text);
-  return extractTitleFromFrontMatter(frontMatter);
-}
-
 // ============================================================================
 // FRONT MATTER REMOVAL (convenience wrapper)
 // ============================================================================
