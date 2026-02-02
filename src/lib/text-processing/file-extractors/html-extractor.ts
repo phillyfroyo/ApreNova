@@ -143,61 +143,22 @@ function extractAnnotations(html: string): { html: string; annotations: Extracte
 /**
  * Remove front matter sections from HTML before text extraction.
  *
- * This handles:
- * 1. Project Gutenberg boilerplate header (section.pg-boilerplate, #pg-header)
- * 2. Title pages (h1 + h2/h3/h4/h5 sequences before actual content)
- * 3. Dedication pages
- *
- * Strategy: Find the first content anchor (like <a id="Benediction">) which marks
- * where actual poems begin, and remove everything before the h3 that contains it.
+ * CONSERVATIVE approach: Only remove clearly identifiable boilerplate sections.
+ * Title pages and epigraphs are kept (they won't match poem detection patterns).
+ * TOC removal is handled separately by removeTOC().
  */
 function removeFrontMatter(html: string): string {
   let result = html;
 
-  // Step 1: Remove Gutenberg boilerplate header section
+  // Remove Gutenberg boilerplate header section (safe - always front matter)
   result = result.replace(/<section[^>]*class="[^"]*pg-boilerplate[^"]*"[^>]*>[\s\S]*?<\/section>/gi, '');
   result = result.replace(/<section[^>]*id="pg-header"[^>]*>[\s\S]*?<\/section>/gi, '');
   result = result.replace(/<div[^>]*id="pg-header"[^>]*>[\s\S]*?<\/div>/gi, '');
 
-  // Step 2: Find the first poem anchor (indicates start of actual content)
-  // Gutenberg uses <h3><a id="PoemName"></a>Title</h3> pattern
-  const firstPoemAnchorMatch = result.match(/<h3[^>]*>\s*<a\s+id="([^"]+)"[^>]*>/i);
-
-  if (firstPoemAnchorMatch) {
-    const anchorIndex = result.indexOf(firstPoemAnchorMatch[0]);
-
-    if (anchorIndex > 0) {
-      // Extract everything before the first poem
-      const beforeFirstPoem = result.slice(0, anchorIndex);
-
-      // Check if this front matter contains title page elements
-      // (h1, multiple h2-h5 headers, or paragraphs with links)
-      const hasTitlePage = /<h1[^>]*>/i.test(beforeFirstPoem);
-      const hasMultipleHeaders = (beforeFirstPoem.match(/<h[2-5][^>]*>/gi) || []).length >= 3;
-
-      if (hasTitlePage || hasMultipleHeaders) {
-        // Remove the front matter, keeping only from the first poem
-        result = result.slice(anchorIndex);
-        console.log('[removeFrontMatter] Removed title page and front matter before first poem anchor');
-      }
-    }
-  }
-
-  // Step 3: Remove any remaining title page pattern at the very start
-  // Pattern: starts with <h1> followed by h2-h5 tags (title page layout)
-  // But only if there's no substantial content between them
-  const titlePagePattern = /^(\s*<div[^>]*>\s*)?<h1[^>]*>[\s\S]*?<\/h1>(\s*<h[2-5][^>]*>[\s\S]*?<\/h[2-5]>){2,}(\s*<hr[^>]*>)*/i;
-  const titlePageMatch = result.match(titlePagePattern);
-
-  if (titlePageMatch) {
-    const titlePageEnd = titlePageMatch[0].length;
-    // Verify there's actual content after this
-    const afterTitlePage = result.slice(titlePageEnd);
-    if (/<h3[^>]*>/i.test(afterTitlePage)) {
-      result = afterTitlePage;
-      console.log('[removeFrontMatter] Removed title page header sequence');
-    }
-  }
+  // Note: We intentionally do NOT try to detect and remove title pages or other
+  // front matter heuristically. This caused issues with Whitman where BOOK I/II
+  // were incorrectly removed. Title page content (h1 tags, etc.) will be extracted
+  // as text but won't be detected as poems/chapters by the detection algorithms.
 
   return result;
 }
@@ -217,9 +178,24 @@ function removeFrontMatter(html: string): string {
 function removeTOC(html: string): string {
   let cleanedHtml = html;
 
-  // Remove TOC tables (tables with many internal links)
+  // Remove TOC tables with explicit class/id
   cleanedHtml = cleanedHtml.replace(/<table[^>]*class="[^"]*toc[^"]*"[^>]*>[\s\S]*?<\/table>/gi, '');
   cleanedHtml = cleanedHtml.replace(/<table[^>]*id="[^"]*toc[^"]*"[^>]*>[\s\S]*?<\/table>/gi, '');
+
+  // Remove tables that look like TOC (many internal links)
+  // Whitman's TOC uses <table> with many <a href="#link..."> entries
+  cleanedHtml = cleanedHtml.replace(
+    /<table[^>]*>([\s\S]*?)<\/table>/gi,
+    (match, content) => {
+      const internalLinks = (content.match(/<a[^>]*href="#[^"]*"[^>]*>/gi) || []).length;
+      // A table with 20+ internal links is almost certainly a TOC
+      if (internalLinks >= 20) {
+        console.log(`[removeTOC] Removed table with ${internalLinks} internal links (likely TOC)`);
+        return ''; // Remove this TOC table
+      }
+      return match;
+    }
+  );
 
   // Remove TOC divs
   cleanedHtml = cleanedHtml.replace(/<div[^>]*class="[^"]*toc[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
