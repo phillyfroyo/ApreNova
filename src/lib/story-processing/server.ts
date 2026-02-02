@@ -33,13 +33,31 @@ export {
 export {
   rewriteToLevel,
   rewritePoemByStanza,
+  rewritePoetryChapter,
   splitIntoStanzas,
   joinStanzasToText,
   joinStanzasWithSpacing,
   type RewriteResult,
   type RewriteOptions,
   type StanzaRewriteResult,
+  type ChapterRewriteResult,
 } from "./rewriting";
+
+// ============================================================================
+// POETRY MARKERS (for chapter-level processing)
+// ============================================================================
+
+export {
+  addPoemAndStanzaMarkers,
+  parsePoemAndStanzaMarkers,
+  reconstructChapterFromPoems,
+  splitChapterAtPoemBoundaries,
+  estimateTokens,
+  validateStanzaCounts,
+  type MarkedPoetryResult,
+  type ParsedPoem,
+  type ParsedChapterResult,
+} from "./poetry-markers";
 
 // ============================================================================
 // DETECTION (uses OpenAI GPT-4o-mini)

@@ -4,6 +4,7 @@
 import { OpenAI } from "openai";
 import type { StoryType, StoryTag } from "@/types/story";
 import { logOpenAICost } from "@/lib/cost-tracker";
+import { extractFrontMatter, extractTitleFromFrontMatter } from "@/lib/text-processing";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -69,8 +70,21 @@ export async function extractOrGenerateTitle(
 ): Promise<TitleResult> {
   const { storyId, userId } = context;
 
-  // Use AI to extract or generate title
-  // (Algorithmic extraction was removed - doesn't work for complex formats like Project Gutenberg)
+  // Extract front matter and content in one pass
+  const { frontMatter, content: cleanedText } = extractFrontMatter(text);
+
+  // Try to extract title from the front matter
+  const extractedTitle = extractTitleFromFrontMatter(frontMatter);
+  if (extractedTitle) {
+    console.log(`[Metadata] Found title in front matter: "${extractedTitle}"`);
+    return {
+      title: extractedTitle,
+      titleEs: extractedTitle,
+      titleEn: extractedTitle,
+    };
+  }
+
+  // Use AI to extract or generate title from content
   const prompt =
     language === "es"
       ? `Analiza el siguiente texto en español. Si hay un título obvio al principio, extráelo. Si no, genera un título apropiado y conciso (máximo 5 palabras).
@@ -79,14 +93,14 @@ Responde en JSON con este formato exacto:
 {"titleEs": "título en español", "titleEn": "title in English"}
 
 Texto:
-${text.substring(0, 1000)}`
+${cleanedText.substring(0, 1000)}`
       : `Analyze the following English text. If there's an obvious title at the beginning, extract it. If not, generate an appropriate and concise title (maximum 5 words).
 
 Respond in JSON with this exact format:
 {"titleEs": "título en español", "titleEn": "title in English"}
 
 Text:
-${text.substring(0, 1000)}`;
+${cleanedText.substring(0, 1000)}`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -514,8 +528,21 @@ export async function generateAllMetadata(
   const needsTitle = !existingTitle;
   const needsDescription = !existingDescription;
 
-  // Sample text - first 2500 chars should contain title and enough for description
-  const textSample = text.substring(0, 2500);
+  // Extract front matter and content in one pass
+  // This gives us the front matter for title extraction AND the clean content for description
+  const { frontMatter, content: cleanedText } = extractFrontMatter(text);
+
+  // Try to extract title from the front matter (contains "Title: ..." etc.)
+  const extractedTitle = needsTitle ? extractTitleFromFrontMatter(frontMatter) : null;
+  if (extractedTitle) {
+    console.log(`[Metadata] Found title in front matter: "${extractedTitle}"`);
+  }
+
+  // Sample text - first 2500 chars should contain enough for description
+  const textSample = cleanedText.substring(0, 2500);
+
+  // If we found a title in front matter, we don't need the AI to generate one
+  const actuallyNeedsTitle = needsTitle && !extractedTitle;
 
   // Build prompt based on what we need
   let prompt: string;
@@ -525,12 +552,12 @@ export async function generateAllMetadata(
     prompt = language === "es"
       ? `Analiza el siguiente texto en español y extrae/genera los metadatos esenciales.
 
-${needsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor como "Project Gutenberg", etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras) que capture la esencia de la historia.` : ""}
+${actuallyNeedsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor como "Project Gutenberg", etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras) que capture la esencia de la historia.` : ""}
 ${needsDescription ? `2. DESCRIPCIÓN: Busca si hay una descripción o resumen existente en el texto. Si no, escribe una descripción atractiva de 1-2 oraciones que capture la esencia sin revelar demasiado.` : ""}
 
 Responde en JSON con este formato exacto:
 {
-  ${needsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${needsTitle && needsDescription ? "," : ""}
+  ${actuallyNeedsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${actuallyNeedsTitle && needsDescription ? "," : ""}
   ${needsDescription ? '"descriptionEs": "descripción en español",\n  "descriptionEn": "description in English"' : ""}
 }
 
@@ -538,12 +565,12 @@ Texto:
 ${textSample}`
       : `Analyze the following English text and extract/generate essential metadata.
 
-${needsTitle ? `1. TITLE: Look for the title in the text (it may be at the beginning, after publisher information like "Project Gutenberg", etc.). If no clear title is found, generate a concise one (max 5 words) that captures the story's essence.` : ""}
+${actuallyNeedsTitle ? `1. TITLE: Look for the title in the text (it may be at the beginning, after publisher information like "Project Gutenberg", etc.). If no clear title is found, generate a concise one (max 5 words) that captures the story's essence.` : ""}
 ${needsDescription ? `2. DESCRIPTION: Look for an existing description or summary in the text. If none, write an engaging 1-2 sentence description that captures the essence without revealing too much.` : ""}
 
 Respond in JSON with this exact format:
 {
-  ${needsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${needsTitle && needsDescription ? "," : ""}
+  ${actuallyNeedsTitle ? '"titleEs": "título en español",\n  "titleEn": "title in English"' : ""}${actuallyNeedsTitle && needsDescription ? "," : ""}
   ${needsDescription ? '"descriptionEs": "descripción en español",\n  "descriptionEn": "description in English"' : ""}
 }
 
@@ -557,7 +584,7 @@ ${textSample}`;
     prompt = language === "es"
       ? `Analiza el siguiente texto en español y extrae/genera los siguientes metadatos.
 
-${needsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor, etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras).` : ""}
+${actuallyNeedsTitle ? `1. TÍTULO: Busca el título del texto (puede estar al principio, después de información del editor, etc.). Si no encuentras un título claro, genera uno conciso (máximo 5 palabras).` : ""}
 ${needsDescription ? `2. DESCRIPCIÓN: Busca si hay una descripción existente. Si no, escribe una descripción atractiva de 1-2 oraciones.` : ""}
 3. GANCHO: Escribe un gancho corto (máximo 15 palabras) que atraiga a los lectores.
 4. TIPO: Determina el tipo de contenido. Opciones válidas: ${typeList}
@@ -566,7 +593,7 @@ ${needsDescription ? `2. DESCRIPCIÓN: Busca si hay una descripción existente. 
 
 Responde en JSON:
 {
-  ${needsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
+  ${actuallyNeedsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
   ${needsDescription ? '"descriptionEs": "descripción",\n  "descriptionEn": "description",' : ""}
   "hookEs": "gancho",
   "hookEn": "hook",
@@ -579,7 +606,7 @@ Texto:
 ${textSample}`
       : `Analyze the following English text and extract/generate metadata.
 
-${needsTitle ? `1. TITLE: Look for the title in the text (may be after publisher info, etc.). If not found, generate a concise one (max 5 words).` : ""}
+${actuallyNeedsTitle ? `1. TITLE: Look for the title in the text (may be after publisher info, etc.). If not found, generate a concise one (max 5 words).` : ""}
 ${needsDescription ? `2. DESCRIPTION: Look for an existing description. If none, write an engaging 1-2 sentence description.` : ""}
 3. HOOK: Write a short hook (max 15 words) that draws readers in.
 4. TYPE: Determine content type. Valid options: ${typeList}
@@ -588,7 +615,7 @@ ${needsDescription ? `2. DESCRIPTION: Look for an existing description. If none,
 
 Respond in JSON:
 {
-  ${needsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
+  ${actuallyNeedsTitle ? '"titleEs": "título",\n  "titleEn": "title",' : ""}
   ${needsDescription ? '"descriptionEs": "descripción",\n  "descriptionEn": "description",' : ""}
   "hookEs": "gancho",
   "hookEn": "hook",
@@ -627,16 +654,25 @@ ${textSample}`;
     const result = JSON.parse(cleaned);
 
     // Build title result
-    const titleResult: TitleResult = needsTitle
+    // Priority: 1) existing title, 2) Gutenberg header title, 3) AI-generated title
+    const titleResult: TitleResult = !needsTitle
       ? {
-          title: language === "es" ? result.titleEs : result.titleEn,
-          titleEs: result.titleEs || "Sin título",
-          titleEn: result.titleEn || "Untitled",
-        }
-      : {
           title: existingTitle!,
           titleEs: existingTitle!,
           titleEn: existingTitle!,
+        }
+      : extractedTitle
+      ? {
+          // Use the title extracted from front matter
+          title: extractedTitle,
+          titleEs: extractedTitle, // Keep original - translation would need AI call
+          titleEn: extractedTitle,
+        }
+      : {
+          // Use AI-generated title
+          title: language === "es" ? result.titleEs : result.titleEn,
+          titleEs: result.titleEs || "Sin título",
+          titleEn: result.titleEn || "Untitled",
         };
 
     // Build description result

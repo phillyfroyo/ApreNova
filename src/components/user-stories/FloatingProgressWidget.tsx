@@ -713,8 +713,11 @@ export default function FloatingProgressWidget() {
   }
 
   // Compute values needed for minimized state
+  // Include streams with:
+  // 1. chapters array populated (legacy/direct data)
+  // 2. currentChapter >= 1 (at least 1 chapter completed - data available in content field)
   const streamsWithData = (progress.streams || []).filter(
-    (s) => Array.isArray(s.chapters) && s.chapters.length > 0
+    (s) => (Array.isArray(s.chapters) && s.chapters.length > 0) || s.currentChapter >= 1
   );
   const hasChaptersToView = streamsWithData.length > 0;
   const isRewriting = progress.stage === "rewriting-levels";
@@ -803,7 +806,7 @@ export default function FloatingProgressWidget() {
                 : lng === "es" ? "Procesando historia" : "Processing Story"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <button
               onClick={toggleMinimized}
               className="p-1 hover:bg-white/20 rounded transition-colors"

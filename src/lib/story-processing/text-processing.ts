@@ -80,7 +80,8 @@ export {
   detectChapterMarkers,
   filterOutTOCMarkers,
   splitIntoChapters,
-  extractFrontMatter,
+  extractPreChapterText,
+  extractFrontMatter,  // Gutenberg front matter extraction
   getFileTypeLabel,
   FILE_TYPES,
   STORY_TYPES,

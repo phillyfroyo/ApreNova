@@ -10,6 +10,69 @@ import {
   fromNumericLevel,
 } from "@/lib/cefr";
 
+// ============================================================================
+// CHAPTER-LEVEL POETRY STRUCTURE RULES
+// Used for processing multiple poems in a single API call
+// ============================================================================
+
+/**
+ * Structure rules for chapter-level poetry processing with markers.
+ * These rules ensure the AI preserves poem and stanza boundaries.
+ */
+export const CHAPTER_POETRY_STRUCTURE_RULES = `
+CHAPTER STRUCTURE (CRITICAL - MULTIPLE POEMS):
+This text contains multiple poems with explicit structural markers. You MUST preserve ALL markers EXACTLY:
+
+MANDATORY MARKERS TO PRESERVE:
+1. [POEM: "Title"] - Start of each poem. Keep the exact title in quotes.
+2. [/POEM] - End of each poem. Must appear after each poem.
+3. [STANZA] - Stanza break within poems. Must remain in exact positions.
+
+RULES:
+- Return the SAME number of [POEM: ...] ... [/POEM] blocks as the input
+- Return the SAME number of [STANZA] markers within each poem
+- Poem titles in markers must be UNCHANGED (exact case, spelling, punctuation)
+- You may adjust vocabulary and line count within stanzas for the target level
+- Do NOT merge or split poems
+- Do NOT merge or split stanzas across [STANZA] markers
+- Do NOT add or remove [STANZA] markers
+- Do NOT rename poems or change title text inside [POEM: "..."]
+
+FORMAT YOUR RESPONSE:
+- Each poem must start with [POEM: "Title"] on its own line
+- Each poem must end with [/POEM] on its own line
+- Stanza breaks use [STANZA] on its own line (no extra blank lines around it)
+- Preserve line indentation/leading whitespace from original
+
+EXAMPLE INPUT:
+[POEM: "Hope"]
+Hope is the thing with feathers
+That perches in the soul
+[STANZA]
+And sings the tune without the words
+And never stops at all
+[/POEM]
+
+[POEM: "Success"]
+Success is counted sweetest
+By those who ne'er succeed
+[/POEM]
+
+EXAMPLE OUTPUT (for lower level):
+[POEM: "Hope"]
+Hope is like a bird with feathers
+It lives inside the heart
+[STANZA]
+It sings a song with no words
+And never ever stops
+[/POEM]
+
+[POEM: "Success"]
+Success feels most sweet
+To those who never win
+[/POEM]
+`;
+
 // Re-export from cefr.ts for backwards compatibility
 export { toCEFR, toNumericLevel, fromNumericLevel };
 
@@ -22,6 +85,16 @@ export type { CEFRLevelDetails as CEFRLevel } from "@/lib/cefr";
 
 // Re-export level details for code that imports from here
 export const CEFR_LEVELS = CEFR_LEVEL_DETAILS;
+
+/**
+ * Options for generating rewrite prompts
+ */
+export interface RewritePromptOptions {
+  /** Whether the text is poetry (enables line count preservation) */
+  isPoetry?: boolean;
+  /** Whether this is chapter-level processing with poem/stanza markers */
+  isChapterWithMarkers?: boolean;
+}
 
 /**
  * Generate a prompt for rewriting text at a specific CEFR level
@@ -38,8 +111,14 @@ export function generateRewritePrompt(
   targetLevel: CEFRCode | number | string,
   sourceText: string,
   sourceLanguage: "en" | "es",
-  isPoetry: boolean = false
+  isPoetryOrOptions: boolean | RewritePromptOptions = false
 ): string {
+  // Handle both old boolean signature and new options object
+  const options: RewritePromptOptions = typeof isPoetryOrOptions === 'boolean'
+    ? { isPoetry: isPoetryOrOptions }
+    : isPoetryOrOptions;
+
+  const { isPoetry = false, isChapterWithMarkers = false } = options;
   const level = getLevelDetails(targetLevel);
   const langName = sourceLanguage === "es" ? "Spanish" : "English";
 
@@ -73,9 +152,15 @@ export function generateRewritePrompt(
       ? `COMMON MISTAKES TO AVOID:\n${level.pitfalls.map(r => `- ${r}`).join("\n")}`
       : "";
 
-  // Different structure rules for poetry vs prose
-  const structureRules = isPoetry
-    ? `STRUCTURE RULES (POETRY) - CRITICAL:
+  // Different structure rules for poetry vs prose vs chapter-level poetry
+  // Chapter-level poetry with markers has its own comprehensive rules
+  let structureRules: string;
+
+  if (isChapterWithMarkers) {
+    // Use chapter-level poetry rules with marker preservation
+    structureRules = CHAPTER_POETRY_STRUCTURE_RULES;
+  } else if (isPoetry) {
+    structureRules = `STRUCTURE RULES (POETRY) - CRITICAL:
 LINE COUNT REQUIREMENT (MANDATORY):
 - The rewritten poem MUST have EXACTLY the same number of lines as the original
 - Each original line → exactly ONE rewritten line (simplified vocabulary, same position)
@@ -110,15 +195,20 @@ INDENTATION IS CRITICAL:
 - Some poems use visual indentation as part of their structure
 - If the original line is "  By those who ne'er succeed." (starts with 2 spaces)
 - Your rewrite must be "  Por quienes nunca triunfan." (also starts with 2 spaces)
-- Copy the EXACT leading whitespace from each input line to your output line`
-    : `STRUCTURE RULES (PROSE):
+- Copy the EXACT leading whitespace from each input line to your output line`;
+  } else {
+    structureRules = `STRUCTURE RULES (PROSE):
 - Preserve the exact meaning, plot, and character names
 - Preserve PARAGRAPH breaks (empty lines between paragraphs)
 - Within paragraphs, text should flow naturally as prose
 - Do NOT break sentences into separate lines
 - Do NOT add line breaks within paragraphs`;
+  }
 
-  return `Rewrite this ${langName} ${isPoetry ? "poem" : "story"} for CEFR ${level.code} (${level.name}).
+  // Determine content type for prompt header
+  const contentType = isChapterWithMarkers ? "poetry chapter" : (isPoetry ? "poem" : "story");
+
+  return `Rewrite this ${langName} ${contentType} for CEFR ${level.code} (${level.name}).
 
 TARGET READER PROFILE:
 ${level.officialDescription}

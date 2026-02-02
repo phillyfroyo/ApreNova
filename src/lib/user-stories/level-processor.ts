@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import {
   rewriteToLevel,
   rewritePoemByStanza,
+  rewritePoetryChapter,
   joinStanzasToText,
   joinStanzasWithSpacing,
   translateText,
@@ -274,6 +275,9 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /**
  * Rewrite a single chapter, chunking if necessary for large content.
  * Returns the rewritten text (reassembled from chunks if chunked).
+ *
+ * For poetry: Uses chapter-level processing with explicit markers for ~99% cost reduction.
+ * Falls back to poem-level then stanza-level if markers aren't preserved.
  */
 async function rewriteChapterWithChunking(
   chapterText: string,
@@ -289,9 +293,11 @@ async function rewriteChapterWithChunking(
     userId: ctx.userId,
   };
 
-  // For poetry: use stanza-by-stanza rewriting to guarantee stanza structure preservation
+  // For poetry: use chapter-level processing with markers for dramatic cost reduction
+  // This processes the entire chapter (or poem-boundary-aware chunks) in a single API call
+  // instead of making 100+ calls for stanza-by-stanza processing
   if (isPoetry) {
-    const stanzaResult = await rewritePoemByStanza(
+    const chapterResult = await rewritePoetryChapter(
       chapterText,
       detectedLevel,
       targetLevel,
@@ -299,13 +305,11 @@ async function rewriteChapterWithChunking(
       rewriteOptions
     );
 
-    // Join stanzas back together, preserving original vertical spacing
-    const joinedText = joinStanzasWithSpacing(
-      stanzaResult.rewrittenStanzas,
-      stanzaResult.blankLinesBefore
-    );
+    if (chapterResult.usedFallback) {
+      console.log(`[RewriteChapterWithChunking] Poetry rewrite used ${chapterResult.usedFallback}-level fallback`);
+    }
 
-    return joinedText;
+    return chapterResult.rewrittenText;
   }
 
   // For prose: check if chapter needs chunking

@@ -277,27 +277,6 @@ export default function UploadStoryModal() {
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
-          {/* Stats / Limits indicator */}
-          {loadingStats ? (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-            </div>
-          ) : stats && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg flex items-center justify-between text-sm">
-              <span className="text-gray-600">
-                {t.myStories.storiesCount}{" "}
-                <span className="font-medium">{stats.totalStories} / {stats.maxStories === -1 ? "∞" : stats.maxStories}</span>
-              </span>
-              {/* Only show daily limit if there is one (not -1 unlimited) */}
-              {!isPremium && stats.dailyLimit !== -1 && (
-                <span className="text-gray-500">
-                  {t.myStories.todayCount}{" "}
-                  <span className="font-medium">{stats.storiesProcessedToday} / {stats.dailyLimit}</span>
-                </span>
-              )}
-            </div>
-          )}
-
           {/* Limit reached warning */}
           {stats && !canUpload && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
@@ -321,88 +300,6 @@ export default function UploadStoryModal() {
 
           {canUpload && (
             <>
-              {/* Content Type Selector - badge buttons */}
-              <div className="mb-4">
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                  {t.myStories.contentType}
-                  <span className="relative group">
-                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 transition-opacity z-10">
-                      {t.myStories.contentTypeDescription}
-                    </span>
-                  </span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "auto", label: t.myStories.contentTypeAuto },
-                    { value: "prose", label: t.myStories.contentTypeProse },
-                    { value: "anthology", label: t.myStories.contentTypePoetry },
-                    { value: "epic", label: t.myStories.contentTypeEpic },
-                    { value: "script", label: t.myStories.contentTypeScript },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setStructureType(option.value as typeof structureType)}
-                      disabled={isUploading}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        structureType === option.value
-                          ? "bg-blue-500 text-white shadow-sm"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      } disabled:opacity-50`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">
-                  {structureType === "auto" && t.myStories.contentTypeHintAuto}
-                  {structureType === "prose" && t.myStories.contentTypeHintProse}
-                  {structureType === "anthology" && t.myStories.contentTypeHintPoetry}
-                  {structureType === "epic" && t.myStories.contentTypeHintEpic}
-                  {structureType === "script" && t.myStories.contentTypeHintScript}
-                </p>
-              </div>
-
-              {/* Processing Mode Selector - badge buttons */}
-              <div className="mb-4">
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                  {t.myStories.processingMode}
-                  <span className="relative group">
-                    <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 transition-opacity z-10">
-                      {t.myStories.processingModeDescription}
-                    </span>
-                  </span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "both" as const, label: t.myStories.processingModeBoth },
-                    { value: "original_only" as const, label: t.myStories.processingModeOriginal },
-                    { value: "rewritten_only" as const, label: t.myStories.processingModeRewritten },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setProcessingMode(option.value)}
-                      disabled={isUploading}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        processingMode === option.value
-                          ? "bg-blue-500 text-white shadow-sm"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      } disabled:opacity-50`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">
-                  {processingMode === "both" && t.myStories.processingModeHintBoth}
-                  {processingMode === "original_only" && t.myStories.processingModeHintOriginal}
-                  {processingMode === "rewritten_only" && t.myStories.processingModeHintRewritten}
-                </p>
-              </div>
-
               {/* Story content input area */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -550,6 +447,88 @@ export default function UploadStoryModal() {
                     )}
                   </p>
                 )}
+              </div>
+
+              {/* Reading Versions Selector - most important, shown first */}
+              <div className="mb-4">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                  {t.myStories.processingMode}
+                  <span className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                      {t.myStories.processingModeDescription}
+                    </span>
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "both" as const, label: t.myStories.processingModeBoth, selectedClass: "bg-badge-level5 text-purple-800" },
+                    { value: "original_only" as const, label: t.myStories.processingModeOriginal, selectedClass: "bg-badge-level2 text-green-800" },
+                    { value: "rewritten_only" as const, label: t.myStories.processingModeRewritten, selectedClass: "bg-badge-level4 text-blue-800" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setProcessingMode(option.value)}
+                      disabled={isUploading}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        processingMode === option.value
+                          ? `${option.selectedClass} shadow-sm`
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      } disabled:opacity-50`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {processingMode === "both" && t.myStories.processingModeHintBoth}
+                  {processingMode === "original_only" && t.myStories.processingModeHintOriginal}
+                  {processingMode === "rewritten_only" && t.myStories.processingModeHintRewritten}
+                </p>
+              </div>
+
+              {/* Content Type Selector */}
+              <div className="mb-4">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
+                  {t.myStories.contentType}
+                  <span className="relative group">
+                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="absolute left-0 bottom-full mb-1.5 px-2.5 py-1.5 text-xs text-white bg-gray-800 rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                      {t.myStories.contentTypeDescription}
+                    </span>
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "auto", label: t.myStories.contentTypeAuto, selectedClass: "bg-badge-level1 text-cyan-800" },
+                    { value: "prose", label: t.myStories.contentTypeProse, selectedClass: "bg-badge-level3 text-orange-800" },
+                    { value: "anthology", label: t.myStories.contentTypePoetry, selectedClass: "bg-badge-level5 text-purple-800" },
+                    { value: "epic", label: t.myStories.contentTypeEpic, selectedClass: "bg-badge-level6 text-red-800" },
+                    { value: "script", label: t.myStories.contentTypeScript, selectedClass: "bg-badge-level4 text-blue-800" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStructureType(option.value as typeof structureType)}
+                      disabled={isUploading}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        structureType === option.value
+                          ? `${option.selectedClass} shadow-sm`
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      } disabled:opacity-50`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {structureType === "auto" && t.myStories.contentTypeHintAuto}
+                  {structureType === "prose" && t.myStories.contentTypeHintProse}
+                  {structureType === "anthology" && t.myStories.contentTypeHintPoetry}
+                  {structureType === "epic" && t.myStories.contentTypeHintEpic}
+                  {structureType === "script" && t.myStories.contentTypeHintScript}
+                </p>
               </div>
 
               {/* Advanced options toggle */}

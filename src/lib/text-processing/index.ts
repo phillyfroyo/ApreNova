@@ -137,10 +137,15 @@ export {
 
 export {
   // Gutenberg
+  extractFrontMatter,
+  extractTitleFromFrontMatter,
+  extractTitleFromGutenbergHeader, // deprecated - use extractFrontMatter + extractTitleFromFrontMatter
   removeGutenbergFrontMatter,
   detectBackMatterStart,
   extractBackMatter,
 } from './shared/gutenberg';
+
+export type { FrontMatterResult } from './shared/gutenberg';
 
 export {
   // Chapter detection
@@ -148,7 +153,7 @@ export {
   detectChapterMarkers,
   filterOutTOCMarkers,
   splitIntoChapters,
-  extractFrontMatter,
+  extractPreChapterText,
 } from './shared/chapter-detection';
 
 export {

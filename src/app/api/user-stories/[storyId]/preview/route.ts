@@ -22,25 +22,39 @@ interface ChapterRewriteData {
 }
 
 // Structure stored in level.content
+// Note: The actual structure has lines as objects { es, en }, not separate arrays
 interface LevelContent {
+  storySlug?: string;
+  level?: number;
+  hasChapters?: boolean;
   chapters: Record<number, {
     pages: Record<number, {
-      en: string[];
-      es: string[];
+      // New format: array of line objects
+      lines?: { es: string; en: string }[];
+      // Legacy format: separate arrays (kept for backward compat)
+      en?: string[];
+      es?: string[];
     }>;
     metadata?: {
+      number?: number;
       title?: string;
+      subtitle?: string;
       titleEn?: string;
       titleEs?: string;
     };
   }>;
-  sourceLanguage: "en" | "es";
-  totalPages: number;
+  sourceLanguage?: "en" | "es";
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  totalPages?: number;
 }
 
 /**
  * Extract chapter data from stored level content
  * This reconstructs the preview data from the paginated content
+ *
+ * Handles both content formats:
+ * - New format: page.lines = [{ es, en }, ...]
+ * - Legacy format: page.en = [...], page.es = [...]
  */
 function extractChaptersFromContent(
   content: LevelContent,
@@ -55,7 +69,7 @@ function extractChaptersFromContent(
 
   for (const chapterKey of chapterKeys) {
     const chapter = content.chapters[chapterKey];
-    if (!chapter) continue;
+    if (!chapter || !chapter.pages) continue;
 
     // Combine all pages into single arrays
     const pageKeys = Object.keys(chapter.pages)
@@ -69,12 +83,26 @@ function extractChaptersFromContent(
       const page = chapter.pages[pageKey];
       if (!page) continue;
 
-      // Source is in the original language, translated is in the opposite
-      const sourceLang = sourceLanguage;
-      const targetLang = sourceLanguage === "en" ? "es" : "en";
+      // Check for new format (lines array of objects)
+      if (page.lines && Array.isArray(page.lines)) {
+        for (const line of page.lines) {
+          if (sourceLanguage === "en") {
+            sourceLines.push(line.en || "");
+            translatedLines.push(line.es || "");
+          } else {
+            sourceLines.push(line.es || "");
+            translatedLines.push(line.en || "");
+          }
+        }
+      }
+      // Fall back to legacy format (separate arrays)
+      else if (page.en || page.es) {
+        const sourceLang = sourceLanguage;
+        const targetLang = sourceLanguage === "en" ? "es" : "en";
 
-      sourceLines.push(...(page[sourceLang] || []));
-      translatedLines.push(...(page[targetLang] || []));
+        sourceLines.push(...(page[sourceLang] || []));
+        translatedLines.push(...(page[targetLang] || []));
+      }
     }
 
     chapters.push({ sourceLines, translatedLines });

@@ -367,7 +367,7 @@ myStories: {
   processingModeHintRewritten: "Reescribe a tu nivel de lectura y traduce. Omite el original si es un nivel diferente.",
   processingModeHintBoth: "Traduce el original y también crea una versión adaptada a tu nivel.",
   // Upload modal UI strings
-  uploadSubtitle: "Pega tu historia y la convertiremos en contenido de aprendizaje",
+  uploadSubtitle: "Sube un archivo o pega tu historia y la convertiremos en contenido de aprendizaje",
   storyContent: "Contenido de la historia",
   characters: "caracteres",
   removeFile: "Eliminar archivo",

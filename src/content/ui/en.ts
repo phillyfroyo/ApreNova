@@ -366,7 +366,7 @@ myStories: {
   processingModeHintRewritten: "Rewrite to your reading level and translate. Skips the original if it's a different level.",
   processingModeHintBoth: "Translate the original and also create a version adapted to your level.",
   // Upload modal UI strings
-  uploadSubtitle: "Paste your story and we'll turn it into learning content",
+  uploadSubtitle: "Upload a file or paste your story and we'll turn it into learning content",
   storyContent: "Story content",
   characters: "characters",
   removeFile: "Remove file",

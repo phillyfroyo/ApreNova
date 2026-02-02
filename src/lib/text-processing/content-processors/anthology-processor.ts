@@ -29,7 +29,7 @@ import {
   detectChapterMarkers,
   filterOutTOCMarkers,
   splitIntoChapters,
-  extractFrontMatter,
+  extractPreChapterText,
 } from '../shared/chapter-detection';
 
 // Import countPoems for internal use in preprocessAnthology
@@ -266,7 +266,7 @@ export function preprocessAnthology(
 
   // Step 7: Extract front matter
   const firstChapterLine = markers.length > 0 ? markers[0].lineIndex : lines.length;
-  const frontMatter = extractFrontMatter(lines, firstChapterLine);
+  const frontMatter = extractPreChapterText(lines, firstChapterLine);
 
   // Step 8: Split into chapters, PRESERVING markers in content (for anthology display)
   let chapters = splitIntoChapters(lines, markers, { preserveMarkers: true });

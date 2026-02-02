@@ -16,6 +16,20 @@
 export const MAX_CHUNK_CHARS = 12000;
 
 /**
+ * Maximum tokens per chapter for chapter-level poetry processing.
+ * Chapters exceeding this will be split at poem boundaries.
+ * - 30,000 tokens ~= 120,000 characters
+ * - This allows full chapter context while staying within API limits
+ */
+export const MAX_CHAPTER_TOKENS = 30000;
+
+/**
+ * Characters per token estimate for splitting calculations.
+ * GPT models average ~4 chars per token for English text.
+ */
+export const CHARS_PER_TOKEN_ESTIMATE = 4;
+
+/**
  * Default lines per page for pagination
  */
 export const DEFAULT_LINES_PER_PAGE = 10;

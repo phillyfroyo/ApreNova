@@ -4,8 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   rewriteToLevel,
-  rewritePoemByStanza,
-  joinStanzasWithSpacing,
+  rewritePoetryChapter,
   type RewriteResult,
 } from "@/lib/story-processing";
 
@@ -27,9 +26,10 @@ export async function POST(req: NextRequest) {
     const language = sourceLanguage || "en";
     const effectiveSourceLevel = sourceLevel || targetLevel;
 
-    // For poetry, use stanza-by-stanza rewriting for better structure preservation
+    // For poetry, use chapter-level processing with markers for ~99% cost reduction
+    // Falls back to poem-level then stanza-level if markers aren't preserved
     if (isPoetry) {
-      const stanzaResult = await rewritePoemByStanza(
+      const chapterResult = await rewritePoetryChapter(
         text,
         effectiveSourceLevel,
         targetLevel,
@@ -37,13 +37,7 @@ export async function POST(req: NextRequest) {
         { isPoetry: true, maxRetries: 3, adminStorySlug: slug }
       );
 
-      // Convert stanza result back to flat text, preserving vertical spacing
-      const rewrittenText = joinStanzasWithSpacing(
-        stanzaResult.rewrittenStanzas,
-        stanzaResult.blankLinesBefore
-      );
-
-      if (!stanzaResult.wasRewritten && effectiveSourceLevel !== targetLevel) {
+      if (!chapterResult.wasRewritten && effectiveSourceLevel !== targetLevel) {
         return NextResponse.json(
           {
             error: "AI could not process this poetry chunk. It may be empty or contain only non-story content.",
@@ -53,13 +47,14 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({
-        rewrittenText,
+        rewrittenText: chapterResult.rewrittenText,
         targetLevel,
-        wasRewritten: stanzaResult.wasRewritten,
+        wasRewritten: chapterResult.wasRewritten,
         originalLength: text.length,
-        rewrittenLength: rewrittenText.length,
-        // Include stanza validation info for debugging
-        stanzaValidation: stanzaResult.allStanzasValid ? undefined : stanzaResult.stanzaValidation,
+        rewrittenLength: chapterResult.rewrittenText.length,
+        poemCount: chapterResult.poemCount,
+        // Include fallback info for debugging
+        usedFallback: chapterResult.usedFallback,
       });
     }
 

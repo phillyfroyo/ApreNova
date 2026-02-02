@@ -471,15 +471,18 @@ export function splitIntoChapters(
 }
 
 // ============================================================================
-// FRONT MATTER EXTRACTION
+// PRE-CHAPTER TEXT EXTRACTION
 // ============================================================================
 
 /**
- * Extract front matter (text before first chapter)
+ * Extract text that appears before the first chapter marker.
+ * This is different from Gutenberg front matter - this extracts any content
+ * (like dedications, epigraphs, etc.) that appears between where Gutenberg
+ * boilerplate ends and where the first chapter begins.
  */
-export function extractFrontMatter(lines: string[], firstChapterLine: number): string {
+export function extractPreChapterText(lines: string[], firstChapterLine: number): string {
   if (firstChapterLine <= 0) return '';
 
-  const frontMatterLines = lines.slice(0, firstChapterLine);
-  return frontMatterLines.join('\n').trim();
+  const preChapterLines = lines.slice(0, firstChapterLine);
+  return preChapterLines.join('\n').trim();
 }

@@ -50,17 +50,22 @@ export function StreamSelector({
 
   // Determine which streams are viewable
   // In preview mode, include all complete streams (data fetched on-demand)
-  // In live mode, only include streams that have chapters data loaded
+  // In live mode, only include streams that have chapters data loaded OR have completed chapters
+  // currentChapter represents COMPLETED chapters, so > 0 means at least 1 chapter is done
   const visibleStreams = isPreviewMode
     ? streams.filter((s) => s.status === "complete")
     : streams.filter(
-        (s) => s.status !== "waiting" || (Array.isArray(s.chapters) && s.chapters.length > 0)
+        (s) => s.status !== "waiting" || (Array.isArray(s.chapters) && s.chapters.length > 0) || s.currentChapter >= 1
       );
 
+  // Streams with data that can be viewed
+  // Include streams with:
+  // 1. chapters array populated (legacy/direct data)
+  // 2. currentChapter >= 1 (at least 1 chapter completed - data available in content field)
   const streamsWithData = isPreviewMode
     ? streams.filter((s) => s.status === "complete")
     : streams.filter(
-        (s) => Array.isArray(s.chapters) && s.chapters.length > 0
+        (s) => (Array.isArray(s.chapters) && s.chapters.length > 0) || s.currentChapter >= 1
       );
 
   // Don't show if no viewable streams
@@ -69,9 +74,14 @@ export function StreamSelector({
   }
 
   const handleStreamClick = (stream: StreamProgress) => {
-    // In preview mode, allow clicking on complete streams even without chapters loaded
-    if (!isPreviewMode && stream.status === "waiting" && (!Array.isArray(stream.chapters) || stream.chapters.length === 0)) {
-      return; // Can't view streams that haven't started in live mode
+    // In preview mode, allow clicking on complete streams (data fetched on-demand)
+    // In live mode, only allow clicking if the stream has completed at least 1 chapter
+    const hasData = isPreviewMode
+      ? stream.status === "complete"
+      : (Array.isArray(stream.chapters) && stream.chapters.length > 0) || stream.currentChapter >= 1;
+
+    if (!hasData) {
+      return; // Can't view streams that don't have data yet
     }
     setSelectedStreamId(stream.id);
     setShowProgressViewer(true);
@@ -164,10 +174,15 @@ export function StreamSelector({
         {isOpen && (
           <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white overflow-hidden">
             {visibleStreams.map((stream) => {
+              // A stream has viewable data if:
+              // - In preview mode: stream is complete (data fetched on-demand)
+              // - In live mode: has chapters array populated OR has completed at least 1 chapter
               const hasData = isPreviewMode
                 ? stream.status === "complete"
-                : Array.isArray(stream.chapters) && stream.chapters.length > 0;
-              const isDisabled = !isPreviewMode && stream.status === "waiting" && !hasData;
+                : (Array.isArray(stream.chapters) && stream.chapters.length > 0) || stream.currentChapter >= 1;
+              // Disable clicking if the stream doesn't have any data yet
+              // This includes "waiting" status AND "in-progress" with 0 completed chapters
+              const isDisabled = !isPreviewMode && !hasData;
 
               return (
                 <button
@@ -189,11 +204,15 @@ export function StreamSelector({
                     </span>
                     {!isPreviewMode && hasData ? (
                       <span className="block text-xs text-gray-400">
-                        {stream.chapters.length} / {stream.totalChapters} chapters completed
+                        {stream.currentChapter || stream.chapters?.length || 0} / {stream.totalChapters} chapters completed
                       </span>
                     ) : stream.status === "waiting" ? (
                       <span className="block text-xs text-gray-400">
                         Waiting to start...
+                      </span>
+                    ) : stream.status === "in-progress" && !hasData ? (
+                      <span className="block text-xs text-gray-400">
+                        Processing first chapter...
                       </span>
                     ) : null}
                   </span>

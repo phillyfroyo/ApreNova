@@ -3,19 +3,27 @@
 // Also handles other publisher boilerplate
 
 // ============================================================================
-// FRONT MATTER REMOVAL
+// TITLE EXTRACTION FROM GUTENBERG HEADER
 // ============================================================================
 
 /**
- * Remove Gutenberg front matter markers from the beginning
- * These often appear before the actual story front matter
- *
- * Improved strategy:
- * 1. Scan sections looking for metadata patterns (not just the first 5)
- * 2. DON'T break on first non-match - metadata can be interspersed
- * 3. Stop when we find actual content (thematic headers, chapter markers, substantial prose)
+ * Result of extracting front matter from text
  */
-export function removeGutenbergFrontMatter(text: string): string {
+export interface FrontMatterResult {
+  /** The removed front matter text (for metadata extraction) */
+  frontMatter: string;
+  /** The cleaned content text (actual story/poems) */
+  content: string;
+  /** Whether any front matter was found and removed */
+  removed: boolean;
+}
+
+/**
+ * Extract and separate front matter from content.
+ * Returns both the front matter (useful for title/author extraction)
+ * and the cleaned content.
+ */
+export function extractFrontMatter(text: string): FrontMatterResult {
   // Split by double newlines and scan for metadata sections
   const sections = text.split(/\n\n+/);
 
@@ -63,7 +71,6 @@ export function removeGutenbergFrontMatter(text: string): string {
     /^[IVXLC]+\.?\s*$/,
     // ALL CAPS poem titles (3-50 chars, at least 2 capital letters)
     /^[A-Z][A-Z\s,.'"-]{2,48}\.?\s*$/,
-    // Content that looks like actual prose/poetry (long lines, sentence structure)
   ];
 
   // Helper: check if a section looks like metadata
@@ -71,18 +78,14 @@ export function removeGutenbergFrontMatter(text: string): string {
     const trimmed = section.trim();
     if (!trimmed) return true; // Empty sections are metadata
 
-    // Check against metadata patterns
     for (const pattern of metadataPatterns) {
       if (pattern.test(trimmed)) return true;
     }
 
-    // Short sections (under 200 chars) that look like bibliographic info
     if (trimmed.length < 200) {
-      // Contains common metadata keywords
       if (/\b(copyright|license|edition|published|printed|transcrib|ebook|e-book|gutenberg)\b/i.test(trimmed)) {
         return true;
       }
-      // Looks like a label:value pair on a single line
       if (/^[A-Za-z\s]{2,20}:\s*.+$/.test(trimmed) && !trimmed.includes('\n')) {
         return true;
       }
@@ -96,20 +99,16 @@ export function removeGutenbergFrontMatter(text: string): string {
     const trimmed = section.trim();
     if (!trimmed) return false;
 
-    // Check content patterns
     for (const pattern of contentPatterns) {
       if (pattern.test(trimmed)) return true;
     }
 
-    // Multiple lines of substantial text (likely prose/poetry content)
     const lines = trimmed.split('\n').filter(l => l.trim().length > 0);
     if (lines.length >= 3) {
       const avgLineLength = trimmed.length / lines.length;
-      // If we have 3+ lines averaging 20+ chars, likely content
       if (avgLineLength >= 20) return true;
     }
 
-    // Single long line (100+ chars) that's not metadata
     if (trimmed.length >= 100 && !isMetadata(section)) {
       return true;
     }
@@ -121,38 +120,91 @@ export function removeGutenbergFrontMatter(text: string): string {
   let contentStartIndex = 0;
   let consecutiveMetadata = 0;
 
-  // Allow scanning up to 30 sections (generous for poetry anthologies with lots of front matter)
   for (let i = 0; i < Math.min(30, sections.length); i++) {
     const section = sections[i].trim();
 
     if (isContent(section)) {
-      // Found actual content - this is where the story/poems start
       contentStartIndex = i;
       break;
     }
 
     if (isMetadata(section)) {
       consecutiveMetadata++;
-      contentStartIndex = i + 1; // Skip this metadata section
+      contentStartIndex = i + 1;
     } else {
-      // Ambiguous section - if we've seen metadata, treat as continuation
-      // If we haven't seen any metadata yet, might be content starting
       if (consecutiveMetadata === 0) {
-        // No metadata seen yet, this might be content
         contentStartIndex = i;
         break;
       }
-      // Otherwise, keep scanning (could be an oddly formatted metadata section)
     }
   }
 
   if (contentStartIndex > 0) {
-    const result = sections.slice(contentStartIndex).join('\n\n').trim();
-    console.log(`[removeGutenbergFrontMatter] Removed ${contentStartIndex} front matter sections`);
-    return result;
+    const frontMatter = sections.slice(0, contentStartIndex).join('\n\n').trim();
+    const content = sections.slice(contentStartIndex).join('\n\n').trim();
+    console.log(`[extractFrontMatter] Extracted ${contentStartIndex} front matter sections`);
+    return { frontMatter, content, removed: true };
   }
 
-  return text.trim();
+  return { frontMatter: '', content: text.trim(), removed: false };
+}
+
+/**
+ * Extract the book title from Project Gutenberg front matter.
+ * Looks for "Title: ..." line or "The Project Gutenberg eBook of ..." pattern.
+ *
+ * @param frontMatter - The front matter text (from extractFrontMatter)
+ * @returns The extracted title or null if not found
+ */
+export function extractTitleFromFrontMatter(frontMatter: string): string | null {
+  if (!frontMatter) return null;
+
+  const lines = frontMatter.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Prefer "Title: <TITLE>" format - it's cleaner
+    const titleMatch = trimmed.match(/^Title:\s*(.+)$/i);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+  }
+
+  // Fall back to "The Project Gutenberg eBook of <TITLE>" pattern
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const ebookMatch = trimmed.match(/^The Project Gutenberg (?:EBook|eBook|Ebook|e-book) of (.+)$/i);
+    if (ebookMatch) {
+      return ebookMatch[1].trim();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @deprecated Use extractTitleFromFrontMatter with extractFrontMatter instead
+ */
+export function extractTitleFromGutenbergHeader(text: string): string | null {
+  const { frontMatter } = extractFrontMatter(text);
+  return extractTitleFromFrontMatter(frontMatter);
+}
+
+// ============================================================================
+// FRONT MATTER REMOVAL (convenience wrapper)
+// ============================================================================
+
+/**
+ * Remove Gutenberg front matter markers from the beginning.
+ * This is a convenience wrapper around extractFrontMatter that just returns the content.
+ *
+ * @param text - The full text including front matter
+ * @returns The text with front matter removed
+ */
+export function removeGutenbergFrontMatter(text: string): string {
+  const { content } = extractFrontMatter(text);
+  return content;
 }
 
 // ============================================================================

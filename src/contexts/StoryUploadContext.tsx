@@ -781,6 +781,12 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           const userLevel = typeof userQuizLevel === "number" ? `l${userQuizLevel}` : userQuizLevel || null;
           const detectedLevel = storyStatus.detectedLevel;
 
+          // Update sourceLanguage as soon as it's detected (before story is complete)
+          // This ensures the progress viewer modal shows the correct language columns
+          if (storyStatus.sourceLanguage && storyData?.sourceLanguage !== storyStatus.sourceLanguage) {
+            setStoryData(prev => prev ? { ...prev, sourceLanguage: storyStatus.sourceLanguage } : null);
+          }
+
           // Get story-level progress (detailed step info)
           const storyProgress = storyStatus.processingProgress as StoryProcessingProgress | null;
 
