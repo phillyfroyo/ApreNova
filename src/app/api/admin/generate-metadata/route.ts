@@ -147,33 +147,6 @@ Return ONLY the JSON, no other text.`;
 }
 
 /**
- * Extract title algorithmically from Gutenberg front matter
- * Returns null if not found or not confident
- */
-function extractTitleFromFrontMatter(frontMatter?: string): { title: string; author?: string } | null {
-  if (!frontMatter) return null;
-
-  // Gutenberg format: "Title: The Book Title"
-  const titleMatch = frontMatter.match(/^Title:\s*(.+)$/im);
-  if (!titleMatch) return null;
-
-  let title = titleMatch[1].trim();
-
-  // Clean up common Gutenberg suffixes
-  title = title
-    .replace(/,\s*Complete$/i, "")
-    .replace(/,\s*by\s+.+$/i, "")
-    .replace(/\s*\([^)]+\)\s*$/, "") // Remove trailing parenthetical
-    .trim();
-
-  // Try to extract author too
-  const authorMatch = frontMatter.match(/^Author:\s*(.+)$/im);
-  const author = authorMatch?.[1]?.trim();
-
-  return { title, author };
-}
-
-/**
  * Generate title, displayTitle, slug, and hook in a single API call
  */
 async function generateBundledMetadata(

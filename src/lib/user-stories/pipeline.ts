@@ -241,7 +241,7 @@ async function extractAndSaveTags(
  */
 async function generateAndSaveAllMetadata(
   ctx: CostContext,
-  story: { title: string; description: string | null; rawContent: string },
+  story: { title: string; description: string | null; rawContent: string; rawHtml: string | null },
   sourceLanguage: "en" | "es"
 ): Promise<void> {
   const isDefaultTitle =
@@ -256,6 +256,7 @@ async function generateAndSaveAllMetadata(
       existingTitle: isDefaultTitle ? undefined : story.title,
       existingDescription: needsDescription ? undefined : (story.description ?? undefined),
       essentialOnly: true, // Only generate title + description for user stories
+      rawSourceText: story.rawHtml || undefined, // Use raw HTML for title extraction if available
     }
   );
 
@@ -667,7 +668,7 @@ export async function processUserStory(storyId: string): Promise<void> {
     await updateStoryProgress(storyId, "generating_metadata");
     await generateAndSaveAllMetadata(
       ctx,
-      { title: story.title, description: story.description, rawContent: story.rawContent },
+      { title: story.title, description: story.description, rawContent: story.rawContent, rawHtml: story.rawHtml },
       sourceLanguage
     );
 
