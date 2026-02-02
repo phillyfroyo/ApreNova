@@ -137,11 +137,82 @@ function extractAnnotations(html: string): { html: string; annotations: Extracte
 }
 
 // ============================================================================
+// FRONT MATTER REMOVAL
+// ============================================================================
+
+/**
+ * Remove front matter sections from HTML before text extraction.
+ *
+ * This handles:
+ * 1. Project Gutenberg boilerplate header (section.pg-boilerplate, #pg-header)
+ * 2. Title pages (h1 + h2/h3/h4/h5 sequences before actual content)
+ * 3. Dedication pages
+ *
+ * Strategy: Find the first content anchor (like <a id="Benediction">) which marks
+ * where actual poems begin, and remove everything before the h3 that contains it.
+ */
+function removeFrontMatter(html: string): string {
+  let result = html;
+
+  // Step 1: Remove Gutenberg boilerplate header section
+  result = result.replace(/<section[^>]*class="[^"]*pg-boilerplate[^"]*"[^>]*>[\s\S]*?<\/section>/gi, '');
+  result = result.replace(/<section[^>]*id="pg-header"[^>]*>[\s\S]*?<\/section>/gi, '');
+  result = result.replace(/<div[^>]*id="pg-header"[^>]*>[\s\S]*?<\/div>/gi, '');
+
+  // Step 2: Find the first poem anchor (indicates start of actual content)
+  // Gutenberg uses <h3><a id="PoemName"></a>Title</h3> pattern
+  const firstPoemAnchorMatch = result.match(/<h3[^>]*>\s*<a\s+id="([^"]+)"[^>]*>/i);
+
+  if (firstPoemAnchorMatch) {
+    const anchorIndex = result.indexOf(firstPoemAnchorMatch[0]);
+
+    if (anchorIndex > 0) {
+      // Extract everything before the first poem
+      const beforeFirstPoem = result.slice(0, anchorIndex);
+
+      // Check if this front matter contains title page elements
+      // (h1, multiple h2-h5 headers, or paragraphs with links)
+      const hasTitlePage = /<h1[^>]*>/i.test(beforeFirstPoem);
+      const hasMultipleHeaders = (beforeFirstPoem.match(/<h[2-5][^>]*>/gi) || []).length >= 3;
+
+      if (hasTitlePage || hasMultipleHeaders) {
+        // Remove the front matter, keeping only from the first poem
+        result = result.slice(anchorIndex);
+        console.log('[removeFrontMatter] Removed title page and front matter before first poem anchor');
+      }
+    }
+  }
+
+  // Step 3: Remove any remaining title page pattern at the very start
+  // Pattern: starts with <h1> followed by h2-h5 tags (title page layout)
+  // But only if there's no substantial content between them
+  const titlePagePattern = /^(\s*<div[^>]*>\s*)?<h1[^>]*>[\s\S]*?<\/h1>(\s*<h[2-5][^>]*>[\s\S]*?<\/h[2-5]>){2,}(\s*<hr[^>]*>)*/i;
+  const titlePageMatch = result.match(titlePagePattern);
+
+  if (titlePageMatch) {
+    const titlePageEnd = titlePageMatch[0].length;
+    // Verify there's actual content after this
+    const afterTitlePage = result.slice(titlePageEnd);
+    if (/<h3[^>]*>/i.test(afterTitlePage)) {
+      result = afterTitlePage;
+      console.log('[removeFrontMatter] Removed title page header sequence');
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
 // TOC REMOVAL
 // ============================================================================
 
 /**
  * Remove Table of Contents sections from HTML
+ *
+ * Detection strategies:
+ * 1. Explicit TOC classes/IDs (class="toc", id="contents")
+ * 2. Sections with many internal anchor links (<a href="#...">)
+ * 3. Tables used for TOC layout
  */
 function removeTOC(html: string): string {
   let cleanedHtml = html;
@@ -153,6 +224,39 @@ function removeTOC(html: string): string {
   // Remove TOC divs
   cleanedHtml = cleanedHtml.replace(/<div[^>]*class="[^"]*toc[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
   cleanedHtml = cleanedHtml.replace(/<div[^>]*id="[^"]*(?:contents|toc)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+
+  // Remove sections that look like TOC (contain many internal links)
+  // A TOC typically has 5+ internal links in a small section
+  cleanedHtml = cleanedHtml.replace(
+    /<(div|section|nav)[^>]*>([\s\S]*?)<\/\1>/gi,
+    (match, tag, content) => {
+      // Count internal anchor links
+      const internalLinks = (content.match(/<a[^>]*href="#[^"]*"[^>]*>/gi) || []).length;
+      // If this section has 5+ internal links and relatively little other content, it's likely a TOC
+      const textContent = content.replace(/<[^>]+>/g, '').trim();
+      const linkDensity = internalLinks / (textContent.length / 100 + 1);
+
+      if (internalLinks >= 5 && linkDensity > 0.3) {
+        return ''; // Remove this TOC section
+      }
+      return match;
+    }
+  );
+
+  // Remove paragraphs that are TOC-like (many internal links, often used in Gutenberg)
+  // Pattern: <p> containing 10+ internal links (like Baudelaire's TOC in <p class="margin">)
+  cleanedHtml = cleanedHtml.replace(
+    /<p[^>]*>([\s\S]*?)<\/p>/gi,
+    (match, content) => {
+      const internalLinks = (content.match(/<a[^>]*href="#[^"]*"[^>]*>/gi) || []).length;
+      // A paragraph with 10+ internal links is almost certainly a TOC
+      if (internalLinks >= 10) {
+        console.log(`[removeTOC] Removed paragraph with ${internalLinks} internal links (likely TOC)`);
+        return ''; // Remove this TOC paragraph
+      }
+      return match;
+    }
+  );
 
   return cleanedHtml;
 }
@@ -310,27 +414,66 @@ function detectAndMarkPoems(html: string): string {
   );
 
   // Pattern 3: <h3> tags as poem titles (Baudelaire and similar anthology styles)
-  // These are typically poem titles - inject markers unless they're structural markers
-  // Handles both <h3>Title</h3> immediately followed by content AND cases with whitespace/other elements between
-  result = result.replace(
-    /<h3([^>]*)>([\s\S]*?)<\/h3>/gi,
-    (match, attrs, title) => {
-      const titleText = title.replace(/<[^>]+>/g, '').trim();
-      // Skip if already marked, or if ALL CAPS (handled by text detection), or too short
-      const isAllCaps = titleText === titleText.toUpperCase() && titleText.length > 3;
-      const isAlreadyMarked = /\[POEM\]/i.test(title);
-      const isBookMarker = /^(BOOK|PART|CANTO|ACT|SCENE)\s/i.test(titleText);
-      // Skip Roman numerals (I, II, III, etc.) - these are often sub-sections within poems, not poem titles
-      const isRomanNumeral = /^[IVXLC]+\.?$/.test(titleText);
-      // Skip very short titles that are likely structural (e.g., single letters)
-      const isTooShort = titleText.length <= 2;
+  // Strategy: Use HTML hierarchy to distinguish front matter from content
+  // - <h1> = Book title (skip)
+  // - <h2> = Major sections or TOC heading (already handled by Pattern 1 for chapter divs)
+  // - <h3> = Poem titles (mark these)
+  //
+  // To avoid marking front matter <h3> tags, we check if the <h3> is followed by
+  // substantial content (poem text in <p> tags) before the next <h3>
 
-      if (!isAllCaps && !isAlreadyMarked && !isBookMarker && !isRomanNumeral && !isTooShort) {
-        return `<div class="poem-marker">[POEM] ${titleText}</div><h3${attrs}>${title}</h3>`;
-      }
-      return match;
+  // First, find positions of all h3 tags and check what follows each
+  const h3Pattern = /<h3([^>]*)>([\s\S]*?)<\/h3>/gi;
+  let h3Match;
+  const h3Replacements: { original: string; replacement: string }[] = [];
+
+  while ((h3Match = h3Pattern.exec(result)) !== null) {
+    const fullMatch = h3Match[0];
+    const attrs = h3Match[1];
+    const title = h3Match[2];
+    const matchEnd = h3Match.index + fullMatch.length;
+
+    const titleText = title.replace(/<[^>]+>/g, '').trim();
+
+    // Skip conditions (structural markers, etc.)
+    const isAllCaps = titleText === titleText.toUpperCase() && titleText.length > 3;
+    const isAlreadyMarked = /\[POEM\]/i.test(title);
+    const isBookMarker = /^(BOOK|PART|CANTO|ACT|SCENE)\s/i.test(titleText);
+    const isRomanNumeral = /^[IVXLC]+\.?$/.test(titleText);
+    const isTooShort = titleText.length <= 2;
+
+    if (isAllCaps || isAlreadyMarked || isBookMarker || isRomanNumeral || isTooShort) {
+      continue;
     }
-  );
+
+    // Check what follows this <h3> - look for content before the next <h3> or end
+    const textAfter = result.slice(matchEnd);
+    const nextH3Index = textAfter.search(/<h3[^>]*>/i);
+    const contentBetween = nextH3Index >= 0 ? textAfter.slice(0, nextH3Index) : textAfter.slice(0, 2000);
+
+    // Look for paragraph content (poem lines) - not just links or metadata
+    const paragraphContent = contentBetween.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const totalParagraphText = paragraphContent
+      .map(p => p.replace(/<[^>]+>/g, '').trim())
+      .join('')
+      .length;
+
+    // If there's substantial paragraph content after this h3, it's likely a poem title
+    // Front matter h3 tags (like "CONTENTS") are followed by links, not paragraphs
+    const hasSubstantialContent = totalParagraphText > 50;
+
+    if (hasSubstantialContent) {
+      h3Replacements.push({
+        original: fullMatch,
+        replacement: `<div class="poem-marker">[POEM] ${titleText}</div><h3${attrs}>${title}</h3>`
+      });
+    }
+  }
+
+  // Apply replacements (in reverse order to preserve indices)
+  for (const { original, replacement } of h3Replacements) {
+    result = result.replace(original, replacement);
+  }
 
   return result;
 }
@@ -369,10 +512,13 @@ export function extractTextFromHTML(
 
   let text = html;
 
-  // Step 0: Detect and mark collection headers before losing HTML structure
+  // Step 0: Remove front matter (Gutenberg header, title page) before processing
+  text = removeFrontMatter(text);
+
+  // Step 0b: Detect and mark collection headers before losing HTML structure
   text = detectAndMarkCollectionHeaders(text);
 
-  // Step 0b: Detect and mark poems (Title Case titles in chapter divs with pre content)
+  // Step 0c: Detect and mark poems (Title Case titles in chapter divs with pre content)
   text = detectAndMarkPoems(text);
 
   // Step 1: Remove script and style elements
