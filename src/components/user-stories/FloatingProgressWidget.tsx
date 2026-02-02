@@ -23,6 +23,7 @@ function SuccessBanner({
   isNavigating,
   setIsNavigating,
   onNavigationComplete,
+  streams,
 }: {
   lng: string;
   storyData: StoryUploadData | null;
@@ -31,6 +32,7 @@ function SuccessBanner({
   isNavigating: boolean;
   setIsNavigating: (v: boolean) => void;
   onNavigationComplete: () => void;
+  streams?: StreamProgress[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -41,10 +43,20 @@ function SuccessBanner({
   const navigationStartPathRef = useRef<string | null>(null);
   const isActuallyNavigating = isNavigating || hasStartedNavigation.current;
 
-  // Get the best level for reading
+  // Get levels that are actually READY (from streams data)
+  const readyLevels = streams
+    ?.filter(s => s.levelStatus === "READY")
+    .map(s => s.level) || [];
+
+  // Get the best level for reading - must be from ready levels
   const userQuizLevel = session?.user?.quizLevel;
   const userLevel = userQuizLevel ? toCEFR(userQuizLevel) : null;
-  const readingLevel = userLevel || detectedLevel || "B1";
+
+  // Priority: 1) user's level if ready, 2) detected level if ready, 3) first ready level, 4) fallback
+  const readingLevel =
+    (userLevel && readyLevels.includes(userLevel)) ? userLevel :
+    (detectedLevel && readyLevels.includes(detectedLevel)) ? detectedLevel :
+    readyLevels[0] || detectedLevel || "B1";
 
   // Detect when navigation completes (pathname changes after we started navigating)
   useEffect(() => {
@@ -621,6 +633,7 @@ export default function FloatingProgressWidget() {
         isNavigating={isNavigating}
         setIsNavigating={setIsNavigating}
         onNavigationComplete={resetProgress}
+        streams={progress.streams}
       />
     );
   }
