@@ -187,8 +187,8 @@ export default function StoryLayoutWithAzureTTS({
 
       const existingData = translationData[lineIndex];
 
-      if (existingData) {
-        // Use existing translation
+      if (existingData?.word && existingData?.translation) {
+        // Use existing translation (only if both word and translation are valid)
         word = existingData.word;
         translation = existingData.translation;
       } else {
@@ -226,7 +226,7 @@ export default function StoryLayoutWithAzureTTS({
 
         const translateData = await translateRes.json();
         translation = isSingleWord
-          ? translateData.translation
+          ? translateData.contextTranslation || translateData.translation
           : translateData.translation;
       }
 

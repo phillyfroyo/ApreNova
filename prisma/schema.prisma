@@ -123,18 +123,18 @@ model TutorMessage {
 model SavedWord {
   id             String      @id @default(cuid())
   userId         String
-  word           String      // Spanish word or phrase
-  translation    String      // English translation
-  sourceSentence String?     // Context sentence where it was saved
-  storySlug      String?     // Which story it came from
-  easeFactor     Float       @default(2.5)  // SM-2 ease factor (min 1.3)
-  interval       Int         @default(0)    // Days until next review
-  repetitions    Int         @default(0)    // Successful review count
+  word           String
+  translation    String
+  sourceSentence String?
+  storySlug      String?
+  easeFactor     Float       @default(2.5)
+  interval       Int         @default(0)
+  repetitions    Int         @default(0)
   nextReviewDate DateTime    @default(now())
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  User           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   ReviewLog      ReviewLog[]
+  User           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, word])
   @@index([userId, nextReviewDate])
@@ -145,8 +145,8 @@ model ReviewLog {
   id             String    @id @default(cuid())
   savedWordId    String
   userId         String
-  quality        Int       // 0-5 SM-2 quality rating
-  direction      String    // "es-en" or "en-es"
+  quality        Int
+  direction      String
   prevInterval   Int
   prevEaseFactor Float
   newInterval    Int
