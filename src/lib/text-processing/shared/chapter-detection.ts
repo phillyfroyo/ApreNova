@@ -278,9 +278,36 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
  * appears as a separate section at the beginning. We detect a TOC cluster
  * by looking for markers with minimal content between them, followed by
  * a REPEATED marker (same BOOK number) with substantial content.
+ *
+ * IMPORTANT: Explicit "CHAPTER X" markers are NEVER filtered as TOC entries.
+ * These are definitively chapter markers, not TOC references. This prevents
+ * novels like Moby Dick (which have EXTRACTS sections with many short entries
+ * before Chapter 1) from having their early chapters incorrectly filtered.
  */
 export function filterOutTOCMarkers(markers: ChapterMarker[], lines: string[]): ChapterMarker[] {
   if (markers.length < 3) return markers;
+
+  // Helper: Check if a marker is an explicit "CHAPTER X" marker
+  // These should NEVER be filtered as TOC entries
+  const isExplicitChapterMarker = (marker: ChapterMarker): boolean => {
+    return /^CHAPTER\s+/i.test(marker.fullMatch);
+  };
+
+  // Find the first explicit CHAPTER marker - everything from here onwards is real content
+  const firstExplicitChapterIndex = markers.findIndex(isExplicitChapterMarker);
+
+  if (firstExplicitChapterIndex >= 0) {
+    // We found an explicit "CHAPTER X" marker
+    // Keep all markers from this point onwards (they're real chapters)
+    // Only filter markers BEFORE this point (which might be EXTRACTS, ETYMOLOGY, etc.)
+    const explicitChapters = markers.slice(firstExplicitChapterIndex);
+
+    if (firstExplicitChapterIndex > 0) {
+      console.log(`[filterOutTOCMarkers] Found explicit CHAPTER marker at index ${firstExplicitChapterIndex}, filtering ${firstExplicitChapterIndex} pre-chapter markers`);
+    }
+
+    return explicitChapters;
+  }
 
   // Calculate content between each marker and the next
   const contentBetween: number[] = [];
