@@ -112,6 +112,10 @@ export default function DashboardPage() {
       chaptersVisited: 'Chapters Read',
       pagesRead: 'Pages Read',
       days: 'days',
+      signInToTrack: 'To track your progress,',
+      signIn: 'sign in',
+      or: 'or',
+      createAccount: 'create a free account',
     },
     es: {
       continueReading: 'Continuar Leyendo',
@@ -133,13 +137,19 @@ export default function DashboardPage() {
       chaptersVisited: 'Capítulos Leídos',
       pagesRead: 'Páginas Leídas',
       days: 'días',
+      signInToTrack: 'Para ver tu progreso,',
+      signIn: 'inicia sesión',
+      or: 'o',
+      createAccount: 'crea una cuenta gratis',
     },
   };
 
   const t = content[lang];
 
+  const isAuthenticated = !!session?.user;
+
   return (
-    <AppLayout lang={lang}>
+    <AppLayout lang={lang} requireAuth={false}>
       {/* Full-screen background that extends under sidebar */}
       <div
         className="fixed inset-0 bg-cover bg-center -z-10"
@@ -150,11 +160,26 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-            {greeting()}, {session?.user?.name?.split(' ')[0] || 'Reader'}!
+            {greeting()}{isAuthenticated ? `, ${session?.user?.name?.split(' ')[0] || 'Reader'}` : ''}!
           </h1>
           <p className="text-gray-500 mt-1">
             {lang === 'es' ? '¿Qué quieres aprender hoy?' : 'What would you like to learn today?'}
           </p>
+          {/* Auth Message for unauthenticated users */}
+          {!isAuthenticated && (
+            <div className="mt-3 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm inline-block">
+              <p className="text-gray-700">
+                {t.signInToTrack}{" "}
+                <Link href={`/${lang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                  {t.signIn}
+                </Link>
+                {" "}{t.or}{" "}
+                <Link href={`/${lang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                  {t.createAccount}
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Stats Section - Moved to top */}
@@ -164,7 +189,7 @@ export default function DashboardPage() {
             {t.yourProgress}
           </h2>
 
-          {loading ? (
+          {loading && isAuthenticated ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 animate-pulse">
@@ -173,13 +198,13 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          ) : stats ? (
+          ) : (stats || !isAuthenticated) ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Current Streak - highlighted */}
               <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 shadow-sm border border-orange-200">
                 <div className="flex items-center gap-2 mb-1">
                   <Flame className="w-5 h-5 text-orange-500" />
-                  <span className="text-2xl font-bold text-gray-900">{stats.currentStreak}</span>
+                  <span className="text-2xl font-bold text-gray-900">{isAuthenticated ? stats?.currentStreak : '–'}</span>
                 </div>
                 <p className="text-sm text-gray-600">{t.currentStreak}</p>
               </div>
@@ -188,7 +213,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-1">
                   <FileText className="w-5 h-5 text-blue-500" />
-                  <span className="text-2xl font-bold text-gray-900">{formatNumber(stats.wordsRead)}</span>
+                  <span className="text-2xl font-bold text-gray-900">{isAuthenticated ? formatNumber(stats?.wordsRead || 0) : '–'}</span>
                 </div>
                 <p className="text-sm text-gray-500">{t.wordsRead}</p>
               </div>
@@ -197,7 +222,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-1">
                   <Layers className="w-5 h-5 text-purple-500" />
-                  <span className="text-2xl font-bold text-gray-900">{stats.chaptersVisited}</span>
+                  <span className="text-2xl font-bold text-gray-900">{isAuthenticated ? stats?.chaptersVisited : '–'}</span>
                 </div>
                 <p className="text-sm text-gray-500">{t.chaptersVisited}</p>
               </div>
@@ -206,7 +231,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-5 h-5 text-indigo-500" />
-                  <span className="text-2xl font-bold text-gray-900">{formatMinutes(stats.readingMs)}</span>
+                  <span className="text-2xl font-bold text-gray-900">{isAuthenticated ? formatMinutes(stats?.readingMs || 0) : '–'}</span>
                 </div>
                 <p className="text-sm text-gray-500">{t.timeReading}</p>
               </div>
@@ -221,10 +246,30 @@ export default function DashboardPage() {
             {t.continueReading}
           </h2>
 
-          {loading ? (
+          {loading && isAuthenticated ? (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
               <div className="h-3 bg-gray-200 rounded w-1/4" />
+            </div>
+          ) : !isAuthenticated ? (
+            /* Placeholder stories for unauthenticated users */
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-400">–</h3>
+                      <p className="text-sm text-gray-300">
+                        {t.chapter} –, {t.page} – • Level –
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : bookmarks.length > 0 ? (
             <div className="space-y-3">

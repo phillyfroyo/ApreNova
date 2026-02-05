@@ -831,7 +831,7 @@ function StoriesPageWrapper() {
   const lang = (lng as Language) || 'es';
 
   return (
-    <AppLayout lang={lang}>
+    <AppLayout lang={lang} requireAuth={false}>
       <Suspense>
         <StoriesPageContent />
       </Suspense>

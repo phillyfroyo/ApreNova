@@ -4,6 +4,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { X, Loader2 } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
@@ -94,15 +95,13 @@ export default function StoryTutorChat({
 
   // Load conversation history for this story and auto-send initial message if needed
   useEffect(() => {
-    if (!session?.user || !isOpen) {
-      // Reset when chat closes
-      if (!isOpen) {
-        hasAutoSentRef.current = false;
-        isInitialScrollRef.current = false;
-        lastProcessedContextRef.current = "";
-        isProcessingRef.current = false;
-        hasLoadedHistoryRef.current = false;
-      }
+    // Reset when chat closes
+    if (!isOpen) {
+      hasAutoSentRef.current = false;
+      isInitialScrollRef.current = false;
+      lastProcessedContextRef.current = "";
+      isProcessingRef.current = false;
+      hasLoadedHistoryRef.current = false;
       return;
     }
 
@@ -118,18 +117,21 @@ export default function StoryTutorChat({
 
     const loadHistory = async () => {
       try {
-        // Step 1: Use preloaded messages if available, otherwise fetch
-        let loadedMessages: Message[];
+        // Step 1: Use preloaded messages if available, otherwise fetch (only for authenticated users)
+        let loadedMessages: Message[] = [];
 
-        if (preloadedMessages && preloadedMessages.length > 0) {
-          console.log(`✨ Using ${preloadedMessages.length} pre-loaded messages - instant load!`);
-          loadedMessages = preloadedMessages;
-        } else {
-          const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
-          if (!response.ok) throw new Error("Failed to load history");
+        // Only load history for authenticated users
+        if (session?.user) {
+          if (preloadedMessages && preloadedMessages.length > 0) {
+            console.log(`✨ Using ${preloadedMessages.length} pre-loaded messages - instant load!`);
+            loadedMessages = preloadedMessages;
+          } else {
+            const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
+            if (!response.ok) throw new Error("Failed to load history");
 
-          const data = await response.json();
-          loadedMessages = data.messages || [];
+            const data = await response.json();
+            loadedMessages = data.messages || [];
+          }
         }
 
         // Step 2: Check if this is a new context (different from last processed)
@@ -170,6 +172,16 @@ export default function StoryTutorChat({
           // Send the "You selected" message to backend and get GPT response
           setTimeout(async () => {
             setIsLoading(true);
+
+            // If user is not authenticated, show auth message instead of calling API
+            if (!session?.user) {
+              // Brief delay to show loading state
+              await new Promise(resolve => setTimeout(resolve, 500));
+              setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+              setIsLoading(false);
+              isProcessingRef.current = false;
+              return;
+            }
 
             try {
               // Use proactive endpoint if sending to GPT, otherwise just save the message
@@ -260,6 +272,15 @@ export default function StoryTutorChat({
     setMessages(currentMessages);
     setInput("");
 
+    // If user is not authenticated, show auth message
+    if (!session?.user) {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      setIsLoading(false);
+      return;
+    }
+
     // Create a separate loading state for this specific request
     const requestId = Date.now();
     setIsLoading(true);
@@ -342,6 +363,19 @@ export default function StoryTutorChat({
               {message.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-purple-600/95 backdrop-blur-sm text-white shadow-lg">
                   <p className="whitespace-pre-wrap text-sm">{renderMarkdown(message.content)}</p>
+                </div>
+              ) : message.content === "__AUTH_REQUIRED__" ? (
+                <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">
+                  <p className="text-sm text-gray-800">
+                    {t(typedLang, "storyTutor", "signInToUse")}{" "}
+                    <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "storyTutor", "signIn")}
+                    </Link>
+                    {" "}{t(typedLang, "storyTutor", "or")}{" "}
+                    <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "storyTutor", "createAccount")}
+                    </Link>
+                  </p>
                 </div>
               ) : (
                 <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">

@@ -66,11 +66,13 @@ export default function MyStoriesPage() {
     storiesRef.current = stories;
   }, [stories]);
 
-  // Fetch stories and stats
+  const isAuthenticated = !!session?.user;
+
+  // Fetch stories and stats (only for authenticated users)
   useEffect(() => {
     if (sessionStatus === "loading") return;
     if (!session?.user) {
-      router.push(`/${typedLang}/auth/login`);
+      setLoading(false);
       return;
     }
 
@@ -194,16 +196,32 @@ export default function MyStoriesPage() {
             <BookOpen className="w-5 h-5 text-purple-600" />
             My Stories
           </h1>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Upload
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Upload
+            </button>
+          )}
         </div>
 
-        {stats && (
+        {/* Auth message for unauthenticated users */}
+        {!isAuthenticated && (
+          <p className="text-gray-700">
+            {typedLang === 'es' ? 'Para subir y ver tus historias,' : 'To upload and view your stories,'}{" "}
+            <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+              {typedLang === 'es' ? 'inicia sesión' : 'sign in'}
+            </Link>
+            {" "}{typedLang === 'es' ? 'o' : 'or'}{" "}
+            <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+              {typedLang === 'es' ? 'crea una cuenta gratis' : 'create a free account'}
+            </Link>
+          </p>
+        )}
+
+        {isAuthenticated && stats && (
           <StorageLimitIndicator
             currentCount={stats.totalStories}
             maxCount={stats.maxStories}
@@ -220,7 +238,20 @@ export default function MyStoriesPage() {
       )}
 
       {/* Stories Grid */}
-      {stories.length === 0 ? (
+      {!isAuthenticated ? (
+        /* Placeholder cards for unauthenticated users */
+        <div className="flex flex-wrap gap-4 py-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              style={{ width: "160px", flexShrink: 0 }}
+              className="aspect-[2/3] rounded-xl bg-white/60 border border-gray-200 flex items-center justify-center"
+            >
+              <span className="text-2xl text-gray-300">–</span>
+            </div>
+          ))}
+        </div>
+      ) : stories.length === 0 ? (
         <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-semibold mb-2">No stories yet</h2>
@@ -277,7 +308,7 @@ export default function MyStoriesPage() {
       <UploadStoryModal />
 
       {/* Premium upsell */}
-      {stats && !stats.isPremium && stats.maxStories !== -1 && stats.totalStories >= stats.maxStories && (
+      {isAuthenticated && stats && !stats.isPremium && stats.maxStories !== -1 && stats.totalStories >= stats.maxStories && (
         <div className="mt-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl p-4 text-white">
           <h3 className="font-semibold mb-1">Want more stories?</h3>
           <p className="text-sm text-white/90 mb-3">

@@ -107,13 +107,18 @@ export default function StoryLayoutWithAzureTTS({
       setActiveAudio(null);
     },
     onError: (error) => {
-      console.error('TTS Error:', error);
-      setTtsError(error.message);
+      if (error.message.includes("sign in")) {
+        setTtsAuthError(true);
+      } else {
+        console.error('TTS Error:', error);
+        setTtsError(error.message);
+      }
     }
   });
 
   const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const [ttsAuthError, setTtsAuthError] = useState(false);
   const [lineWidths, setLineWidths] = useState<Record<number, number>>({});
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -996,8 +1001,29 @@ export default function StoryLayoutWithAzureTTS({
       className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
       style={backgroundStyle}
     >
-      {/* TTS Error Display */}
-      {ttsError && (
+      {/* TTS Auth Error Display - styled like translation bubble */}
+      {ttsAuthError && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow-lg max-w-sm">
+          <button
+            onClick={() => setTtsAuthError(false)}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ✕
+          </button>
+          <div className="text-sm pr-6">
+            <span className="text-gray-700">{t(typedLang, "translator", "audioSignInRequired")} </span>
+            <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+              {t(typedLang, "translator", "signIn")}
+            </Link>
+            <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
+            <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+              {t(typedLang, "translator", "createAccount")}
+            </Link>
+          </div>
+        </div>
+      )}
+      {/* TTS Error Display - for non-auth errors */}
+      {ttsError && !ttsAuthError && (
         <div className="fixed top-16 left-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
           <AlertCircle className="mr-2 h-5 w-5" />
           <span>{ttsError}</span>

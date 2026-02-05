@@ -15,9 +15,10 @@ interface AppLayoutProps {
   children: React.ReactNode;
   lang: Language;
   hideNavigation?: boolean; // For immersive pages like story reading
+  requireAuth?: boolean; // Whether to require authentication (default: true)
 }
 
-export default function AppLayout({ children, lang, hideNavigation = false }: AppLayoutProps) {
+export default function AppLayout({ children, lang, hideNavigation = false, requireAuth = true }: AppLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,15 +50,15 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only when requireAuth is true)
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (requireAuth && status === 'unauthenticated') {
       router.push(`/${lang}/auth/login`);
     }
-  }, [status, router, lang]);
+  }, [requireAuth, status, router, lang]);
 
-  // Show loading state while checking auth
-  if (status === 'loading') {
+  // Show loading state while checking auth (only when auth is required)
+  if (requireAuth && status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -70,8 +71,8 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
     );
   }
 
-  // Don't render if not authenticated
-  if (status === 'unauthenticated') {
+  // Don't render if not authenticated (only when auth is required)
+  if (requireAuth && status === 'unauthenticated') {
     return null;
   }
 

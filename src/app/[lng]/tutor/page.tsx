@@ -66,12 +66,17 @@ export default function TutorPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
   };
 
-  // Load conversation history on mount
+  // Load conversation history on mount (or show auth message for unauthenticated users)
   useEffect(() => {
-    if (!session?.user) return;
-
     // Prevent double-loading on React strict mode double-render
     if (hasLoadedHistoryRef.current) return;
+
+    // If not authenticated, show auth message as first assistant response
+    if (!session?.user) {
+      hasLoadedHistoryRef.current = true;
+      setMessages([{ role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      return;
+    }
 
     const loadHistory = async () => {
       try {
@@ -122,6 +127,14 @@ export default function TutorPage() {
     setInput("");
     setIsLoading(true);
 
+    // If not authenticated, show auth message
+    if (!session?.user) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/tutor", {
         method: "POST",
@@ -159,7 +172,7 @@ export default function TutorPage() {
   };
 
   return (
-    <AppLayout lang={typedLang}>
+    <AppLayout lang={typedLang} requireAuth={false}>
     {/* Full-screen background that extends under sidebar */}
     <div
       className="fixed inset-0 bg-cover bg-center -z-10"
@@ -175,7 +188,7 @@ export default function TutorPage() {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end">
           {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-500 mt-20">
               <p className="text-lg mb-2">
@@ -197,6 +210,19 @@ export default function TutorPage() {
               {message.role === "user" ? (
                 <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-600 text-white">
                   <p className="whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
+                </div>
+              ) : message.content === "__AUTH_REQUIRED__" ? (
+                <div className="max-w-[80%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
+                  <p className="text-gray-800">
+                    {t(typedLang, "aiTutor", "signInToUse")}{" "}
+                    <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "aiTutor", "signIn")}
+                    </Link>
+                    {" "}{t(typedLang, "aiTutor", "or")}{" "}
+                    <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "aiTutor", "createAccount")}
+                    </Link>
+                  </p>
                 </div>
               ) : (
                 <div className="max-w-[80%]">

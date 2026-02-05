@@ -252,7 +252,12 @@ premium: {
 translator: {
   translation: "Traducción",
   otherCommonUses: "también puede significar",
-  translating: "Traduciendo"
+  translating: "Traduciendo",
+  signInRequired: "Para usar traducciones con IA,",
+  signIn: "inicia sesión",
+  or: "o",
+  createAccount: "crea una cuenta gratis",
+  audioSignInRequired: "Para usar funciones de audio,",
 },
 
 storyTutor: {
@@ -266,7 +271,11 @@ storyTutor: {
   autoMessageVerb: "¿Qué significa \"{word}\"? Si es un verbo, ¿puedes mostrarme la conjugación?",
   autoMessageSentence: "¿Puedes ayudarme a entender esta oración?",
   errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo.",
-  youSelected: "Seleccionaste \"{text}\""
+  youSelected: "Seleccionaste \"{text}\"",
+  signInToUse: "Para usar el Tutor de Historia con IA,",
+  signIn: "inicia sesión",
+  or: "o",
+  createAccount: "crea una cuenta gratis",
 },
 
 aiTutor: {
@@ -275,7 +284,11 @@ aiTutor: {
   practiceSkills: "Practica tus habilidades lingüísticas conversando",
   placeholder: "Escribe tu mensaje...",
   send: "Enviar",
-  errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo."
+  errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo.",
+  signInToUse: "Para usar el Tutor IA,",
+  signIn: "inicia sesión",
+  or: "o",
+  createAccount: "crea una cuenta gratis",
 },
 
 myStories: {

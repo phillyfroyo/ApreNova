@@ -269,7 +269,11 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       }
 
     } catch (error) {
-      console.error('TTS playback error:', error);
+      // Only log non-auth errors to console
+      const isAuthError = error instanceof Error && error.message.includes("sign in");
+      if (!isAuthError) {
+        console.error('TTS playback error:', error);
+      }
       // Only update state if this is still the current request
       if (currentRequestRef.current === generateCacheKey(request)) {
         setPlaybackState(prev => ({ ...prev, error: 'Playback failed', isPlaying: false }));

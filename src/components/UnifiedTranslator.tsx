@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { t } from '@/lib/t';
 import type { Language } from "@/types/i18n";
 
@@ -45,6 +46,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authError, setAuthError] = useState(false);
 
   // Use external selection if provided, otherwise use internal state
   const startIdx = externalSelection !== undefined ? externalSelection?.start ?? null : internalStartIdx;
@@ -55,9 +57,9 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
 
   // Notify parent of translation state changes
   useEffect(() => {
-    const hasActiveTranslation = translations.length > 0 || loading || error !== "";
+    const hasActiveTranslation = translations.length > 0 || loading || error !== "" || authError;
     onTranslationStateChange?.(hasActiveTranslation);
-  }, [translations.length, loading, error]); // Removed onTranslationStateChange from deps
+  }, [translations.length, loading, error, authError]); // Removed onTranslationStateChange from deps
 
   // Notify parent of selection changes (only for internal selections, not external)
   useEffect(() => {
@@ -143,6 +145,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
     try {
       setLoading(true);
       setError("");
+      setAuthError(false);
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -183,10 +186,10 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
         }
       }
     } catch (err: any) {
-      console.error(err);
       if (err.message === "Authentication required") {
-        setError("🔒 Please sign in to use translations");
+        setAuthError(true);
       } else {
+        console.error(err);
         setError("⚠️ Failed to fetch translation.");
       }
     } finally {
@@ -259,6 +262,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
     setTranslations([]);
     setEnhancedTranslation(null);
     setError("");
+    setAuthError(false);
   }, []);
 
   // Provide manual translation function to parent only once
@@ -376,9 +380,10 @@ const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
     }));
     console.log("🎯 Data from API:", data);
   } catch (err: any) {
-    console.error("❌ Failed to fetch example:", err);
     if (err.message === "Authentication required") {
-      setError("🔒 Please sign in to use example sentences");
+      setAuthError(true);
+    } else {
+      console.error("❌ Failed to fetch example:", err);
     }
   }
 };
@@ -485,7 +490,7 @@ useEffect(() => {
     </div>
     </div>
 
-    {enabled && (translations.length > 0 || loading || error) && (
+    {enabled && (translations.length > 0 || loading || error || authError) && (
       <div
   ref={tooltipRef}
   style={sentenceWidth ? { width: sentenceWidth } : undefined}
@@ -501,7 +506,19 @@ useEffect(() => {
           ✕
         </button>
 
-        {error && <div className="text-sm text-red-500 pr-6">{error}</div>}
+        {authError && (
+          <div className="text-sm pr-6">
+            <span className="text-gray-700">{t(currentLang, "translator", "signInRequired")} </span>
+            <Link href={`/${currentLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+              {t(currentLang, "translator", "signIn")}
+            </Link>
+            <span className="text-gray-700"> {t(currentLang, "translator", "or")} </span>
+            <Link href={`/${currentLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+              {t(currentLang, "translator", "createAccount")}
+            </Link>
+          </div>
+        )}
+        {error && !authError && <div className="text-sm text-red-500 pr-6">{error}</div>}
 
         <div className="text-sm text-left pr-6">
           {loading && (

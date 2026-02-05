@@ -251,7 +251,12 @@ premium: {
 translator: {
   translation: "Translation",
   otherCommonUses: "can also mean",
-  translating: "Translating"
+  translating: "Translating",
+  signInRequired: "To use AI translations,",
+  signIn: "sign in",
+  or: "or",
+  createAccount: "create a free account",
+  audioSignInRequired: "To use audio features,",
 },
 
 storyTutor: {
@@ -265,7 +270,11 @@ storyTutor: {
   autoMessageVerb: "What does \"{word}\" mean? If it's a verb, can you show me the conjugation?",
   autoMessageSentence: "Can you help me understand this sentence?",
   errorMessage: "Sorry, I encountered an error. Please try again.",
-  youSelected: "You selected \"{text}\""
+  youSelected: "You selected \"{text}\"",
+  signInToUse: "To use the AI Story Tutor,",
+  signIn: "sign in",
+  or: "or",
+  createAccount: "create a free account",
 },
 
 aiTutor: {
@@ -274,7 +283,11 @@ aiTutor: {
   practiceSkills: "Practice your language skills through conversation",
   placeholder: "Type your message...",
   send: "Send",
-  errorMessage: "Sorry, I encountered an error. Please try again."
+  errorMessage: "Sorry, I encountered an error. Please try again.",
+  signInToUse: "To use the AI Tutor,",
+  signIn: "sign in",
+  or: "or",
+  createAccount: "create a free account",
 },
 
 myStories: {
