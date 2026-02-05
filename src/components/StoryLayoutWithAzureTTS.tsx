@@ -146,6 +146,7 @@ export default function StoryLayoutWithAzureTTS({
     loading: boolean;
     isStatic?: boolean; // true if using pre-existing translation (no GPT call)
     selectedWord?: string; // the word/phrase that was translated
+    authError?: boolean; // true if auth required (user not signed in)
     enhancedTranslation?: {
       contextTranslation?: string;
       isDerivative?: boolean;
@@ -1725,10 +1726,17 @@ export default function StoryLayoutWithAzureTTS({
                       }));
                     }
                   } catch (err) {
-                    console.error('[StanzaTranslate] GPT error:', err);
+                    const isAuthError = err instanceof Error && err.message.includes('Authentication required');
+                    if (!isAuthError) {
+                      console.error('[StanzaTranslate] GPT error:', err);
+                    }
                     setStanzaAITranslation(prev => ({
                       ...prev,
-                      [stanzaIdx]: { text: 'Translation failed', loading: false }
+                      [stanzaIdx]: {
+                        text: isAuthError ? '' : 'Translation failed',
+                        loading: false,
+                        authError: isAuthError,
+                      }
                     }));
                   }
                 }
@@ -2010,6 +2018,18 @@ export default function StoryLayoutWithAzureTTS({
                                   })}
                                 </ul>
                               </>
+                            ) : aiTranslation.authError ? (
+                              /* Auth required - show sign in prompt */
+                              <div className="text-sm pr-6 mt-1">
+                                <span className="text-gray-700">{t(typedLang, "translator", "signInRequired")} </span>
+                                <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                                  {t(typedLang, "translator", "signIn")}
+                                </Link>
+                                <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
+                                <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                                  {t(typedLang, "translator", "createAccount")}
+                                </Link>
+                              </div>
                             ) : (
                               /* Simple translation (static or no extra info) */
                               <div className="text-lg font-medium text-gray-900 mt-1 whitespace-pre-line pr-6" style={{ wordSpacing: '0.15em' }}>
