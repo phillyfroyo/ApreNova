@@ -291,6 +291,13 @@ aiTutor: {
   createAccount: "crea una cuenta gratis",
 },
 
+sidebar: {
+  guest: "Invitado",
+  notSignedIn: "No has iniciado sesión",
+  settings: "Ajustes",
+  goPremium: "Hazte Premium",
+},
+
 myStories: {
   title: "Mis Historias",
   upload: "Subir",

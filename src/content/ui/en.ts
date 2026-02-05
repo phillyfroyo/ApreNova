@@ -290,6 +290,13 @@ aiTutor: {
   createAccount: "create a free account",
 },
 
+sidebar: {
+  guest: "Guest",
+  notSignedIn: "Not signed in",
+  settings: "Settings",
+  goPremium: "Go Premium",
+},
+
 myStories: {
   title: "My Stories",
   upload: "Upload",

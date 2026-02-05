@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 import type { Language } from '@/types/i18n';
+import { t } from '@/lib/t';
 
 interface SidebarProps {
   lang: Language;
@@ -272,10 +273,10 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
             {!collapsed && (
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium text-gray-700 truncate">
-                  {lang === 'es' ? 'Invitado' : 'Guest'}
+                  {t(lang, 'sidebar', 'guest')}
                 </p>
                 <p className="text-[10px] text-gray-500">
-                  {lang === 'es' ? 'No has iniciado sesión' : 'Not signed in'}
+                  {t(lang, 'sidebar', 'notSignedIn')}
                 </p>
               </div>
             )}
