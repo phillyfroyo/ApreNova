@@ -16,6 +16,7 @@ import {
   Crown,
   ChevronUp,
   Gem,
+  User,
 } from 'lucide-react';
 import type { Language } from '@/types/i18n';
 
@@ -176,7 +177,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* User Section */}
-      {session?.user && (
+      {session?.user ? (
         <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm h-[62px]">
           {/* User Menu Dropdown - appears above the user section */}
           {userMenuOpen && !collapsed && (
@@ -257,6 +258,29 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
             )}
           </button>
         </div>
+      ) : (
+        /* Unauthenticated User Section */
+        <Link
+          href={`/${lang}/settings`}
+          className="block p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm h-[62px] hover:bg-white/40 transition-colors"
+        >
+          <div className="flex items-center gap-3 p-1">
+            {/* Generic user icon */}
+            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 ring-2 ring-white/50 flex-shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-gray-700 truncate">
+                  {lang === 'es' ? 'Invitado' : 'Guest'}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  {lang === 'es' ? 'No has iniciado sesión' : 'Not signed in'}
+                </p>
+              </div>
+            )}
+          </div>
+        </Link>
       )}
 
       </aside>

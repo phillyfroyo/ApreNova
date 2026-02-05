@@ -53,7 +53,7 @@ export default function SettingsPage() {
 
   if (status === 'loading') {
     return (
-      <AppLayout lang={typedLang}>
+      <AppLayout lang={typedLang} requireAuth={false}>
         <div className="min-h-screen flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
         </div>
@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
   if (!session?.user?.email) {
     return (
-      <AppLayout lang={typedLang}>
+      <AppLayout lang={typedLang} requireAuth={false}>
         <div
           className="fixed inset-0 bg-cover bg-center -z-10"
           style={{ backgroundImage: 'url(/images/background3.png)' }}
