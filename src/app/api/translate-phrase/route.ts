@@ -5,10 +5,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPhrasePrompt } from '@/lib/getPhrasePrompt';
 import { getPhrasePromptToEnglish } from '@/lib/getPhrasePromptToEnglish';
 import { logOpenAICost } from "@/lib/cost-tracker";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
+  // Require authentication for AI API calls
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Authentication required", code: "AUTH_REQUIRED" }, { status: 401 });
+  }
+
   const { phrase, sentence, level, context } = await req.json();
 
   if (!phrase || !sentence || !level) {

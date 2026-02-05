@@ -5,6 +5,8 @@ import { getWordPrompt } from "@/lib/getWordPrompt";
 import { getWordPromptToEnglish } from "@/lib/getWordPromptToEnglish";
 import { NextRequest, NextResponse } from 'next/server';
 import { logOpenAICost } from "@/lib/cost-tracker";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -12,6 +14,12 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new Map<string, { translations: string[] }>();
 
 export async function POST(req: NextRequest) {
+  // Require authentication for AI API calls
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Authentication required", code: "AUTH_REQUIRED" }, { status: 401 });
+  }
+
   const { word, sentence, level, context } = await req.json();
 
   console.log("🧪 translate-word input:", { word, level });

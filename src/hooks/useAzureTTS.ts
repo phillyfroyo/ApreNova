@@ -69,6 +69,9 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("Please sign in to use audio features");
+        }
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 

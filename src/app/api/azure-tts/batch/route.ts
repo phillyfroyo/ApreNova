@@ -3,9 +3,9 @@ import { NextRequest } from 'next/server';
 import { getAzureSpeechService } from '@/lib/azure-speech';
 import { getTTSCacheService } from '@/lib/tts-cache';
 import { getRateLimiter, getClientIdentifier, createRateLimitHeaders } from '@/lib/rate-limiter';
-import { 
-  validateTTSBatchRequest, 
-  validateContentType, 
+import {
+  validateTTSBatchRequest,
+  validateContentType,
   validateRequestSize,
   createValidationErrorResponse,
   createErrorResponse,
@@ -13,6 +13,8 @@ import {
   ValidationError
 } from '@/lib/validation';
 import type { TTSBatchRequest, TTSBatchResponse, TTSResponse } from '@/types/azure-tts';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 /**
  * POST /api/azure-tts/batch
@@ -20,6 +22,12 @@ import type { TTSBatchRequest, TTSBatchResponse, TTSResponse } from '@/types/azu
  */
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for AI API calls
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return createErrorResponse("Authentication required", 401);
+    }
+
     // Validate request headers
     const contentType = request.headers.get('content-type');
     if (!validateContentType(contentType)) {

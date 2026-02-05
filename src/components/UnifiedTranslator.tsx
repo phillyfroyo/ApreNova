@@ -182,9 +182,13 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
           setEnhancedTranslation(null);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("⚠️ Failed to fetch translation.");
+      if (err.message === "Authentication required") {
+        setError("🔒 Please sign in to use translations");
+      } else {
+        setError("⚠️ Failed to fetch translation.");
+      }
     } finally {
       setLoading(false);
     }
@@ -371,8 +375,11 @@ const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
       },
     }));
     console.log("🎯 Data from API:", data);
-  } catch (err) {
+  } catch (err: any) {
     console.error("❌ Failed to fetch example:", err);
+    if (err.message === "Authentication required") {
+      setError("🔒 Please sign in to use example sentences");
+    }
   }
 };
 

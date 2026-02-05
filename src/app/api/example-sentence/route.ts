@@ -5,13 +5,21 @@ import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getExamplePrompt } from "@/lib/getExamplePrompt";
 import { getExamplePromptToEnglish } from "@/lib/getExamplePromptToEnglish";
 import { logOpenAICost } from "@/lib/cost-tracker";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
-const cache = new Map<string, { english: string; spanish: string }>();     
+const cache = new Map<string, { english: string; spanish: string }>();
 
 export async function POST(req: NextRequest) {
+  // Require authentication for AI API calls
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Authentication required", code: "AUTH_REQUIRED" }, { status: 401 });
+  }
+
   const { spanishWord, englishWord, level } = await req.json();
   const lang = req.nextUrl.searchParams.get("lang") ?? "es";
   const isSpanishToEnglish = lang === "en";

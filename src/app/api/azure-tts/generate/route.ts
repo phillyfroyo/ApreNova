@@ -14,6 +14,8 @@ import {
 } from '@/lib/validation';
 import { logTTSCost } from '@/lib/cost-tracker';
 import type { TTSRequest, TTSResponse } from '@/types/azure-tts';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 /**
  * POST /api/azure-tts/generate
@@ -21,6 +23,12 @@ import type { TTSRequest, TTSResponse } from '@/types/azure-tts';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for AI API calls
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return createErrorResponse("Authentication required", 401);
+    }
+
     // Validate request headers
     const contentType = request.headers.get('content-type');
     if (!validateContentType(contentType)) {
