@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log cost (fire-and-forget)
-    logOpenAICost("translate-word", "gpt-4o", completion.usage);
+    logOpenAICost("translate-word", "gpt-4o", completion.usage, { userId: session.user.id });
 
     const reply = completion.choices[0]?.message?.content || "";
     console.log("🧠 GPT raw reply:", reply);

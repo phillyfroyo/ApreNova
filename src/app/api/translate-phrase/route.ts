@@ -41,7 +41,7 @@ const prompt = isSpanishToEnglish
     });
 
     // Log cost (fire-and-forget)
-    logOpenAICost("translate-phrase", "gpt-4o", completion.usage);
+    logOpenAICost("translate-phrase", "gpt-4o", completion.usage, { userId: session.user.id });
 
     const result = completion.choices[0]?.message?.content;
     console.log("🧠 Raw GPT response:", result);

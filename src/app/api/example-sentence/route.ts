@@ -45,7 +45,7 @@ try {
     });
 
     // Log cost (fire-and-forget)
-    logOpenAICost("example-sentence", "gpt-4o", completion.usage);
+    logOpenAICost("example-sentence", "gpt-4o", completion.usage, { userId: session.user.id });
 
     const reply = completion.choices[0]?.message?.content || "";
     const cleanReply = reply.replace(/```json|```/g, "").trim();

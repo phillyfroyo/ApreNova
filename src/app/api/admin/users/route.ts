@@ -9,6 +9,27 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+// Operation category mappings
+const IN_STORY_OPERATIONS = [
+  "translate-word",
+  "translate-phrase",
+  "example-sentence",
+  "tts",
+  "story-tutor",
+];
+
+const TUTOR_OPERATIONS = ["tutor"];
+
+// Human-readable labels for operations
+const OPERATION_LABELS: Record<string, string> = {
+  "translate-word": "Word Translations",
+  "translate-phrase": "Phrase Translations",
+  "example-sentence": "Example Sentences",
+  "tts": "Text-to-Speech",
+  "story-tutor": "Story Tutor",
+  "tutor": "AI Tutor",
+};
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -153,6 +174,55 @@ async function getUserDetails(userId: string) {
   const deletedStoryCount = deletedStoriesData._count;
   const deletedStoryCostCents = deletedStoriesData._sum.costCents || 0;
 
+  // Get in-story usage costs grouped by operation
+  const inStoryCosts = await prisma.apiCost.groupBy({
+    by: ["operation"],
+    where: {
+      userId,
+      operation: { in: IN_STORY_OPERATIONS },
+    },
+    _sum: { costCents: true },
+    _count: true,
+  });
+
+  const inStoryBreakdown = inStoryCosts.map((c) => ({
+    operation: c.operation,
+    label: OPERATION_LABELS[c.operation] || c.operation,
+    costCents: c._sum.costCents || 0,
+    count: c._count,
+  }));
+  const inStoryTotalCostCents = inStoryBreakdown.reduce(
+    (sum, b) => sum + b.costCents,
+    0
+  );
+
+  // Get tutor costs grouped by operation
+  const tutorCosts = await prisma.apiCost.groupBy({
+    by: ["operation"],
+    where: {
+      userId,
+      operation: { in: TUTOR_OPERATIONS },
+    },
+    _sum: { costCents: true },
+    _count: true,
+  });
+
+  const tutorBreakdown = tutorCosts.map((c) => ({
+    operation: c.operation,
+    label: OPERATION_LABELS[c.operation] || c.operation,
+    costCents: c._sum.costCents || 0,
+    count: c._count,
+  }));
+  const tutorTotalCostCents = tutorBreakdown.reduce(
+    (sum, b) => sum + b.costCents,
+    0
+  );
+
+  // Get tutor message count
+  const tutorMessageCount = await prisma.tutorMessage.count({
+    where: { userId },
+  });
+
   // Build story data for existing stories
   const storyData = stories.map((story) => {
     const wordCount = countWords(story.rawContent);
@@ -181,8 +251,8 @@ async function getUserDetails(userId: string) {
   // Total story count = existing + deleted (for accurate averages)
   const allStoryCount = totalExistingStories + deletedStoryCount;
 
-  // Other costs = total - all story costs (tutor, translations, etc.)
-  const otherCostCents = totalCostCents - allStoryCostCents;
+  // Other costs = total - story uploads - in-story - tutor (avoids double-counting)
+  const otherCostCents = totalCostCents - allStoryCostCents - inStoryTotalCostCents - tutorTotalCostCents;
 
   return NextResponse.json({
     user: {
@@ -208,5 +278,14 @@ async function getUserDetails(userId: string) {
         totalWords > 0 ? Math.round((existingStoryCostTotal / totalWords) * 1000) : 0,
     },
     stories: storyData,
+    inStoryUsage: {
+      totalCostCents: inStoryTotalCostCents,
+      breakdown: inStoryBreakdown,
+    },
+    tutorUsage: {
+      totalCostCents: tutorTotalCostCents,
+      messageCount: tutorMessageCount,
+      breakdown: tutorBreakdown,
+    },
   });
 }

@@ -58,6 +58,8 @@ export type OperationType =
   | "translate-phrase"    // Phrase translation
   | "example-sentence"    // Example sentence generation
   | "tts"                 // Text-to-speech
+  | "process-chapter"     // Chapter text processing
+  | "parse-attribution"   // Attribution metadata extraction
   | "other";
 
 export type Provider = "openai" | "anthropic" | "azure";
@@ -81,7 +83,8 @@ export interface CostLogEntry {
 // ============================================================================
 
 /**
- * Calculate cost in cents for LLM tokens
+ * Calculate cost in microcents for LLM tokens
+ * (1 dollar = 1,000,000 microcents)
  */
 function calculateLLMCostCents(
   model: string,
@@ -98,12 +101,12 @@ function calculateLLMCostCents(
   const outputCost = (outputTokens / 1_000_000) * pricing.output;
   const totalDollars = inputCost + outputCost;
 
-  // Convert to cents and round up to nearest cent
-  return Math.ceil(totalDollars * 100);
+  // Convert to microcents (1 dollar = 1,000,000 microcents)
+  return Math.round(totalDollars * 1_000_000);
 }
 
 /**
- * Calculate cost in cents for DALL-E images
+ * Calculate cost in microcents for DALL-E images
  */
 function calculateImageCostCents(
   imageCount: number,
@@ -112,16 +115,16 @@ function calculateImageCostCents(
   const pricing = PRICING["dall-e-3"];
   const pricePerImage = pricing[imageSize as keyof typeof pricing] || pricing["1024x1792"];
   const totalDollars = imageCount * pricePerImage;
-  return Math.ceil(totalDollars * 100);
+  return Math.round(totalDollars * 1_000_000);
 }
 
 /**
- * Calculate cost in cents for TTS characters
+ * Calculate cost in microcents for TTS characters
  */
 function calculateTTSCostCents(characters: number): number {
   const pricing = PRICING["azure-tts-neural"];
   const totalDollars = (characters / 1_000_000) * pricing.characters;
-  return Math.ceil(totalDollars * 100);
+  return Math.round(totalDollars * 1_000_000);
 }
 
 // ============================================================================
@@ -418,10 +421,11 @@ export async function getAllAdminStoryCosts(): Promise<Record<string, number>> {
 }
 
 /**
- * Format cents as dollar string
+ * Format microcents as dollar string
+ * (1 dollar = 1,000,000 microcents)
  */
-export function formatCents(cents: number): string {
-  const dollars = cents / 100;
-  if (dollars < 0.01) return "<$0.01";
+export function formatCents(microcents: number): string {
+  const dollars = microcents / 1_000_000;
+  if (dollars < 0.01 && dollars > 0) return "<$0.01";
   return `$${dollars.toFixed(2)}`;
 }

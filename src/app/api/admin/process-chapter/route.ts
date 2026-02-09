@@ -2,6 +2,7 @@
 // Process a single chapter - extract clean narrative vs glosses/notes
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { logOpenAICost } from "@/lib/cost-tracker";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -82,6 +83,9 @@ export async function POST(request: NextRequest) {
       temperature: 0.1,
       max_tokens: 8000,
     });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("process-chapter", "gpt-4o-mini", response.usage);
 
     const content = response.choices[0]?.message?.content;
 

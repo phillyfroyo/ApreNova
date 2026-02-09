@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Log TTS cost (fire-and-forget) - only for newly generated audio, not cached
     logTTSCost(requestData.text.length, {
+      userId: session.user.id,
       metadata: { language: requestData.language, speed: requestData.speed },
     });
 

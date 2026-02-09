@@ -70,8 +70,8 @@ interface CostData {
   recentEntries: RecentEntry[];
 }
 
-function formatCents(cents: number): string {
-  const dollars = cents / 100;
+function formatCents(microcents: number): string {
+  const dollars = microcents / 1_000_000;
   if (dollars < 0.01 && dollars > 0) return "<$0.01";
   return `$${dollars.toFixed(2)}`;
 }

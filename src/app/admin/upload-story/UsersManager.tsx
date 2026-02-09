@@ -51,6 +51,24 @@ interface StoryDetail {
   createdAt: string;
 }
 
+interface OperationBreakdown {
+  operation: string;
+  label: string;
+  costCents: number;
+  count: number;
+}
+
+interface InStoryUsage {
+  totalCostCents: number;
+  breakdown: OperationBreakdown[];
+}
+
+interface TutorUsage {
+  totalCostCents: number;
+  messageCount: number;
+  breakdown: OperationBreakdown[];
+}
+
 interface UsersData {
   summary: UserSummary;
   users: UserListItem[];
@@ -60,10 +78,14 @@ interface UserDetailsData {
   user: UserDetail;
   summary: UserDetailSummary;
   stories: StoryDetail[];
+  inStoryUsage: InStoryUsage;
+  tutorUsage: TutorUsage;
 }
 
-function formatCents(cents: number): string {
-  const dollars = cents / 100;
+type DetailTab = "stories" | "in-story" | "tutor";
+
+function formatCents(microcents: number): string {
+  const dollars = microcents / 1_000_000;
   if (dollars < 0.01 && dollars > 0) return "<$0.01";
   return `$${dollars.toFixed(2)}`;
 }
@@ -116,6 +138,7 @@ export default function UsersManager() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetailsData | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>("stories");
 
   useEffect(() => {
     fetchUsers();
@@ -124,6 +147,7 @@ export default function UsersManager() {
   useEffect(() => {
     if (selectedUserId) {
       fetchUserDetails(selectedUserId);
+      setActiveDetailTab("stories");
     } else {
       setUserDetails(null);
     }
@@ -191,6 +215,25 @@ export default function UsersManager() {
 
   if (!data) return null;
 
+  // Compute tab cost values for the tab strip
+  const storyUploadCost = userDetails
+    ? userDetails.summary.storyCostCents + userDetails.summary.deletedStoryCostCents
+    : 0;
+  const inStoryCost = userDetails?.inStoryUsage?.totalCostCents ?? 0;
+  const tutorCost = userDetails?.tutorUsage?.totalCostCents ?? 0;
+
+  const totalInStoryRequests = userDetails?.inStoryUsage?.breakdown.reduce(
+    (sum, b) => sum + b.count,
+    0
+  ) ?? 0;
+  const featureCount = userDetails?.inStoryUsage?.breakdown.length ?? 0;
+
+  const tutorMessageCount = userDetails?.tutorUsage?.messageCount ?? 0;
+  const totalTutorApiCalls = userDetails?.tutorUsage?.breakdown.reduce(
+    (sum, b) => sum + b.count,
+    0
+  ) ?? 0;
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
@@ -245,7 +288,7 @@ export default function UsersManager() {
           <div className="px-4 py-3 border-b border-gray-200">
             <h3 className="font-medium text-gray-900">Users</h3>
             <p className="text-xs text-gray-500 mt-1">
-              Click a user to view their story details
+              Click a user to view their cost details
             </p>
           </div>
           <div className="max-h-[500px] overflow-y-auto">
@@ -295,121 +338,310 @@ export default function UsersManager() {
 
         {/* User Details */}
         <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Story Details</h3>
-          </div>
-
           {!selectedUserId ? (
-            <div className="p-8 text-center text-gray-400">
-              Select a user to view their stories
-            </div>
+            <>
+              <div className="px-4 py-3 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900">Cost Details</h3>
+              </div>
+              <div className="p-8 text-center text-gray-400">
+                Select a user to view their cost breakdown
+              </div>
+            </>
           ) : detailsLoading ? (
-            <div className="p-8 text-center text-gray-500">
-              Loading...
-            </div>
+            <>
+              <div className="px-4 py-3 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900">Cost Details</h3>
+              </div>
+              <div className="p-8 text-center text-gray-500">
+                Loading...
+              </div>
+            </>
           ) : userDetails ? (
             <div>
-              {/* User Detail Summary */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatNumber(userDetails.summary.totalWords)}
-                    </div>
-                    <div className="text-xs text-gray-500">Total Words</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatCents(userDetails.summary.totalCostCents)}
-                    </div>
-                    <div className="text-xs text-gray-500">Total Cost</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-bold text-blue-600">
-                      {formatCents(userDetails.summary.avgCostPerThousandWords)}
-                    </div>
-                    <div className="text-xs text-gray-500">Per 1K Words</div>
-                  </div>
-                </div>
+              {/* 3-Tab Strip */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveDetailTab("stories")}
+                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
+                    activeDetailTab === "stories"
+                      ? "border-b-2 border-blue-500 text-blue-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div>Story Uploads</div>
+                  <div className="text-xs mt-0.5">{formatCents(storyUploadCost)}</div>
+                </button>
+                <button
+                  onClick={() => setActiveDetailTab("in-story")}
+                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
+                    activeDetailTab === "in-story"
+                      ? "border-b-2 border-blue-500 text-blue-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div>In-Story Usage</div>
+                  <div className="text-xs mt-0.5">{formatCents(inStoryCost)}</div>
+                </button>
+                <button
+                  onClick={() => setActiveDetailTab("tutor")}
+                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
+                    activeDetailTab === "tutor"
+                      ? "border-b-2 border-blue-500 text-blue-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div>AI Tutor</div>
+                  <div className="text-xs mt-0.5">{formatCents(tutorCost)}</div>
+                </button>
               </div>
 
-              {/* Stories List */}
-              <div className="max-h-[380px] overflow-y-auto">
-                {userDetails.stories.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    No stories uploaded yet
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {userDetails.stories.map((story) => (
-                      <div key={story.id} className="px-4 py-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate text-gray-900">
-                              {story.title}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">
-                                {STORY_TYPE_LABELS[story.storyType || ""] ||
-                                  story.storyType ||
-                                  "Unknown"}
-                              </span>
-                              <span
-                                className={`text-xs px-1.5 py-0.5 rounded ${
-                                  STATUS_COLORS[story.status] ||
-                                  "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                {story.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right ml-4">
-                            <div className="font-medium text-gray-900">
-                              {formatCents(story.costCents)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {formatNumber(story.wordCount)} words
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-                          <span>{formatDate(story.createdAt)}</span>
-                          <span className="text-blue-600 font-medium">
-                            {formatCents(story.costPerThousandWords)}/1K words
-                          </span>
-                        </div>
+              {/* Tab-Aware Summary Card */}
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                {activeDetailTab === "stories" && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatNumber(userDetails.summary.totalWords)}
                       </div>
-                    ))}
+                      <div className="text-xs text-gray-500">Total Words</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatCents(storyUploadCost)}
+                      </div>
+                      <div className="text-xs text-gray-500">Upload Cost</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {formatCents(userDetails.summary.avgCostPerThousandWords)}
+                      </div>
+                      <div className="text-xs text-gray-500">Per 1K Words</div>
+                    </div>
+                  </div>
+                )}
+                {activeDetailTab === "in-story" && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatNumber(totalInStoryRequests)}
+                      </div>
+                      <div className="text-xs text-gray-500">Requests</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatCents(inStoryCost)}
+                      </div>
+                      <div className="text-xs text-gray-500">Total Cost</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {featureCount}
+                      </div>
+                      <div className="text-xs text-gray-500">Features Used</div>
+                    </div>
+                  </div>
+                )}
+                {activeDetailTab === "tutor" && (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatNumber(tutorMessageCount)}
+                      </div>
+                      <div className="text-xs text-gray-500">Messages</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {formatCents(tutorCost)}
+                      </div>
+                      <div className="text-xs text-gray-500">Total Cost</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {formatNumber(totalTutorApiCalls)}
+                      </div>
+                      <div className="text-xs text-gray-500">API Calls</div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Deleted Stories */}
-              {userDetails.summary.deletedStoryCount > 0 && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      Deleted stories ({userDetails.summary.deletedStoryCount})
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      {formatCents(userDetails.summary.deletedStoryCostCents)}
-                    </span>
+              {/* Story Uploads Tab */}
+              {activeDetailTab === "stories" && (
+                <>
+                  <div className="max-h-[380px] overflow-y-auto">
+                    {userDetails.stories.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        No stories uploaded yet
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {userDetails.stories.map((story) => (
+                          <div key={story.id} className="px-4 py-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate text-gray-900">
+                                  {story.title}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-gray-500">
+                                    {STORY_TYPE_LABELS[story.storyType || ""] ||
+                                      story.storyType ||
+                                      "Unknown"}
+                                  </span>
+                                  <span
+                                    className={`text-xs px-1.5 py-0.5 rounded ${
+                                      STATUS_COLORS[story.status] ||
+                                      "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    {story.status}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-right ml-4">
+                                <div className="font-medium text-gray-900">
+                                  {formatCents(story.costCents)}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {formatNumber(story.wordCount)} words
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                              <span>{formatDate(story.createdAt)}</span>
+                              <span className="text-blue-600 font-medium">
+                                {formatCents(story.costPerThousandWords)}/1K words
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Deleted Stories */}
+                  {userDetails.summary.deletedStoryCount > 0 && (
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">
+                          Deleted stories ({userDetails.summary.deletedStoryCount})
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          {formatCents(userDetails.summary.deletedStoryCostCents)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Costs */}
+                  {userDetails.summary.otherCostCents > 0 && (
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">
+                          Other (unattributed)
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          {formatCents(userDetails.summary.otherCostCents)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* In-Story Usage Tab */}
+              {activeDetailTab === "in-story" && (
+                <div className="max-h-[380px] overflow-y-auto">
+                  {userDetails.inStoryUsage.breakdown.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <div className="text-gray-400 mb-1">No in-story usage yet</div>
+                      <div className="text-xs text-gray-400">
+                        Translations, example sentences, and TTS costs will appear here
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {userDetails.inStoryUsage.breakdown
+                        .sort((a, b) => b.costCents - a.costCents)
+                        .map((item) => (
+                          <div key={item.operation} className="px-4 py-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {item.label}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {formatNumber(item.count)} requests
+                                  {item.count > 0 && (
+                                    <span className="text-gray-400">
+                                      {" "}· {formatCents(Math.round(item.costCents / item.count))}/req
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="font-medium text-gray-900">
+                                {formatCents(item.costCents)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Other Costs (tutor, etc.) */}
-              {userDetails.summary.otherCostCents > 0 && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      Other (tutor, translations)
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      {formatCents(userDetails.summary.otherCostCents)}
-                    </span>
-                  </div>
+              {/* AI Tutor Tab */}
+              {activeDetailTab === "tutor" && (
+                <div className="max-h-[380px] overflow-y-auto">
+                  {userDetails.tutorUsage.breakdown.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <div className="text-gray-400 mb-1">No tutor usage yet</div>
+                      <div className="text-xs text-gray-400">
+                        AI tutor conversation costs will appear here
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {tutorMessageCount > 0 && (
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">
+                              Total tutor messages
+                            </span>
+                            <span className="font-medium text-gray-900">
+                              {formatNumber(tutorMessageCount)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="divide-y divide-gray-100">
+                        {userDetails.tutorUsage.breakdown
+                          .sort((a, b) => b.costCents - a.costCents)
+                          .map((item) => (
+                            <div key={item.operation} className="px-4 py-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {item.label}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-0.5">
+                                    {formatNumber(item.count)} API calls
+                                    {item.count > 0 && (
+                                      <span className="text-gray-400">
+                                        {" "}· {formatCents(Math.round(item.costCents / item.count))}/call
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="font-medium text-gray-900">
+                                  {formatCents(item.costCents)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

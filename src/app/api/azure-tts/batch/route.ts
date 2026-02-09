@@ -13,6 +13,7 @@ import {
   ValidationError
 } from '@/lib/validation';
 import type { TTSBatchRequest, TTSBatchResponse, TTSResponse } from '@/types/azure-tts';
+import { logTTSCost } from '@/lib/cost-tracker';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
@@ -110,6 +111,12 @@ export async function POST(request: NextRequest) {
           result.wordTimings,
           result.duration
         );
+
+        // Log TTS cost for newly generated audio
+        logTTSCost(item.text.length, {
+          userId: session.user.id,
+          metadata: { language: item.language, speed: item.speed, batch: true, batchIndex: i },
+        });
 
         const response: TTSResponse = {
           audioUrl,
