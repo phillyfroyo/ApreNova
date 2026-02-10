@@ -226,7 +226,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     type: "short-story",
     origin: { isOriginal: true },
     tags: ["suspenseful","heartwarming","reflective","inspiring"],
-    targetAudience: "adult",
+    targetAudience: "all",
   },
   {
     slug: "diego-unplugged",

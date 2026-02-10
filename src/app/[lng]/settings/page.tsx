@@ -170,7 +170,7 @@ export default function SettingsPage() {
         credentials: 'include',
       })
       if (res.ok) {
-        await signOut({ callbackUrl: `/${typedLang}/auth/login`, redirect: true })
+        await signOut({ callbackUrl: '/', redirect: true })
       } else {
         const data = await res.json()
         console.error('Failed to delete account:', data.error)
@@ -523,7 +523,7 @@ export default function SettingsPage() {
             </h2>
 
             <button
-              onClick={() => signOut({ callbackUrl: `/${typedLang}/auth/login`, redirect: true })}
+              onClick={() => signOut({ callbackUrl: '/', redirect: true })}
               className="w-full flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
             >
               <div className="flex items-center gap-3">

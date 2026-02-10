@@ -40,18 +40,31 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
 
   // Track if we're on desktop (md breakpoint = 768px)
   const [isDesktop, setIsDesktop] = useState(false);
+  // Track if bottom navigation is visible
+  const [hasBottomNav, setHasBottomNav] = useState(true);
 
   // Save corner preference
   useEffect(() => {
     localStorage.setItem("feedbackWidgetCorner", corner);
   }, [corner]);
 
-  // Track screen size for responsive positioning
+  // Track screen size and bottom nav presence for responsive positioning
   useEffect(() => {
-    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768);
-    checkIsDesktop();
-    window.addEventListener("resize", checkIsDesktop);
-    return () => window.removeEventListener("resize", checkIsDesktop);
+    const check = () => {
+      setIsDesktop(window.innerWidth >= 768);
+      // Check if the bottom navigation is rendered and visible
+      const bottomNav = document.querySelector('nav.fixed.bottom-0');
+      setHasBottomNav(!!bottomNav);
+    };
+    check();
+    window.addEventListener("resize", check);
+    // Re-check when route changes (MutationObserver on body)
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      window.removeEventListener("resize", check);
+      observer.disconnect();
+    };
   }, []);
 
   // Get corner position styles
@@ -59,7 +72,7 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
     const offset = 16; // 4 in tailwind = 16px
     // Desktop: nav is on the side, so we can sit closer to bottom
     // Mobile: nav is at bottom, so we need more space
-    const bottomOffset = isDesktop ? 16 : 80;
+    const bottomOffset = isDesktop ? 16 : (hasBottomNav ? 80 : 16);
 
     switch (c) {
       case "top-left":
@@ -242,10 +255,11 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
           }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          className={`px-3 py-2 text-xl rounded-full leading-none min-w-0 select-none touch-none cursor-grab active:cursor-grabbing bg-gray-300 hover:bg-gray-400 transition-all ${isDragging ? 'scale-110 shadow-lg opacity-80' : ''}`}
+          className={`px-3 py-2 text-sm font-semibold rounded-full leading-none min-w-0 select-none touch-none cursor-grab active:cursor-grabbing bg-gray-300 hover:bg-gray-400 transition-all ${isDragging ? 'scale-110 shadow-lg opacity-80' : ''}`}
           aria-label={text.title1}
+          title={lng === 'es' ? 'Comentarios' : 'Feedback'}
         >
-          💬
+          fb
         </button>
       </div>
 

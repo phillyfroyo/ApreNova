@@ -40,15 +40,18 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { userId, level } = body
 
-    if (!userId || level === undefined) {
-      return new Response(JSON.stringify({ error: 'Missing userId or level' }), { status: 400 })
+    if (level === undefined) {
+      return new Response(JSON.stringify({ error: 'Missing level' }), { status: 400 })
     }
 
-    // Prevent users from updating other users' data
-    validateUserOwnership(authenticatedUser.id, userId)
+    // Use authenticated user's ID if userId not provided, otherwise validate ownership
+    const targetUserId = userId || authenticatedUser.id
+    if (userId) {
+      validateUserOwnership(authenticatedUser.id, userId)
+    }
 
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: targetUserId },
       data: { quizLevel: level },
     })
 

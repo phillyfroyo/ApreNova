@@ -94,6 +94,9 @@ export default function AppLayout({ children, lang, hideNavigation = false, requ
             </span>
             <span className="text-purple-800">ana</span>
           </span>
+          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+            beta
+          </span>
         </Link>
 
         {/* User Profile */}

@@ -159,7 +159,7 @@ onboarding: {
   createAccountBenefit2: "Sube tus propias historias",
   createAccountBenefit3: "Crea tu lista de vocabulario personal",
   createAccountCta: "Crear Cuenta",
-  skipForNow: "Omitir por ahora",
+  skipForNow: "Continuar sin cuenta",
 },
 
 about: {
@@ -424,7 +424,7 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "La Última Palabra",
-    description: "Misterios y criaturas ocultas en un bosque encantado.",
+    description: "Acompaña a Maya mientras enfrenta sus miedos de hablar en público y descubre su fuerza interior.",
   },
   "diego-unplugged": {
     title: "Diego Desconectado",

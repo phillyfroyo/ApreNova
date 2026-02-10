@@ -1183,7 +1183,7 @@ export default function StoryLayoutWithAzureTTS({
       )}
 
       {/* Navigation buttons (same as original) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2">
+      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''}`}>
         {(() => {
           const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
           const buttonClass = (disabled: boolean, color: string) =>

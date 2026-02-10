@@ -135,12 +135,17 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
         <Link href={`/${lang}/dashboard`} className="flex items-center gap-2 h-full">
           <BookOpen className="w-6 h-6 text-indigo-600 flex-shrink-0" />
           {!collapsed && (
-            <span className="text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap">
-              <span className="text-indigo-700">
-                {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+            <>
+              <span className="text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap">
+                <span className="text-indigo-700">
+                  {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+                </span>
+                <span className="text-purple-800">ana</span>
               </span>
-              <span className="text-purple-800">ana</span>
-            </span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+                beta
+              </span>
+            </>
           )}
         </Link>
       </div>

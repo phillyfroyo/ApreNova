@@ -159,7 +159,7 @@ onboarding: {
   createAccountBenefit2: "Upload your own stories",
   createAccountBenefit3: "Build your personal vocabulary list",
   createAccountCta: "Create Account",
-  skipForNow: "Skip for now",
+  skipForNow: "Continue without an account",
 },
 
 about: {
@@ -423,7 +423,7 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "The Last Word",
-    description: "Mysteries and hidden creatures in an enchanted forest.",
+    description: "Join Maya as she battles her fears of public speaking and discovers her inner strength.",
   },
   "diego-unplugged": {
     title: "Diego Unplugged",

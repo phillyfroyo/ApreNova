@@ -313,7 +313,7 @@ export default function StoryDetailModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed inset-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
+            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
           >
             {/* Close button - fixed position outside the scrollable area */}
             <button
@@ -327,20 +327,22 @@ export default function StoryDetailModal({
             </button>
 
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] md:h-[80vh] md:max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
               <div className="relative w-full md:w-2/5 md:flex-shrink-0">
-                <div className="aspect-[2/3] md:aspect-auto md:h-full relative">
-                  <Image
-                    src={story.image}
-                    alt={getStoryTitle(typedLang, storySlug)}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 40vw"
-                    className="object-cover"
-                    priority
-                  />
+                <div className="max-h-[60vh] md:max-h-none md:h-full relative overflow-hidden">
+                  <div className="relative w-full aspect-[2/3] md:aspect-auto md:h-full">
+                    <Image
+                      src={story.image}
+                      alt={getStoryTitle(typedLang, storySlug)}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 40vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -400,11 +402,6 @@ export default function StoryDetailModal({
                   </p>
                 )}
 
-                {/* Description */}
-                <p className="text-gray-700 leading-relaxed mb-6">
-                  {getStoryDescription(typedLang, storySlug)}
-                </p>
-
                 {/* Read Button */}
                 <Button
                   variant="parts"
@@ -462,6 +459,15 @@ export default function StoryDetailModal({
                   </div>
                 </div>
 
+                {/* Estimated Read Time (if available) */}
+                {story.estimatedReadTime && (
+                  <div className="text-sm text-gray-500 mb-6">
+                    {typedLang === "es"
+                      ? `Tiempo de lectura: ~${story.estimatedReadTime} min`
+                      : `Reading time: ~${story.estimatedReadTime} min`}
+                  </div>
+                )}
+
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (
                   <div className="mb-6">
@@ -481,18 +487,16 @@ export default function StoryDetailModal({
                   </div>
                 )}
 
+                {/* Description — below the action items */}
+                {getStoryDescription(typedLang, storySlug) && (
+                  <p className="text-gray-600 text-sm leading-relaxed mb-6">
+                    {getStoryDescription(typedLang, storySlug)}
+                  </p>
+                )}
+
                 {/* Full Attribution Section for non-original works */}
                 {hasAttribution && attribution && (
                   <AttributionSection attribution={attribution} lang={typedLang} />
-                )}
-
-                {/* Estimated Read Time (if available) */}
-                {story.estimatedReadTime && (
-                  <div className="text-sm text-gray-500">
-                    {typedLang === "es"
-                      ? `Tiempo de lectura: ~${story.estimatedReadTime} min`
-                      : `Reading time: ~${story.estimatedReadTime} min`}
-                  </div>
                 )}
               </div>
             </div>

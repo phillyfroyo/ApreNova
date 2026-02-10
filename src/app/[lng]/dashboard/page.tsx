@@ -31,7 +31,7 @@ type UserStats = {
 export default function DashboardPage() {
   const { lng } = useParams();
   const lang = (lng as Language) || 'es';
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -147,6 +147,7 @@ export default function DashboardPage() {
   const t = content[lang];
 
   const isAuthenticated = !!session?.user;
+  const sessionLoaded = sessionStatus !== 'loading';
 
   return (
     <AppLayout lang={lang} requireAuth={false}>
@@ -165,8 +166,8 @@ export default function DashboardPage() {
           <p className="text-gray-500 mt-1">
             {lang === 'es' ? '¿Qué quieres aprender hoy?' : 'What would you like to learn today?'}
           </p>
-          {/* Auth Message for unauthenticated users */}
-          {!isAuthenticated && (
+          {/* Auth Message for unauthenticated users - only after session loads */}
+          {sessionLoaded && !isAuthenticated && (
             <div className="mt-3 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm inline-block">
               <p className="text-gray-700">
                 {t.signInToTrack}{" "}

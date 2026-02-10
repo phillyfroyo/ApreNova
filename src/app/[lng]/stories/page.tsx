@@ -356,7 +356,7 @@ useEffect(() => {
   </Link>
 </div>
 
-<div className="mt-4 mb-4 px-4">
+<div className="mt-12 mb-4 px-4">
   {/* Filter Panel */}
   <AnimatePresence>
     {showFilters && (

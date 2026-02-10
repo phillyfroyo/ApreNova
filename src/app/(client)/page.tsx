@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import Logo from "@/components/Logo";
 import { motion } from "framer-motion";
 import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
+import { updateNativeLanguage } from "@/lib/updateLanguage";
 
 type PreferredLanguage = 'es' | 'en';
 
@@ -55,6 +56,10 @@ export default function LanguageSelectPage() {
   }, [session, status, router]);
 
   const handleLanguageSelect = (lang: 'en' | 'es') => {
+    // If authenticated, update native language in DB
+    if (status === 'authenticated') {
+      updateNativeLanguage(lang);
+    }
     router.push(`/${lang}/home`);
   };
 
@@ -97,7 +102,7 @@ export default function LanguageSelectPage() {
     >
       {/* Logo and tagline at top */}
       <div className="text-center pt-8 pb-2">
-        <Logo variant="classic" />
+        <Logo variant="classic" showBeta />
         <p className="text-sm text-gray-600 mt-2 font-[Alice]">
           {t.tagline}
         </p>
@@ -216,8 +221,15 @@ export default function LanguageSelectPage() {
               )}
             </div>
 
-            {/* Login link - only show for unauthenticated users */}
-            {status !== 'authenticated' && (
+            {/* Loading spinner only when redirecting (authenticated + completed onboarding) */}
+            {status === 'authenticated' && session?.user?.quizLevel ? (
+              <div className="flex justify-center mt-6">
+                <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+            ) : status !== 'authenticated' ? (
               <>
                 <div className="flex items-center gap-4 my-6">
                   <div className="flex-1 h-px bg-gray-300"></div>
@@ -226,13 +238,17 @@ export default function LanguageSelectPage() {
                 <div className="text-center">
                   <a
                     href={`/${preferredLang}/auth/login`}
+                    onClick={() => {
+                      // Clear onboarding state — user is skipping onboarding to log in
+                      sessionStorage.removeItem('quizLevel');
+                    }}
                     className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
                   >
                     {t.loginText}
                   </a>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         </motion.div>
       </div>
