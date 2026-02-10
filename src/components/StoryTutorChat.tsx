@@ -344,7 +344,7 @@ export default function StoryTutorChat({
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white/40 backdrop-blur-md max-h-[calc(100vh-200px)]">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white/40 backdrop-blur-md min-h-0">
         <div>
           {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-700 mt-10 bg-white/80 backdrop-blur-sm rounded-xl p-6 mx-auto max-w-md">
@@ -401,8 +401,8 @@ export default function StoryTutorChat({
         </div>
       </div>
 
-      {/* Input Container */}
-      <div className="border-t border-purple-300/50 bg-white/80 backdrop-blur-md px-4 py-3">
+      {/* Input Container — pinned to bottom, with safe-area padding for notched devices */}
+      <div className="border-t border-purple-300/50 bg-white/80 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <form onSubmit={handleSubmit}>
           <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
@@ -411,7 +411,7 @@ export default function StoryTutorChat({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t(typedLang, "storyTutor", "placeholder")}
-              className="flex-1 px-3 py-2 pr-[72px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto text-sm"
+              className="flex-1 px-3 py-2 pr-[72px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto text-base"
               style={{ minHeight: "44px", maxHeight: "150px" }}
               rows={1}
             />
