@@ -179,13 +179,6 @@ export default function TutorPage() {
       style={{ backgroundImage: "url('/images/background6.png')" }}
     />
     <div className="flex flex-col h-[calc(100vh-4rem)] md:h-screen">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">
-          {t(typedLang, "stories", "aiTutor")}
-        </h1>
-      </div>
-
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end">
