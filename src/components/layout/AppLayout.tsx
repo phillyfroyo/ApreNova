@@ -15,10 +15,11 @@ interface AppLayoutProps {
   children: React.ReactNode;
   lang: Language;
   hideNavigation?: boolean; // For immersive pages like story reading
+  hideBottomNav?: boolean; // Hide mobile bottom nav (e.g., tutor page with its own input)
   requireAuth?: boolean; // Whether to require authentication (default: true)
 }
 
-export default function AppLayout({ children, lang, hideNavigation = false, requireAuth = true }: AppLayoutProps) {
+export default function AppLayout({ children, lang, hideNavigation = false, hideBottomNav = false, requireAuth = true }: AppLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -179,14 +180,14 @@ export default function AppLayout({ children, lang, hideNavigation = false, requ
           ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}
           min-h-screen
           pt-16 md:pt-0
-          pb-20 md:pb-0
+          ${hideBottomNav ? 'pb-0' : 'pb-20 md:pb-0'}
         `}
       >
         {children}
       </main>
 
       {/* Bottom Navigation - Mobile only */}
-      <BottomNavigation lang={lang} />
+      {!hideBottomNav && <BottomNavigation lang={lang} />}
     </div>
   );
 }
