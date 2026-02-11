@@ -101,7 +101,7 @@ export default function SettingsLevelDisplay() {
               </option>
             ))}
           </select>
-          {saving && <p className="text-xs text-gray-500">Saving...</p>}
+          {saving && <p className="text-xs text-gray-500">{typedLang === "es" ? "Guardando..." : "Saving..."}</p>}
         </div>
       )}
     </div>

@@ -4,6 +4,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChapterData, RewriteChapterData } from "@/contexts/StoryUploadContext";
 import { getCEFRLabel, toCEFR } from "@/lib/cefr";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 export interface ProgressViewerModalProps {
   isOpen: boolean;
@@ -23,6 +25,8 @@ export interface ProgressViewerModalProps {
   storyId?: string;
   // If true, this is a preview of completed work (no loading animations)
   isPreview?: boolean;
+  // Language for i18n
+  lng?: Language;
 }
 
 export function ProgressViewerModal({
@@ -38,6 +42,7 @@ export function ProgressViewerModal({
   targetLevel,
   storyId,
   isPreview = false,
+  lng = "en",
 }: ProgressViewerModalProps) {
   const [selectedChapter, setSelectedChapter] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -186,21 +191,20 @@ export function ProgressViewerModal({
     const rewriteData = currentChapterData as RewriteChapterData;
     leftLines = rewriteData.originalLines || [];
     rightLines = rewriteData.rewrittenLines || [];
-    // Use CEFR labels for level display
-    const fromLevel = detectedLevel ? getCEFRLabel(toCEFR(detectedLevel)) : "Original";
-    const toLevel = targetLevel ? getCEFRLabel(toCEFR(targetLevel)) : "Rewritten";
-    leftTitle = `${fromLevel} (Original)`;
-    rightTitle = `${toLevel} (Rewritten)`;
-    footerLeftLabel = "original";
-    footerRightLabel = "rewritten";
+    const fromLevel = detectedLevel ? getCEFRLabel(toCEFR(detectedLevel), lng) : t(lng, "upload", "original");
+    const toLevel = targetLevel ? getCEFRLabel(toCEFR(targetLevel), lng) : t(lng, "upload", "rewritten");
+    leftTitle = `${fromLevel} (${t(lng, "upload", "original")})`;
+    rightTitle = `${toLevel} (${t(lng, "upload", "rewritten")})`;
+    footerLeftLabel = t(lng, "upload", "original").toLowerCase();
+    footerRightLabel = t(lng, "upload", "rewritten").toLowerCase();
   } else if (!isRewriting && currentChapterData) {
     const translationData = currentChapterData as ChapterData;
     leftLines = translationData.sourceLines || [];
     rightLines = translationData.translatedLines || [];
-    leftTitle = sourceLanguage === "en" ? "English (Source)" : "Spanish (Source)";
-    rightTitle = sourceLanguage === "en" ? "Spanish (Translation)" : "English (Translation)";
-    footerLeftLabel = "source";
-    footerRightLabel = "translated";
+    leftTitle = sourceLanguage === "en" ? t(lng, "upload", "englishSource") : t(lng, "upload", "spanishSource");
+    rightTitle = sourceLanguage === "en" ? t(lng, "upload", "spanishTranslation") : t(lng, "upload", "englishTranslation");
+    footerLeftLabel = t(lng, "upload", "source");
+    footerRightLabel = t(lng, "upload", "translated");
   }
 
   const maxLines = Math.max(leftLines.length, rightLines.length);
@@ -229,19 +233,18 @@ export function ProgressViewerModal({
       const fromLevel = detectedLevel ? toCEFR(detectedLevel) : "";
       const toLevel = targetLevel ? toCEFR(targetLevel) : "";
       if (fromLevel && toLevel) {
-        return `Rewrite ${fromLevel} → ${toLevel}`;
+        return t(lng, "upload", "rewriteFromTo", { from: fromLevel, to: toLevel });
       }
-      return "Rewrite";
+      return t(lng, "upload", "rewrite");
     } else {
-      // Translation - indicate if this is original or rewritten text
       const level = targetLevel ? toCEFR(targetLevel) : "";
       const isOriginalLevel = targetLevel === detectedLevel;
       if (level) {
         return isOriginalLevel
-          ? `Translate ${level} (Original)`
-          : `Translate ${level} (Rewritten)`;
+          ? t(lng, "upload", "translateOriginal", { level })
+          : t(lng, "upload", "translateRewritten", { level });
       }
-      return "Translate";
+      return t(lng, "upload", "translate");
     }
   };
   const stageTitle = getStageTitle();
@@ -275,13 +278,15 @@ export function ProgressViewerModal({
                 {stageTitle}
               </span>
               <span className="text-xs md:text-sm bg-white/20 px-2 md:px-3 py-1 rounded-full">
-                {completedChapters} of {totalChapters} chapters
+                {t(lng, "upload", "chaptersCount", { completed: completedChapters, total: totalChapters })}
               </span>
               {/* Only show live processing badge when not in preview mode */}
               {!isPreview && stage !== "complete" && (
                 <span className="text-xs md:text-sm bg-yellow-500/80 px-2 md:px-3 py-1 rounded-full animate-pulse flex items-center gap-2">
                   <span className="w-2 h-2 bg-white rounded-full animate-ping" />
-                  {isRewriting ? "Rewriting" : "Translating"} chapter {currentChapter}...
+                  {isRewriting
+                    ? t(lng, "upload", "rewritingChapter", { current: currentChapter })
+                    : t(lng, "upload", "translatingChapterLive", { current: currentChapter })}
                 </span>
               )}
             </div>
@@ -307,7 +312,7 @@ export function ProgressViewerModal({
           {/* Chapter selector */}
           {displayChapters.length > 1 && (
             <div className="px-4 md:px-6 py-3 bg-gray-50 border-b flex items-center gap-3 overflow-x-auto shrink-0">
-              <span className="text-sm text-gray-500 shrink-0">Chapters:</span>
+              <span className="text-sm text-gray-500 shrink-0">{t(lng, "upload", "chapters")}</span>
               <div className="flex gap-2">
                 {displayChapters.map((_, idx) => (
                   <button
@@ -341,7 +346,7 @@ export function ProgressViewerModal({
             <div className="flex-1 flex items-center justify-center py-16">
               <div className="text-center">
                 <div className={`w-16 h-16 border-4 ${isRewriting ? "border-amber-500" : "border-blue-500"} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
-                <p className="text-gray-600">Loading preview data...</p>
+                <p className="text-gray-600">{t(lng, "upload", "loadingPreview")}</p>
               </div>
             </div>
           ) : fetchError ? (
@@ -350,7 +355,7 @@ export function ProgressViewerModal({
                 <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <p className="text-gray-600">Failed to load preview</p>
+                <p className="text-gray-600">{t(lng, "upload", "failedToLoadPreview")}</p>
                 <p className="text-sm text-gray-400 mt-2">{fetchError}</p>
               </div>
             </div>
@@ -358,9 +363,11 @@ export function ProgressViewerModal({
             <div className="flex-1 flex items-center justify-center py-16">
               <div className="text-center">
                 <div className={`w-16 h-16 border-4 ${isRewriting ? "border-amber-500" : "border-blue-500"} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
-                <p className="text-gray-600">Waiting for first chapter to complete...</p>
+                <p className="text-gray-600">{t(lng, "upload", "waitingForFirstChapter")}</p>
                 <p className="text-sm text-gray-400 mt-2">
-                  {isRewriting ? "Rewriting" : "Translating"} chapter {currentChapter} of {totalChapters}
+                  {isRewriting
+                    ? t(lng, "upload", "rewritingChapterOf", { current: currentChapter, total: totalChapters })
+                    : t(lng, "upload", "translatingChapterOf", { current: currentChapter, total: totalChapters })}
                 </p>
               </div>
             </div>
@@ -375,12 +382,12 @@ export function ProgressViewerModal({
                 {/* Left header */}
                 <div className="bg-gray-100 px-2 md:px-3 py-2 text-xs md:text-sm font-medium text-gray-600 border-r border-gray-200 flex items-center justify-between min-w-0">
                   <span className="truncate">{leftTitle}</span>
-                  <span className="text-gray-400 text-xs hidden sm:inline ml-2 shrink-0">{leftLines.length} lines</span>
+                  <span className="text-gray-400 text-xs hidden sm:inline ml-2 shrink-0">{leftLines.length} {t(lng, "upload", "lines")}</span>
                 </div>
                 {/* Right header */}
                 <div className={`${rightHeaderBg} px-2 md:px-3 py-2 text-xs md:text-sm font-medium ${rightHeaderText} flex items-center justify-between min-w-0`}>
                   <span className="truncate">{rightTitle}</span>
-                  <span className={`${rightHeaderSubtext} text-xs hidden sm:inline ml-2 shrink-0`}>{rightLines.length} lines</span>
+                  <span className={`${rightHeaderSubtext} text-xs hidden sm:inline ml-2 shrink-0`}>{rightLines.length} {t(lng, "upload", "lines")}</span>
                 </div>
               </div>
 
@@ -408,14 +415,14 @@ export function ProgressViewerModal({
                         {/* Left cell */}
                         <div className={`py-1 px-2 md:px-3 border-r border-gray-200 overflow-hidden min-w-0 ${isStanzaBreak ? "bg-gray-100" : ""}`}>
                           <span className={`whitespace-pre-wrap break-words block ${isStanzaBreak ? "text-gray-400 text-center italic text-xs" : "text-gray-700"}`}>
-                            {isStanzaBreak ? "⸺ stanza break ⸺" : (leftLine || "\u00A0")}
+                            {isStanzaBreak ? t(lng, "upload", "stanzaBreak") : (leftLine || "\u00A0")}
                           </span>
                         </div>
 
                         {/* Right cell */}
                         <div className={`py-1 px-2 md:px-3 overflow-hidden min-w-0 ${isStanzaBreak ? "bg-gray-100" : ""}`}>
                           <span className={`whitespace-pre-wrap break-words block ${isStanzaBreak ? "text-gray-400 text-center italic text-xs" : "text-gray-700"}`}>
-                            {isStanzaBreak ? "⸺ stanza break ⸺" : (rightLine || "\u00A0")}
+                            {isStanzaBreak ? t(lng, "upload", "stanzaBreak") : (rightLine || "\u00A0")}
                           </span>
                         </div>
                       </div>
@@ -432,21 +439,21 @@ export function ProgressViewerModal({
               {displayChapters.length > 0 && (
                 <>
                   <span className="truncate">
-                    Chapter {selectedChapter + 1}: {leftLines.length} {footerLeftLabel} → {rightLines.length} {footerRightLabel}
+                    {t(lng, "upload", "chapterLabel", { num: selectedChapter + 1, left: leftLines.length, leftLabel: footerLeftLabel, right: rightLines.length, rightLabel: footerRightLabel })}
                   </span>
                   {leftLines.length !== rightLines.length && (
                     <span className="text-amber-600 flex items-center gap-1 shrink-0">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <span className="hidden sm:inline">Line count mismatch</span>
+                      <span className="hidden sm:inline">{t(lng, "upload", "lineCountMismatch")}</span>
                     </span>
                   )}
                 </>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-4">
-              <span className="text-gray-400">Progress:</span>
+              <span className="text-gray-400">{t(lng, "upload", "progress")}</span>
               <span className="font-medium text-gray-700">{progressPercent}%</span>
             </div>
           </div>

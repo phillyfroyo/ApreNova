@@ -1,12 +1,67 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useStoryUpload, StreamProgress, StoryUploadData } from "@/contexts/StoryUploadContext";
+import { useStoryUpload, StreamProgress, StoryUploadData, getLocalizedPhaseTitle, getLocalizedStageMessage } from "@/contexts/StoryUploadContext";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toCEFR } from "@/lib/cefr";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 // Note: prefetch-cache no longer used for reader prefetching (unified reader uses server-side data)
 import { StreamSelector } from "./StreamSelector";
+
+// Map English step labels (from backend) to i18n dictionary keys
+const STEP_LABEL_I18N_KEYS: Record<string, string> = {
+  "Creating story record": "stepCreatingRecord",
+  "Preparing reading levels": "stepPreparingLevels",
+  "Detecting language": "stepDetectingLanguage",
+  "Analyzing story metadata": "stepAnalyzingMetadata",
+  "Generating title": "stepGeneratingTitle",
+  "Generating description": "stepGeneratingDescription",
+  "Generating hook": "stepGeneratingHook",
+  "Detecting story type": "stepDetectingStoryType",
+  "Detecting target audience": "stepDetectingAudience",
+  "Extracting tags": "stepExtractingTags",
+  "Detecting CEFR level": "stepDetectingLevel",
+  "Cleaning text": "stepCleaningText",
+  "Parsing chapters": "stepParsingChapters",
+  "Adapting to reading levels": "stepAdaptingLevels",
+  "Rewriting chapter": "stepRewritingChapter",
+  "Translating all levels": "stepTranslatingLevels",
+  "Translating chapter": "stepTranslatingChapter",
+  "Building all levels": "stepBuildingLevels",
+  "Building content structure": "stepBuildingStructure",
+  "Saving level content": "stepSavingContent",
+  "Complete": "stepComplete",
+  "Ready for review": "readyForReview",
+};
+
+// Localize a step label from the backend (English) to the current language
+// Handles labels with chapter suffixes like "Rewriting chapter 3 of 5"
+function localizeStepLabel(label: string | undefined, lng: Language): string | undefined {
+  if (!label) return label;
+
+  // Try direct match first
+  const directKey = STEP_LABEL_I18N_KEYS[label];
+  if (directKey) return t(lng, "upload", directKey);
+
+  // Try stripping chapter suffix: "Rewriting chapter 3 of 5" → "Rewriting chapter" + "3 of 5"
+  const chapterMatch = label.match(/^(.+?)\s+(\d+)\s+of\s+(\d+)$/);
+  if (chapterMatch) {
+    const baseLabel = chapterMatch[1];
+    const current = chapterMatch[2];
+    const total = chapterMatch[3];
+    const baseKey = STEP_LABEL_I18N_KEYS[baseLabel];
+    if (baseKey) {
+      const localizedBase = t(lng, "upload", baseKey);
+      const localizedChapter = t(lng, "upload", "stepChapterOf", { current, total });
+      return `${localizedBase} ${localizedChapter}`;
+    }
+  }
+
+  // Fallback: return original label
+  return label;
+}
 
 // Minimum duration for displaying each step label (ms)
 const MIN_STEP_DURATION = 800;
@@ -647,7 +702,7 @@ export default function FloatingProgressWidget() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
           <div>
-            <span className="font-medium">Upload failed</span>
+            <span className="font-medium">{t(lng as Language, "upload", "uploadFailed")}</span>
             {progress.error && (
               <p className="text-sm text-red-200">{progress.error}</p>
             )}
@@ -656,7 +711,7 @@ export default function FloatingProgressWidget() {
             onClick={cancelUpload}
             className="ml-2 text-red-200 hover:text-white"
           >
-            Dismiss
+            {t(lng as Language, "upload", "dismiss")}
           </button>
         </div>
       </div>
@@ -768,7 +823,15 @@ export default function FloatingProgressWidget() {
           <div className={`w-2 h-2 rounded-full animate-pulse flex-shrink-0 ${isRewriting ? "bg-amber-500" : "bg-blue-500"}`} />
           <span className="flex-shrink-0">{progress.overallProgress}%</span>
           <span className="text-gray-400 flex-shrink-0">|</span>
-          <span className="truncate">{progress.phaseTitle || progress.message}</span>
+          <span className="truncate">
+            {progress.phase
+              ? getLocalizedPhaseTitle(progress.phase, lng as Language)
+              : getLocalizedStageMessage(progress.stage, lng as Language, {
+                  userLevel: progress.userLevel,
+                  detectedLevel: progress.detectedLevel,
+                  currentLevel: progress.currentLevel,
+                }) || progress.message}
+          </span>
           {hasChaptersToView && (
             <>
               <span className="text-gray-400">|</span>
@@ -816,7 +879,7 @@ export default function FloatingProgressWidget() {
             <span className="font-medium truncate">
               {storyData?.title && storyData.title !== "Untitled Story"
                 ? storyData.title
-                : lng === "es" ? "Procesando historia" : "Processing Story"}
+                : t(lng as Language, "upload", "processingStory")}
             </span>
           </div>
           <div className="flex items-center">
@@ -879,14 +942,20 @@ export default function FloatingProgressWidget() {
             <div className="flex-1 min-w-0">
               {/* Phase title (main) */}
               <p className="font-medium text-gray-800">
-                {progress.phaseTitle || progress.message}
+                {progress.phase
+                  ? getLocalizedPhaseTitle(progress.phase, lng as Language)
+                  : getLocalizedStageMessage(progress.stage, lng as Language, {
+                      userLevel: progress.userLevel,
+                      detectedLevel: progress.detectedLevel,
+                      currentLevel: progress.currentLevel,
+                    }) || progress.message}
               </p>
               {/* Step label (subtitle) with cylinder animation - fixed height container */}
               <div className="h-5 relative overflow-hidden" style={{ perspective: "200px" }}>
                 {/* Exiting label */}
                 {previousStepLabel && isAnimating && (
                   <p className="text-sm text-gray-500 truncate absolute inset-0 animate-subtitle-exit">
-                    {previousStepLabel}
+                    {localizeStepLabel(previousStepLabel, lng as Language)}
                   </p>
                 )}
                 {/* Current/entering label - use absolute during animation to prevent layout shift */}
@@ -894,14 +963,14 @@ export default function FloatingProgressWidget() {
                   <p
                     className={`text-sm text-gray-500 truncate ${isAnimating ? 'absolute inset-0 animate-subtitle-enter' : ''}`}
                   >
-                    {displayedStepLabel}
+                    {localizeStepLabel(displayedStepLabel, lng as Language)}
                   </p>
                 )}
                 {/* Chapter progress if no step label but in chapter processing */}
                 {!displayedStepLabel && !previousStepLabel && (progress.stage === "rewriting-levels" || progress.stage === "translating") &&
                   progress.currentChapter && progress.totalChapters && (
                   <p className="text-sm text-gray-500">
-                    Chapter {progress.currentChapter}/{progress.totalChapters}
+                    {t(lng as Language, "upload", "chapterProgress", { current: progress.currentChapter, total: progress.totalChapters })}
                   </p>
                 )}
               </div>
@@ -911,22 +980,22 @@ export default function FloatingProgressWidget() {
           {/* Stage steps */}
           <div className="mt-3 flex justify-between text-xs text-gray-400">
             <StageStep
-              label="Detect"
+              label={t(lng as Language, "upload", "detect")}
               active={["detecting-language", "detecting-level"].includes(progress.stage)}
               complete={progress.overallProgress > 20}
             />
             <StageStep
-              label="Adapt"
+              label={t(lng as Language, "upload", "adapt")}
               active={progress.stage === "rewriting-levels"}
               complete={progress.overallProgress > 70}
             />
             <StageStep
-              label="Translate"
+              label={t(lng as Language, "upload", "translate")}
               active={progress.stage === "translating"}
               complete={progress.overallProgress > 90}
             />
             <StageStep
-              label="Done"
+              label={t(lng as Language, "upload", "done")}
               active={progress.stage === "review"}
               complete={progress.overallProgress === 100}
             />
@@ -968,7 +1037,7 @@ export default function FloatingProgressWidget() {
               onClick={() => setShowReviewModal(true)}
               className="w-full py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
             >
-              Review Your Story
+              {t(lng as Language, "upload", "reviewYourStory")}
             </button>
           </div>
         )}

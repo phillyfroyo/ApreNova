@@ -540,7 +540,7 @@ useEffect(() => {
 
                   {enhancedTranslation.isDerivative && enhancedTranslation.rootWord && (
                     <div className="mt-3">
-                      <p className="font-semibold text-sm text-gray-700">Root word:</p>
+                      <p className="font-semibold text-sm text-gray-700">{t(currentLang, "translator", "rootWord")}:</p>
                       <div className="text-sm text-gray-800">
                         <span className="font-medium">{enhancedTranslation.rootWord}</span> = {enhancedTranslation.rootTranslation}
                       </div>

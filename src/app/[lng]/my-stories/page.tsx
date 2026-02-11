@@ -13,6 +13,7 @@ import UploadStoryModal from "@/components/user-stories/UploadStoryModal";
 import StorageLimitIndicator from "@/components/user-stories/StorageLimitIndicator";
 import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import type { Language } from "@/types/i18n";
+import { t } from "@/lib/t";
 
 interface UserStory {
   id: string;
@@ -162,7 +163,7 @@ export default function MyStoriesPage() {
   if (sessionStatus === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
-        <div className="animate-pulse text-gray-500">Loading...</div>
+        <div className="animate-pulse text-gray-500">{t(typedLang, "stories", "loading")}</div>
       </div>
     );
   }
@@ -194,7 +195,7 @@ export default function MyStoriesPage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-semibold flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-purple-600" />
-            My Stories
+            {t(typedLang, "myStories", "title")}
           </h1>
           {isAuthenticated && (
             <button
@@ -202,7 +203,7 @@ export default function MyStoriesPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
-              Upload
+              {t(typedLang, "myStories", "upload")}
             </button>
           )}
         </div>
@@ -226,6 +227,7 @@ export default function MyStoriesPage() {
             currentCount={stats.totalStories}
             maxCount={stats.maxStories}
             isPremium={stats.isPremium}
+            lng={typedLang}
           />
         )}
       </div>
@@ -254,16 +256,16 @@ export default function MyStoriesPage() {
       ) : stories.length === 0 ? (
         <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center">
           <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-xl font-semibold mb-2">No stories yet</h2>
+          <h2 className="text-xl font-semibold mb-2">{t(typedLang, "myStories", "noStories")}</h2>
           <p className="text-gray-600 mb-4">
-            Upload your first story to start learning with your own content!
+            {t(typedLang, "myStories", "noStoriesDescription")}
           </p>
           <button
             onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             <Plus className="w-5 h-5" />
-            Upload Your First Story
+            {t(typedLang, "myStories", "uploadFirst")}
           </button>
         </div>
       ) : (
@@ -276,7 +278,7 @@ export default function MyStoriesPage() {
               className="aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
             >
               <Plus className="w-8 h-8 text-gray-400" />
-              <span className="text-sm text-gray-500">Add Story</span>
+              <span className="text-sm text-gray-500">{t(typedLang, "myStories", "addStory")}</span>
             </button>
           )}
 
@@ -310,15 +312,15 @@ export default function MyStoriesPage() {
       {/* Premium upsell */}
       {isAuthenticated && stats && !stats.isPremium && stats.maxStories !== -1 && stats.totalStories >= stats.maxStories && (
         <div className="mt-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl p-4 text-white">
-          <h3 className="font-semibold mb-1">Want more stories?</h3>
+          <h3 className="font-semibold mb-1">{t(typedLang, "myStories", "wantMore")}</h3>
           <p className="text-sm text-white/90 mb-3">
-            Upgrade to Premium for unlimited story uploads and longer texts.
+            {t(typedLang, "myStories", "upgradeForUnlimited")}
           </p>
           <Link
             href={`/${typedLang}/premium`}
             className="inline-block px-4 py-2 bg-white text-purple-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
           >
-            Go Premium
+            {t(typedLang, "sidebar", "goPremium")}
           </Link>
         </div>
       )}

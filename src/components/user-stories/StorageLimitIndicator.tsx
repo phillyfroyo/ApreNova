@@ -1,18 +1,21 @@
 // src/components/user-stories/StorageLimitIndicator.tsx
 "use client";
 
-import { USER_STORY_LIMITS } from "@/lib/user-stories/limits";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 interface StorageLimitIndicatorProps {
   currentCount: number;
   maxCount: number;
   isPremium: boolean;
+  lng?: Language;
 }
 
 export default function StorageLimitIndicator({
   currentCount,
   maxCount,
   isPremium,
+  lng = "en",
 }: StorageLimitIndicatorProps) {
   const isUnlimited = maxCount === -1;
   const percentage = isUnlimited ? 0 : (currentCount / maxCount) * 100;
@@ -25,15 +28,15 @@ export default function StorageLimitIndicator({
         <div className="flex justify-between text-sm mb-1">
           <span className="text-gray-600">
             {isUnlimited ? (
-              <>Stories: {currentCount}</>
+              <>{t(lng, "myStories", "storiesCountUnlimited", { count: currentCount })}</>
             ) : (
               <>
-                {currentCount} / {maxCount} stories
+                {t(lng, "myStories", "storiesCountLimit", { count: currentCount, max: maxCount })}
               </>
             )}
           </span>
           {!isPremium && (
-            <span className="text-xs text-gray-400">Free tier</span>
+            <span className="text-xs text-gray-400">{t(lng, "myStories", "freeTier")}</span>
           )}
         </div>
         {!isUnlimited && (

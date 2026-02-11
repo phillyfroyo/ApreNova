@@ -1,14 +1,23 @@
 // src/components/StoryLoadingSkeleton.tsx
 // Shared loading skeleton for story reader pages
 // Used by loading.tsx files
+"use client";
+
+import { useParams } from "next/navigation";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 interface StoryLoadingSkeletonProps {
   message?: string;
 }
 
 export default function StoryLoadingSkeleton({
-  message = "Loading story..."
+  message,
 }: StoryLoadingSkeletonProps) {
+  const params = useParams();
+  const lng = (params?.lng as Language) || "en";
+  const displayMessage = message || t(lng, "stories", "loading");
+
   return (
     <div className="min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-gradient-to-br from-emerald-50 to-teal-100 animate-pulse">
       {/* Menu button skeleton */}
@@ -70,7 +79,7 @@ export default function StoryLoadingSkeleton({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           />
         </svg>
-        <span className="text-sm text-gray-600 font-medium">{message}</span>
+        <span className="text-sm text-gray-600 font-medium">{displayMessage}</span>
       </div>
     </div>
   );

@@ -31,6 +31,35 @@ const STORY_TAGS = [
   "monsters", "heros-journey", "war", "love", "death", "revenge"
 ];
 
+// i18n key maps for slug → dictionary key
+const TAG_I18N_KEYS: Record<string, string> = {
+  "family": "tagFamily", "friendship": "tagFriendship", "adventure": "tagAdventure",
+  "mystery": "tagMystery", "romance": "tagRomance", "coming-of-age": "tagComingOfAge",
+  "nature": "tagNature", "technology": "tagTechnology", "travel": "tagTravel",
+  "food": "tagFood", "humorous": "tagHumorous", "heartwarming": "tagHeartwarming",
+  "suspenseful": "tagSuspenseful", "reflective": "tagReflective", "inspiring": "tagInspiring",
+  "urban": "tagUrban", "rural": "tagRural", "historical": "tagHistorical",
+  "fantasy": "tagFantasy", "contemporary": "tagContemporary", "latin-america": "tagLatinAmerica",
+  "spain": "tagSpain", "usa": "tagUsa", "multicultural": "tagMulticultural",
+  "epic": "tagEpic", "mythology": "tagMythology", "heroic": "tagHeroic",
+  "tragedy": "tagTragedy", "comedy": "tagComedy", "monsters": "tagMonsters",
+  "heros-journey": "tagHerosJourney", "war": "tagWar", "love": "tagLove",
+  "death": "tagDeath", "revenge": "tagRevenge",
+};
+
+const TYPE_I18N_KEYS: Record<string, string> = {
+  "short-story": "typeShortStory", "poem": "typePoem", "fable": "typeFable",
+  "folktale": "typeFolktale", "novel": "typeNovel", "article": "typeArticle",
+  "dialogue": "typeDialogue", "song-lyrics": "typeSongLyrics", "epic": "typeEpic",
+  "myth": "typeMyth", "legend": "typeLegend", "movie-script": "typeMovieScript",
+  "tv-script": "typeTvScript",
+};
+
+const AUDIENCE_I18N_KEYS: Record<string, string> = {
+  "all": "audienceAll", "children": "audienceChildren",
+  "teen": "audienceTeen", "adult": "audienceAdult",
+};
+
 export default function StoryReviewModal() {
   const { lng } = useParams();
   const router = useRouter();
@@ -563,7 +592,7 @@ export default function StoryReviewModal() {
                   >
                     {STORY_TYPES.map(type => (
                       <option key={type} value={type}>
-                        {type.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                        {TYPE_I18N_KEYS[type] ? t.myStories[TYPE_I18N_KEYS[type] as keyof typeof t.myStories] : type.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                       </option>
                     ))}
                   </select>
@@ -592,7 +621,7 @@ export default function StoryReviewModal() {
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
-                        {audience.charAt(0).toUpperCase() + audience.slice(1)}
+                        {AUDIENCE_I18N_KEYS[audience] ? t.myStories[AUDIENCE_I18N_KEYS[audience] as keyof typeof t.myStories] : audience.charAt(0).toUpperCase() + audience.slice(1)}
                       </button>
                     ))}
                   </div>
@@ -627,7 +656,7 @@ export default function StoryReviewModal() {
                               : "bg-gray-50 text-gray-300 cursor-not-allowed"
                           }`}
                         >
-                          {tag.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                          {TAG_I18N_KEYS[tag] ? t.myStories[TAG_I18N_KEYS[tag] as keyof typeof t.myStories] : tag.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                         </button>
                       );
                     })}

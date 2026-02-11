@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useStoryUpload, StreamProgress } from "@/contexts/StoryUploadContext";
 import { toCEFR } from "@/lib/cefr";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 interface StreamSelectorProps {
   streams: StreamProgress[];
@@ -122,21 +124,21 @@ export function StreamSelector({
     );
   };
 
+  const typedLng = (lng as Language) || "en";
+
   const getStreamLabel = (stream: StreamProgress) => {
     const level = toCEFR(stream.level);
     if (stream.type === "rewriting") {
       const fromLevel = stream.fromLevel ? toCEFR(stream.fromLevel) : "?";
-      return lng === "es"
-        ? `Reescritura ${fromLevel} → ${level}`
-        : `Rewrite ${fromLevel} → ${level}`;
+      return t(typedLng, "upload", "rewriteFromTo", { from: fromLevel, to: level });
     } else {
       const isOriginal = storyData?.detectedLevel && stream.level === storyData.detectedLevel;
       if (isOriginal !== undefined) {
-        return lng === "es"
-          ? `Traducción ${level} (${isOriginal ? "Original" : "Reescrito"})`
-          : `Translation ${level} (${isOriginal ? "Original" : "Rewritten"})`;
+        return isOriginal
+          ? t(typedLng, "upload", "translateOriginal", { level })
+          : t(typedLng, "upload", "translateRewritten", { level });
       }
-      return stream.label || `Translation ${level}`;
+      return stream.label || t(typedLng, "upload", "translateLevel", { level });
     }
   };
 
@@ -154,8 +156,8 @@ export function StreamSelector({
           </svg>
           <span className="flex-1 text-left">
             {isPreviewMode
-              ? (lng === "es" ? "Vista previa de historia completada" : "Preview completed story")
-              : (lng === "es" ? "Ver progreso" : "View Progress")}
+              ? t(typedLng, "upload", "previewCompletedStory")
+              : t(typedLng, "upload", "viewProgress")}
           </span>
           <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
             {streamsWithData.length}
@@ -204,15 +206,15 @@ export function StreamSelector({
                     </span>
                     {!isPreviewMode && hasData ? (
                       <span className="block text-xs text-gray-400">
-                        {stream.currentChapter || stream.chapters?.length || 0} / {stream.totalChapters} chapters completed
+                        {t(typedLng, "upload", "chaptersCompleted", { completed: stream.currentChapter || stream.chapters?.length || 0, total: stream.totalChapters })}
                       </span>
                     ) : stream.status === "waiting" ? (
                       <span className="block text-xs text-gray-400">
-                        Waiting to start...
+                        {t(typedLng, "upload", "waitingToStart")}
                       </span>
                     ) : stream.status === "in-progress" && !hasData ? (
                       <span className="block text-xs text-gray-400">
-                        Processing first chapter...
+                        {t(typedLng, "upload", "processingFirstChapter")}
                       </span>
                     ) : null}
                   </span>

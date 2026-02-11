@@ -2,8 +2,11 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
 import { ProgressViewerModal } from "@/components/user-stories/ProgressViewerModal";
 import { toCEFR } from "@/lib/cefr";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 // Upload status stages
 export type UploadStage =
@@ -392,7 +395,6 @@ function getStageMessage(
 ): string {
   const userCEFR = extra?.userLevel ? toCEFR(extra.userLevel) : null;
   const detectedCEFR = extra?.detectedLevel ? toCEFR(extra.detectedLevel) : null;
-  // Chapter info is now displayed as subtitle in UI, not in message
 
   switch (stage) {
     case "idle":
@@ -411,8 +413,6 @@ function getStageMessage(
       }
       return "Adapting";
     case "translating":
-      // Show which text is being translated with CEFR level
-      // If text was rewritten (userCEFR !== detectedCEFR), indicate it's the rewritten version
       if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
         return `Translating rewritten ${userCEFR} text...`;
       }
@@ -425,6 +425,54 @@ function getStageMessage(
       return "Story uploaded successfully!";
     case "error":
       return "Something went wrong";
+    default:
+      return "";
+  }
+}
+
+// i18n-aware version of phase titles
+export function getLocalizedPhaseTitle(phase: ProgressPhase, lng: Language): string {
+  return t(lng, "upload", phase);
+}
+
+// i18n-aware version of stage message
+export function getLocalizedStageMessage(
+  stage: UploadStage,
+  lng: Language,
+  extra?: { userLevel?: string; detectedLevel?: string; currentLevel?: string; currentChapter?: number; totalChapters?: number }
+): string {
+  const userCEFR = extra?.userLevel ? toCEFR(extra.userLevel) : null;
+  const detectedCEFR = extra?.detectedLevel ? toCEFR(extra.detectedLevel) : null;
+
+  switch (stage) {
+    case "idle":
+      return "";
+    case "uploading":
+      return t(lng, "upload", "uploadingStory");
+    case "detecting-language":
+      return t(lng, "upload", "detectingLanguage");
+    case "detecting-level":
+      return t(lng, "upload", "analyzingLevel");
+    case "generating-description":
+      return t(lng, "upload", "creatingDescription");
+    case "rewriting-levels":
+      if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
+        return t(lng, "upload", "adaptingLevel", { from: detectedCEFR, to: userCEFR });
+      }
+      return t(lng, "upload", "adaptingGeneric");
+    case "translating":
+      if (userCEFR && detectedCEFR && userCEFR !== detectedCEFR) {
+        return t(lng, "upload", "translatingRewritten", { level: userCEFR });
+      }
+      return t(lng, "upload", "translatingOriginal", { level: detectedCEFR || "original" });
+    case "finalizing":
+      return t(lng, "upload", "finalizingStory");
+    case "review":
+      return t(lng, "upload", "readyForReview");
+    case "complete":
+      return t(lng, "upload", "uploadSuccess");
+    case "error":
+      return t(lng, "upload", "somethingWentWrong");
     default:
       return "";
   }
@@ -469,6 +517,8 @@ function getPersistedUploadState(): PersistedUploadState | null {
 
 export function StoryUploadProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
+  const params = useParams();
+  const providerLng = (params?.lng as Language) || "en";
   const [isUploading, setIsUploading] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -1389,6 +1439,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         storyId={storyData?.id}
         // Preview mode: when opened from review modal (selectedStreamId) or stage is review/complete
         isPreview={!!selectedStreamId || progress.stage === "review" || progress.stage === "complete"}
+        lng={providerLng}
       />
 
       {/* Cancel Confirmation Dialog */}
@@ -1396,10 +1447,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]">
           <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Cancel Upload?
+              {t(providerLng, "upload", "cancelUploadTitle")}
             </h3>
             <p className="text-gray-600 mb-6">
-              This will stop the upload and discard all progress. Are you sure you want to cancel?
+              {t(providerLng, "upload", "cancelUploadMessage")}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1407,7 +1458,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 disabled={isCancelling}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Keep Uploading
+                {t(providerLng, "upload", "keepUploading")}
               </button>
               <button
                 onClick={cancelUpload}
@@ -1420,10 +1471,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Cancelling...
+                    {t(providerLng, "upload", "cancelling")}
                   </>
                 ) : (
-                  "Yes, Cancel"
+                  t(providerLng, "upload", "yesCancelUpload")
                 )}
               </button>
             </div>
