@@ -223,33 +223,27 @@ export async function updateUITranslation(
       return false;
     }
 
-    // Find the closing pattern: },\n}, which marks end of last entry and storiesMetadata close
-    // Search backwards from export for the pattern "  },\n},"
+    // Strategy: find the closing `},` of `storiesMetadata` and insert before it.
+    // The storiesMetadata block ends with a `},` line that is followed by `};` (end of the outer object).
+    // We search backwards from `export default` for the pattern `},\n};` which marks storiesMetadata close + object close.
     const closingSection = content.slice(metadataIdx, exportIdx);
 
-    // Find last occurrence of "},\n" or "},\r\n" followed by eventual "},"
-    // The structure is: ...entry},\n},\n};\nexport
-    // We want to insert before the second }, (storiesMetadata close)
-    const lastEntryClose = closingSection.lastIndexOf('  },');
+    // Find the storiesMetadata closing brace: the `},` that immediately precedes `};`
+    // The closing `},` may have varying indentation (0 or 2 spaces), so match flexibly
+    const storiesMetadataClosePattern = /\n\s*\},?\s*\n\s*\};/;
+    const closeMatch = closingSection.match(storiesMetadataClosePattern);
 
-    if (lastEntryClose === -1) {
-      console.error(`[file-writer] Could not find last entry close in ${lang}.ts storiesMetadata`);
-      console.error(`[file-writer] Closing section:`, JSON.stringify(closingSection.slice(-200)));
+    if (!closeMatch || closeMatch.index === undefined) {
+      console.error(`[file-writer] Could not find storiesMetadata closing brace in ${lang}.ts`);
+      console.error(`[file-writer] Closing section tail:`, JSON.stringify(closingSection.slice(-200)));
       return false;
     }
 
-    // Insert position is right after the last entry's },
-    const insertPos = metadataIdx + lastEntryClose + 4; // 4 = length of "  },"
+    // Insert position is right before the storiesMetadata closing `},`
+    const insertPos = metadataIdx + closeMatch.index;
 
-    // Find where the line ends after },
-    let lineEndPos = insertPos;
-    while (lineEndPos < content.length && content[lineEndPos] !== '\n') {
-      lineEndPos++;
-    }
-    lineEndPos++; // Include the \n
-
-    // Insert the new entry
-    content = content.slice(0, lineEndPos) + entry + lineEnding + content.slice(lineEndPos);
+    // Insert the new entry before the closing brace
+    content = content.slice(0, insertPos) + entry + lineEnding + content.slice(insertPos);
 
     await fs.writeFile(filePath, content, "utf-8");
     console.log(`[file-writer] Successfully added "${slug}" to ${lang}.ts`);

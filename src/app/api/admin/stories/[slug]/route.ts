@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Generate a random 4-digit number for unique filenames
@@ -675,6 +676,24 @@ export async function DELETE(
       }
     } catch (themeError) {
       // storyThemes.ts might not have an entry for this story
+    }
+
+    // 8. Delete API cost records associated with this story
+    try {
+      const { count } = await prisma.apiCost.deleteMany({
+        where: {
+          metadata: {
+            path: ["adminStorySlug"],
+            equals: slug,
+          },
+        },
+      });
+      if (count > 0) {
+        results.push(`Deleted ${count} API cost record(s) from database`);
+      }
+    } catch (costError) {
+      console.error("Failed to delete cost records:", costError);
+      errors.push("Failed to delete API cost records from database");
     }
 
     if (results.length === 0) {

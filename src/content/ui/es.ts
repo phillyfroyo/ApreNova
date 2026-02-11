@@ -41,8 +41,8 @@ language: {
 },
 
   stories: {
-  goPremium: "Hazte Premium 💎",
-  premiumDescription: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido.",
+  goPremium: "Planes",
+  premiumDescription: "Desbloquea herramientas más inteligentes para aprender más rápido.",
   dashboard: "Panel",
   settings: "Configuración",
   stories: "Historias",
@@ -179,7 +179,7 @@ about: {
 settings: {
   notLoggedIn: "No has iniciado sesión.",
   greeting: "¡Hola {name}! 🎉",
-  premium: "Premium 💎",
+  premium: "PRO",
   free: "Gratis",
   memberStatus: "Estado de miembro",
   nativeLanguage: "Mi idioma nativo:",
@@ -228,8 +228,8 @@ feedback: {
   },
 
 premium: {
-  title: "Hazte Premium 💎",
-  description: "Cuentana Premium desbloquea herramientas más inteligentes para aprender más rápido:",
+  title: "Mejora Tu Plan",
+  description: "Desbloquea herramientas más inteligentes para aprender más rápido:",
   benefit1: {
     title: "Traducciones GPT Instantáneas",
     desc: "Traduce cualquier palabra o frase con contexto completo."
@@ -243,10 +243,10 @@ premium: {
     desc: "Traduce oraciones completas con un solo clic y ejemplos de uso."
   },
   currentPlan: "Plan Actual",
-  planPremium: "Premium 💎",
+  planPremium: "PRO",
   planFree: "Gratis",
   returnToStories: "Volver a las Historias",
-  subscribeButton: "Suscribirme a Premium"
+  subscribeButton: "Mejorar"
 },
 
 translator: {
@@ -259,6 +259,7 @@ translator: {
   createAccount: "crea una cuenta gratis",
   audioSignInRequired: "Para usar funciones de audio,",
   rootWord: "Palabra raíz",
+  lockedFeature: "Mejora tu plan para desbloquear traducciones inteligentes",
 },
 
 storyTutor: {
@@ -296,7 +297,7 @@ sidebar: {
   guest: "Invitado",
   notSignedIn: "No has iniciado sesión",
   settings: "Ajustes",
-  goPremium: "Hazte Premium",
+  goPremium: "Planes",
 },
 
 myStories: {
@@ -309,7 +310,7 @@ myStories: {
   uploadFirst: "Sube Tu Primera Historia",
   addStory: "Añadir Historia",
   wantMore: "¿Quieres más historias?",
-  upgradeForUnlimited: "Actualiza a Premium para subir historias ilimitadas y textos más largos.",
+  upgradeForUnlimited: "Mejora tu plan para subir historias ilimitadas y textos más largos.",
   storyTitle: "Título de la Historia",
   storyTitlePlaceholder: "Escribe el título de tu historia...",
   sourceLanguage: "Idioma Original",
@@ -325,7 +326,7 @@ myStories: {
   step2: "Transcripción: La IA reescribirá la historia para tu nivel CEFR.",
   step3: "Traducción: Cada nivel será traducido a ambos idiomas.",
   step4: "Tu historia estará lista en 2-20 minutos, dependiendo de la longitud.",
-  premiumDailyLimit: "Los usuarios Premium tienen 10 subidas por día.",
+  premiumDailyLimit: "Los usuarios PRO tienen 10 subidas por día.",
   dailyUploads: "Subidas diarias",
   processing: "Procesando...",
   ready: "Lista",
@@ -352,7 +353,7 @@ myStories: {
   underReview: "En revisión",
   public: "Pública",
   notApproved: "No aprobada para público",
-  premiumRequired: "Premium requerido para compartir públicamente",
+  premiumRequired: "Se requiere mejorar para compartir públicamente",
   levelBeginner: "A1 - Fundamentos",
   levelElementary: "A2 - En Desarrollo",
   levelIntermediate: "B1 - Independiente",
@@ -408,7 +409,7 @@ myStories: {
   dailyLimitReached: "Límite diario alcanzado",
   storyLimitMessage: "Has alcanzado el máximo de {max} historias.",
   dailyLimitMessage: "Has usado tu límite diario de subidas. ¡Intenta de nuevo mañana!",
-  upgradeToPremium: "Mejora a Premium",
+  upgradeToPremium: "Mejorar",
   upgradeForMore: "Mejora para más",
   firstStoryBonus: "Primera historia del mes: hasta {max} caracteres gratis.",
   freeTierLimit: "Límite gratuito: {max} caracteres.",
@@ -585,10 +586,6 @@ storiesMetadata: {
     title: "Diego Desconectado",
     description: "El viaje de autodescubrimiento de un joven cuando se desconecta del mundo digital.",
   },
-  "my-day": {
-    title: "Mi Día",
-    description: "Un poema simple sobre las alegrías de la vida cotidiana.",
-  },
   "el-viaje-magico": {
     title: "El Viaje Mágico",
     description: "Un tren, un mapa antiguo, y una puerta a otro mundo.",
@@ -600,8 +597,13 @@ storiesMetadata: {
   "poems-by-emily-dickinson": {
     title: "Poemas de Emily Dickinson, Tres Series, Completas",
     description: "Los versos de Emily Dickinson pertenecen enfáticamente a lo que Emerson hace tiempo llamó 'la Poesía del Portafolio', algo producido absolutamente sin la intención de publicación, y únicamente como expresión de la propia mente del escritor. Tal verso debe inevitablemente perder cualquier ventaja que se encuentre en la disciplina de la crítica pública y la conformidad forzada a las maneras aceptadas. Por otro lado, a menudo puede ganar algo a través del hábito de la libertad y la expresión no convencional de pensamientos atrevidos. En el caso de la autora actual, no había absolutamente ninguna opción en el asunto; debía escribir así, o no escribir en absoluto. Una reclusa por temperamento y hábito, literalmente pasando años sin poner un pie más allá del umbral, y muchos más años durante los cuales sus paseos se limitaban estrictamente a los terrenos de su padre, habitualmente ocultaba su mente, como su persona, de todos excepto de unos pocos amigos; y fue con gran dificultad que fue persuadida para imprimir, durante su vida, tres o cuatro poemas. Sin embargo, escribió versos en gran abundancia; y aunque curiosamente indiferente a todas las reglas convencionales, tenía sin embargo un estándar literario riguroso propio, y a menudo alteraba una palabra muchas veces para adecuarla a un oído que tenía su propia tenaz exquisitez.",
+  },  "my-day-1": {
+    title: "Mi Día",
+    hook: "Sigue un día sencillo en la vida.",
+    description: "",
   },
-  },
+
+},
 };
 
 export default es;

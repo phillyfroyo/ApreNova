@@ -20,7 +20,6 @@ import { SPLIT_CHAPTER_THRESHOLD } from "@/app/admin/upload-story/config/constan
 import type { StoryType, StoryTag, StoryOrigin, ContentStructureType } from "@/types/story";
 import {
   paginateAnthologyPoems,
-  detectPoemBoundaries,
   buildContentStructureWithMetadata,
   type StoryLine as SharedStoryLine,
   type ProcessedChapterDataWithMetadata,
@@ -44,6 +43,7 @@ interface SaveStoryRequest {
   slug: string;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook?: { en: string; es: string };
   levels: LevelContent[];
   linesPerPage?: number;
   thumbnailBase64?: string; // Base64 encoded image data
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       slug,
       title,
       description,
+      hook,
       levels,
       linesPerPage = 10,
       thumbnailBase64,
@@ -124,43 +125,21 @@ export async function POST(req: NextRequest) {
         console.log(`[save-story] Anthology Level ${levelData.level}: Detected ${sections.length} sections/collections`);
 
         // Build chapter data for each section
+        const chapterMarkerPattern = /^---\s*(Chapter|Capítulo)\s+\d+.*---$/i;
         const chapterData: ProcessedChapterDataWithMetadata[] = sections.map((section, sectionIdx) => {
-          // Get section lines from both languages
-          const sectionEnLines = section.lines;
-          const sectionEsLines = esLines.slice(section.startLine, section.endLine);
+          // Get section lines from both languages, stripping any chapter markers
+          const sectionEnLines = section.lines.filter(l => !chapterMarkerPattern.test(l.trim()));
+          const sectionEsLines = esLines.slice(section.startLine, section.endLine)
+            .filter(l => !chapterMarkerPattern.test(l.trim()));
 
-          // Within this section, detect individual poems
-          const poemsInSection = detectPoemBoundaries(sectionEnLines);
-          console.log(`[save-story] Section "${section.number}. ${section.title}": ${poemsInSection.length} poems`);
-
-          // Combine all lines from poems in this section (preserving poem structure for pagination)
-          const sourceLines: string[] = [];
-          const translatedLines: string[] = [];
+          // Detect stanzas on all section lines — paginateAnthologyPoems handles poem detection downstream
+          const stanzaMarked = detectStanzas(sectionEnLines);
           const lineMetadata = new Map<number, { stanzaNumber?: number; isStanzaBreak?: boolean }>();
-
-          // Process each poem in this section
-          for (const poem of poemsInSection) {
-            const poemSourceLines = sectionEnLines.slice(poem.startLine, poem.endLine);
-            const poemTranslatedLines = sectionEsLines.slice(poem.startLine, poem.endLine);
-
-            // Detect stanzas within this poem
-            const stanzaMarked = detectStanzas(poemSourceLines);
-            const translatedStanzaMarked = detectStanzas(poemTranslatedLines);
-
-            // Add lines with metadata
-            stanzaMarked.forEach((markedLine, lineIdx) => {
-              const globalIdx = sourceLines.length;
-              lineMetadata.set(globalIdx, {
-                stanzaNumber: markedLine.stanzaNumber,
-                isStanzaBreak: markedLine.isStanzaBreak,
-              });
-              sourceLines.push(markedLine.text);
-            });
-
-            translatedStanzaMarked.forEach((markedLine) => {
-              translatedLines.push(markedLine.text);
-            });
-          }
+          const sourceLines = stanzaMarked.map((m, idx) => {
+            lineMetadata.set(idx, { stanzaNumber: m.stanzaNumber, isStanzaBreak: m.isStanzaBreak });
+            return m.text;
+          });
+          const translatedLines = detectStanzas(sectionEsLines).map(m => m.text);
 
           return {
             sourceLines,
@@ -294,6 +273,7 @@ export async function POST(req: NextRequest) {
       slug,
       title,
       description,
+      hook: hook || undefined,
       image: thumbnailImagePath || undefined, // Use the saved thumbnail path
       levels: cefrLevels,
       isPremiumOnly: false,

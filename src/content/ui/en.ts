@@ -41,8 +41,8 @@ language: {
 },
 
 stories: {
-  goPremium: "Go Premium 💎",
-  premiumDescription: "Cuentana Premium unlocks smarter tools for faster learning.",
+  goPremium: "Plans",
+  premiumDescription: "Unlock smarter tools for faster learning.",
   dashboard: "Dashboard",
   settings: "Settings",
   stories: "Stories",
@@ -179,7 +179,7 @@ about: {
 settings: {
   notLoggedIn: "You are not logged in.",
   greeting: "Hi {name}! 🎉",
-  premium: "Premium 💎",
+  premium: "PRO",
   free: "Free",
   memberStatus: "Member Status",
   nativeLanguage: "My native language:",
@@ -232,20 +232,20 @@ premium: {
     desc: "Translate any word or phrase with full context."
   },
   benefit2: {
-    title: "Premium-Only Stories",
+    title: "PRO Stories",
     desc: "Early access to new stories and advanced levels."
   },
   benefit3: {
     title: "Full-Sentence Translation Mode",
     desc: "One-click whole sentence translation with example usage."
   },
-  title: "Go Premium 💎",
-  description: "Cuentana Premium unlocks smarter tools for faster learning:",
+  title: "Upgrade Your Plan",
+  description: "Unlock smarter tools for faster learning:",
   currentPlan: "Current Plan",
-  planPremium: "Premium 💎",
+  planPremium: "PRO",
   planFree: "Free",
   returnToStories: "Return to Stories",
-  subscribeButton: "Subscribe to Premium"
+  subscribeButton: "Upgrade"
 },
 
 translator: {
@@ -258,6 +258,7 @@ translator: {
   createAccount: "create a free account",
   audioSignInRequired: "To use audio features,",
   rootWord: "Root word",
+  lockedFeature: "Upgrade to unlock smart translations",
 },
 
 storyTutor: {
@@ -295,7 +296,7 @@ sidebar: {
   guest: "Guest",
   notSignedIn: "Not signed in",
   settings: "Settings",
-  goPremium: "Go Premium",
+  goPremium: "Plans",
 },
 
 myStories: {
@@ -308,7 +309,7 @@ myStories: {
   uploadFirst: "Upload Your First Story",
   addStory: "Add Story",
   wantMore: "Want more stories?",
-  upgradeForUnlimited: "Upgrade to Premium for unlimited story uploads and longer texts.",
+  upgradeForUnlimited: "Upgrade your plan for unlimited story uploads and longer texts.",
   storyTitle: "Story Title",
   storyTitlePlaceholder: "Enter your story title...",
   sourceLanguage: "Source Language",
@@ -324,7 +325,7 @@ myStories: {
   step2: "Transcription: AI will rewrite the story to match your CEFR level.",
   step3: "Translation: Each level will be translated to both languages.",
   step4: "Your story will be ready to read in 2-20 minutes, depending on length.",
-  premiumDailyLimit: "Premium users get 10 uploads per day.",
+  premiumDailyLimit: "PRO users get 10 uploads per day.",
   dailyUploads: "Daily uploads",
   processing: "Processing...",
   ready: "Ready",
@@ -351,7 +352,7 @@ myStories: {
   underReview: "Under review",
   public: "Public",
   notApproved: "Not approved for public",
-  premiumRequired: "Premium required to share publicly",
+  premiumRequired: "Upgrade required to share publicly",
   levelBeginner: "A1 - Foundations",
   levelElementary: "A2 - Developing",
   levelIntermediate: "B1 - Independent",
@@ -407,7 +408,7 @@ myStories: {
   dailyLimitReached: "Daily limit reached",
   storyLimitMessage: "You've reached the maximum of {max} stories.",
   dailyLimitMessage: "You've used your daily upload limit. Try again tomorrow!",
-  upgradeToPremium: "Upgrade to Premium",
+  upgradeToPremium: "Upgrade",
   upgradeForMore: "Upgrade for more",
   firstStoryBonus: "First story this month: up to {max} characters free.",
   freeTierLimit: "Free tier: {max} characters.",
@@ -584,10 +585,6 @@ storiesMetadata: {
     title: "Diego Unplugged",
     description: "A young man's journey of self-discovery when he disconnects from the digital world.",
   },
-  "my-day": {
-    title: "My Day",
-    description: "A simple poem about the joys of everyday life.",
-  },
   "el-viaje-magico": {
     title: "The Magic Journey",
     description: "A train, an ancient map, and a door to another world.",
@@ -599,8 +596,13 @@ storiesMetadata: {
   "poems-by-emily-dickinson": {
     title: "Poems by Emily Dickinson, Three Series, Complete",
     description: "The verses of Emily Dickinson belong emphatically to what Emerson long since called 'the Poetry of the Portfolio,'—something produced absolutely without the thought of publication, and solely by way of expression of the writer's own mind. Such verse must inevitably forfeit whatever advantage lies in the discipline of public criticism and the enforced conformity to accepted ways. On the other hand, it may often gain something through the habit of freedom and the unconventional utterance of daring thoughts. In the case of the present author, there was absolutely no choice in the matter; she must write thus, or not at all. A recluse by temperament and habit, literally spending years without setting her foot beyond the doorstep, and many more years during which her walks were strictly limited to her father's grounds, she habitually concealed her mind, like her person, from all but a very few friends; and it was with great difficulty that she was persuaded to print, during her lifetime, three or four poems. Yet she wrote verses in great abundance; and though brought curiously indifferent to all conventional rules, had yet a rigorous literary standard of her own, and often altered a word many times to suit an ear which had its own tenacious fastidiousness.",
+  },  "my-day-1": {
+    title: "My Day",
+    hook: "Follow a simple day in the life. ",
+    description: "",
   },
-  },
+
+},
 };
 
 export default en;
