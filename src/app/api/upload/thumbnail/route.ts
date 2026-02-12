@@ -1,13 +1,11 @@
 // src/app/api/upload/thumbnail/route.ts
-// Upload thumbnail images to Azure Blob Storage
+// Upload thumbnail images to local filesystem
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import { BlobServiceClient } from "@azure/storage-blob";
-
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || "thumbnails";
+import fs from "fs/promises";
+import path from "path";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,14 +13,6 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!connectionString) {
-      console.error("[Upload] Missing AZURE_STORAGE_CONNECTION_STRING");
-      return NextResponse.json(
-        { error: "Storage not configured" },
-        { status: 500 }
-      );
     }
 
     // Parse form data
@@ -51,35 +41,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const extension = file.name.split(".").pop() || "jpg";
-    const blobName = storyId
-      ? `${session.user.id}/${storyId}-${timestamp}.${extension}`
-      : `${session.user.id}/${timestamp}.${extension}`;
-
-    // Upload to Azure Blob Storage
-    const blobServiceClient =
-      BlobServiceClient.fromConnectionString(connectionString);
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload with content type
-    await blockBlobClient.upload(buffer, buffer.length, {
-      blobHTTPHeaders: {
-        blobContentType: file.type,
-      },
-    });
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.name.split(".").pop() || "jpg";
+    const filename = storyId
+      ? `${storyId}-${timestamp}.${extension}`
+      : `${session.user.id}-${timestamp}.${extension}`;
 
-    // Get the public URL
-    const url = blockBlobClient.url;
+    // Save to local filesystem
+    const uploadDir = path.join(process.cwd(), "public/images/user-thumbnails");
+    await fs.mkdir(uploadDir, { recursive: true });
 
-    console.log("[Upload] Thumbnail uploaded:", { blobName, url });
+    const filePath = path.join(uploadDir, filename);
+    await fs.writeFile(filePath, buffer);
 
+    const url = `/images/user-thumbnails/${filename}`;
+    console.log("[Upload] Thumbnail saved:", { filename, url });
     return NextResponse.json({ url });
   } catch (error: any) {
     console.error("[Upload] Error:", error.message);

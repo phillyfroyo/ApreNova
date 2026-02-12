@@ -525,7 +525,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-default"
             >
               <Image
                 src="https://www.svgrepo.com/show/475656/google-color.svg"

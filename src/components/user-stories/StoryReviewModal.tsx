@@ -307,12 +307,25 @@ export default function StoryReviewModal() {
                 }`}
               >
                 {storyData.thumbnailUrl ? (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full group/thumb">
                     <img
                       src={storyData.thumbnailUrl}
                       alt="Story thumbnail"
                       className="w-full h-full object-cover"
                     />
+                    {/* Remove thumbnail button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateStoryData({ thumbnailUrl: "" });
+                      }}
+                      className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                      aria-label={lng === "es" ? "Eliminar imagen" : "Remove image"}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                     {isUploadingThumbnail && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
@@ -363,7 +376,7 @@ export default function StoryReviewModal() {
               <button
                 onClick={handleGenerateAIThumbnail}
                 disabled={isGeneratingThumbnail || isUploadingThumbnail}
-                className="w-full mt-2 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                className="w-full mt-2 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-default transition-all flex items-center justify-center gap-1.5"
               >
                 {isGeneratingThumbnail ? (
                   <>
@@ -653,7 +666,7 @@ export default function StoryReviewModal() {
                               ? "bg-emerald-500 text-white"
                               : canSelect
                               ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                              : "bg-gray-50 text-gray-300 cursor-default"
                           }`}
                         >
                           {TAG_I18N_KEYS[tag] ? t.myStories[TAG_I18N_KEYS[tag] as keyof typeof t.myStories] : tag.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
@@ -702,7 +715,7 @@ export default function StoryReviewModal() {
           <button
             onClick={handleConfirm}
             disabled={isSubmitting || isUploadingThumbnail}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-default transition-all flex items-center gap-2"
           >
             {isSubmitting || isUploadingThumbnail ? (
               <>

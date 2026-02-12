@@ -52,7 +52,7 @@ export default function UploadStoryButton() {
         ref={buttonRef}
         onClick={handleClick}
         disabled={isUploading}
-        className="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-default"
         title={isSpanish ? "Subir historia" : "Upload story"}
       >
         {isUploading ? (

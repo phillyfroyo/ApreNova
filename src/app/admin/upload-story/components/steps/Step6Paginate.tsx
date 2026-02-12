@@ -135,21 +135,21 @@ export function Step6Paginate({
             <button
               onClick={() => updateStoryData({ linesPerPage: totalLines })}
               disabled={hasPageMarkers}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-default"
             >
               Single Page ({totalLines} lines)
             </button>
             <button
               onClick={() => updateStoryData({ linesPerPage: 10 })}
               disabled={hasPageMarkers}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-default"
             >
               Standard (10 lines)
             </button>
             <button
               onClick={() => updateStoryData({ linesPerPage: 5 })}
               disabled={hasPageMarkers}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-default"
             >
               Short (5 lines)
             </button>

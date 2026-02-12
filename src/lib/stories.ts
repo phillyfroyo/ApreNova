@@ -192,6 +192,10 @@ export function getStoryDescription(lang: Language, slug: string): string {
   return (translations as any)[lang]?.storiesMetadata?.[slug]?.description ?? "";
 }
 
+export function getStoryHook(lang: Language, slug: string): string {
+  return (translations as any)[lang]?.storiesMetadata?.[slug]?.hook ?? "";
+}
+
 export function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -237,21 +241,20 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["technology","reflective","inspiring","heartwarming"],
     targetAudience: "all",
-  },
-  {
-    slug: "my-day",
-    image: "/images/my-day-thumbnail.png",
-    levels: ["A1", "A2", "B1", "B2", "C1"],
-    type: "poem",
-    origin: { isOriginal: true },
-    tags: ["family","multicultural"],
-    targetAudience: "all",
-  },  {
+  },{
     slug: "poems-by-emily-dickinson",
     image: "/images/poems-by-emily-dickinson-thumbnail-1465.jpeg",
     levels: ["C1"],
     type: "poem",
     origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886" }, yearFirstPublished: 2004, sourceEdition: { title: "Poems by Emily Dickinson, Three Series, Complete", publisher: "Project Gutenberg", publicationYear: 2004, editor: "Mabel Loomis Todd and T.W. Higginson", isPublicDomain: true, publicDomainNote: "This ebook is for the use of anyone anywhere in the United States and most other parts of the world at no cost and with almost no restrictions whatsoever." }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceNote: "Text from Project Gutenberg", provenanceUrl: "https://www.gutenberg.org/ebooks/12242" } } },
+    targetAudience: "all",
+    structureType: "anthology",
+  },  {
+    slug: "my-day-3",
+    image: "/images/my-day-3-thumbnail-7027.png",
+    levels: ["A1", "A2", "B1", "B2", "C1"],
+    type: "poem",
+    origin: { isOriginal: true },
     targetAudience: "all",
     structureType: "anthology",
   },

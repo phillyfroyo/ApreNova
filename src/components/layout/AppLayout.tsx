@@ -10,6 +10,7 @@ import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
 import { BookOpen, Crown, Gem, Settings } from 'lucide-react';
 import type { Language } from '@/types/i18n';
+import { t } from '@/lib/t';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -161,7 +162,7 @@ export default function AppLayout({ children, lang, hideNavigation = false, hide
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Gem className="w-4 h-4 text-indigo-500" />
-                    {lang === 'es' ? 'Hazte Premium' : 'Go Premium'}
+                    {t(lang, "sidebar", "goPremium")}
                   </Link>
                 )}
               </div>

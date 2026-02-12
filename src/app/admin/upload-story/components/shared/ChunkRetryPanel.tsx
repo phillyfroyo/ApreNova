@@ -132,7 +132,7 @@ function ErrorItem({
           <button
             onClick={onRetry}
             disabled={isRetrying}
-            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-default"
             title="Retry this chunk"
           >
             {isRetrying ? "..." : "Retry"}

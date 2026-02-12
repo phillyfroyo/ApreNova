@@ -1456,14 +1456,14 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
               <button
                 onClick={dismissCancelConfirm}
                 disabled={isCancelling}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-default"
               >
                 {t(providerLng, "upload", "keepUploading")}
               </button>
               <button
                 onClick={cancelUpload}
                 disabled={isCancelling}
-                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-default flex items-center gap-2"
               >
                 {isCancelling ? (
                   <>

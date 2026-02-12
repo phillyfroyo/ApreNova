@@ -332,7 +332,7 @@ export function ProgressViewerModal({
                   <button
                     key={`pending-${idx}`}
                     disabled
-                    className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                    className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-400 border border-gray-200 cursor-default"
                   >
                     {displayChapters.length + idx + 1}
                   </button>

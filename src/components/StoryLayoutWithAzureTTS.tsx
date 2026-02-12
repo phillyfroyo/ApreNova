@@ -1361,7 +1361,7 @@ export default function StoryLayoutWithAzureTTS({
                         onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
                         className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow
-                            ? 'opacity-50 cursor-not-allowed'
+                            ? 'opacity-50 cursor-default'
                             : ''
                         } ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
@@ -1380,7 +1380,7 @@ export default function StoryLayoutWithAzureTTS({
                         onClick={() => handlePlay(lineIndex, true, s[oppositeLang])}
                         className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow
-                            ? 'opacity-50 cursor-not-allowed'
+                            ? 'opacity-50 cursor-default'
                             : ''
                         } ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
@@ -1754,7 +1754,7 @@ export default function StoryLayoutWithAzureTTS({
                       onClick={() => handleStanzaPlay(false)}
                       className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
                         playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow
-                          ? 'opacity-50 cursor-not-allowed'
+                          ? 'opacity-50 cursor-default'
                           : ''
                       } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
                       data-audio-control="speaker"
@@ -1771,7 +1771,7 @@ export default function StoryLayoutWithAzureTTS({
                       onClick={() => handleStanzaPlay(true)}
                       className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
                         playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow
-                          ? 'opacity-50 cursor-not-allowed'
+                          ? 'opacity-50 cursor-default'
                           : ''
                       } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
                       data-audio-control="turtle"
@@ -1931,7 +1931,7 @@ export default function StoryLayoutWithAzureTTS({
 
                                 {aiTranslation.enhancedTranslation.isDerivative && aiTranslation.enhancedTranslation.rootWord && (
                                   <div className="mt-3">
-                                    <p className="font-semibold text-sm text-gray-700">Root word:</p>
+                                    <p className="font-semibold text-sm text-gray-700">{t(typedLang, "translator", "rootWord")}:</p>
                                     <div className="text-sm text-gray-800">
                                       <span className="font-medium">{aiTranslation.enhancedTranslation.rootWord}</span> = {aiTranslation.enhancedTranslation.rootTranslation}
                                     </div>

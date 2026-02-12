@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     if (!session.user.isPremium) {
       return NextResponse.json(
         {
-          error: "Only Premium users can submit stories for public review",
+          error: "Upgrade your plan to submit stories for public review",
           upgradeRequired: true,
         },
         { status: 403 }

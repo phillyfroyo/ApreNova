@@ -566,7 +566,7 @@ export default function StoryLayoutSandbox({
         <div className="fixed bottom-4 right-4 z-50">
           <Button 
             variant="muted"
-            className="px-[10px] py-0.1 text-xs rounded-xl opacity-75 cursor-not-allowed"
+            className="px-[10px] py-0.1 text-xs rounded-xl opacity-75 cursor-default"
             disabled
           >
             💬 Feedback
@@ -718,7 +718,7 @@ export default function StoryLayoutSandbox({
                 disabled
               />
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-default"
                 disabled
               >
                 Send

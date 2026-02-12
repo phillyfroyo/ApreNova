@@ -31,7 +31,7 @@ export async function canCreateStory(
       allowed: false,
       reason: isPremium
         ? "You have reached the maximum number of stories."
-        : "Free tier limit reached. Upgrade to Premium for unlimited stories.",
+        : "Free tier limit reached. Upgrade your plan for unlimited stories.",
       currentCount: storyCount,
       maxCount: maxStories,
     };
@@ -80,7 +80,7 @@ export async function canProcessToday(
       allowed: false,
       reason: isPremium
         ? `You've reached your daily limit of ${limit} stories. Try again tomorrow.`
-        : "Free users can process 1 story per day. Upgrade to Premium for more.",
+        : "Free users can process 1 story per day. Upgrade your plan for more.",
       currentCount: processedToday,
       maxCount: limit,
     };
@@ -129,7 +129,7 @@ export function validateContentLength(
     } else if (isFirstStoryThisMonth) {
       reason = `Story exceeds the maximum length of ${maxLength.toLocaleString()} characters.`;
     } else {
-      reason = `Free users can upload one large story per month. Additional stories are limited to ${maxLength.toLocaleString()} characters. Upgrade to Premium for unlimited large uploads.`;
+      reason = `Free users can upload one large story per month. Additional stories are limited to ${maxLength.toLocaleString()} characters. Upgrade your plan for unlimited large uploads.`;
     }
 
     return {

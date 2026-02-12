@@ -112,6 +112,7 @@ export interface StoryMetadataInput {
   slug: string;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook?: { en: string; es: string };
   image?: string;
   levels: CEFRCode[];  // CEFR codes like "A1", "A2", "B1", etc.
   isPremiumOnly?: boolean;
@@ -422,9 +423,11 @@ export function generateUITranslationEntry(
   lang: "en" | "es",
   metadata: StoryMetadataInput
 ): string {
+  const hook = metadata.hook?.[lang];
+  const hookLine = hook ? `\n    hook: "${escapeJsString(hook)}",` : "";
   return `  "${metadata.slug}": {
-    title: "${lang === "en" ? metadata.title.en : metadata.title.es}",
-    description: "${lang === "en" ? metadata.description.en : metadata.description.es}",
+    title: "${escapeJsString(lang === "en" ? metadata.title.en : metadata.title.es)}",${hookLine}
+    description: "${escapeJsString(lang === "en" ? metadata.description.en : metadata.description.es)}",
   },`;
 }
 

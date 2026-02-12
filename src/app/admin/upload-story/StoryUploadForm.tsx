@@ -244,7 +244,7 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
                       ? "bg-blue-100 text-blue-700"
                       : step.number < currentStep
                       ? "text-green-600 hover:bg-green-50 cursor-pointer"
-                      : "text-gray-400 cursor-not-allowed"
+                      : "text-gray-400 cursor-default"
                   }`}
                 >
                   <span
@@ -421,7 +421,7 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
             <button
               onClick={() => goToStep((currentStep - 1) as Step)}
               disabled={currentStep === 1}
-              className="px-6 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-default"
             >
               ← Back
             </button>
@@ -441,7 +441,7 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
                 <button
                   onClick={() => goToStep((currentStep + 1) as Step)}
                   disabled={!canProceed() || isProcessing}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default"
                 >
                   Continue →
                 </button>

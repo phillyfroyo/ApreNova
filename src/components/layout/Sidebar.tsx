@@ -211,7 +211,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Gem className="w-4 h-4 text-indigo-500" />
-                    {lang === 'es' ? 'Hazte Premium' : 'Go Premium'}
+                    {t(lang, "sidebar", "goPremium")}
                   </Link>
                 )}
               </div>

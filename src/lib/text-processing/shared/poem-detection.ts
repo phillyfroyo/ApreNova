@@ -324,12 +324,17 @@ export function detectPoemBoundaries(lines: string[]): DetectedPoem[] {
     }
   }
 
-  // If double-blank detection found poems, return them
+  // If double-blank detection found multiple poems, return them
   if (poems.length > 1) {
     return poems;
   }
 
-  // Final fallback: treat entire chapter as one poem
+  // If double-blank detection found exactly one poem, return it as-is
+  if (poems.length === 1) {
+    return poems;
+  }
+
+  // Final fallback: treat entire chapter as one poem (no poems detected at all)
   if (lines.length > 0) {
     poems.push({
       title: "",

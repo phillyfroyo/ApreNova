@@ -82,7 +82,7 @@ export default function Dropdown({
             }}
             className={`px-4 py-2 ${
               disabled
-                ? "text-gray-400 cursor-not-allowed"
+                ? "text-gray-400 cursor-default"
                 : "hover:bg-gray-100 cursor-pointer"
             }`}
           >

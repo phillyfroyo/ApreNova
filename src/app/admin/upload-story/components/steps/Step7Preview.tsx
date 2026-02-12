@@ -77,6 +77,7 @@ export function Step7Preview({
           slug: storyData.slug,
           title: storyData.title,
           description: storyData.description,
+          hook: storyData.hook || undefined,
           levels,
           linesPerPage: storyData.linesPerPage,
           thumbnailBase64: storyData.thumbnailPreview || undefined,

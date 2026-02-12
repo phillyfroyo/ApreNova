@@ -193,7 +193,7 @@ export function StreamSelector({
                   disabled={isDisabled}
                   className={`w-full px-3 py-2 flex items-center gap-3 text-left transition-colors ${
                     isDisabled
-                      ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                      ? "bg-gray-50 text-gray-400 cursor-default"
                       : "hover:bg-gray-50 text-gray-700"
                   }`}
                 >

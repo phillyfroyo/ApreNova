@@ -258,7 +258,7 @@ export default function TutorPage() {
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-default transition-colors text-sm font-medium"
             >
               {t(typedLang, "aiTutor", "send")}
             </button>

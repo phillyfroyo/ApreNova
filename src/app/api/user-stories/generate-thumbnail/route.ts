@@ -6,15 +6,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import OpenAI from "openai";
-import { BlobServiceClient } from "@azure/storage-blob";
 import { logOpenAICost, logDalleCost } from "@/lib/cost-tracker";
+import fs from "fs/promises";
+import path from "path";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || "thumbnails";
 
 export async function POST(req: NextRequest) {
   try {
@@ -190,21 +188,13 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
   }
 }
 
-// PUT: Upload selected DALL-E image to Azure Blob Storage
+// PUT: Save selected DALL-E image to local filesystem
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (!connectionString) {
-      console.error("[Upload] Missing AZURE_STORAGE_CONNECTION_STRING");
-      return NextResponse.json(
-        { error: "Storage not configured" },
-        { status: 500 }
-      );
     }
 
     const body = await req.json();
@@ -246,23 +236,18 @@ export async function PUT(req: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now();
     const extension = contentType.includes("png") ? "png" : "jpg";
-    const blobName = `${session.user.id}/${storyId}-ai-${timestamp}.${extension}`;
+    const filename = `${storyId}-ai-${timestamp}.${extension}`;
 
-    // Upload to Azure Blob Storage
-    const blobServiceClient =
-      BlobServiceClient.fromConnectionString(connectionString);
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    // Save to local filesystem
+    const uploadDir = path.join(process.cwd(), "public/images/user-thumbnails");
+    await fs.mkdir(uploadDir, { recursive: true });
 
-    await blockBlobClient.upload(imageBuffer, imageBuffer.length, {
-      blobHTTPHeaders: {
-        blobContentType: contentType,
-      },
-    });
+    const filePath = path.join(uploadDir, filename);
+    await fs.writeFile(filePath, imageBuffer);
 
-    const permanentUrl = blockBlobClient.url;
+    const permanentUrl = `/images/user-thumbnails/${filename}`;
 
-    console.log("[Upload AI Thumbnail] Uploaded to:", permanentUrl);
+    console.log("[Upload AI Thumbnail] Saved to:", permanentUrl);
 
     // Update story with new thumbnail URL
     await prisma.userStory.update({

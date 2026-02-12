@@ -214,7 +214,7 @@ export default function AzureAudioControls({
           onClick={onPlay}
           disabled={isLoading}
           className={`text-xl hover:scale-110 transition-transform ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:text-blue-600'
+            isLoading ? 'opacity-50 cursor-default' : 'hover:text-blue-600'
           }`}
           title="Play at normal speed"
           data-audio-control="speaker"
@@ -227,7 +227,7 @@ export default function AzureAudioControls({
           onClick={onPlaySlow}
           disabled={isLoading}
           className={`text-xl hover:scale-110 transition-transform ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:text-green-600'
+            isLoading ? 'opacity-50 cursor-default' : 'hover:text-green-600'
           }`}
           title="Play at slow speed"
           data-audio-control="turtle"

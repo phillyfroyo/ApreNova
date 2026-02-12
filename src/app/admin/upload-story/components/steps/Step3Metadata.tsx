@@ -488,14 +488,14 @@ export function Step3Metadata({
             <button
               onClick={generateBundleMetadata}
               disabled={isAnyGenerating || !storyData.rawText}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-default text-sm font-medium"
             >
               {isGeneratingBundle ? "Generating..." : "Generate Text Metadata"}
             </button>
             <button
               onClick={generateAll}
               disabled={isAnyGenerating || !storyData.rawText}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-default text-sm font-medium"
             >
               {generatingTypes.size > 0 ? "Generating..." : "Generate Images"}
             </button>
@@ -553,7 +553,7 @@ export function Step3Metadata({
             <button
               onClick={() => generateMetadata("image")}
               disabled={isGenerating("image") || !storyData.rawText}
-              className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-default"
             >
               {isGenerating("image") ? "Generating..." : "Generate with AI"}
             </button>
@@ -909,7 +909,7 @@ export function Step3Metadata({
           <button
             onClick={() => generateMetadata("title")}
             disabled={isGenerating("title") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-default"
           >
             {isGenerating("title") ? "Generating..." : "Generate"}
           </button>
@@ -984,7 +984,7 @@ export function Step3Metadata({
                   type="button"
                   onClick={() => translateMetadata("en-to-es", ["title", "hook", "description"])}
                   disabled={isTranslating}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                 >
                   {isTranslating ? (
                     <>
@@ -1005,7 +1005,7 @@ export function Step3Metadata({
                   type="button"
                   onClick={() => translateMetadata("es-to-en", ["title", "hook", "description"])}
                   disabled={isTranslating}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                 >
                   {isTranslating ? (
                     <>
@@ -1210,7 +1210,7 @@ export function Step3Metadata({
                     type="button"
                     onClick={parseAttributionWithAI}
                     disabled={isParsingAttribution || !frontMatterText.trim()}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                   >
                     {isParsingAttribution ? (
                       <>

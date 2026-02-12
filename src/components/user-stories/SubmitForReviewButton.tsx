@@ -3,11 +3,14 @@
 
 import { useState } from "react";
 import { Send, Lock, CheckCircle, Clock } from "lucide-react";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
 
 interface SubmitForReviewButtonProps {
   storyId: string;
   currentVisibility: "PRIVATE" | "SUBMITTED" | "PUBLIC" | "REJECTED";
   isPremium: boolean;
+  lng?: Language;
   onSuccess?: () => void;
 }
 
@@ -15,6 +18,7 @@ export default function SubmitForReviewButton({
   storyId,
   currentVisibility,
   isPremium,
+  lng = "en",
   onSuccess,
 }: SubmitForReviewButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +83,7 @@ export default function SubmitForReviewButton({
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Lock className="w-4 h-4" />
-        <span>Premium required to share publicly</span>
+        <span>{t(lng, "myStories", "premiumRequired")}</span>
       </div>
     );
   }
@@ -100,7 +104,7 @@ export default function SubmitForReviewButton({
       <button
         onClick={handleSubmit}
         disabled={isSubmitting}
-        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-default transition-colors text-sm font-medium"
       >
         {isSubmitting ? (
           <>

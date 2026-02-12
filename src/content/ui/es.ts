@@ -258,7 +258,7 @@ translator: {
   or: "o",
   createAccount: "crea una cuenta gratis",
   audioSignInRequired: "Para usar funciones de audio,",
-  rootWord: "Palabra raíz",
+  rootWord: "Raíz",
   lockedFeature: "Mejora tu plan para desbloquear traducciones inteligentes",
 },
 
@@ -597,12 +597,12 @@ storiesMetadata: {
   "poems-by-emily-dickinson": {
     title: "Poemas de Emily Dickinson, Tres Series, Completas",
     description: "Los versos de Emily Dickinson pertenecen enfáticamente a lo que Emerson hace tiempo llamó 'la Poesía del Portafolio', algo producido absolutamente sin la intención de publicación, y únicamente como expresión de la propia mente del escritor. Tal verso debe inevitablemente perder cualquier ventaja que se encuentre en la disciplina de la crítica pública y la conformidad forzada a las maneras aceptadas. Por otro lado, a menudo puede ganar algo a través del hábito de la libertad y la expresión no convencional de pensamientos atrevidos. En el caso de la autora actual, no había absolutamente ninguna opción en el asunto; debía escribir así, o no escribir en absoluto. Una reclusa por temperamento y hábito, literalmente pasando años sin poner un pie más allá del umbral, y muchos más años durante los cuales sus paseos se limitaban estrictamente a los terrenos de su padre, habitualmente ocultaba su mente, como su persona, de todos excepto de unos pocos amigos; y fue con gran dificultad que fue persuadida para imprimir, durante su vida, tres o cuatro poemas. Sin embargo, escribió versos en gran abundancia; y aunque curiosamente indiferente a todas las reglas convencionales, tenía sin embargo un estándar literario riguroso propio, y a menudo alteraba una palabra muchas veces para adecuarla a un oído que tenía su propia tenaz exquisitez.",
-  },  "my-day-1": {
+  },
+  "my-day-3": {
     title: "Mi Día",
-    hook: "Sigue un día sencillo en la vida.",
+    hook: "Sigue un día típico de la mañana a la noche.",
     description: "",
   },
-
 },
 };
 

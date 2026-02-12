@@ -160,7 +160,7 @@ export default function WordHighlighter({
 
     // Disabled state
     if (disabled) {
-      baseClasses.push('opacity-50', 'cursor-not-allowed');
+      baseClasses.push('opacity-50', 'cursor-default');
     } else if (isClickable) {
       baseClasses.push('cursor-pointer');
     } else {

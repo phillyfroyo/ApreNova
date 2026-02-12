@@ -76,7 +76,7 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
             <button
               type="submit"
               disabled={isLoading || !secret}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default transition-colors"
             >
               {isLoading ? "Authenticating..." : "Access Admin Panel"}
             </button>

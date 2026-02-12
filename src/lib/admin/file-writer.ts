@@ -239,11 +239,11 @@ export async function updateUITranslation(
       return false;
     }
 
-    // Insert position is right before the storiesMetadata closing `},`
+    // Insert position is right before the storiesMetadata closing sequence
     const insertPos = metadataIdx + closeMatch.index;
 
-    // Insert the new entry before the closing brace
-    content = content.slice(0, insertPos) + entry + lineEnding + content.slice(insertPos);
+    // Insert the new entry before the closing brace, with proper newline separation
+    content = content.slice(0, insertPos) + lineEnding + entry + content.slice(insertPos);
 
     await fs.writeFile(filePath, content, "utf-8");
     console.log(`[file-writer] Successfully added "${slug}" to ${lang}.ts`);

@@ -646,7 +646,7 @@ export default function StoryManager() {
                 <td className="px-4 py-3 text-right">
                   <span className="text-sm text-gray-600">
                     {story.totalCostCents
-                      ? `$${(story.totalCostCents / 100).toFixed(2)}`
+                      ? `$${(story.totalCostCents / 1_000_000).toFixed(2)}`
                       : "-"}
                   </span>
                 </td>
@@ -1130,7 +1130,7 @@ export default function StoryManager() {
                           type="button"
                           onClick={parseAttributionWithAI}
                           disabled={isParsingAttribution || !frontMatterText.trim()}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                         >
                           {isParsingAttribution ? (
                             <>

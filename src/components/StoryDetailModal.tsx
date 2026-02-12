@@ -10,7 +10,7 @@ import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution,
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
-import { getStoryTitle, getStoryDescription } from "@/lib/stories";
+import { getStoryTitle, getStoryDescription, getStoryHook } from "@/lib/stories";
 import type { StoryMetadata, StoryAttribution } from "@/types/story";
 import { toCEFR, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
 
@@ -410,6 +410,13 @@ export default function StoryDetailModal({
                 >
                   {t(typedLang, "stories", "readStory")}
                 </Button>
+
+                {/* Hook */}
+                {getStoryHook(typedLang, storySlug) && (
+                  <p className="text-gray-600 text-sm italic mb-6">
+                    {getStoryHook(typedLang, storySlug)}
+                  </p>
+                )}
 
                 {/* Available Levels */}
                 <div className="mb-6">

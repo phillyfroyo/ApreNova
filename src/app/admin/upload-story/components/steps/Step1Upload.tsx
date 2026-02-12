@@ -346,7 +346,7 @@ export function Step1Upload({
           <button
             onClick={processText}
             disabled={isParsing || !storyData.rawText.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-default text-sm font-medium transition-all"
           >
             {isParsing ? (
               <>
@@ -461,7 +461,7 @@ export function Step1Upload({
                 <button
                   onClick={extractMetadataFromFrontMatter}
                   disabled={isExtractingMetadata}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-default text-xs font-medium transition-all"
                 >
                   {isExtractingMetadata ? (
                     <>

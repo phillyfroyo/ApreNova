@@ -118,7 +118,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   const fetchTranslation = useCallback(
   async (start: number, end: number) => {
     if (readOnlyMode) {
-      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      setTranslations([`🔒 ${t(currentLang, "translator", "lockedFeature")}`]);
       return;
     }
 
@@ -217,7 +217,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
       // Set all states together - React 18 batches into single render
       setStartIdx(0);
       setEndIdx(words.length - 1);
-      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      setTranslations([`🔒 ${t(currentLang, "translator", "lockedFeature")}`]);
       return;
     }
 

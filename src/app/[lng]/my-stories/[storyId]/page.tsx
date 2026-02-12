@@ -214,7 +214,7 @@ export default function StoryDetailPage() {
                 const isOriginal = story.detectedLevel && toCEFR(story.detectedLevel) === cefrLevel;
                 const colorClass = isReady
                   ? CEFR_BADGE_COLORS[cefrLevel] || "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed";
+                  : "bg-gray-100 text-gray-400 cursor-default";
                 return (
                   <Link
                     key={cefrLevel}

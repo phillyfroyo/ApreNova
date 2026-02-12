@@ -196,8 +196,8 @@ export default function SettingsPage() {
       membership: 'Membership',
       currentPlan: 'Current Plan',
       free: 'Free',
-      premium: 'Premium',
-      upgradeToPremium: 'Upgrade to Premium',
+      premium: 'PRO',
+      upgradeToPremium: 'Upgrade',
       account: 'Account',
       signOut: 'Sign Out',
       save: 'Save',
@@ -223,8 +223,8 @@ export default function SettingsPage() {
       membership: 'Membresía',
       currentPlan: 'Plan Actual',
       free: 'Gratis',
-      premium: 'Premium',
-      upgradeToPremium: 'Mejorar a Premium',
+      premium: 'PRO',
+      upgradeToPremium: 'Mejorar',
       account: 'Cuenta',
       signOut: 'Cerrar Sesión',
       save: 'Guardar',
@@ -588,7 +588,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleteConfirmText !== 'DELETE' || deleting}
-                className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-default flex items-center justify-center gap-2"
               >
                 {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {txt.deleteAccountButton}
