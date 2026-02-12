@@ -21,7 +21,7 @@ export default function StoryCard({
   return (
     <div
       style={{
-        width: "160px",
+        width: "140px",
         flexShrink: 0,
         scrollSnapAlign: "start",
       }}
@@ -48,7 +48,7 @@ export default function StoryCard({
     src={image}
     alt={title}
     fill
-    sizes="160px"
+    sizes="140px"
     style={{ objectFit: "cover", borderRadius: "12px" }}
   />
 </div>

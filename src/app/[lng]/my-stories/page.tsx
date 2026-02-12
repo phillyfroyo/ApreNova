@@ -246,7 +246,7 @@ export default function MyStoriesPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              style={{ width: "160px", flexShrink: 0 }}
+              style={{ width: "140px", flexShrink: 0 }}
               className="aspect-[2/3] rounded-xl bg-white/60 border border-gray-200 flex items-center justify-center"
             >
               <span className="text-2xl text-gray-300">–</span>
@@ -272,14 +272,17 @@ export default function MyStoriesPage() {
         <div className="flex flex-wrap gap-4 py-3">
           {/* Add new story card - at the front */}
           {stats && (stats.maxStories === -1 || stats.totalStories < stats.maxStories) && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              style={{ width: "160px", flexShrink: 0 }}
-              className="aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex flex-col items-center justify-center gap-2 hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
-            >
-              <Plus className="w-8 h-8 text-gray-400" />
-              <span className="text-sm text-gray-500">{t(typedLang, "myStories", "addStory")}</span>
-            </button>
+            <div style={{ width: "140px", flexShrink: 0 }}>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="w-full aspect-[2/3] rounded-xl border-2 border-dashed border-gray-300 bg-white/50 flex items-center justify-center hover:border-blue-400 hover:bg-white/80 transition-all cursor-pointer"
+              >
+                <Plus className="w-8 h-8 text-gray-400" />
+              </button>
+              <p className="text-center text-sm mt-2 text-gray-500 whitespace-nowrap overflow-hidden text-ellipsis">
+                {t(typedLang, "myStories", "addStory")}
+              </p>
+            </div>
           )}
 
           {stories.map((story) => (

@@ -103,7 +103,7 @@ export default function UserStoryCard({
   return (
     <div
       style={fillContainer ? {} : {
-        width: "160px",
+        width: "140px",
         flexShrink: 0,
         scrollSnapAlign: "start",
       }}
@@ -128,7 +128,7 @@ export default function UserStoryCard({
             src={validThumbnailUrl}
             alt={title}
             fill
-            sizes={fillContainer ? "(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw" : "160px"}
+            sizes={fillContainer ? "(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw" : "140px"}
             className="object-cover rounded-xl"
           />
         ) : (

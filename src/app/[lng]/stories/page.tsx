@@ -323,11 +323,7 @@ useEffect(() => {
         zIndex: -1,
       }}
     />
-    <div style={{
-    padding: "2rem",
-    position: "relative",
-    minHeight: "100vh",
-  }}>
+    <div className="px-2 py-4 sm:p-8 relative min-h-screen">
 
 {/* Top right controls: Filter, Upload button + My Stories */}
 <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
@@ -356,7 +352,7 @@ useEffect(() => {
   </Link>
 </div>
 
-<div className="mt-12 mb-4 px-4">
+<div className="mt-12 mb-4 px-1 sm:px-4">
   {/* Filter Panel */}
   <AnimatePresence>
     {showFilters && (
@@ -485,7 +481,7 @@ useEffect(() => {
 
 {/* My Stories Section - only show if user has stories and not viewing a source filter */}
 {userStories.length > 0 && !sourceFilter && (
-  <div className="mb-6 px-4">
+  <div className="mb-6 px-1 sm:px-4">
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-xl font-semibold flex items-center gap-2">
         <span>📚</span>
@@ -498,8 +494,8 @@ useEffect(() => {
         display: "flex",
         gap: "1rem",
         overflowX: "auto",
-        paddingLeft: "1rem",
-        paddingRight: "1rem",
+        paddingLeft: "0.25rem",
+        paddingRight: "0.25rem",
         paddingTop: "0.75rem",
         paddingBottom: "0.75rem",
         scrollbarWidth: "none",
@@ -535,7 +531,7 @@ useEffect(() => {
 
         {/* Full Grid View when source filter is active */}
         {sourceFilter ? (
-          <div className="mb-6 px-4">
+          <div className="mb-6 px-1 sm:px-4">
             {/* Header with back button */}
             <div className="flex items-center gap-4 mb-4">
               <button
@@ -573,7 +569,7 @@ useEffect(() => {
             </div>
 
             {/* Grid of all stories in this category */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 px-0 sm:px-2">
               {(sourceFilter === "cuentana" ? cuentanaOriginals : sourceFilter === "gutenberg" ? gutenbergStories : otherExternalStories).map((story) => {
                 const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
                 return (
@@ -592,7 +588,7 @@ useEffect(() => {
           <>
             {/* Normal Row View - Cuentana Originals */}
             {cuentanaOriginals.length > 0 && (
-              <div className="mb-6 px-4">
+              <div className="mb-6 px-1 sm:px-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>🎨</span>
@@ -613,8 +609,8 @@ useEffect(() => {
                     display: "flex",
                     gap: "1rem",
                     overflowX: "auto",
-                    paddingLeft: "1rem",
-                    paddingRight: "1rem",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
                     paddingTop: "0.75rem",
                     paddingBottom: "0.75rem",
                     scrollbarWidth: "none",
@@ -640,7 +636,7 @@ useEffect(() => {
 
             {/* Normal Row View - Project Gutenberg Collection */}
             {gutenbergStories.length > 0 && (
-              <div className="mb-6 px-4">
+              <div className="mb-6 px-1 sm:px-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>📖</span>
@@ -661,8 +657,8 @@ useEffect(() => {
                     display: "flex",
                     gap: "1rem",
                     overflowX: "auto",
-                    paddingLeft: "1rem",
-                    paddingRight: "1rem",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
                     paddingTop: "0.75rem",
                     paddingBottom: "0.75rem",
                     scrollbarWidth: "none",
@@ -688,7 +684,7 @@ useEffect(() => {
 
             {/* Normal Row View - Other External Stories */}
             {otherExternalStories.length > 0 && (
-              <div className="mb-6 px-4">
+              <div className="mb-6 px-1 sm:px-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>📖</span>
@@ -709,8 +705,8 @@ useEffect(() => {
                     display: "flex",
                     gap: "1rem",
                     overflowX: "auto",
-                    paddingLeft: "1rem",
-                    paddingRight: "1rem",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
                     paddingTop: "0.75rem",
                     paddingBottom: "0.75rem",
                     scrollbarWidth: "none",
@@ -738,7 +734,7 @@ useEffect(() => {
       </>
     ) : (
       // Loading skeleton for admin stories while waiting for user stories status
-      <div className="mb-6 px-8">
+      <div className="mb-6 px-1 sm:px-8">
         {[1, 2, 3].map((row) => (
           <div
             key={row}

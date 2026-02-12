@@ -315,17 +315,6 @@ export default function StoryDetailModal({
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
           >
-            {/* Close button - fixed position outside the scrollable area */}
-            <button
-              onClick={onClose}
-              className="absolute top-0 right-0 md:top-2 md:right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10 pointer-events-auto"
-              aria-label="Close"
-            >
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
             <div
               className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] md:h-[80vh] md:max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
