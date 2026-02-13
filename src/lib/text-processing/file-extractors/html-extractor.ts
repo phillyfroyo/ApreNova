@@ -164,6 +164,165 @@ function removeFrontMatter(html: string): string {
 }
 
 // ============================================================================
+// INTER-BOOK TITLE PAGE REMOVAL
+// ============================================================================
+
+/**
+ * Remove inter-book title pages and prefaces from multi-volume works.
+ *
+ * Multi-volume Gutenberg works (e.g., Dickinson's "Poems, Three Series")
+ * contain repeated title pages and editorial prefaces between volumes.
+ * These appear mid-document and look like:
+ *
+ *   <hr>
+ *   <h2>POEMS</h2>
+ *   <h2>by EMILY DICKINSON</h2>
+ *   <h2>Second Series</h2>
+ *   <p>Edited by...</p>
+ *   <p>PREFACE</p>
+ *   <p>Long editorial prose...</p>  (many paragraphs)
+ *   <p>MABEL LOOMIS TODD.</p>       (signature)
+ *   <hr>
+ *   <p class="indent">Epigraph poem...</p>
+ *   <hr>
+ *   ... actual content resumes ...
+ *
+ * Strategy: Find <hr> tags followed by consecutive <h2> clusters that look
+ * like title pages. Remove from the <hr> through the preface prose, up to
+ * the next <hr> that precedes poem content (thematic section markers like
+ * "I. LIFE."). Keep everything after that final <hr>.
+ */
+function removeInterBookTitlePages(html: string): string {
+  let result = html;
+
+  // Strategy: Find clusters of 2+ consecutive <h2> tags that look like a title page,
+  // then look backwards for a preceding <hr> and forwards for where content resumes.
+  //
+  // The gap between <hr> and <h2> can contain arbitrary HTML (empty divs, br tags,
+  // anchor divs, empty paragraphs), so we find h2 clusters first, then scan backwards.
+
+  // Find all <h2> tags with their positions
+  const h2Pattern = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  const h2Tags: { index: number; end: number; text: string }[] = [];
+  let h2Match;
+
+  while ((h2Match = h2Pattern.exec(result)) !== null) {
+    h2Tags.push({
+      index: h2Match.index,
+      end: h2Match.index + h2Match[0].length,
+      text: h2Match[1].replace(/<[^>]+>/g, '').trim(),
+    });
+  }
+
+  // Find clusters of 2+ <h2> tags that are close together (within 200 chars)
+  // and look like a title page
+  const removals: { start: number; end: number; label: string }[] = [];
+
+  for (let i = 0; i < h2Tags.length - 1; i++) {
+    // Check if this h2 and the next form a cluster
+    const cluster: typeof h2Tags = [h2Tags[i]];
+    let j = i + 1;
+    while (j < h2Tags.length && h2Tags[j].index - cluster[cluster.length - 1].end < 200) {
+      cluster.push(h2Tags[j]);
+      j++;
+    }
+
+    if (cluster.length < 2) continue;
+
+    // Check if this cluster looks like a title page
+    const clusterTexts = cluster.map(h => h.text);
+    const combinedText = clusterTexts.join(' ').toLowerCase();
+    const isTitlePage = combinedText.includes(' by ') ||
+      /\b(series|volume|part)\b/i.test(combinedText) ||
+      (cluster.length >= 2 && clusterTexts.some(t => /^(poems|stories|works|tales|songs|collected)/i.test(t)));
+
+    if (!isTitlePage) continue;
+
+    // Found a title page cluster. Look backwards for a preceding <hr>
+    const beforeCluster = result.slice(0, cluster[0].index);
+    const lastHrBefore = beforeCluster.lastIndexOf('<hr');
+    if (lastHrBefore === -1) continue;
+
+    // Verify there's no substantial content between the <hr> and the cluster
+    // (only whitespace, empty divs, br tags, anchors, empty paragraphs allowed)
+    const gap = beforeCluster.slice(lastHrBefore);
+    const gapText = gap.replace(/<[^>]+>/g, '').trim();
+    if (gapText.length > 50) continue; // Too much text content in the gap — not a title page
+
+    const titlePageStart = lastHrBefore;
+
+    // Now scan forward from end of h2 cluster to find where content resumes.
+    // Look for the <hr> that precedes thematic section markers (I. LIFE., etc.)
+    const afterCluster = result.slice(cluster[cluster.length - 1].end);
+    const hrPositions: number[] = [];
+    const hrScanPattern = /<hr[^>]*>/gi;
+    let hrScan;
+    while ((hrScan = hrScanPattern.exec(afterCluster)) !== null) {
+      hrPositions.push(hrScan.index);
+    }
+
+    if (hrPositions.length === 0) continue;
+
+    let cutEndOffset = -1;
+
+    for (const hrPos of hrPositions) {
+      const afterHr = afterCluster.slice(hrPos);
+      // Check text content in the next ~500 chars for thematic section markers
+      const previewText = afterHr.slice(0, 500).replace(/<[^>]+>/g, '');
+
+      // Thematic section markers: "I. LIFE.", "II. LOVE.", etc.
+      if (/[IVXLC]+\.\s+[A-Z]{2,}/.test(previewText)) {
+        cutEndOffset = hrPos;
+        break;
+      }
+    }
+
+    if (cutEndOffset === -1) {
+      // No thematic marker found — use last <hr> before any poem-like content
+      // as a fallback (look for short lines with leading whitespace = poetry)
+      for (let k = hrPositions.length - 1; k >= 0; k--) {
+        const afterHr = afterCluster.slice(hrPositions[k]);
+        const previewText = afterHr.slice(0, 300).replace(/<[^>]+>/g, '');
+        // Check for poem numbering pattern (Roman numeral alone on a line)
+        if (/^\s*[IVXLC]+\.\s*$/m.test(previewText)) {
+          cutEndOffset = hrPositions[k];
+          break;
+        }
+      }
+    }
+
+    if (cutEndOffset === -1) continue;
+
+    // Calculate absolute positions for removal
+    const absoluteEnd = cluster[cluster.length - 1].end + cutEndOffset;
+    const removed = result.slice(titlePageStart, absoluteEnd);
+    const removedTextLength = removed.replace(/<[^>]+>/g, '').trim().length;
+
+    // Safety: only remove if substantial prose (> 200 chars of text)
+    if (removedTextLength > 200) {
+      removals.push({
+        start: titlePageStart,
+        end: absoluteEnd,
+        label: clusterTexts.join(' / '),
+      });
+    }
+
+    // Skip past this cluster for the next iteration
+    i = j - 1;
+  }
+
+  // Apply removals in reverse order to preserve indices
+  for (let k = removals.length - 1; k >= 0; k--) {
+    const { start, end, label } = removals[k];
+    const removedTextLength = result.slice(start, end).replace(/<[^>]+>/g, '').trim().length;
+    console.log(`[removeInterBookTitlePages] Removed inter-book title page (${removedTextLength} chars of text): "${label}"`);
+    result = result.slice(0, start) + result.slice(end);
+  }
+
+  return result;
+}
+
+// ============================================================================
 // TOC REMOVAL
 // ============================================================================
 
@@ -490,6 +649,9 @@ export function extractTextFromHTML(
 
   // Step 0: Remove front matter (Gutenberg header, title page) before processing
   text = removeFrontMatter(text);
+
+  // Step 0a: Remove inter-book title pages and prefaces (multi-volume works)
+  text = removeInterBookTitlePages(text);
 
   // Step 0b: Detect and mark collection headers before losing HTML structure
   text = detectAndMarkCollectionHeaders(text);
