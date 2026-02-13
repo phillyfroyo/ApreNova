@@ -479,7 +479,10 @@ ${needsTitle ? `1. TÍTULO: Busca el título OFICIAL del libro en este orden de 
    c) Si no encuentras ninguno, genera un título conciso (máximo 5 palabras)
 
    IMPORTANTE: IGNORA textos promocionales como "The Project Gutenberg eBook of..." o "The Complete Project Gutenberg...". Estos NO son el título oficial.` : ""}
-${needsDescription ? `2. DESCRIPCIÓN: Basándote en el contenido de la historia, escribe una descripción atractiva de 1-2 oraciones que capture la esencia sin revelar demasiado.` : ""}
+${needsDescription ? `2. DESCRIPCIÓN: Una descripción de 1-2 oraciones del texto, en ambos idiomas. Sigue estas reglas:
+   - Si el texto contiene una descripción o resumen existente (en el prefacio, introducción o metadatos), úsalo EXACTAMENTE como está escrito si tiene 2 oraciones o menos.
+   - Si la descripción encontrada tiene más de 2 oraciones, condénsala a 1-2 oraciones usando las MISMAS PALABRAS del original, parafraseando solo si es necesario.
+   - Si NO se encuentra ninguna descripción en el texto, escribe una descripción profesional de 1-2 oraciones basada en el contenido.` : ""}
 
 Responde en JSON:
 {
@@ -497,7 +500,10 @@ ${needsTitle ? `1. TITLE: Find the OFFICIAL book title in this priority order:
    c) If neither found, generate a concise title (max 5 words)
 
    IMPORTANT: IGNORE promotional text like "The Project Gutenberg eBook of..." or "The Complete Project Gutenberg...". These are NOT the official title.` : ""}
-${needsDescription ? `2. DESCRIPTION: Based on the story content, write an engaging 1-2 sentence description that captures the essence without revealing too much.` : ""}
+${needsDescription ? `2. DESCRIPTION: A 1-2 sentence description of the text, in both languages. Follow these rules:
+   - If the text contains an existing description or summary (in a preface, introduction, or metadata), use it EXACTLY as written if it is 2 sentences or fewer.
+   - If the found description is longer than 2 sentences, condense it to 1-2 sentences using the SAME WORDS as the original, paraphrasing only slightly if needed.
+   - If NO description is found in the text, write a professional 1-2 sentence description based on the content.` : ""}
 
 Respond in JSON:
 {
@@ -520,7 +526,7 @@ ${needsTitle ? `1. TÍTULO: Busca el título OFICIAL del libro en este orden de 
    b) Línea "Title: ..." en los metadatos - usa el texto después de "Title:" exactamente
    c) Si no encuentras ninguno, genera un título conciso (máximo 5 palabras)
    IMPORTANTE: IGNORA textos promocionales como "The Project Gutenberg eBook of..." o "The Complete Project Gutenberg...".` : ""}
-${needsDescription ? `2. DESCRIPCIÓN: Escribe una descripción atractiva de 1-2 oraciones basándote en el contenido.` : ""}
+${needsDescription ? `2. DESCRIPCIÓN: Una descripción de 1-2 oraciones del texto. Si el texto contiene una descripción existente, úsala exactamente o condénsala usando las mismas palabras. Si no hay descripción, escribe una profesional basada en el contenido.` : ""}
 3. GANCHO: Escribe un gancho corto (máximo 15 palabras) que atraiga a los lectores.
 4. TIPO: Determina el tipo de contenido. Opciones válidas: ${typeList}
 5. AUDIENCIA: Determina la audiencia objetivo. Opciones: children, teen, adult, all
@@ -547,7 +553,7 @@ ${needsTitle ? `1. TITLE: Find the OFFICIAL book title in this priority order:
    b) "Title: ..." line in metadata - use the text after "Title:" exactly
    c) If neither found, generate a concise title (max 5 words)
    IMPORTANT: IGNORE promotional text like "The Project Gutenberg eBook of..." or "The Complete Project Gutenberg...".` : ""}
-${needsDescription ? `2. DESCRIPTION: Write an engaging 1-2 sentence description based on the content.` : ""}
+${needsDescription ? `2. DESCRIPTION: A 1-2 sentence description. If the text contains an existing description, use it exactly or condense it using the same words. If no description is found, write a professional one based on the content.` : ""}
 3. HOOK: Write a short hook (max 15 words) that draws readers in.
 4. TYPE: Determine content type. Valid options: ${typeList}
 5. AUDIENCE: Determine target audience. Options: children, teen, adult, all
