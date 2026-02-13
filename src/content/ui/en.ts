@@ -592,17 +592,11 @@ storiesMetadata: {
   "secretos-del-desierto": {
     title: "Secrets of the Desert",
     description: "The past comes alive among the desert dunes.",
-  },
-  "poems-by-emily-dickinson": {
-    title: "Poems by Emily Dickinson, Three Series, Complete",
-    description: "The verses of Emily Dickinson belong emphatically to what Emerson long since called 'the Poetry of the Portfolio,'—something produced absolutely without the thought of publication, and solely by way of expression of the writer's own mind. Such verse must inevitably forfeit whatever advantage lies in the discipline of public criticism and the enforced conformity to accepted ways. On the other hand, it may often gain something through the habit of freedom and the unconventional utterance of daring thoughts. In the case of the present author, there was absolutely no choice in the matter; she must write thus, or not at all. A recluse by temperament and habit, literally spending years without setting her foot beyond the doorstep, and many more years during which her walks were strictly limited to her father's grounds, she habitually concealed her mind, like her person, from all but a very few friends; and it was with great difficulty that she was persuaded to print, during her lifetime, three or four poems. Yet she wrote verses in great abundance; and though brought curiously indifferent to all conventional rules, had yet a rigorous literary standard of her own, and often altered a word many times to suit an ear which had its own tenacious fastidiousness.",
-  },
-  "my-day-3": {
+  },"my-day-3": {
     title: "My Day",
     hook: "Follow a typical day from morning to night.",
     description: "",
-  },
-},
+  },},
 };
 
 export default en;

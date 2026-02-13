@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { StoryType, ContentStructureType, DigitalLibrarySource } from "@/types/story";
+import type { StoryType } from "@/types/story";
 import type { StoryData } from "../../types";
 import { FormAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 import {
@@ -58,6 +58,7 @@ export function Step3Metadata({
     displayTitle: { en: string; es: string };
     slug: string;
     hook: { en: string; es: string };
+    description?: { en: string; es: string };
   }>>([]);
   const [isGeneratingBundle, setIsGeneratingBundle] = useState(false);
 
@@ -245,13 +246,18 @@ export function Step3Metadata({
     displayTitle: { en: string; es: string };
     slug: string;
     hook: { en: string; es: string };
+    description?: { en: string; es: string };
   }) => {
-    updateStoryData({
+    const updates: Partial<StoryData> = {
       title: option.title,
       displayTitle: option.displayTitle,
       slug: option.slug,
       hook: option.hook,
-    });
+    };
+    if (option.description) {
+      updates.description = option.description;
+    }
+    updateStoryData(updates);
     setBundleOptions([]);
   };
 
@@ -532,6 +538,12 @@ export function Step3Metadata({
                     <span className="text-xs font-medium text-gray-500">Hook:</span>
                     <p className="text-sm text-gray-700">{option.hook.en}</p>
                   </div>
+                  {option.description && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Description:</span>
+                      <p className="text-sm text-gray-600">{option.description.en}</p>
+                    </div>
+                  )}
                 </div>
               </button>
             ))}
@@ -785,33 +797,6 @@ export function Step3Metadata({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Content Structure Type */}
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">
-            Content Structure
-            <span
-              className="ml-2 text-gray-400 cursor-help"
-              title="Controls how chapters and pages are labeled in navigation. Auto-detect works for most content."
-            >
-              ℹ️
-            </span>
-          </label>
-          <select
-            value={storyData.structureType}
-            onChange={(e) => updateStoryData({ structureType: e.target.value as ContentStructureType | "auto" })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          >
-            <option value="auto">Auto-detect (recommended)</option>
-            <option value="prose">Novel / Short Story (Chapter → Page)</option>
-            <option value="anthology">Poetry Anthology (Collection → Poem)</option>
-            <option value="epic">Epic / Narrative Poetry (Canto → Section)</option>
-            <option value="script">Script / Transcript (Act → Scene)</option>
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            For poetry collections with thematic sections (like &quot;I. LIFE.&quot;), select Poetry Anthology.
-          </p>
         </div>
 
         {/* Target Audience */}

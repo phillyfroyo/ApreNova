@@ -543,6 +543,32 @@ export function extractTextFromHTML(
     return stripped ? stripped + '\n' : '\n';
   });
 
+  // Step 7b: Handle Gutenberg div-based poetry formatting
+  // Pattern: <div class="pg_body_wrapper"><br></div> used as visual line spacers.
+  // One br-div between content = line separator (within a stanza).
+  // Two+ consecutive br-divs = stanza/poem break.
+  //
+  // First, collapse each run of consecutive br-only divs (with optional whitespace
+  // between them) into a counted placeholder. Each br-div in the run contributes
+  // one \n. Then convert content divs to text\n.
+
+  // Collapse consecutive br-only divs into newline runs.
+  // Match one or more adjacent <div...><br></div> (with optional whitespace between).
+  text = text.replace(
+    /(?:\s*<div[^>]*>\s*<br\s*\/?>\s*<\/div>\s*)+/gi,
+    (match) => {
+      // Count how many br-divs are in this run
+      const count = (match.match(/<br\s*\/?>/gi) || []).length;
+      return '\n'.repeat(count);
+    }
+  );
+
+  // Convert remaining div tags (content divs, anchor-only divs, etc.)
+  text = text.replace(/<div[^>]*>([\s\S]*?)<\/div>/gi, (_, content) => {
+    const stripped = content.replace(/<[^>]+>/g, '').trim();
+    return stripped ? stripped + '\n' : '';
+  });
+
   // Step 8: Convert br tags to newlines
   text = text.replace(/<br\s*\/?>/gi, '\n');
 
@@ -560,11 +586,19 @@ export function extractTextFromHTML(
 
   // Step 12: Normalize whitespace based on preserveWhitespace option
   if (preserveWhitespace) {
-    // For poetry: preserve ALL whitespace exactly
-    // Only do minimal cleanup (remove trailing spaces, excessive blank lines 10+)
+    // For poetry: preserve leading indentation (horizontal whitespace) but still
+    // normalize vertical spacing to proper hierarchy. Raw HTML artifacts (inter-tag
+    // newlines) must be collapsed just like the prose path, otherwise every line
+    // gets an extra blank line between it.
     text = text
-      .replace(/[ \t]+$/gm, '')          // Remove trailing horizontal whitespace
-      .replace(/\n{11,}/g, '\n\n\n\n\n\n\n\n\n\n')  // Only collapse 10+ blank lines
+      .replace(/[ \t]+$/gm, '')          // Remove trailing horizontal whitespace (keep leading!)
+      .replace(/\n{5,}/g, MARKERS.SECTION_BREAK)  // 5+ newlines = section break
+      .replace(/\n{4}/g, MARKERS.POEM_BREAK)      // 4 newlines = poem break
+      .replace(/\n{3}/g, MARKERS.STANZA_BREAK)    // 3 newlines = stanza break
+      .replace(/\n+/g, '\n')               // Collapse remaining newlines to 1
+      .replace(new RegExp(MARKERS.SECTION_BREAK.replace(/\x00/g, '\\x00'), 'g'), '\n\n\n\n')
+      .replace(new RegExp(MARKERS.POEM_BREAK.replace(/\x00/g, '\\x00'), 'g'), '\n\n\n')
+      .replace(new RegExp(MARKERS.STANZA_BREAK.replace(/\x00/g, '\\x00'), 'g'), '\n\n')
       // Restore markers
       .replace(new RegExp(MARKERS.HEADER_BREAK.replace(/\x00/g, '\\x00'), 'g'), '\n\n')
       .replace(new RegExp(MARKERS.PRE_START.replace(/\x00/g, '\\x00'), 'g'), '\n\n')

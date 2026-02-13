@@ -188,7 +188,15 @@ Generate the following metadata for the story provided:
 
 4. HOOK: A 1-2 sentence teaser that entices readers without spoilers, in both languages
 
-5. DESCRIPTION: A 2-4 sentence full description/summary of the story, in both languages
+5. DESCRIPTION: A 2-4 sentence description of the work, in both languages. Follow these rules strictly:
+   - If the front matter or text contains a description/summary of 4 sentences or fewer, use it EXACTLY as written (word for word).
+   - If the front matter or text contains a description/summary longer than 4 sentences, condense it to 2-4 sentences using the SAME WORDS as the original. Paraphrase only slightly if needed to fit.
+   - If NO description is found in the text, write a professional 2-4 sentence description based on the metadata and content.
+   - The description should be informative and literary in tone, NOT a marketing hook.
+
+   Example — given a long preface about Emily Dickinson's poems, the description should be:
+   EN: "This collection brings together the early published poems of Emily Dickinson, edited after her death by Mabel Loomis Todd and T. W. Higginson. Written largely without thought of publication, her verses reflect a fiercely independent spirit and an unconventional style that defied the literary norms of her time. A lifelong recluse from Amherst, Massachusetts, Dickinson produced poems of striking originality—flashes of profound insight into nature, life, faith, and death—marked by vivid imagery, daring thought, and a voice unlike any other in American poetry."
+   ES: "Esta colección reúne los primeros poemas publicados de Emily Dickinson, editados después de su muerte por Mabel Loomis Todd y T. W. Higginson. Escritos en su mayoría sin intención de ser publicados, sus versos reflejan un espíritu profundamente independiente y un estilo poco convencional que desafiaba las normas literarias de su época. Reclusa gran parte de su vida en Amherst, Massachusetts, Dickinson creó poemas de una originalidad impactante: destellos de profunda reflexión sobre la naturaleza, la vida, la fe y la muerte, marcados por imágenes vívidas, pensamientos audaces y una voz única en la poesía estadounidense."
 
 Provide 2 options for variety (different hooks/descriptions, but the title should be the same if extracted from front matter).`;
 
@@ -197,7 +205,7 @@ Provide 2 options for variety (different hooks/descriptions, but the title shoul
 ${storyText.slice(0, 2500)}${storyText.length > 2500 ? "..." : ""}
 """
 
-${frontMatter ? `Front matter:\n"""\n${frontMatter.slice(0, 500)}\n"""\n\n` : ""}${customPrompt ? `Additional guidance: ${customPrompt}\n\n` : ""}Generate 2 complete metadata options. Return as JSON in this exact format:
+${frontMatter ? `Front matter:\n"""\n${frontMatter.slice(0, 2000)}\n"""\n\n` : ""}${customPrompt ? `Additional guidance: ${customPrompt}\n\n` : ""}Generate 2 complete metadata options. Return as JSON in this exact format:
 {
   "options": [
     {
@@ -226,7 +234,7 @@ Return ONLY the JSON, no other text.`;
       { role: "user", content: userPrompt },
     ],
     temperature: 0.7,
-    max_tokens: 1500,
+    max_tokens: 2500,
   });
 
   // Log cost (fire-and-forget)

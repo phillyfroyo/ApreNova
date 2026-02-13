@@ -32,7 +32,7 @@ export function Step7Preview({
 }: Step7PreviewProps) {
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   // Only include levels that are fully generated and translated (not omitted)
-  const completedLevels = [1, 2, 3, 4, 5].filter(
+  const completedLevels = [1, 2, 3, 4, 5, 6].filter(
     (l) =>
       storyData.levelContent[l]?.status === "done" &&
       storyData.levelContent[l]?.mode !== "omit" &&

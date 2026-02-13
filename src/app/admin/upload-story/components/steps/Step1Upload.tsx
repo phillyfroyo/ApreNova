@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import type { StoryTag } from "@/types/story";
-import type { StoryData, SourceLanguage, PreprocessedResult } from "../../types";
+import type { StoryTag, ContentStructureType } from "@/types/story";
+import type { StoryData, SourceLanguage } from "../../types";
 import { createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
 import {
-  extractTextFromHTML,
-  stripRTF,
+  processText as runProcessText,
+  detectFileTypeFromName,
+  detectFileTypeFromMime,
   isAcceptedFile,
   SUPPORTED_FILE_TYPES,
-  type ExtractedAnnotation,
 } from "@/lib/text-processing";
 
 interface Step1UploadProps {
@@ -29,29 +29,16 @@ export function Step1Upload({
   const [isExtractingMetadata, setIsExtractingMetadata] = useState(false);
 
   const handleFileRead = async (file: File) => {
-    let text = await file.text();
-    const fileName = file.name.toLowerCase();
-    let extractedAnnotations: ExtractedAnnotation[] = [];
-
-    // Convert HTML to plain text, extracting sidenotes/footnotes
-    // Use default (non-preserving) mode which uses placeholder-based stanza break detection
-    // Whitespace normalization for poetry happens downstream in preprocessText()
-    if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
-      const result = extractTextFromHTML(text);
-      text = result.text;
-      extractedAnnotations = result.annotations;
-    }
-
-    // RTF basic handling - strip RTF codes
-    if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
-      text = stripRTF(text);
-    }
+    const rawContent = await file.text();
+    const fileType = detectFileTypeFromName(file.name) || detectFileTypeFromMime(file.type) || 'txt';
 
     updateStoryData({
-      rawText: text,
+      rawText: rawContent,
+      rawFileContent: rawContent,
+      detectedFileType: fileType,
       uploadedFileName: file.name,
       parsedResult: null,
-      extractedAnnotations,
+      extractedAnnotations: [],
     });
   };
 
@@ -78,8 +65,9 @@ export function Step1Upload({
     }
   };
 
-  const processText = async () => {
-    if (!storyData.rawText.trim()) {
+  const processText = () => {
+    const content = storyData.rawFileContent || storyData.rawText;
+    if (!content.trim()) {
       setParseError("Please upload or paste text first");
       return;
     }
@@ -88,25 +76,24 @@ export function Step1Upload({
     setParseError("");
 
     try {
-      const response = await fetch("/api/admin/parse-full-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rawText: storyData.rawText,
-        }),
+      const result = runProcessText(content, {
+        fileType: storyData.detectedFileType || 'txt',
+        contentType: storyData.structureType === 'auto' ? 'auto' : storyData.structureType,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to process text");
-      }
-
-      const result = data.result as PreprocessedResult;
-
       updateStoryData({
-        parsedResult: result,
-        rawText: result.cleanedFullText,
+        parsedResult: {
+          frontMatter: result.preprocessed.frontMatter,
+          backMatter: result.preprocessed.backMatter,
+          chapters: result.preprocessed.chapters,
+          stats: result.preprocessed.stats,
+          cleanedFullText: result.preprocessed.cleanedFullText,
+        },
+        rawText: result.preprocessed.cleanedFullText,
+        extractedAnnotations: result.annotations,
+        structureType: storyData.structureType === 'auto'
+          ? result.detectedContentType
+          : storyData.structureType,
       });
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "Failed to process text");
@@ -284,7 +271,7 @@ export function Step1Upload({
         {/* Text Area */}
         <textarea
           value={storyData.rawText}
-          onChange={(e) => updateStoryData({ rawText: e.target.value, parsedResult: null })}
+          onChange={(e) => updateStoryData({ rawText: e.target.value, rawFileContent: null, detectedFileType: null, parsedResult: null })}
           placeholder="Paste your story here (including front matter, footnotes, etc.)..."
           className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm resize-none"
         />
@@ -336,6 +323,31 @@ export function Step1Upload({
 
       {/* Process Text Button */}
       <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+        {/* Structure Type Dropdown */}
+        {(storyData.rawText.trim() || storyData.rawFileContent) && (
+          <div className="mb-3">
+            <label className="block text-sm text-gray-600 mb-1">
+              Content Structure
+              <span
+                className="ml-2 text-gray-400 cursor-help"
+                title="Controls how chapters and pages are labeled in navigation. Auto-detect works for most content."
+              >
+                info
+              </span>
+            </label>
+            <select
+              value={storyData.structureType}
+              onChange={(e) => updateStoryData({ structureType: e.target.value as ContentStructureType | "auto" })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            >
+              <option value="auto">Auto-detect (recommended)</option>
+              <option value="prose">Novel / Short Story (Chapter - Page)</option>
+              <option value="anthology">Poetry Anthology (Collection - Poem)</option>
+              <option value="epic">Epic / Narrative Poetry (Canto - Section)</option>
+              <option value="script">Script / Transcript (Act - Scene)</option>
+            </select>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-medium text-gray-900">Text Processor</h3>

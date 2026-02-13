@@ -279,7 +279,7 @@ export function Step5Translate({
     }
   }, [storyData.levelContent, updateStoryData, setChunkErrors]);
 
-  const generatedLevels = [1, 2, 3, 4, 5].filter(
+  const generatedLevels = [1, 2, 3, 4, 5, 6].filter(
     (l) => storyData.levelContent[l]?.status === "done" &&
            storyData.levelContent[l]?.mode !== "omit" &&
            storyData.levelContent[l]?.sourceText?.length > 0

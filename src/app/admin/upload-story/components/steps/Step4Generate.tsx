@@ -42,7 +42,7 @@ export function Step4Generate({
     saveEditedText,
   } = pipeline;
 
-  const allDone = [1, 2, 3, 4, 5].every((l) => {
+  const allDone = [1, 2, 3, 4, 5, 6].every((l) => {
     const mode = getLevelMode(l);
     return mode === "omit" || storyData.levelContent[l]?.status === "done";
   });
@@ -77,7 +77,7 @@ export function Step4Generate({
         )}
 
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((level) => {
+          {[1, 2, 3, 4, 5, 6].map((level) => {
             const content = storyData.levelContent[level];
             const isSource = level === storyData.detectedLevel;
             const mode = getLevelMode(level);

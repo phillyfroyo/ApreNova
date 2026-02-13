@@ -423,7 +423,7 @@ export function useRewritePipeline({
     setError("");
     const accumulator = { ...storyData.levelContent };
 
-    for (const level of [1, 2, 3, 4, 5]) {
+    for (const level of [1, 2, 3, 4, 5, 6]) {
       if (cancelledRef.current) break;
 
       const mode = getLevelMode(level);

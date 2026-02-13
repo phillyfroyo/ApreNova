@@ -29,6 +29,8 @@ interface StoryUploadFormProps {
 
 const initialStoryData: StoryData = {
   rawText: "",
+  rawFileContent: null,
+  detectedFileType: null,
   sourceLanguage: "en",
   slug: "",
   detectedLevel: null,
@@ -36,7 +38,7 @@ const initialStoryData: StoryData = {
   displayTitle: null,
   description: { en: "", es: "" },
   hook: null,
-  selectedLevels: [1, 2, 3, 4, 5],
+  selectedLevels: [1, 2, 3, 4, 5, 6],
   levelContent: {},
   linesPerPage: 10,
   thumbnailFile: null,
@@ -149,7 +151,7 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
 
   // Get levels that have been generated (have content, not omitted)
   const getGeneratedLevels = () => {
-    return [1, 2, 3, 4, 5].filter(
+    return [1, 2, 3, 4, 5, 6].filter(
       (l) => storyData.levelContent[l]?.status === "done" &&
              storyData.levelContent[l]?.mode !== "omit" &&
              storyData.levelContent[l]?.sourceText?.length > 0

@@ -3,6 +3,7 @@
 
 import type { StoryType, StoryTag, ContentStructureType } from "@/types/story";
 import type { FormAttribution } from "@/lib/admin/attribution-helpers";
+import type { FileType } from "@/lib/text-processing";
 
 // ============================================
 // Core Types
@@ -63,6 +64,7 @@ export interface DetectedChapter {
 
 export interface PreprocessedResult {
   frontMatter: string;
+  backMatter?: string;
   chapters: DetectedChapter[];
   stats: {
     originalLength: number;
@@ -96,6 +98,8 @@ export interface ExtractedAnnotation {
 
 export interface StoryData {
   rawText: string;
+  rawFileContent: string | null;     // Raw file content (before extraction) — needed for processText()
+  detectedFileType: FileType | null; // File type detected from upload (html, txt, rtf, md)
   sourceLanguage: SourceLanguage;
   slug: string;
   detectedLevel: number | null;

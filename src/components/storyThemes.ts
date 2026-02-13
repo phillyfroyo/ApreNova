@@ -37,16 +37,7 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     hoverAccentColor: "hover:bg-indigo-300",
     fontFamily: "font-sans",
   },
-
-  "poems-by-emily-dickinson": {
-    backgroundColor: "#f5f0e6",
-    textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
-    fontFamily: "font-sans",
-  },
-
-  "my-day-3": {
+"my-day-3": {
     backgroundColor: "#f5f0e6",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
