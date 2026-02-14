@@ -194,26 +194,27 @@ export function useRewritePipeline({
     return data.rewrittenText;
   }, [storyData.storyType, storyData.sourceLanguage, storyData.detectedLevel]);
 
-  // Retry with exponential backoff
+  // Retry with exponential backoff (retries all transient errors, not just rate limits)
   const withRetry = useCallback(async <T,>(
     fn: () => Promise<T>,
     maxRetries: number = 3,
     baseDelay: number = 1000
   ): Promise<T> => {
     let lastError: Error | null = null;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await fn();
       } catch (error) {
         lastError = error as Error;
-        const isRateLimit = lastError.message?.includes("rate") ||
-                           lastError.message?.includes("429") ||
-                           lastError.message?.includes("too many");
-        if (!isRateLimit || attempt === maxRetries - 1) {
+        // Don't retry cancellations
+        if (lastError.name === "AbortError" || lastError.message === "Cancelled" || cancelledRef.current) {
+          throw lastError;
+        }
+        if (attempt === maxRetries) {
           throw lastError;
         }
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        console.log(`[Rewrite] Error: ${lastError.message}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -350,6 +351,34 @@ export function useRewritePipeline({
           setChapterProgress(null);
           console.log(`[processLevel] L${level} generation cancelled, reset to pending`);
           return false;
+        }
+
+        // Auto-retry any failed chapters individually
+        const failedIndices = rewrittenChapters
+          .map((text, idx) => text.startsWith("[ERROR:") ? idx : -1)
+          .filter(idx => idx !== -1);
+
+        if (failedIndices.length > 0 && !cancelledRef.current) {
+          console.log(`[Rewrite] L${level}: ${failedIndices.length} failed chapters, retrying individually...`);
+          setChapterProgress({ current: 0, batchEnd: failedIndices.length, total: failedIndices.length });
+
+          for (let i = 0; i < failedIndices.length; i++) {
+            if (cancelledRef.current) break;
+            const chapterIdx = failedIndices[i];
+            console.log(`[Rewrite] Retrying chapter ${chapterIdx + 1}...`);
+            setChapterProgress({ current: i + 1, batchEnd: failedIndices.length, total: failedIndices.length });
+
+            const result = await rewriteSingleChapter(
+              chapters[chapterIdx].rawText, chapterIdx, chapters[chapterIdx].title || "", level
+            );
+            rewrittenChapters[chapterIdx] = result.rewritten;
+          }
+        }
+
+        // Check for any still-failed chapters
+        const stillFailed = rewrittenChapters.filter(text => text.startsWith("[ERROR:")).length;
+        if (stillFailed > 0) {
+          console.warn(`[Rewrite] L${level}: ${stillFailed} chapters still failed after retry`);
         }
 
         const fullRewrittenText = rewrittenChapters
