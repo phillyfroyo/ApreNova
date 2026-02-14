@@ -592,11 +592,18 @@ storiesMetadata: {
   "secretos-del-desierto": {
     title: "Secrets of the Desert",
     description: "The past comes alive among the desert dunes.",
-  },"my-day-3": {
+  },
+  "my-day-3": {
     title: "My Day",
     hook: "Follow a typical day from morning to night.",
     description: "",
-  },},
+  },
+  "poems-by-emily-dickinson-complete": {
+    title: "Poems by Emily Dickinson, Three Series, Complete",
+    description: "This collection brings together the early published poems of Emily Dickinson, edited after her death by Mabel Loomis Todd and T. W. Higginson. Written largely without thought of publication, her verses reflect a fiercely independent spirit and an unconventional style that defied the literary norms of her time. A lifelong recluse from Amherst, Massachusetts, Dickinson produced poems of striking originality—flashes of profound insight into nature, life, faith, and death—marked by vivid imagery, daring thought, and a voice unlike any other in American poetry.",
+  },
+
+},
 };
 
 export default en;

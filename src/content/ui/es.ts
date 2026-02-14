@@ -593,11 +593,18 @@ storiesMetadata: {
   "secretos-del-desierto": {
     title: "Secretos del Desierto",
     description: "El pasado cobra vida entre las dunas del desierto.",
-  },"my-day-3": {
+  },
+  "my-day-3": {
     title: "Mi Día",
     hook: "Sigue un día típico de la mañana a la noche.",
     description: "",
-  },},
+  },
+  "poems-by-emily-dickinson-complete": {
+    title: "Poemas de Emily Dickinson, Tres Series, Completo",
+    description: "Esta colección reúne los primeros poemas publicados de Emily Dickinson, editados después de su muerte por Mabel Loomis Todd y T. W. Higginson. Escritos en gran parte sin pensar en su publicación, sus versos reflejan un espíritu ferozmente independiente y un estilo poco convencional que desafiaba las normas literarias de su tiempo. Una ermitaña de por vida de Amherst, Massachusetts, Dickinson produjo poemas de originalidad sorprendente—destellos de profunda percepción sobre la naturaleza, la vida, la fe y la muerte—marcados por imágenes vívidas, pensamientos audaces y una voz como ninguna otra en la poesía estadounidense.",
+  },
+
+},
 };
 
 export default es;
