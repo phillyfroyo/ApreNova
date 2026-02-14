@@ -9,6 +9,7 @@ type StoryCardProps = {
   index: number;
   title: string;
   image: string;
+  hook?: string;
   onClick: () => void;
 };
 
@@ -16,6 +17,7 @@ export default function StoryCard({
   index,
   title,
   image,
+  hook,
   onClick,
 }: StoryCardProps) {
   return (
@@ -64,6 +66,23 @@ export default function StoryCard({
       >
         {title}
       </p>
+      {hook && (
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: "0.75rem",
+            color: "#6b7280",
+            fontStyle: "italic",
+            marginTop: "0.25rem",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical" as const,
+            overflow: "hidden",
+          }}
+        >
+          {hook}
+        </p>
+      )}
 </motion.div>
     </div>
   );

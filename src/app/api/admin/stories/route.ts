@@ -31,6 +31,10 @@ export async function GET() {
           en: enMeta?.description || "",
           es: esMeta?.description || "",
         },
+        hook: {
+          en: enMeta?.hook || "",
+          es: esMeta?.hook || "",
+        },
         // Tagging fields
         type: story.type || "short-story",
         origin: story.origin || { isOriginal: true },

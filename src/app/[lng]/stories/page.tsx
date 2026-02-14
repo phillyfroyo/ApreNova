@@ -17,7 +17,7 @@ import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
 import type { StoryTag, StoryType } from "@/types/story";
 import { t } from "@/lib/t";
-import { getStoryTitle } from "@/lib/stories";
+import { getStoryTitle, getStoryHook } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
 import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
 import UserStoryCard from "@/components/user-stories/UserStoryCard"
@@ -578,6 +578,7 @@ useEffect(() => {
                     index={originalIndex}
                     title={getStoryTitle(typedLang, story.slug)}
                     image={story.image}
+                    hook={getStoryHook(typedLang, story.slug) || undefined}
                     onClick={() => openDetailModal(story.slug)}
                   />
                 );
@@ -626,6 +627,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
+                        hook={getStoryHook(typedLang, story.slug) || undefined}
                         onClick={() => openDetailModal(story.slug)}
                       />
                     );
@@ -674,6 +676,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
+                        hook={getStoryHook(typedLang, story.slug) || undefined}
                         onClick={() => openDetailModal(story.slug)}
                       />
                     );
@@ -722,6 +725,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
+                        hook={getStoryHook(typedLang, story.slug) || undefined}
                         onClick={() => openDetailModal(story.slug)}
                       />
                     );

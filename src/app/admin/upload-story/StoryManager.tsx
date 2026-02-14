@@ -14,6 +14,7 @@ interface Story {
   isArchived?: boolean;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook: { en: string; es: string };
   // Tagging fields
   type?: StoryType;
   origin?: StoryOrigin;
@@ -27,6 +28,7 @@ interface EditingStory {
   slug: string;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook: { en: string; es: string };
   thumbnailPreview: string | null;
   thumbnailFile: File | null;
   backgroundPreview: string | null;
@@ -140,6 +142,7 @@ export default function StoryManager() {
       slug: story.slug,
       title: { ...story.title },
       description: { ...story.description },
+      hook: { ...story.hook },
       thumbnailPreview: null,
       thumbnailFile: null,
       backgroundPreview: null,
@@ -442,6 +445,7 @@ export default function StoryManager() {
         body: JSON.stringify({
           title: editingStory.title,
           description: editingStory.description,
+          hook: editingStory.hook,
           thumbnailBase64: editingStory.thumbnailPreview || undefined,
           backgroundBase64: editingStory.backgroundPreview || undefined,
           // Delete flags
@@ -904,6 +908,43 @@ export default function StoryManager() {
                           }
                           rows={3}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hook */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Hook</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">English</label>
+                        <input
+                          type="text"
+                          value={editingStory.hook.en}
+                          onChange={(e) =>
+                            setEditingStory({
+                              ...editingStory,
+                              hook: { ...editingStory.hook, en: e.target.value },
+                            })
+                          }
+                          placeholder="Short teaser hook..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Spanish</label>
+                        <input
+                          type="text"
+                          value={editingStory.hook.es}
+                          onChange={(e) =>
+                            setEditingStory({
+                              ...editingStory,
+                              hook: { ...editingStory.hook, es: e.target.value },
+                            })
+                          }
+                          placeholder="Gancho corto..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         />
                       </div>
                     </div>
