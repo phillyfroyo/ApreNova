@@ -9,7 +9,7 @@ import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
 
 export const metadata = {
   title: 'Cuentana',
-  description: 'Learn smarter, not harder. Learn with stories.',
+  description: 'Learn language through stories.',
 };
 
 const alice = Alice({ subsets: ['latin'], weight: '400' });

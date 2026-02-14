@@ -601,6 +601,7 @@ storiesMetadata: {
   },
   "poems-by-emily-dickinson-complete": {
     title: "Poemas de Emily Dickinson, Tres Series, Completo",
+    hook: "Descubre la poesía introspectiva y poco convencional de Emily Dickinson, que refleja su perspectiva única sobre la vida y el éxito.",
     description: "Esta colección reúne los primeros poemas publicados de Emily Dickinson, editados después de su muerte por Mabel Loomis Todd y T. W. Higginson. Escritos en gran parte sin pensar en su publicación, sus versos reflejan un espíritu ferozmente independiente y un estilo poco convencional que desafiaba las normas literarias de su tiempo. Una ermitaña de por vida de Amherst, Massachusetts, Dickinson produjo poemas de originalidad sorprendente—destellos de profunda percepción sobre la naturaleza, la vida, la fe y la muerte—marcados por imágenes vívidas, pensamientos audaces y una voz como ninguna otra en la poesía estadounidense.",
   },
 
