@@ -10,9 +10,13 @@ export interface ComparisonModalProps {
   leftText: string;
   rightTitle: string;
   rightText: string;
-  onSave?: (editedText: string, side: 'left' | 'right') => void;
-  editableSide?: 'left' | 'right' | 'none';
+  onSave?: (edits: { left?: string; right?: string }) => void;
+  editableSide?: 'left' | 'right' | 'both' | 'none';
   headerGradient?: string;
+  /** Optional: allow retranslating a single chapter with configurable sub-chunks */
+  onRetranslateChapter?: (chapterIndex: number, chapterText: string, numChunks: number) => Promise<void>;
+  /** Whether a chapter retranslation is in progress */
+  isRetranslating?: boolean;
 }
 
 // Parse chapter markers from text: "--- Chapter N ---" or "--- Chapter N: Title ---"
@@ -91,7 +95,7 @@ function parseChaptersFromText(text: string): ParsedChapter[] {
 interface EditingCell {
   lineIndex: number;
   side: 'left' | 'right';
-  value: string;
+  initialValue: string;
 }
 
 export function ComparisonModal({
@@ -105,6 +109,8 @@ export function ComparisonModal({
   onSave,
   editableSide = 'right',
   headerGradient = "bg-gradient-to-r from-indigo-600 to-purple-600",
+  onRetranslateChapter,
+  isRetranslating = false,
 }: ComparisonModalProps) {
   // Chapter parsing
   const leftChapters = useMemo(() => parseChaptersFromText(leftText), [leftText]);
@@ -112,9 +118,29 @@ export function ComparisonModal({
   const hasMultipleChapters = leftChapters.length > 1 || rightChapters.length > 1;
   const maxChapters = Math.max(leftChapters.length, rightChapters.length);
 
+  // Detect duplicate chapter numbers (corrupted data)
+  const duplicateWarning = useMemo(() => {
+    const check = (chapters: ParsedChapter[], label: string) => {
+      const seen = new Map<number, number>();
+      const dupes: number[] = [];
+      for (const ch of chapters) {
+        const count = (seen.get(ch.number) || 0) + 1;
+        seen.set(ch.number, count);
+        if (count === 2) dupes.push(ch.number);
+      }
+      return dupes.length > 0 ? `${label}: duplicate chapter${dupes.length > 1 ? 's' : ''} ${dupes.join(', ')}` : null;
+    };
+    const warnings = [check(leftChapters, 'Source'), check(rightChapters, 'Translation')].filter(Boolean);
+    return warnings.length > 0 ? warnings.join(' | ') : null;
+  }, [leftChapters, rightChapters]);
+
   // Chapter selection state
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [viewMode, setViewMode] = useState<'chapter' | 'all'>('chapter');
+
+  // Retranslate state
+  const [showRetranslatePopover, setShowRetranslatePopover] = useState(false);
+  const [retranslateChunks, setRetranslateChunks] = useState(2);
 
   // Lines state for editing
   const [leftLines, setLeftLines] = useState<string[]>([]);
@@ -123,25 +149,83 @@ export function ComparisonModal({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [splitPosition, setSplitPosition] = useState(50);
 
+  // Track per-chapter edits so switching chapters doesn't lose changes
+  const editedChaptersRef = useRef<Record<number, { left: string[]; right: string[] }>>({});
+
   const isDragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Save current chapter lines to editedChaptersRef before switching
+  // Also commits any in-progress cell edit so it isn't lost
+  const saveCurrentChapterToRef = useCallback(() => {
+    if (viewMode === 'chapter' && hasMultipleChapters) {
+      let savedLeft = [...leftLines];
+      let savedRight = [...rightLines];
+
+      // Commit any pending cell edit from the textarea ref
+      if (editingCell && editInputRef.current) {
+        const { lineIndex, side } = editingCell;
+        const value = editInputRef.current.value;
+        if (side === 'left') {
+          savedLeft[lineIndex] = value;
+        } else {
+          savedRight[lineIndex] = value;
+        }
+      }
+
+      editedChaptersRef.current[selectedChapter] = {
+        left: savedLeft,
+        right: savedRight,
+      };
+    }
+  }, [viewMode, hasMultipleChapters, selectedChapter, leftLines, rightLines, editingCell]);
+
   // Initialize lines when opening or chapter changes
   useEffect(() => {
     if (isOpen) {
       if (viewMode === 'all' || !hasMultipleChapters) {
-        setLeftLines(leftText.split("\n"));
-        setRightLines(rightText.split("\n"));
+        // In 'all' mode, reconstruct full text with any per-chapter edits applied
+        if (Object.keys(editedChaptersRef.current).length > 0 && hasMultipleChapters) {
+          const rebuildFullLines = (chapters: ParsedChapter[], originalText: string, side: 'left' | 'right') => {
+            const fullLines = originalText.split('\n');
+            // Apply edits in reverse order to preserve line indices
+            const sortedIndices = Object.keys(editedChaptersRef.current)
+              .map(Number)
+              .sort((a, b) => b - a);
+            for (const idx of sortedIndices) {
+              const edited = editedChaptersRef.current[idx]?.[side];
+              const chapter = chapters[idx];
+              if (edited && chapter) {
+                const nextChapter = chapters[idx + 1];
+                const start = chapter.startLine + 1;
+                const end = nextChapter ? nextChapter.startLine : fullLines.length;
+                fullLines.splice(start, end - start, ...edited);
+              }
+            }
+            return fullLines;
+          };
+          setLeftLines(rebuildFullLines(leftChapters, leftText, 'left'));
+          setRightLines(rebuildFullLines(rightChapters, rightText, 'right'));
+        } else {
+          setLeftLines(leftText.split("\n"));
+          setRightLines(rightText.split("\n"));
+        }
       } else {
-        const leftChapter = leftChapters[selectedChapter];
-        const rightChapter = rightChapters[selectedChapter];
-        setLeftLines(leftChapter?.content.split("\n") || []);
-        setRightLines(rightChapter?.content.split("\n") || []);
+        // In chapter view, check for saved edits first
+        const savedEdits = editedChaptersRef.current[selectedChapter];
+        if (savedEdits) {
+          setLeftLines(savedEdits.left);
+          setRightLines(savedEdits.right);
+        } else {
+          const leftChapter = leftChapters[selectedChapter];
+          const rightChapter = rightChapters[selectedChapter];
+          setLeftLines(leftChapter?.content.split("\n") || []);
+          setRightLines(rightChapter?.content.split("\n") || []);
+        }
       }
       setEditingCell(null);
-      // Don't reset unsaved changes when just changing chapters
     }
   }, [isOpen, leftText, rightText, selectedChapter, viewMode, hasMultipleChapters, leftChapters, rightChapters]);
 
@@ -151,6 +235,7 @@ export function ComparisonModal({
       setSelectedChapter(0);
       setViewMode('chapter');
       setHasUnsavedChanges(false);
+      editedChaptersRef.current = {};
     }
   }, [isOpen]);
 
@@ -176,17 +261,19 @@ export function ComparisonModal({
       if (!editingCell && hasMultipleChapters && viewMode === 'chapter') {
         if (e.key === "ArrowLeft" && selectedChapter > 0) {
           e.preventDefault();
+          saveCurrentChapterToRef();
           setSelectedChapter(prev => prev - 1);
         }
         if (e.key === "ArrowRight" && selectedChapter < maxChapters - 1) {
           e.preventDefault();
+          saveCurrentChapterToRef();
           setSelectedChapter(prev => prev + 1);
         }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, editingCell, hasMultipleChapters, viewMode, selectedChapter, maxChapters]);
+  }, [isOpen, onClose, editingCell, hasMultipleChapters, viewMode, selectedChapter, maxChapters, saveCurrentChapterToRef]);
 
   // Divider drag handlers
   const handleDividerMouseDown = (e: React.MouseEvent) => {
@@ -221,12 +308,11 @@ export function ComparisonModal({
   }, [handleDividerMouseMove]);
 
   // Cell editing handlers
-  const handleCellClick = (lineIndex: number, side: 'left' | 'right') => {
-    if (editableSide === 'none') return;
-    if (editableSide !== side && editableSide !== 'left' && editableSide !== 'right') return;
+  const canEditSide = (side: 'left' | 'right') =>
+    editableSide === 'both' || editableSide === side;
 
-    // Only allow editing the editable side
-    if (side !== editableSide) return;
+  const handleCellClick = (lineIndex: number, side: 'left' | 'right') => {
+    if (!canEditSide(side)) return;
 
     const lines = side === 'left' ? leftLines : rightLines;
     const currentValue = lines[lineIndex] || '';
@@ -234,14 +320,15 @@ export function ComparisonModal({
     setEditingCell({
       lineIndex,
       side,
-      value: currentValue,
+      initialValue: currentValue,
     });
   };
 
   const handleCellSave = () => {
-    if (!editingCell) return;
+    if (!editingCell || !editInputRef.current) return;
 
-    const { lineIndex, side, value } = editingCell;
+    const { lineIndex, side } = editingCell;
+    const value = editInputRef.current.value;
 
     if (side === 'left') {
       const newLines = [...leftLines];
@@ -282,33 +369,18 @@ export function ComparisonModal({
     });
   };
 
-  const handleAddRowAbove = (lineIndex: number) => {
-    // Store scroll position
+  const handleAddRow = (lineIndex: number, position: 'above' | 'below', side: 'both' | 'left' | 'right') => {
     const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    const insertAt = position === 'above' ? lineIndex : lineIndex + 1;
 
-    // Add empty row to both sides
-    setLeftLines(prev => [...prev.slice(0, lineIndex), '', ...prev.slice(lineIndex)]);
-    setRightLines(prev => [...prev.slice(0, lineIndex), '', ...prev.slice(lineIndex)]);
+    if (side === 'both' || side === 'left') {
+      setLeftLines(prev => [...prev.slice(0, insertAt), '', ...prev.slice(insertAt)]);
+    }
+    if (side === 'both' || side === 'right') {
+      setRightLines(prev => [...prev.slice(0, insertAt), '', ...prev.slice(insertAt)]);
+    }
     setHasUnsavedChanges(true);
 
-    // Restore scroll position after state update
-    requestAnimationFrame(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = scrollTop;
-      }
-    });
-  };
-
-  const handleAddRowBelow = (lineIndex: number) => {
-    // Store scroll position
-    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
-
-    // Add empty row to both sides
-    setLeftLines(prev => [...prev.slice(0, lineIndex + 1), '', ...prev.slice(lineIndex + 1)]);
-    setRightLines(prev => [...prev.slice(0, lineIndex + 1), '', ...prev.slice(lineIndex + 1)]);
-    setHasUnsavedChanges(true);
-
-    // Restore scroll position after state update
     requestAnimationFrame(() => {
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = scrollTop;
@@ -318,8 +390,96 @@ export function ComparisonModal({
 
   const handleSaveAll = () => {
     if (onSave && editableSide !== 'none') {
-      const textToSave = editableSide === 'left' ? leftLines.join('\n') : rightLines.join('\n');
-      onSave(textToSave, editableSide);
+      // First: commit any in-progress cell edit into the lines arrays
+      let currentLeft = [...leftLines];
+      let currentRight = [...rightLines];
+      if (editingCell && editInputRef.current) {
+        const { lineIndex, side: editSide } = editingCell;
+        const value = editInputRef.current.value;
+        if (editSide === 'left') {
+          currentLeft[lineIndex] = value;
+          setLeftLines(currentLeft);
+        } else {
+          currentRight[lineIndex] = value;
+          setRightLines(currentRight);
+        }
+        setEditingCell(null);
+      }
+
+      // Save current chapter's edits to ref
+      if (viewMode === 'chapter' && hasMultipleChapters) {
+        editedChaptersRef.current[selectedChapter] = {
+          left: [...currentLeft],
+          right: [...currentRight],
+        };
+      }
+
+      // Reconstruct full text for a given side
+      const reconstructText = (side: 'left' | 'right') => {
+        const linesNow = side === 'left' ? currentLeft : currentRight;
+        if (viewMode === 'all' || !hasMultipleChapters) {
+          return linesNow.join('\n');
+        }
+        // Chapter view: assemble dividers + chapter content
+        const fullChapters = side === 'left' ? leftChapters : rightChapters;
+        const originalFullText = side === 'left' ? leftText : rightText;
+        const originalLines = originalFullText.split('\n');
+        const outputParts: string[] = [];
+
+        // Content before first chapter divider (if any)
+        if (fullChapters.length > 0 && fullChapters[0].startLine > 0) {
+          for (let i = 0; i < fullChapters[0].startLine; i++) {
+            outputParts.push(originalLines[i]);
+          }
+        }
+
+        for (let chIdx = 0; chIdx < fullChapters.length; chIdx++) {
+          const chapter = fullChapters[chIdx];
+          outputParts.push(originalLines[chapter.startLine]); // divider line
+          const edited = editedChaptersRef.current[chIdx]?.[side];
+          if (edited) {
+            outputParts.push(...edited);
+          } else {
+            outputParts.push(...chapter.content.split('\n'));
+          }
+        }
+        return outputParts.join('\n');
+      };
+
+      // Safety: check for duplicate chapter markers in reconstructed text
+      const hasDuplicateChapters = (text: string) => {
+        const nums: number[] = [];
+        for (const m of text.matchAll(/^---\s*(?:Chapter|Capítulo)\s+(\d+)/gim)) {
+          nums.push(parseInt(m[1], 10));
+        }
+        const seen = new Set<number>();
+        for (const n of nums) {
+          if (seen.has(n)) return true;
+          seen.add(n);
+        }
+        return false;
+      };
+
+      // Build edits object and save in a single call
+      const edits: { left?: string; right?: string } = {};
+      if (editableSide === 'both' || editableSide === 'left') {
+        edits.left = reconstructText('left');
+      }
+      if (editableSide === 'both' || editableSide === 'right') {
+        edits.right = reconstructText('right');
+      }
+
+      // Abort save if reconstruction produced corrupted data
+      if ((edits.left && hasDuplicateChapters(edits.left)) ||
+          (edits.right && hasDuplicateChapters(edits.right))) {
+        console.error('[ComparisonModal] Reconstruction produced duplicate chapters — aborting save');
+        alert('Save aborted: chapter reconstruction produced duplicate chapters. Please try saving in "View All" mode instead.');
+        return;
+      }
+
+      onSave(edits);
+
+      editedChaptersRef.current = {};
     }
     setHasUnsavedChanges(false);
   };
@@ -328,6 +488,7 @@ export function ComparisonModal({
     setLeftLines(leftText.split("\n"));
     setRightLines(rightText.split("\n"));
     setEditingCell(null);
+    editedChaptersRef.current = {};
     setHasUnsavedChanges(false);
   };
 
@@ -338,8 +499,8 @@ export function ComparisonModal({
     const isEditingLeft = editingCell?.lineIndex === idx && editingCell?.side === 'left';
     const isEditingRight = editingCell?.lineIndex === idx && editingCell?.side === 'right';
     const isEditing = isEditingLeft || isEditingRight;
-    const canEditLeft = editableSide === 'left';
-    const canEditRight = editableSide === 'right';
+    const canEditLeft = canEditSide('left');
+    const canEditRight = canEditSide('right');
 
     return (
       <div
@@ -353,10 +514,30 @@ export function ComparisonModal({
         >
           <span className="group-hover:hidden">{idx + 1}</span>
 
-          {/* Row actions - show on hover */}
-          <div className="hidden group-hover:flex items-center justify-end gap-0.5 absolute inset-0 bg-gray-50 pr-1">
+          {/* Row actions - hover: L R (add left/right), l r (delete left/right), ^ (add both), x (delete both) */}
+          <div className="hidden group-hover:flex items-center justify-end gap-0 absolute inset-0 bg-gray-50 pr-0.5">
             <button
-              onClick={() => handleAddRowAbove(idx)}
+              onClick={() => handleAddRow(idx, 'below', 'left')}
+              className="px-0.5 text-[10px] text-gray-400 hover:text-green-600 hover:bg-green-50 rounded font-bold leading-none"
+              title="Add row to left side only"
+            >L</button>
+            <button
+              onClick={() => handleAddRow(idx, 'below', 'right')}
+              className="px-0.5 text-[10px] text-gray-400 hover:text-green-600 hover:bg-green-50 rounded font-bold leading-none"
+              title="Add row to right side only"
+            >R</button>
+            <button
+              onClick={() => handleDeleteRow(idx, 'left')}
+              className="px-0.5 text-[10px] text-gray-400 hover:text-red-600 hover:bg-red-50 rounded font-bold leading-none"
+              title="Delete left cell only"
+            >l</button>
+            <button
+              onClick={() => handleDeleteRow(idx, 'right')}
+              className="px-0.5 text-[10px] text-gray-400 hover:text-red-600 hover:bg-red-50 rounded font-bold leading-none"
+              title="Delete right cell only"
+            >r</button>
+            <button
+              onClick={() => handleAddRow(idx, 'above', 'both')}
               className="p-0.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
               title="Add row above (both sides)"
             >
@@ -365,33 +546,9 @@ export function ComparisonModal({
               </svg>
             </button>
             <button
-              onClick={() => handleAddRowBelow(idx)}
-              className="p-0.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"
-              title="Add row below (both sides)"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {/* Delete buttons: L = left only, R = right only, X = both */}
-            <button
-              onClick={() => handleDeleteRow(idx, 'left')}
-              className="px-0.5 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 rounded font-medium"
-              title="Delete left cell only"
-            >
-              L
-            </button>
-            <button
-              onClick={() => handleDeleteRow(idx, 'right')}
-              className="px-0.5 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 rounded font-medium"
-              title="Delete right cell only"
-            >
-              R
-            </button>
-            <button
               onClick={() => handleDeleteRow(idx, 'both')}
               className="p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-              title="Delete entire row (both sides)"
+              title="Delete row (both sides)"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -412,8 +569,7 @@ export function ComparisonModal({
             <div className="flex flex-col h-full">
               <textarea
                 ref={editInputRef}
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                defaultValue={editingCell.initialValue}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -424,7 +580,7 @@ export function ComparisonModal({
                   }
                 }}
                 className="w-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={Math.max(1, editingCell.value.split('\n').length)}
+                rows={Math.max(1, editingCell.initialValue.split('\n').length)}
               />
               <div className="flex gap-1 p-1 bg-gray-100 border-t">
                 <button
@@ -459,8 +615,7 @@ export function ComparisonModal({
             <div className="flex flex-col h-full">
               <textarea
                 ref={editInputRef}
-                value={editingCell.value}
-                onChange={(e) => setEditingCell({ ...editingCell, value: e.target.value })}
+                defaultValue={editingCell.initialValue}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -471,7 +626,7 @@ export function ComparisonModal({
                   }
                 }}
                 className="w-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={Math.max(1, editingCell.value.split('\n').length)}
+                rows={Math.max(1, editingCell.initialValue.split('\n').length)}
               />
               <div className="flex gap-1 p-1 bg-gray-100 border-t">
                 <button
@@ -562,6 +717,16 @@ export function ComparisonModal({
           </div>
         </div>
 
+        {/* Duplicate chapter warning */}
+        {duplicateWarning && (
+          <div className="px-6 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2 text-red-700 text-sm shrink-0">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-medium">Corrupted data detected:</span> {duplicateWarning}. Reset this level and retranslate.
+          </div>
+        )}
+
         {/* Chapter selector - only show if multiple chapters */}
         {hasMultipleChapters && (
           <div className="px-4 md:px-6 py-3 bg-gray-50 border-b flex items-center gap-3 overflow-x-auto shrink-0">
@@ -578,6 +743,7 @@ export function ComparisonModal({
                   <button
                     key={idx}
                     onClick={() => {
+                      saveCurrentChapterToRef();
                       setSelectedChapter(idx);
                       setViewMode('chapter');
                     }}
@@ -670,6 +836,74 @@ export function ComparisonModal({
                 <span className="hidden sm:inline">Line mismatch</span>
               </span>
             )}
+            {/* Retranslate chapter button */}
+            {onRetranslateChapter && viewMode === 'chapter' && hasMultipleChapters && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowRetranslatePopover(!showRetranslatePopover)}
+                  disabled={isRetranslating}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                    isRetranslating
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  {isRetranslating ? (
+                    <>
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Retranslating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Retranslate Chapter
+                    </>
+                  )}
+                </button>
+                {showRetranslatePopover && !isRetranslating && (
+                  <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10 w-56">
+                    <div className="text-xs font-medium text-gray-700 mb-2">
+                      Split into sub-chunks:
+                    </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      {[1, 2, 3, 4, 5, 6].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => setRetranslateChunks(n)}
+                          className={`w-7 h-7 text-xs rounded-md font-medium transition-colors ${
+                            retranslateChunks === n
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">
+                      {leftLines.length} source lines {retranslateChunks > 1 ? `(~${Math.ceil(leftLines.length / retranslateChunks)} lines/chunk)` : '(no splitting)'}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const sourceChapter = leftChapters[selectedChapter];
+                        if (sourceChapter) {
+                          setShowRetranslatePopover(false);
+                          onRetranslateChapter(selectedChapter, sourceChapter.content, retranslateChunks);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                    >
+                      Retranslate with {retranslateChunks} chunk{retranslateChunks > 1 ? 's' : ''}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4 flex-wrap text-xs">
             <span className="flex items-center gap-1">
@@ -680,9 +914,11 @@ export function ComparisonModal({
             </span>
             <span className="text-gray-300">|</span>
             <span className="hidden md:flex items-center gap-1">
-              Hover # for:
-              <span className="text-green-600">↑↓</span>
-              <span className="text-red-600">L/R/✕</span>
+              Hover #:
+              <span className="text-green-600">L R</span>add
+              <span className="text-red-600">l r</span>del
+              <span className="text-green-600">^</span>
+              <span className="text-red-600">✕</span>
             </span>
             <span className="hidden md:inline text-gray-300">|</span>
             {hasMultipleChapters && viewMode === 'chapter' && (

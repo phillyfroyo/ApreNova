@@ -7,6 +7,233 @@ import { cleanText, splitIntoSubChunks } from "@/lib/admin/text-utils";
 import { REWRITE_BATCH_SIZE, MAX_CHUNK_CHARS } from "../config/constants";
 
 // ============================================
+// Content Warning Scanner
+// ============================================
+
+export interface ContentWarning {
+  level: number;
+  chapter: number;    // 1-indexed
+  line: number;       // 1-indexed
+  type: "error_marker" | "ai_refusal" | "translation_failed" | "short_translation";
+  text: string;       // The offending line
+}
+
+const AI_REFUSAL_PATTERNS = [
+  /^I'm sorry,?\s*(but)?/i,
+  /^I apologize,?\s*(but)?/i,
+  /^Unfortunately,?\s*(I )?(can't|cannot|couldn't)/i,
+  /^I (can't|cannot|couldn't) (help|assist|complete|fulfill|rewrite|translate)/i,
+  /^I cannot (rewrite|translate)/i,
+  /^As an AI/i,
+];
+
+/**
+ * Scan level text for suspicious content (error markers, AI refusals).
+ * Returns warnings with chapter and line numbers.
+ */
+export function scanContentWarnings(text: string, level: number): ContentWarning[] {
+  if (!text) return [];
+  const warnings: ContentWarning[] = [];
+
+  // Split into chapters first
+  const chapterParts = text.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const chapterOffset = chapterParts[0]?.trim() === "" ? 1 : 0; // Skip empty pre-chapter text
+
+  for (let chIdx = chapterOffset; chIdx < chapterParts.length; chIdx++) {
+    const chapterNum = chapterOffset === 1 ? chIdx : chIdx + 1;
+    const lines = chapterParts[chIdx].split("\n");
+
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const line = lines[lineIdx];
+
+      // Check for error markers
+      if (line.includes("[ERROR:")) {
+        warnings.push({
+          level,
+          chapter: chapterNum,
+          line: lineIdx + 1,
+          type: "error_marker",
+          text: line.trim(),
+        });
+      }
+
+      // Check for translation failed markers
+      if (line.includes("[TRANSLATION_FAILED:")) {
+        warnings.push({
+          level,
+          chapter: chapterNum,
+          line: lineIdx + 1,
+          type: "translation_failed",
+          text: line.trim(),
+        });
+      }
+
+      // Check for AI refusal patterns (only on non-empty lines)
+      if (line.trim().length > 0) {
+        for (const pattern of AI_REFUSAL_PATTERNS) {
+          if (pattern.test(line.trim())) {
+            warnings.push({
+              level,
+              chapter: chapterNum,
+              line: lineIdx + 1,
+              type: "ai_refusal",
+              text: line.trim().slice(0, 100),
+            });
+            break; // Only one warning per line
+          }
+        }
+      }
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * Compare source and translated text line-by-line to find suspiciously short translations.
+ * A translated line that is less than 25% of the source line length (and source is > 40 chars)
+ * is flagged as potentially truncated/incomplete.
+ */
+export function scanTranslationQuality(
+  sourceText: string,
+  translatedText: string,
+  level: number
+): ContentWarning[] {
+  if (!sourceText || !translatedText) return [];
+  const warnings: ContentWarning[] = [];
+
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+
+  const sourceChapterParts = sourceText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const transChapterParts = translatedText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+
+  // Detect chapter numbers from divider lines
+  const sourceChapterNums: number[] = [];
+  for (const line of sourceText.split("\n")) {
+    const m = line.match(chapterDivider);
+    if (m) sourceChapterNums.push(parseInt(m[1], 10));
+  }
+
+  const sourceOffset = sourceChapterParts[0]?.trim() === "" ? 1 : 0;
+  const transOffset = transChapterParts[0]?.trim() === "" ? 1 : 0;
+
+  const numChapters = Math.min(
+    sourceChapterParts.length - sourceOffset,
+    transChapterParts.length - transOffset
+  );
+
+  for (let chIdx = 0; chIdx < numChapters; chIdx++) {
+    const chapterNum = sourceChapterNums[chIdx] || chIdx + 1;
+    const sourceLines = sourceChapterParts[chIdx + sourceOffset].split("\n");
+    const transLines = transChapterParts[chIdx + transOffset].split("\n");
+
+    // Get content lines only (non-empty)
+    const srcContent = sourceLines.filter(l => l.trim().length > 0);
+    const transContent = transLines.filter(l => l.trim().length > 0);
+
+    const compareCount = Math.min(srcContent.length, transContent.length);
+
+    for (let i = 0; i < compareCount; i++) {
+      const srcLine = srcContent[i].trim();
+      const transLine = transContent[i].trim();
+
+      // Flag if source is substantial (>40 chars) and translation is < 25% of source length
+      if (srcLine.length > 40 && transLine.length < srcLine.length * 0.25) {
+        warnings.push({
+          level,
+          chapter: chapterNum,
+          line: i + 1,
+          type: "short_translation",
+          text: `"${transLine}" ← "${srcLine.slice(0, 80)}${srcLine.length > 80 ? '...' : ''}"`,
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * Compare two texts line-by-line within chapters to detect misaligned lines.
+ * A misalignment is where one side has content and the other side is blank at the same line position.
+ * This typically indicates a double-blank-line issue or paragraph merging/splitting.
+ *
+ * Only checks the first few lines of each chapter since that's where the off-by-one typically starts.
+ */
+export interface LineAlignmentWarning {
+  chapter: number;       // 1-indexed chapter number
+  line: number;          // 1-indexed line within chapter
+  type: 'left_blank' | 'right_blank';  // Which side is blank
+  leftContent: string;
+  rightContent: string;
+}
+
+export function scanLineAlignment(
+  leftText: string,
+  rightText: string,
+): LineAlignmentWarning[] {
+  if (!leftText || !rightText) return [];
+  const warnings: LineAlignmentWarning[] = [];
+
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+
+  // Split both texts into chapters
+  const splitIntoChapters = (text: string) => {
+    const lines = text.split("\n");
+    const chapters: { number: number; lines: string[] }[] = [];
+    let currentLines: string[] = [];
+    let currentNum = 0;
+
+    for (const line of lines) {
+      const m = line.match(chapterDivider);
+      if (m) {
+        if (currentLines.length > 0 || chapters.length > 0) {
+          chapters.push({ number: currentNum, lines: currentLines });
+        }
+        currentNum = parseInt(m[1], 10);
+        currentLines = [];
+      } else {
+        currentLines.push(line);
+      }
+    }
+    if (currentLines.length > 0) {
+      chapters.push({ number: currentNum, lines: currentLines });
+    }
+    return chapters;
+  };
+
+  const leftChapters = splitIntoChapters(leftText);
+  const rightChapters = splitIntoChapters(rightText);
+
+  const numChapters = Math.min(leftChapters.length, rightChapters.length);
+
+  for (let chIdx = 0; chIdx < numChapters; chIdx++) {
+    const leftLines = leftChapters[chIdx].lines;
+    const rightLines = rightChapters[chIdx].lines;
+    const chapterNum = leftChapters[chIdx].number || chIdx + 1;
+
+    // Check first 5 lines of each chapter for misalignment
+    const checkCount = Math.min(5, leftLines.length, rightLines.length);
+    for (let i = 0; i < checkCount; i++) {
+      const leftIsBlank = leftLines[i].trim() === "";
+      const rightIsBlank = rightLines[i].trim() === "";
+
+      if (leftIsBlank !== rightIsBlank) {
+        warnings.push({
+          chapter: chapterNum,
+          line: i + 1,
+          type: leftIsBlank ? 'left_blank' : 'right_blank',
+          leftContent: leftLines[i].trim().slice(0, 60) || '(blank)',
+          rightContent: rightLines[i].trim().slice(0, 60) || '(blank)',
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
+
+// ============================================
 // Types
 // ============================================
 
@@ -51,6 +278,7 @@ export function useRewritePipeline({
 
   const [currentGenerating, setCurrentGenerating] = useState<number | null>(null);
   const [chapterProgress, setChapterProgress] = useState<ChapterProgress | null>(null);
+  const [retryStatus, setRetryStatus] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   // Comparison modal state
@@ -115,7 +343,19 @@ export function useRewritePipeline({
 
   const saveEditedText = useCallback(() => {
     if (comparisonLevel === -1) {
-      updateStoryData({ rawText: editedText });
+      // Update rawText and also sync the source level's sourceText if it exists
+      const updates: Partial<StoryData> = { rawText: editedText };
+      const sourceLevel = storyData.detectedLevel;
+      if (sourceLevel && storyData.levelContent[sourceLevel]?.status === "done") {
+        updates.levelContent = {
+          ...storyData.levelContent,
+          [sourceLevel]: {
+            ...storyData.levelContent[sourceLevel],
+            sourceText: editedText,
+          },
+        };
+      }
+      updateStoryData(updates);
       setIsEditing(false);
     } else if (comparisonLevel !== null) {
       const current = storyData.levelContent[comparisonLevel];
@@ -130,7 +370,7 @@ export function useRewritePipeline({
       });
       setIsEditing(false);
     }
-  }, [comparisonLevel, editedText, storyData.levelContent, updateStoryData]);
+  }, [comparisonLevel, editedText, storyData.levelContent, storyData.detectedLevel, updateStoryData]);
 
   // ============================================
   // Processing Control
@@ -188,6 +428,8 @@ export function useRewritePipeline({
     }
 
     if (!response.ok) {
+      const reason = data.failureReason || "unknown";
+      console.error(`[rewriteChunk] Failed: ${data.error} (reason: ${reason}, input: ${text.length} chars)`);
       throw new Error(data.error || "Failed to generate");
     }
 
@@ -251,7 +493,8 @@ export function useRewritePipeline({
 
         for (const result of results) {
           if (result.success) {
-            rewrittenSubChunks[result.index] = result.result;
+            // Normalize leading/trailing whitespace from AI response
+            rewrittenSubChunks[result.index] = result.result.replace(/^\n+/, "").replace(/\n+$/, "");
           } else {
             hasError = true;
             rewrittenSubChunks[result.index] = `[ERROR: Sub-chunk ${result.index + 1} failed]\n\n${result.original}`;
@@ -264,7 +507,8 @@ export function useRewritePipeline({
         };
       } else {
         const rewritten = await withRetry(() => rewriteChunk(chapterText, level));
-        return { rewritten };
+        // Normalize leading/trailing whitespace from AI response
+        return { rewritten: rewritten.replace(/^\n+/, "").replace(/\n+$/, "") };
       }
     } catch (chunkError) {
       const isCancelled = (chunkError as Error).name === "AbortError" ||
@@ -310,23 +554,47 @@ export function useRewritePipeline({
         return true;
       }
 
-      const chapters = storyData.parsedResult?.chapters;
+      // Re-split rawText into chapters live (instead of using stale parsedResult.chapters)
+      // This ensures any manual edits to the original text are reflected in the rewrite
+      const chapterPattern = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?::\s*(.+?))?\s*---$/im;
+      const liveChapters: { rawText: string; title: string; number: number }[] = [];
+      {
+        const rawText = storyData.rawText;
+        const parts = rawText.split(/^(---\s*(?:Chapter|Capítulo)\s+\d+(?::\s*.+?)?\s*---)\s*$/im);
+        // parts alternates: [preContent, divider1, content1, divider2, content2, ...]
+        for (let pi = 1; pi < parts.length; pi += 2) {
+          const divider = parts[pi];
+          const content = parts[pi + 1] || "";
+          const match = divider.match(chapterPattern);
+          liveChapters.push({
+            rawText: content.replace(/^\n+/, "").replace(/\s+$/, ""),
+            title: match?.[2]?.trim() || "",
+            number: match ? parseInt(match[1], 10) : Math.ceil(pi / 2),
+          });
+        }
+        // Fallback: if no chapter markers found, use parsedResult chapters
+        if (liveChapters.length === 0 && storyData.parsedResult?.chapters) {
+          for (const ch of storyData.parsedResult.chapters) {
+            liveChapters.push({ rawText: ch.rawText, title: ch.title || "", number: ch.number });
+          }
+        }
+      }
 
-      if (chapters && chapters.length > 1) {
-        const rewrittenChapters: string[] = new Array(chapters.length).fill("");
-        setChapterProgress({ current: 1, batchEnd: Math.min(REWRITE_BATCH_SIZE, chapters.length), total: chapters.length });
+      if (liveChapters.length > 1) {
+        const rewrittenChapters: string[] = new Array(liveChapters.length).fill("");
+        setChapterProgress({ current: 1, batchEnd: Math.min(REWRITE_BATCH_SIZE, liveChapters.length), total: liveChapters.length });
 
-        for (let batchStart = 0; batchStart < chapters.length; batchStart += REWRITE_BATCH_SIZE) {
+        for (let batchStart = 0; batchStart < liveChapters.length; batchStart += REWRITE_BATCH_SIZE) {
           if (cancelledRef.current) break;
 
-          const batchEnd = Math.min(batchStart + REWRITE_BATCH_SIZE, chapters.length);
+          const batchEnd = Math.min(batchStart + REWRITE_BATCH_SIZE, liveChapters.length);
           const batchIndices = Array.from({ length: batchEnd - batchStart }, (_, i) => batchStart + i);
 
-          console.log(`Rewrite: Processing chapters ${batchStart + 1}-${batchEnd} of ${chapters.length} in parallel`);
-          setChapterProgress({ current: batchStart + 1, batchEnd, total: chapters.length });
+          console.log(`Rewrite: Processing chapters ${batchStart + 1}-${batchEnd} of ${liveChapters.length} in parallel`);
+          setChapterProgress({ current: batchStart + 1, batchEnd, total: liveChapters.length });
 
           const batchPromises = batchIndices.map(i =>
-            rewriteSingleChapter(chapters[i].rawText, i, chapters[i].title || "", level)
+            rewriteSingleChapter(liveChapters[i].rawText, i, liveChapters[i].title || "", level)
           );
 
           const batchResults = await Promise.allSettled(batchPromises);
@@ -336,12 +604,12 @@ export function useRewritePipeline({
             if (result.status === "fulfilled") {
               rewrittenChapters[chapterIdx] = result.value.rewritten;
             } else {
-              rewrittenChapters[chapterIdx] = `[ERROR: Failed to rewrite chapter ${chapterIdx + 1}]\n\n${chapters[chapterIdx].rawText}`;
+              rewrittenChapters[chapterIdx] = `[ERROR: Failed to rewrite chapter ${chapterIdx + 1}]\n\n${liveChapters[chapterIdx].rawText}`;
             }
           });
 
-          const nextBatchEnd = Math.min(batchEnd + REWRITE_BATCH_SIZE, chapters.length);
-          setChapterProgress({ current: batchEnd + 1, batchEnd: nextBatchEnd, total: chapters.length });
+          const nextBatchEnd = Math.min(batchEnd + REWRITE_BATCH_SIZE, liveChapters.length);
+          setChapterProgress({ current: batchEnd + 1, batchEnd: nextBatchEnd, total: liveChapters.length });
         }
 
         // Check if cancelled before saving
@@ -354,44 +622,49 @@ export function useRewritePipeline({
         }
 
         // Auto-retry any failed chapters individually
+        // Use includes() not startsWith() — sub-chunk errors appear mid-text
         const failedIndices = rewrittenChapters
-          .map((text, idx) => text.startsWith("[ERROR:") ? idx : -1)
+          .map((text, idx) => text.includes("[ERROR:") ? idx : -1)
           .filter(idx => idx !== -1);
 
         if (failedIndices.length > 0 && !cancelledRef.current) {
           console.log(`[Rewrite] L${level}: ${failedIndices.length} failed chapters, retrying individually...`);
-          setChapterProgress({ current: 0, batchEnd: failedIndices.length, total: failedIndices.length });
+          setRetryStatus(`${failedIndices.length} failed chapter${failedIndices.length > 1 ? 's' : ''} detected, retrying...`);
 
           for (let i = 0; i < failedIndices.length; i++) {
             if (cancelledRef.current) break;
             const chapterIdx = failedIndices[i];
             console.log(`[Rewrite] Retrying chapter ${chapterIdx + 1}...`);
-            setChapterProgress({ current: i + 1, batchEnd: failedIndices.length, total: failedIndices.length });
+            setRetryStatus(`Retrying chapter ${chapterIdx + 1} (${i + 1} of ${failedIndices.length})`);
 
             const result = await rewriteSingleChapter(
-              chapters[chapterIdx].rawText, chapterIdx, chapters[chapterIdx].title || "", level
+              liveChapters[chapterIdx].rawText, chapterIdx, liveChapters[chapterIdx].title || "", level
             );
             rewrittenChapters[chapterIdx] = result.rewritten;
           }
+          setRetryStatus(null);
         }
 
         // Check for any still-failed chapters
-        const stillFailed = rewrittenChapters.filter(text => text.startsWith("[ERROR:")).length;
+        const stillFailed = rewrittenChapters.filter(text => text.includes("[ERROR:")).length;
         if (stillFailed > 0) {
           console.warn(`[Rewrite] L${level}: ${stillFailed} chapters still failed after retry`);
+          setError(`L${level}: ${stillFailed} chapter${stillFailed > 1 ? 's' : ''} failed after retry`);
         }
 
         const fullRewrittenText = rewrittenChapters
           .map((text, idx) => {
-            const chapterNumber = chapters[idx]?.number || idx + 1;
-            const rawTitle = chapters[idx]?.title || "";
+            const chapterNumber = liveChapters[idx]?.number || idx + 1;
+            const rawTitle = liveChapters[idx]?.title || "";
             const isMeaningfulTitle = rawTitle.length > 0 &&
               !/^(Chapter|Section|Part|Capítulo|Sección|Parte|Full Text)\s*\d*$/i.test(rawTitle.trim());
             const divider = isMeaningfulTitle
               ? `--- Chapter ${chapterNumber}: ${rawTitle} ---`
               : `--- Chapter ${chapterNumber} ---`;
-            // Always add chapter header (including Chapter 1 for consistency)
-            return `${divider}\n\n${text}`;
+            // Trim leading/trailing blank lines from rewritten text to prevent
+            // off-by-one alignment when chapters are reassembled with dividers
+            const normalizedText = text.replace(/^\n+/, "").replace(/\n+$/, "");
+            return `${divider}\n\n${normalizedText}`;
           })
           .join("\n\n");
 
@@ -491,10 +764,18 @@ export function useRewritePipeline({
     console.log(`[resetLevel] L${level} reset to pending`);
   }, [storyData.levelContent, getLevelMode, updateStoryData]);
 
+  // Scan a level's source text for suspicious content
+  const getContentWarnings = useCallback((level: number): ContentWarning[] => {
+    const content = storyData.levelContent[level];
+    if (!content?.sourceText) return [];
+    return scanContentWarnings(content.sourceText, level);
+  }, [storyData.levelContent]);
+
   return {
     // State
     currentGenerating,
     chapterProgress,
+    retryStatus,
     error,
     setError,
 
@@ -512,6 +793,7 @@ export function useRewritePipeline({
     isLevelDone,
     isLevelGenerating,
     resetLevel,
+    getContentWarnings,
 
     // Comparison modal
     comparisonLevel,

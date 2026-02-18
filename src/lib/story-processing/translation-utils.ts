@@ -18,19 +18,35 @@
  *   blankLinePositions: [1] // 0-indexed positions of blank lines
  * }
  */
+/**
+ * Check if a line is a structural separator (dashes, asterisks, rules).
+ * These should be passed through unchanged, not sent to the AI.
+ */
+function isStructuralLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  return /^[-=_*~#]{3,}$/.test(trimmed) || /^([*\-_] ){2,}[*\-_]$/.test(trimmed);
+}
+
 export function addLineNumbers(text: string): {
   numberedText: string;
   lineCount: number;
   totalLines: number;
   blankLinePositions: number[];
+  /** Positions and content of structural lines (dashes, rules) to pass through unchanged */
+  structuralLines: { position: number; text: string }[];
 } {
   const lines = text.split("\n");
   const blankLinePositions: number[] = [];
+  const structuralLines: { position: number; text: string }[] = [];
   const contentLines: string[] = [];
 
   lines.forEach((line, idx) => {
     if (line.trim() === "") {
       blankLinePositions.push(idx);
+    } else if (isStructuralLine(line)) {
+      // Track structural lines separately — don't send to AI
+      structuralLines.push({ position: idx, text: line });
     } else {
       contentLines.push(`[${contentLines.length + 1}] ${line}`);
     }
@@ -41,6 +57,7 @@ export function addLineNumbers(text: string): {
     lineCount: contentLines.length,
     totalLines: lines.length,
     blankLinePositions,
+    structuralLines,
   };
 }
 
@@ -77,19 +94,30 @@ export function parseNumberedLines(
 }
 
 /**
- * Reconstruct full text by re-inserting blank lines at their original positions
+ * Reconstruct full text by re-inserting blank lines and structural lines at their original positions
  */
 export function reconstructWithBlankLines(
   translatedLines: string[],
   blankLinePositions: number[],
-  totalLines: number
+  totalLines: number,
+  structuralLines?: { position: number; text: string }[]
 ): string[] {
   const result: string[] = [];
   let translatedIdx = 0;
 
+  // Build a set of structural line positions for O(1) lookup
+  const structuralMap = new Map<number, string>();
+  if (structuralLines) {
+    for (const sl of structuralLines) {
+      structuralMap.set(sl.position, sl.text);
+    }
+  }
+
   for (let i = 0; i < totalLines; i++) {
     if (blankLinePositions.includes(i)) {
       result.push(""); // Re-insert blank line
+    } else if (structuralMap.has(i)) {
+      result.push(structuralMap.get(i)!); // Re-insert structural line unchanged
     } else {
       result.push(translatedLines[translatedIdx] || "");
       translatedIdx++;

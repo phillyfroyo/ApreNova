@@ -76,14 +76,17 @@ export async function translateText(
 ): Promise<TranslationResult> {
   const { maxRetries = 3, storyId, userId, isPoetry = false, adminStorySlug } = options;
   const levelNum = typeof level === "string" ? levelStringToNumber(level) : level;
-  const { numberedText, lineCount, totalLines, blankLinePositions } = addLineNumbers(text);
+  const { numberedText, lineCount, totalLines, blankLinePositions, structuralLines } = addLineNumbers(text);
   const sourceLines = text.split("\n");
 
   // DEBUG: Log blank line info to trace whitespace preservation
-  if (blankLinePositions.length > 0 || totalLines !== lineCount) {
-    console.log(`[Translation] Blank line info: ${blankLinePositions.length} blanks, ${lineCount} content lines, ${totalLines} total lines`);
+  if (blankLinePositions.length > 0 || totalLines !== lineCount || structuralLines.length > 0) {
+    console.log(`[Translation] Line info: ${blankLinePositions.length} blanks, ${structuralLines.length} structural, ${lineCount} content lines, ${totalLines} total lines`);
     if (blankLinePositions.length > 0) {
       console.log(`[Translation] First 10 blank positions: ${blankLinePositions.slice(0, 10).join(', ')}`);
+    }
+    if (structuralLines.length > 0) {
+      console.log(`[Translation] Structural lines: ${structuralLines.map(s => `pos ${s.position}: "${s.text.slice(0, 30)}"`).join(', ')}`);
     }
   }
 
@@ -138,6 +141,16 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
   console.log(`[Translation] Input preview (first 15 of ${lineCount} content lines):`);
   inputLines.forEach((line, i) => console.log(`  ${i}: ${line.substring(0, 100)}${line.length > 100 ? "..." : ""}`));
 
+  // Dynamically calculate max_tokens based on input size.
+  // Translation output is roughly the same size as input (line-for-line).
+  // Spanish text tends to be ~15-20% longer than English, so use 1.5x multiplier.
+  const estimatedInputTokens = Math.ceil(numberedText.length / 4);
+  const dynamicMaxTokens = Math.min(
+    Math.max(Math.ceil(estimatedInputTokens * 1.5), 4000),
+    16384
+  );
+  console.log(`[Translation] Dynamic max_tokens: ${dynamicMaxTokens} (input: ${numberedText.length} chars, ~${estimatedInputTokens} tokens)`);
+
   let lastError: Error | null = null;
   let bestResult: string[] | null = null;
   let bestResultCount = 0;
@@ -148,7 +161,7 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
 
       const response = await anthropic.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 16000,
+        max_tokens: dynamicMaxTokens,
         system: systemPrompt,
         messages: [
           {
@@ -158,12 +171,12 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
         ],
       });
 
-      // Log cost (fire-and-forget)
+      // Log cost (fire-and-forget, swallow DB errors)
       logAnthropicCost("translation", "claude-haiku-4-5-20251001", response.usage, {
         userId,
         userStoryId: storyId,
         metadata: { level: levelNum, lineCount, attempt, ...(adminStorySlug && { adminStorySlug }) },
-      });
+      }).catch(() => {});
 
       const rawResponse =
         response.content[0].type === "text"
@@ -229,7 +242,8 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
         const fullTranslatedLines = reconstructWithBlankLines(
           translatedContentLines,
           blankLinePositions,
-          totalLines
+          totalLines,
+          structuralLines
         );
 
         return {
@@ -259,7 +273,8 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
     const fullTranslatedLines = reconstructWithBlankLines(
       bestResult,
       blankLinePositions,
-      totalLines
+      totalLines,
+      structuralLines
     );
 
     return {

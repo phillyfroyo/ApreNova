@@ -89,10 +89,9 @@ export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
     numericLevel: 1,
     name: "Foundations",
     officialDescription: "Can understand and use familiar everyday expressions and very basic phrases aimed at the satisfaction of needs of a concrete type. Can interact in a simple way provided the other person talks slowly and clearly.",
-    sentenceLength: "3-7 words",
-    vocabulary: "500 most common words, concrete nouns, simple verbs (go, see, say, want, like)",
+    sentenceLength: "3-10 words",
+    vocabulary: "~700 most frequent lemmas (headwords), concrete nouns, simple verbs (go, see, say, want, like, come, take, make, give, know)",
     forbidden: [
-      "NO past tense (use present tense narration)",
       "NO future tense",
       "NO perfect tenses",
       "NO conditionals",
@@ -102,6 +101,7 @@ export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
     ],
     allowed: [
       "Simple present tense",
+      "Simple past tense for narration (walked, saw, said, went) — stories are naturally told in past tense",
       "Basic compound sentences with 'and', 'but'",
       "Simple dialogue (breaks up narration naturally)",
       "Pronouns (she, he, it) after subject is clearly established",
@@ -109,8 +109,10 @@ export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
     ],
     connectors: ["and", "but", "then", "so"],
     styleGuidance: [
-      "Write connected prose, not isolated sentences",
-      "Keep cause-and-effect clear: 'She is hungry. So she eats.'",
+      "Write connected prose, not isolated sentences — this is a STORY, not a vocabulary exercise",
+      "The story MUST remain a faithful retelling — keep all major plot points, characters, and scenes",
+      "Simplify the LANGUAGE, not the STORY — every chapter should cover the same events as the original",
+      "Keep cause-and-effect clear: 'She was hungry. So she ate.'",
       "Use simple connectors to maintain narrative flow",
       "Repeat character names for clarity, but not every sentence",
       "After 2-3 sentences about the same subject, pronouns are fine",
@@ -118,6 +120,8 @@ export const CEFR_LEVEL_DETAILS: Record<CEFRCode, CEFRLevelDetails> = {
       "Simple dialogue adds variety and feels natural",
     ],
     pitfalls: [
+      "SUMMARIZING instead of retelling — do NOT condense 3 pages into 3 sentences",
+      "Skipping scenes or plot points — every event in the original should appear in simplified form",
       "Creating choppy 'note-taking' style prose (list of disconnected facts)",
       "Removing all personality from characters",
       "Eliminating cause-effect relationships",

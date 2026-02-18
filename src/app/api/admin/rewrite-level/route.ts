@@ -58,19 +58,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // For prose, use standard rewriting
+    // For prose, use standard rewriting with 3 retries
     const result: RewriteResult = await rewriteToLevel(
       text,
       effectiveSourceLevel,
       targetLevel,
       language,
-      { isPoetry: false, maxRetries: 2, adminStorySlug: slug }
+      { isPoetry: false, maxRetries: 3, adminStorySlug: slug }
     );
 
     if (!result.wasRewritten && effectiveSourceLevel !== targetLevel) {
+      const reason = result.failureReason || "unknown";
+      console.error(`[rewrite-level] Failed: reason=${reason}, input=${text.length} chars, L${effectiveSourceLevel}→L${targetLevel}`);
       return NextResponse.json(
         {
-          error: "AI could not process this text chunk. It may be empty or contain only non-story content.",
+          error: `Rewrite failed (${reason}). Input: ${text.length} chars.`,
+          failureReason: reason,
         },
         { status: 400 }
       );

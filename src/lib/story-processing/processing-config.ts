@@ -91,11 +91,15 @@ export const RETRY_CONFIG = {
  * Batch processing settings
  */
 export const BATCH_CONFIG = {
-  /** Number of chapters to process in parallel during rewriting */
-  REWRITE_BATCH_SIZE: 8,
+  /** Number of chapters to process in parallel during rewriting
+   * Kept moderate to avoid connection pool exhaustion and API rate limits.
+   * Each chapter can take 20-40s, and sub-chunks add more parallel calls. */
+  REWRITE_BATCH_SIZE: 4,
 
-  /** Number of chapters to process in parallel during translation */
-  TRANSLATION_BATCH_SIZE: 8,
+  /** Number of chapters to process sequentially during translation.
+   * Set to 1 (fully sequential) to match user portal behavior and avoid
+   * rate limits, truncation, and line alignment issues. */
+  TRANSLATION_BATCH_SIZE: 1,
 } as const;
 
 // ============================================================================
@@ -321,7 +325,7 @@ export function detectFileType(
 
 /**
  * Split text into sub-chunks for API calls, respecting paragraph and sentence boundaries.
- * This ensures we don't exceed token limits while maintaining text coherence.
+ * Preserves original spacing (double, triple newlines) between paragraphs.
  *
  * @param text The text to split
  * @param maxChars Maximum characters per chunk (defaults to MAX_CHUNK_CHARS)
@@ -334,25 +338,33 @@ export function splitIntoSubChunks(
   // If text fits in one chunk, return as-is
   if (text.length <= maxChars) return [text];
 
-  // First pass: split by paragraphs
-  const paragraphs = text.split(/\n\n+/);
-  const chunks: string[] = [];
-  let currentChunk = "";
-
-  for (const para of paragraphs) {
-    // Check if adding this paragraph would exceed limit
-    if (currentChunk.length + para.length + 2 > maxChars) {
-      // Save current chunk if it has content
-      if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = para;
-    } else {
-      // Add paragraph to current chunk
-      currentChunk += (currentChunk ? "\n\n" : "") + para;
+  // Split by paragraph breaks while capturing the separator (preserves spacing)
+  const parts = text.split(/(\n{2,})/);
+  // parts alternates: [content, separator, content, separator, ...]
+  // Build entries: each content piece with the separator BEFORE it
+  const entries: { text: string; separatorBefore: string }[] = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    const content = parts[i] || "";
+    const separatorBefore = i > 0 ? (parts[i - 1] || "\n\n") : "";
+    if (content.trim()) {
+      entries.push({ text: content, separatorBefore });
     }
   }
 
-  // Don't forget the last chunk
-  if (currentChunk) chunks.push(currentChunk.trim());
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  for (const entry of entries) {
+    const sep = currentChunk ? entry.separatorBefore : "";
+    if (currentChunk && currentChunk.length + sep.length + entry.text.length > maxChars) {
+      chunks.push(currentChunk);
+      currentChunk = entry.text;
+    } else {
+      currentChunk += sep + entry.text;
+    }
+  }
+
+  if (currentChunk) chunks.push(currentChunk);
 
   // Second pass: split any chunks that are still too large by sentences
   const result: string[] = [];

@@ -28,6 +28,141 @@ export { isErrorResponse, stripPreamble, isValidRewriteResponse, isTitleLikeText
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ============================================================================
+// PARAGRAPH MARKER UTILITIES (for prose rewrite alignment)
+// ============================================================================
+
+/**
+ * A structural/separator line that should be passed through unchanged.
+ * Matches lines like "----------", "***", "* * *", "===", etc.
+ */
+function isStructuralLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  // Lines made entirely of dashes, asterisks, equals, underscores, or spaced versions
+  return /^[-=_*~#]{3,}$/.test(trimmed) || /^([*\-_] ){2,}[*\-_]$/.test(trimmed);
+}
+
+/**
+ * Represents a segment of text between structural separators.
+ * Tracks the original spacing so we can reassemble faithfully.
+ */
+interface ParagraphSegment {
+  type: 'content' | 'structural';
+  text: string;
+  /** The newline sequence that appeared BEFORE this segment in the original text */
+  separatorBefore: string;
+}
+
+/**
+ * Split text into paragraphs while preserving:
+ * - Exact number of newlines between paragraphs (double, triple, etc.)
+ * - Structural separator lines (dashes, asterisks) as passthrough elements
+ *
+ * Returns segments that can be filtered for content (to send to AI) and
+ * reassembled with original spacing.
+ */
+function splitPreservingSpacing(text: string): ParagraphSegment[] {
+  const segments: ParagraphSegment[] = [];
+  // Split on one or more blank lines, capturing the separator
+  const parts = text.split(/(\n{2,})/);
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    // Even indices are content, odd indices are separators
+    if (i % 2 === 1) {
+      // This is a separator (newlines) — store it on the next segment
+      continue;
+    }
+
+    if (!part) continue;
+
+    const separatorBefore = i > 0 ? (parts[i - 1] || "\n\n") : "";
+
+    // Check if this paragraph is entirely structural lines
+    const lines = part.split("\n");
+    const allStructural = lines.every(l => isStructuralLine(l) || l.trim() === "");
+    const hasContent = lines.some(l => l.trim() !== "");
+
+    if (allStructural && hasContent) {
+      segments.push({ type: 'structural', text: part, separatorBefore });
+    } else if (hasContent) {
+      segments.push({ type: 'content', text: part, separatorBefore });
+    } else if (separatorBefore) {
+      // Only whitespace — absorb into the next separator
+      // The separator is already captured; skip empty segments
+    }
+  }
+
+  return segments;
+}
+
+/**
+ * Reassemble paragraphs with their original spacing.
+ * Content segments get replaced with rewritten text; structural segments stay unchanged.
+ */
+function reassembleWithSpacing(
+  segments: ParagraphSegment[],
+  rewrittenContent: string[],
+): string {
+  const parts: string[] = [];
+  let contentIdx = 0;
+
+  for (const seg of segments) {
+    // Add the separator that was before this segment
+    if (seg.separatorBefore) {
+      parts.push(seg.separatorBefore);
+    }
+
+    if (seg.type === 'structural') {
+      parts.push(seg.text);
+    } else {
+      parts.push(rewrittenContent[contentIdx] ?? seg.text);
+      contentIdx++;
+    }
+  }
+
+  return parts.join("");
+}
+
+/**
+ * Parse paragraph markers [P1], [P2], etc. from AI response.
+ * Returns an array of paragraphs in marker order.
+ * If markers are missing (model ignored them), falls back to splitting on double-newlines.
+ */
+function parseParagraphMarkers(text: string, expectedCount: number): string[] {
+  const markerPattern = /\[P(\d+)\]\s*/g;
+  const markers: { index: number; position: number }[] = [];
+  let match;
+
+  while ((match = markerPattern.exec(text)) !== null) {
+    markers.push({ index: parseInt(match[1], 10), position: match.index });
+  }
+
+  if (markers.length >= expectedCount * 0.5) {
+    const paragraphs: string[] = [];
+
+    for (let i = 0; i < markers.length; i++) {
+      const startPos = markers[i].position;
+      const endPos = i + 1 < markers.length ? markers[i + 1].position : text.length;
+      const segment = text.substring(startPos, endPos);
+      const cleaned = segment.replace(/^\[P\d+\]\s*/, "").trim();
+      if (cleaned) {
+        paragraphs.push(cleaned);
+      }
+    }
+
+    console.log(`[Rewrite] Parsed ${paragraphs.length}/${expectedCount} paragraph markers`);
+    return paragraphs;
+  }
+
+  // Markers not preserved — strip any stray [PN] prefixes and split on double-newlines
+  console.warn(`[Rewrite] Paragraph markers not preserved (found ${markers.length}/${expectedCount}), stripping`);
+  const cleaned = text.replace(/\[P\d+\]\s*/g, "");
+  return cleaned.split(/\n\n+/).filter(p => p.trim());
+}
+
+// ============================================================================
 // MAIN REWRITING FUNCTION
 // Uses OpenAI GPT-4 with retry logic
 // ============================================================================
@@ -38,6 +173,8 @@ export interface RewriteResult {
   rewrittenLength: number;
   wasRewritten: boolean;
   attempts: number;
+  /** Why the rewrite failed (if wasRewritten is false) */
+  failureReason?: string;
 }
 
 export interface RewriteOptions {
@@ -83,7 +220,22 @@ export async function rewriteToLevel(
     };
   }
 
-  const prompt = generateRewritePrompt(targetLevelNum, text, language, isPoetry);
+  // For prose, split into segments preserving spacing and structural lines,
+  // then add paragraph markers [P1], [P2], etc. to content paragraphs only.
+  // Structural lines (dashes, rules) pass through unchanged.
+  let textForPrompt = text;
+  let contentParagraphCount = 0;
+  let segments: ParagraphSegment[] = [];
+  if (!isPoetry) {
+    segments = splitPreservingSpacing(text);
+    const contentSegments = segments.filter(s => s.type === 'content');
+    contentParagraphCount = contentSegments.length;
+    textForPrompt = contentSegments
+      .map((s, i) => `[P${i + 1}] ${s.text.trim()}`)
+      .join("\n\n");
+  }
+
+  const prompt = generateRewritePrompt(targetLevelNum, textForPrompt, language, isPoetry);
 
   const systemPrompt = `You are an expert language educator specializing in graded readers and CEFR-level content adaptation.
 
@@ -94,6 +246,17 @@ Your task is to rewrite texts to match specific CEFR levels while preserving:
 
 IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no preambles like "Here's the rewritten text:".`;
 
+  // Dynamically calculate max_tokens based on input size
+  // The rewritten text should be roughly the same length or shorter (for simplification)
+  // Estimate: ~4 chars per token, add 50% headroom for expansion at higher levels
+  const estimatedInputTokens = Math.ceil(text.length / 4);
+  const dynamicMaxTokens = Math.min(
+    Math.max(estimatedInputTokens * 2, 4000), // At least 4K, up to 2x input
+    16384 // GPT-4o max output
+  );
+
+  let failureReason = "";
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
@@ -103,21 +266,23 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
           { role: "user", content: prompt },
         ],
         temperature: 0.5,
-        max_tokens: 16000,
+        max_tokens: dynamicMaxTokens,
       });
 
-      // Log cost (fire-and-forget)
+      // Log cost (fire-and-forget, don't let it crash the rewrite)
       logOpenAICost("rewriting", "gpt-4o", completion.usage, {
         userId,
         userStoryId: storyId,
         metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt, ...(adminStorySlug && { adminStorySlug }) },
-      });
+      }).catch(() => {}); // Swallow cost logging errors
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
       const finishReason = completion.choices[0]?.finish_reason;
 
       // Check for error responses
       if (isErrorResponse(rawResponse)) {
+        failureReason = "ai_refusal";
+        console.warn(`[Rewrite] AI refusal (attempt ${attempt}/${maxRetries}): ${rawResponse.slice(0, 100)}`);
         if (attempt < maxRetries) {
           await new Promise((r) => setTimeout(r, 2000 * attempt));
           continue;
@@ -128,15 +293,50 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
           rewrittenLength: text.length,
           wasRewritten: false,
           attempts: attempt,
+          failureReason,
         };
+      }
+
+      // Check if API response was truncated BEFORE validation
+      if (finishReason === "length") {
+        failureReason = "truncated";
+        console.warn(`[Rewrite] Response truncated (attempt ${attempt}/${maxRetries}), max_tokens=${dynamicMaxTokens}, input=${text.length} chars`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        // On last attempt, use truncated result if it's substantial enough
+        let rewrittenText = stripPreamble(rawResponse);
+        if (!isPoetry && contentParagraphCount > 0) {
+          const parsedParagraphs = parseParagraphMarkers(rewrittenText, contentParagraphCount);
+          rewrittenText = reassembleWithSpacing(segments, parsedParagraphs);
+        }
+        if (rewrittenText && rewrittenText.length >= text.length * 0.5) {
+          console.warn(`[Rewrite] Using truncated result (${rewrittenText.length}/${text.length} chars) on final attempt`);
+          return {
+            rewrittenText,
+            originalLength: text.length,
+            rewrittenLength: rewrittenText.length,
+            wasRewritten: true,
+            attempts: attempt,
+            failureReason: "truncated_accepted",
+          };
+        }
       }
 
       // Strip preambles
-      const rewrittenText = stripPreamble(rawResponse);
+      let rewrittenText = stripPreamble(rawResponse);
+
+      // For prose: parse paragraph markers and reassemble with original spacing
+      if (!isPoetry && contentParagraphCount > 0) {
+        const parsedParagraphs = parseParagraphMarkers(rewrittenText, contentParagraphCount);
+        rewrittenText = reassembleWithSpacing(segments, parsedParagraphs);
+      }
 
       // Validate content - check response is related to original (catches meta-commentary)
       if (!isValidRewriteResponse(text, rewrittenText)) {
-        console.warn(`[Rewrite] Response failed content validation (attempt ${attempt})`);
+        failureReason = "content_validation";
+        console.warn(`[Rewrite] Response failed content validation (attempt ${attempt}/${maxRetries})`);
         if (attempt < maxRetries) {
           await new Promise((r) => setTimeout(r, 2000 * attempt));
           continue;
@@ -147,11 +347,18 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
           rewrittenLength: text.length,
           wasRewritten: false,
           attempts: attempt,
+          failureReason,
         };
       }
 
-      // Validate the rewrite worked
-      if (!rewrittenText || rewrittenText.length < text.length * 0.3) {
+      // Validate the rewrite worked (response not too short)
+      // Scale threshold by target level — lower levels produce legitimately shorter output
+      const minLengthRatio = targetLevelNum <= 1 ? 0.1  // A1: 10% (heavy simplification expected)
+                           : targetLevelNum <= 2 ? 0.15 // A2: 15%
+                           : 0.3;                       // B1+: 30%
+      if (!rewrittenText || rewrittenText.length < text.length * minLengthRatio) {
+        failureReason = "too_short";
+        console.warn(`[Rewrite] Response too short: ${rewrittenText?.length || 0} chars vs ${text.length} original (min ${Math.round(minLengthRatio * 100)}%, attempt ${attempt}/${maxRetries})`);
         if (attempt < maxRetries) {
           await new Promise((r) => setTimeout(r, 2000 * attempt));
           continue;
@@ -162,16 +369,8 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
           rewrittenLength: text.length,
           wasRewritten: false,
           attempts: attempt,
+          failureReason,
         };
-      }
-
-      // Check if API response was truncated
-      if (finishReason === "length") {
-        if (attempt < maxRetries) {
-          await new Promise((r) => setTimeout(r, 2000 * attempt));
-          continue;
-        }
-        // Use truncated result if it's our last attempt and it's substantial
       }
 
       return {
@@ -182,7 +381,8 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
         attempts: attempt,
       };
     } catch (error: any) {
-      console.error(`[Rewrite] Error:`, error.message);
+      failureReason = "exception";
+      console.error(`[Rewrite] Exception (attempt ${attempt}/${maxRetries}):`, error.message);
       if (attempt < maxRetries) {
         await new Promise((r) => setTimeout(r, 2000 * attempt));
       }
@@ -190,12 +390,14 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
   }
 
   // If all attempts failed, return original text
+  console.error(`[Rewrite] All ${maxRetries} attempts failed. Reason: ${failureReason}, input: ${text.length} chars`);
   return {
     rewrittenText: text,
     originalLength: text.length,
     rewrittenLength: text.length,
     wasRewritten: false,
     attempts: maxRetries,
+    failureReason,
   };
 }
 
@@ -590,7 +792,7 @@ Return ONLY the rewritten text with markers. No explanations, no headers.`;
         max_tokens: 16000,
       });
 
-      // Log cost
+      // Log cost (fire-and-forget, don't let it crash the rewrite)
       logOpenAICost("rewriting", "gpt-4o", completion.usage, {
         userId,
         userStoryId: storyId,
@@ -602,7 +804,7 @@ Return ONLY the rewritten text with markers. No explanations, no headers.`;
           isChapterLevel: true,
           ...(adminStorySlug && { adminStorySlug }),
         },
-      });
+      }).catch(() => {});
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
 
@@ -751,7 +953,7 @@ async function rewritePoetryChapterByPoem(
           isFallback: true,
           ...(options.adminStorySlug && { adminStorySlug: options.adminStorySlug }),
         },
-      });
+      }).catch(() => {});
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
       const parsed = parsePoemAndStanzaMarkers(rawResponse, 1, { validateLineNumbers: false });

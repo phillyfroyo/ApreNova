@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import type { StoryData, ChunkError, TranslationErrorType } from "../../types";
 import { useTranslationPipeline } from "../../hooks/useTranslationPipeline";
+import { scanContentWarnings, scanTranslationQuality } from "../../hooks/useRewritePipeline";
 import { ComparisonModal } from "../ComparisonModal";
 
 interface Step5TranslateProps {
@@ -32,10 +33,11 @@ export function Step5Translate({
     chunkErrors,
     setChunkErrors,
     copiedFromLevel,
-    truncationRetryStatus,
     translateSingleLevel,
     translateAllLevels,
     cancel,
+    resetTranslation,
+    retranslateChapter,
     isTranslationComplete,
   } = pipeline;
 
@@ -46,39 +48,47 @@ export function Step5Translate({
 
   // Translation comparison modal state
   const [translationComparisonLevel, setTranslationComparisonLevel] = useState<number | null>(null);
-  const [translationModalEditing, setTranslationModalEditing] = useState(false);
-  const [translationModalEditText, setTranslationModalEditText] = useState("");
+  const [isRetranslatingChapter, setIsRetranslatingChapter] = useState(false);
 
   const openTranslationComparison = useCallback((level: number) => {
     const content = storyData.levelContent[level];
     if (content?.translatedText) {
       setTranslationComparisonLevel(level);
-      setTranslationModalEditText(content.translatedText);
-      setTranslationModalEditing(false);
     }
   }, [storyData.levelContent]);
 
   const closeTranslationComparison = useCallback(() => {
     setTranslationComparisonLevel(null);
-    setTranslationModalEditing(false);
   }, []);
 
-  const saveTranslationFromModal = useCallback((editedText: string) => {
-    if (translationComparisonLevel !== null) {
-      const content = storyData.levelContent[translationComparisonLevel];
-      if (content) {
-        updateStoryData({
-          levelContent: {
-            ...storyData.levelContent,
-            [translationComparisonLevel]: {
-              ...content,
-              translatedText: editedText,
-            },
-          },
-        });
-      }
-    }
+  const saveTranslationFromModal = useCallback((edits: { left?: string; right?: string }) => {
+    if (translationComparisonLevel === null) return;
+    const content = storyData.levelContent[translationComparisonLevel];
+    if (!content) return;
+
+    updateStoryData({
+      levelContent: {
+        ...storyData.levelContent,
+        [translationComparisonLevel]: {
+          ...content,
+          ...(edits.left !== undefined && { sourceText: edits.left }),
+          ...(edits.right !== undefined && { translatedText: edits.right }),
+        },
+      },
+    });
   }, [translationComparisonLevel, storyData.levelContent, updateStoryData]);
+
+  const handleRetranslateChapter = useCallback(async (chapterIndex: number, chapterText: string, numChunks: number) => {
+    if (translationComparisonLevel === null) return;
+    setIsRetranslatingChapter(true);
+    try {
+      await retranslateChapter(translationComparisonLevel, chapterIndex, chapterText, numChunks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retranslation failed");
+    } finally {
+      setIsRetranslatingChapter(false);
+    }
+  }, [translationComparisonLevel, retranslateChapter, setError]);
 
   // Error helper functions
   const getErrorIcon = (errorType: TranslationErrorType): string => {
@@ -113,10 +123,10 @@ export function Step5Translate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: chunkError.originalText,
-          sourceLanguage: storyData.sourceLanguage,
-          targetLanguage: storyData.sourceLanguage === "en" ? "es" : "en",
-          targetLevel: level,
-          slug: storyData.slug || undefined,  // For cost tracking
+          fromLanguage: storyData.sourceLanguage,
+          level,
+          slug: storyData.slug || undefined,
+          isPoetry: storyData.structureType === "anthology" || storyData.structureType === "epic",
         }),
       });
 
@@ -323,6 +333,26 @@ export function Step5Translate({
           const isTranslating = translatingLevels.has(level);
           const levelErrorList = chunkErrors[level] || [];
           const hasLevelErrors = levelErrorList.length > 0;
+          const translationWarnings = hasTranslation ? scanContentWarnings(content.translatedText, level) : [];
+          const sourceWarnings = content?.sourceText ? scanContentWarnings(content.sourceText, level) : [];
+          const qualityWarnings = (hasTranslation && content?.sourceText)
+            ? scanTranslationQuality(content.sourceText, content.translatedText, level)
+            : [];
+
+          // Detect duplicate chapter markers (corrupted data)
+          const detectDupeChapters = (text: string) => {
+            const nums: number[] = [];
+            for (const m of text.matchAll(/^---\s*(?:Chapter|Capítulo)\s+(\d+)/gim)) {
+              nums.push(parseInt(m[1], 10));
+            }
+            const seen = new Set<number>();
+            const dupes = new Set<number>();
+            for (const n of nums) { if (seen.has(n)) dupes.add(n); seen.add(n); }
+            return dupes.size > 0 ? Array.from(dupes) : null;
+          };
+          const sourceDupes = content?.sourceText ? detectDupeChapters(content.sourceText) : null;
+          const transDupes = hasTranslation ? detectDupeChapters(content.translatedText) : null;
+          const hasDupeChapters = sourceDupes || transDupes;
 
           return (
             <div
@@ -370,37 +400,52 @@ export function Step5Translate({
                       {isTranslating
                         ? levelProgress[level]
                           ? levelProgress[level].subChunk
-                            ? `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd}/${levelProgress[level].total} (part ${levelProgress[level].subChunk!.current}/${levelProgress[level].subChunk!.total})...`
-                            : `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd} of ${levelProgress[level].total}...`
+                            ? `Translating chapter ${levelProgress[level].current} of ${levelProgress[level].total} (sub-chunk ${levelProgress[level].subChunk.current}/${levelProgress[level].subChunk.total})...`
+                            : `Translating chapter ${levelProgress[level].current} of ${levelProgress[level].total}...`
                           : "Translating..."
                         : hasLevelErrors
                         ? "Translation incomplete - resolve errors below"
                         : hasTranslation
                         ? (() => {
-                            const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
-                            const transLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
-                            const isComplete = transLines >= sourceLines;
-                            return isComplete
-                              ? `${transLines} lines translated ✓`
-                              : `${transLines}/${sourceLines} lines translated (partial)`;
+                            const divPat = /^---\s*(Chapter|Capítulo)\s*(\d+)/i;
+                            const countChapterLines = (text: string) => {
+                              const lines = text.split("\n");
+                              const chapters: { num: number; start: number }[] = [];
+                              lines.forEach((line, idx) => {
+                                const m = line.match(divPat);
+                                if (m) chapters.push({ num: parseInt(m[2], 10), start: idx });
+                              });
+                              if (chapters.length <= 1) return { total: lines.length, content: lines.filter(l => l.trim()).length, perChapter: [] as { num: number; total: number; content: number }[] };
+                              const perChapter: { num: number; total: number; content: number }[] = [];
+                              let totalSum = 0, contentSum = 0;
+                              for (let c = 0; c < chapters.length; c++) {
+                                const end = c + 1 < chapters.length ? chapters[c + 1].start : lines.length;
+                                const slice = lines.slice(chapters[c].start + 1, end);
+                                const t = slice.length;
+                                const ct = slice.filter(l => l.trim()).length;
+                                perChapter.push({ num: chapters[c].num, total: t, content: ct });
+                                totalSum += t;
+                                contentSum += ct;
+                              }
+                              return { total: totalSum, content: contentSum, perChapter };
+                            };
+                            const src = countChapterLines(content.sourceText || "");
+                            const trans = countChapterLines(content.translatedText);
+                            const totalOk = trans.total >= src.total;
+                            const contentOk = trans.content >= src.content;
+                            if (totalOk && contentOk) return `${trans.content} lines translated ✓`;
+                            // Show which chapters have mismatches
+                            const mismatched = src.perChapter
+                              .filter(sc => {
+                                const tc = trans.perChapter.find(c => c.num === sc.num);
+                                return tc ? (tc.total !== sc.total || tc.content !== sc.content) : true;
+                              })
+                              .map(sc => `Ch ${sc.num}`);
+                            const detail = mismatched.length > 0 ? ` — ${mismatched.join(', ')}` : '';
+                            return `${trans.content}/${src.content} lines translated (partial${detail})`;
                           })()
                         : "Pending translation"}
                     </div>
-                    {isTranslating && truncationRetryStatus && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        <span>
-                          Truncation detected in Chapter {truncationRetryStatus.chapter + 1} -
-                          Auto-retry {truncationRetryStatus.attempt}/{truncationRetryStatus.maxAttempts}
-                        </span>
-                        <span className="text-amber-500 text-xs opacity-75">
-                          ({truncationRetryStatus.reasons.join(", ")})
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -422,6 +467,22 @@ export function Step5Translate({
                       Resume Translation
                     </button>
                   )}
+                  {hasTranslation && !isTranslating && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Reset Level ${level} translation? This will clear the translated text so you can re-translate.`)) {
+                          resetTranslation(level);
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset
+                    </button>
+                  )}
                   {isTranslating && (
                     <button
                       onClick={cancel}
@@ -435,26 +496,28 @@ export function Step5Translate({
 
               {/* Line count comparison */}
               {content?.translatedText?.length > 0 && (() => {
-                const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
-                const translatedLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
-                const linesMatch = sourceLines === translatedLines;
                 const isBreakdownExpanded = expandedLineBreakdown === level;
 
                 const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
                 const sourceTextLines = (content.sourceText || "").split("\n");
                 const translatedTextLines = content.translatedText.split("\n");
 
+                // Parse chapters counting both total and content-only lines
                 const parseChapters = (lines: string[]) => {
                   type ChapterInfo = { number: number; title: string; startLine: number };
-                  const chapters: { number: number; title: string; startLine: number; lineCount: number }[] = [];
+                  const chapters: { number: number; title: string; startLine: number; totalLines: number; contentLines: number }[] = [];
                   let currentChapter: ChapterInfo | null = null;
 
                   lines.forEach((line, idx) => {
                     const match = line.match(chapterPattern);
                     if (match) {
                       if (currentChapter) {
-                        const contentLines = lines.slice(currentChapter.startLine + 1, idx).filter(l => l.trim()).length;
-                        chapters.push({ number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine, lineCount: contentLines });
+                        const slice = lines.slice(currentChapter.startLine + 1, idx);
+                        chapters.push({
+                          number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine,
+                          totalLines: slice.length,
+                          contentLines: slice.filter(l => l.trim()).length,
+                        });
                       }
                       currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
                     }
@@ -462,8 +525,12 @@ export function Step5Translate({
 
                   if (currentChapter) {
                     const chap = currentChapter as ChapterInfo;
-                    const contentLines = lines.slice(chap.startLine + 1).filter(l => l.trim()).length;
-                    chapters.push({ number: chap.number, title: chap.title, startLine: chap.startLine, lineCount: contentLines });
+                    const slice = lines.slice(chap.startLine + 1);
+                    chapters.push({
+                      number: chap.number, title: chap.title, startLine: chap.startLine,
+                      totalLines: slice.length,
+                      contentLines: slice.filter(l => l.trim()).length,
+                    });
                   }
 
                   return chapters;
@@ -472,6 +539,43 @@ export function Step5Translate({
                 const sourceChapters = parseChapters(sourceTextLines);
                 const translatedChapters = parseChapters(translatedTextLines);
                 const hasChapters = sourceChapters.length > 1 || translatedChapters.length > 1;
+
+                // Total lines (content + blank) — catches alignment issues
+                const srcTotal = hasChapters ? sourceChapters.reduce((s, c) => s + c.totalLines, 0) : sourceTextLines.length;
+                const transTotal = hasChapters ? translatedChapters.reduce((s, c) => s + c.totalLines, 0) : translatedTextLines.length;
+                const totalMatch = srcTotal === transTotal;
+
+                // Content lines only — catches missing/extra translations
+                const srcContent = hasChapters ? sourceChapters.reduce((s, c) => s + c.contentLines, 0) : sourceTextLines.filter(l => l.trim()).length;
+                const transContent = hasChapters ? translatedChapters.reduce((s, c) => s + c.contentLines, 0) : translatedTextLines.filter(l => l.trim()).length;
+                const contentMatch = srcContent === transContent;
+
+                const allGood = totalMatch && contentMatch;
+
+                // Find mismatched chapters for each metric
+                const totalMismatched = hasChapters ? sourceChapters
+                  .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.totalLines !== sc.totalLines : true; })
+                  .map(sc => `Ch ${sc.number}`) : [];
+                const contentMismatched = hasChapters ? sourceChapters
+                  .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.contentLines !== sc.contentLines : true; })
+                  .map(sc => `Ch ${sc.number}`) : [];
+
+                const LineRow = ({ label, src, trans, match, mismatched }: { label: string; src: number; trans: number; match: boolean; mismatched: string[] }) => (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-xs w-20">{label}:</span>
+                    <span className={`text-sm font-medium ${match ? 'text-green-600' : 'text-amber-600'}`}>
+                      {src} <span className="text-gray-400 mx-0.5">{"→"}</span> {trans}
+                      {match ? (
+                        <span className="text-green-500 ml-1">&#10003;</span>
+                      ) : (
+                        <span className="text-amber-500 ml-1">
+                          ({trans - src > 0 ? '+' : ''}{trans - src})
+                          {mismatched.length > 0 && <span className="text-xs ml-1">{mismatched.join(', ')}</span>}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
 
                 return (
                   <div className="mt-3">
@@ -493,15 +597,9 @@ export function Step5Translate({
                             </svg>
                           </button>
                         )}
-                        <div className={`text-sm font-medium flex items-center gap-2 ${linesMatch ? 'text-green-600' : 'text-amber-600'}`}>
-                          <span>{sourceLines} lines</span>
-                          <span className="text-gray-400">{"<-->"}</span>
-                          <span>{translatedLines} lines</span>
-                          {linesMatch ? (
-                            <span className="text-green-500 ml-1">&#10003;</span>
-                          ) : (
-                            <span className="text-amber-500 ml-1">({translatedLines - sourceLines > 0 ? '+' : ''}{translatedLines - sourceLines})</span>
-                          )}
+                        <div className="flex flex-col gap-0.5">
+                          <LineRow label="total lines" src={srcTotal} trans={transTotal} match={totalMatch} mismatched={totalMismatched} />
+                          <LineRow label="content lines" src={srcContent} trans={transContent} match={contentMatch} mismatched={contentMismatched} />
                         </div>
                       </div>
                       <button
@@ -517,27 +615,31 @@ export function Step5Translate({
                     {isBreakdownExpanded && hasChapters && (
                       <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
                         {sourceChapters.map((srcChapter) => {
-                          const transChapter = translatedChapters.find(c => c.number === srcChapter.number);
-                          const srcLines = srcChapter.lineCount;
-                          const transLines = transChapter?.lineCount || 0;
-                          const chapterMatch = srcLines === transLines;
-                          const diff = transLines - srcLines;
+                          const tc = translatedChapters.find(c => c.number === srcChapter.number);
+                          const totalOk = tc ? tc.totalLines === srcChapter.totalLines : false;
+                          const contentOk = tc ? tc.contentLines === srcChapter.contentLines : false;
+                          const chapterOk = totalOk && contentOk;
 
                           return (
                             <div
                               key={srcChapter.number}
-                              className={`flex items-center justify-between px-2 py-1 rounded ${chapterMatch ? 'bg-green-50' : 'bg-amber-50'}`}
+                              className={`flex items-center justify-between px-2 py-1 rounded ${chapterOk ? 'bg-green-50' : 'bg-amber-50'}`}
                             >
                               <span className="text-gray-700 font-medium">
                                 Ch. {srcChapter.number}
                                 {srcChapter.title && <span className="font-normal text-gray-500 ml-1">({srcChapter.title.slice(0, 20)}{srcChapter.title.length > 20 ? '...' : ''})</span>}
                               </span>
-                              <span className={chapterMatch ? 'text-green-600' : 'text-amber-600'}>
-                                {srcLines} <span className="text-gray-400 mx-1">→</span> {transLines}
-                                {!chapterMatch && (
-                                  <span className="ml-1 opacity-75">({diff > 0 ? '+' : ''}{diff})</span>
-                                )}
-                              </span>
+                              <div className="flex gap-3 text-xs">
+                                <span className={totalOk ? 'text-green-600' : 'text-amber-600'}>
+                                  {srcChapter.totalLines}{tc ? ` → ${tc.totalLines}` : ''}
+                                  {!totalOk && tc && <span className="ml-0.5 opacity-75">({(tc.totalLines - srcChapter.totalLines) > 0 ? '+' : ''}{tc.totalLines - srcChapter.totalLines})</span>}
+                                </span>
+                                <span className="text-gray-300">|</span>
+                                <span className={contentOk ? 'text-green-600' : 'text-amber-600'}>
+                                  {srcChapter.contentLines}{tc ? ` → ${tc.contentLines}` : ''}
+                                  {!contentOk && tc && <span className="ml-0.5 opacity-75">({(tc.contentLines - srcChapter.contentLines) > 0 ? '+' : ''}{tc.contentLines - srcChapter.contentLines})</span>}
+                                </span>
+                              </div>
                             </div>
                           );
                         })}
@@ -546,6 +648,53 @@ export function Step5Translate({
                   </div>
                 );
               })()}
+
+              {/* Content Warnings */}
+              {(sourceWarnings.length > 0 || translationWarnings.length > 0 || qualityWarnings.length > 0) && (
+                <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    {sourceWarnings.length + translationWarnings.length + qualityWarnings.length} content warning{sourceWarnings.length + translationWarnings.length + qualityWarnings.length > 1 ? "s" : ""} detected
+                  </div>
+                  <ul className="space-y-1">
+                    {sourceWarnings.map((w, i) => (
+                      <li key={`src-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Source</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                    {translationWarnings.map((w, i) => (
+                      <li key={`trans-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Translation</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                    {qualityWarnings.map((w, i) => (
+                      <li key={`quality-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Short translation</span> Ch {w.chapter}, line {w.line}
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 120)}{w.text.length > 120 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Duplicate chapter warning */}
+              {hasDupeChapters && (
+                <div className="mt-3 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+                  <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="text-sm text-red-700">
+                    <span className="font-medium">Corrupted data: duplicate chapters detected.</span>
+                    {sourceDupes && <span> Source Ch {sourceDupes.join(', ')}.</span>}
+                    {transDupes && <span> Translation Ch {transDupes.join(', ')}.</span>}
+                    <span> Reset this level and retranslate.</span>
+                  </div>
+                </div>
+              )}
 
               {/* Failed Chunks UI */}
               {hasLevelErrors && (
@@ -707,8 +856,10 @@ export function Step5Translate({
           rightTitle={`Translation (${storyData.sourceLanguage === 'en' ? 'ES' : 'EN'})`}
           rightText={storyData.levelContent[translationComparisonLevel]?.translatedText || ""}
           onSave={saveTranslationFromModal}
-          editableSide="right"
+          editableSide="both"
           headerGradient="bg-gradient-to-r from-blue-600 to-indigo-600"
+          onRetranslateChapter={handleRetranslateChapter}
+          isRetranslating={isRetranslatingChapter}
         />
       )}
     </div>

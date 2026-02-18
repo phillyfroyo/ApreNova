@@ -198,11 +198,31 @@ INDENTATION IS CRITICAL:
 - Copy the EXACT leading whitespace from each input line to your output line`;
   } else {
     structureRules = `STRUCTURE RULES (PROSE):
-- Preserve the exact meaning, plot, and character names
-- Preserve PARAGRAPH breaks (empty lines between paragraphs)
-- Within paragraphs, text should flow naturally as prose
-- Do NOT break sentences into separate lines
-- Do NOT add line breaks within paragraphs`;
+- RETELL the full story in simpler language — do NOT summarize or condense
+- Every scene, event, and plot point from the original must appear in the rewrite
+- The rewritten text should be a substantial retelling, not a brief summary
+- Do NOT skip dialogue, descriptions, or character interactions
+
+PARAGRAPH ALIGNMENT (CRITICAL):
+- Each paragraph in the input is prefixed with a marker like [P1], [P2], [P3], etc.
+- You MUST preserve these exact paragraph markers in your output
+- Each [PN] input paragraph produces EXACTLY ONE [PN] output paragraph
+- NEVER merge multiple paragraphs — each [PN] marker must appear on its own line in your output
+- NEVER skip any [PN] marker — every marker from the input must appear in your output
+- Within each paragraph, text should flow naturally as prose
+- Do NOT break sentences into separate lines within a paragraph
+- Do NOT add line breaks within paragraphs
+
+Example:
+Input:
+[P1] In my younger years my father gave me some advice that I have been thinking about ever since.
+[P2] "Don't judge people," he said. "Not everyone has the same advantages as you."
+[P3] He didn't say more, but I understood he meant a lot.
+
+Output (for lower level):
+[P1] When I was young, my father gave me advice. I still think about it.
+[P2] "Don't judge people," he said. "Not everyone has what you have."
+[P3] He did not say more. But I understood.`;
   }
 
   // Determine content type for prompt header

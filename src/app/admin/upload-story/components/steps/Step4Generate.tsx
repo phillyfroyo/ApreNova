@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import type { StoryData } from "../../types";
-import { useRewritePipeline } from "../../hooks/useRewritePipeline";
+import { useRewritePipeline, scanLineAlignment } from "../../hooks/useRewritePipeline";
 import { ComparisonModal } from "../ComparisonModal";
+import { OriginalTextModal } from "../OriginalTextModal";
 
 interface Step4GenerateProps {
   storyData: StoryData;
@@ -25,6 +27,7 @@ export function Step4Generate({
 
   const {
     chapterProgress,
+    retryStatus,
     error,
     getLevelMode,
     setLevelMode,
@@ -32,14 +35,10 @@ export function Step4Generate({
     processAllLevels,
     cancel,
     resetLevel,
+    getContentWarnings,
     comparisonLevel,
-    isEditing,
-    editedText,
-    setEditedText,
-    setIsEditing,
     openComparison,
     closeComparison,
-    saveEditedText,
   } = pipeline;
 
   const allDone = [1, 2, 3, 4, 5, 6].every((l) => {
@@ -49,6 +48,21 @@ export function Step4Generate({
 
   const originalText = storyData.rawText;
   const comparisonContent = comparisonLevel !== null ? storyData.levelContent[comparisonLevel] : null;
+
+  // Line breakdown expansion state
+  const [expandedLineBreakdown, setExpandedLineBreakdown] = useState<number | null>(null);
+
+  // Detect duplicate chapter markers in text
+  const detectDupeChapters = (text: string) => {
+    const nums: number[] = [];
+    for (const m of text.matchAll(/^---\s*(?:Chapter|Capítulo)\s+(\d+)/gim)) {
+      nums.push(parseInt(m[1], 10));
+    }
+    const seen = new Set<number>();
+    const dupes = new Set<number>();
+    for (const n of nums) { if (seen.has(n)) dupes.add(n); seen.add(n); }
+    return dupes.size > 0 ? Array.from(dupes) : null;
+  };
 
   return (
     <>
@@ -82,12 +96,25 @@ export function Step4Generate({
             const isSource = level === storyData.detectedLevel;
             const mode = getLevelMode(level);
             const isOmitted = mode === "omit";
+            const warnings = content?.status === "done" ? getContentWarnings(level) : [];
+
+            // Duplicate chapter detection
+            const dupeChapters = content?.status === "done" && content?.sourceText
+              ? detectDupeChapters(content.sourceText)
+              : null;
+
+            // Line alignment detection (original vs rewrite)
+            const alignmentWarnings = content?.status === "done" && content.mode !== "use-original" && content?.sourceText
+              ? scanLineAlignment(originalText, content.sourceText)
+              : [];
 
             return (
               <div
                 key={level}
                 className={`p-4 rounded-lg border-2 transition-all ${
-                  isOmitted
+                  dupeChapters
+                    ? "border-red-500 bg-red-50"
+                    : isOmitted
                     ? "border-gray-200 bg-gray-50 opacity-60"
                     : content?.status === "done"
                     ? "border-green-500 bg-green-50"
@@ -102,7 +129,9 @@ export function Step4Generate({
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                        isOmitted
+                        dupeChapters
+                          ? "bg-red-600 text-white"
+                          : isOmitted
                           ? "bg-gray-300 text-gray-500"
                           : content?.status === "done"
                           ? "bg-green-600 text-white"
@@ -111,7 +140,7 @@ export function Step4Generate({
                           : "bg-gray-200 text-gray-600"
                       }`}
                     >
-                      {isOmitted ? "—" : content?.status === "done" ? "✓" : `L${level}`}
+                      {dupeChapters ? "!" : isOmitted ? "—" : content?.status === "done" ? "✓" : `L${level}`}
                     </div>
                     <div>
                       <div className={`font-medium ${isOmitted ? "text-gray-400" : "text-gray-900"}`}>
@@ -124,11 +153,13 @@ export function Step4Generate({
                           : content?.status === "generating"
                           ? mode === "use-original"
                             ? "Copying original..."
-                            : chapterProgress
-                              ? chapterProgress.subChunk
-                                ? `Chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} (part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total})...`
-                                : `Generating chapters ${chapterProgress.current}-${chapterProgress.batchEnd} of ${chapterProgress.total}...`
-                              : "Generating..."
+                            : retryStatus
+                              ? retryStatus
+                              : chapterProgress
+                                ? chapterProgress.subChunk
+                                  ? `Chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} (part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total})...`
+                                  : `Generating chapters ${chapterProgress.current}-${chapterProgress.batchEnd} of ${chapterProgress.total}...`
+                                : "Generating..."
                           : content?.status === "done"
                           ? `${content.sourceText.split("\n").filter((l) => l.trim()).length} lines • ${content.mode === "use-original" ? "Original text" : "AI generated"}`
                           : content?.status === "error"
@@ -205,7 +236,7 @@ export function Step4Generate({
                     </details>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => openComparison(level)}
+                        onClick={() => openComparison(isSource ? -1 : level)}
                         className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,6 +261,180 @@ export function Step4Generate({
                     </div>
                   </div>
                 )}
+
+                {/* Line count comparison (original vs rewrite) */}
+                {content?.status === "done" && content.mode !== "use-original" && (() => {
+                  const isBreakdownExpanded = expandedLineBreakdown === level;
+                  const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
+
+                  const parseChapters = (text: string) => {
+                    const lines = text.split("\n");
+                    const chapters: { number: number; title: string; startLine: number; totalLines: number; contentLines: number }[] = [];
+                    let currentChapter: { number: number; title: string; startLine: number } | null = null;
+
+                    lines.forEach((line, idx) => {
+                      const match = line.match(chapterPattern);
+                      if (match) {
+                        if (currentChapter) {
+                          const slice = lines.slice(currentChapter.startLine + 1, idx);
+                          chapters.push({
+                            ...currentChapter,
+                            totalLines: slice.length,
+                            contentLines: slice.filter(l => l.trim()).length,
+                          });
+                        }
+                        currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
+                      }
+                    });
+                    if (currentChapter) {
+                      const chap = currentChapter as { number: number; title: string; startLine: number };
+                      const slice = lines.slice(chap.startLine + 1);
+                      chapters.push({
+                        ...chap,
+                        totalLines: slice.length,
+                        contentLines: slice.filter(l => l.trim()).length,
+                      });
+                    }
+                    return chapters;
+                  };
+
+                  const origLines = originalText.split("\n");
+                  const rewriteLines = content.sourceText.split("\n");
+                  const origChapters = parseChapters(originalText);
+                  const rewriteChapters = parseChapters(content.sourceText);
+                  const hasChapters = origChapters.length > 1 || rewriteChapters.length > 1;
+
+                  const origContent = hasChapters
+                    ? origChapters.reduce((s, c) => s + c.contentLines, 0)
+                    : origLines.filter(l => l.trim()).length;
+                  const rewriteContent = hasChapters
+                    ? rewriteChapters.reduce((s, c) => s + c.contentLines, 0)
+                    : rewriteLines.filter(l => l.trim()).length;
+
+                  // For rewrites, line count differences are normal — only warn for extreme mismatches
+                  const ratio = origContent > 0 ? rewriteContent / origContent : 1;
+                  const isExtremeMismatch = ratio < 0.5 || ratio > 2.0;
+
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {hasChapters && (
+                            <button
+                              onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
+                              className="p-1 hover:bg-gray-200 rounded transition-colors"
+                              title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
+                            >
+                              <svg
+                                className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-xs">paragraphs:</span>
+                            <span className={`text-sm font-medium ${isExtremeMismatch ? 'text-amber-600' : 'text-gray-600'}`}>
+                              {origContent} <span className="text-gray-400 mx-0.5">{"→"}</span> {rewriteContent}
+                              {isExtremeMismatch && (
+                                <span className="text-amber-500 ml-1">
+                                  ({rewriteContent - origContent > 0 ? '+' : ''}{rewriteContent - origContent})
+                                </span>
+                              )}
+                              {!isExtremeMismatch && <span className="text-green-500 ml-1">&#10003;</span>}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {isBreakdownExpanded && hasChapters && (
+                        <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
+                          {origChapters.map((origCh) => {
+                            const rwCh = rewriteChapters.find(c => c.number === origCh.number);
+                            const chRatio = origCh.contentLines > 0 && rwCh
+                              ? rwCh.contentLines / origCh.contentLines : 1;
+                            const chExtreme = chRatio < 0.5 || chRatio > 2.0;
+
+                            return (
+                              <div
+                                key={origCh.number}
+                                className={`flex items-center justify-between px-2 py-1 rounded ${chExtreme ? 'bg-amber-50' : 'bg-green-50'}`}
+                              >
+                                <span className="text-gray-700 font-medium">
+                                  Ch. {origCh.number}
+                                  {origCh.title && <span className="font-normal text-gray-500 ml-1">({origCh.title.slice(0, 20)}{origCh.title.length > 20 ? '...' : ''})</span>}
+                                </span>
+                                <span className={chExtreme ? 'text-amber-600' : 'text-green-600'}>
+                                  {origCh.contentLines}{rwCh ? ` → ${rwCh.contentLines}` : ''}
+                                  {chExtreme && rwCh && <span className="ml-0.5 opacity-75">({(rwCh.contentLines - origCh.contentLines) > 0 ? '+' : ''}{rwCh.contentLines - origCh.contentLines})</span>}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Duplicate chapter warning */}
+                {dupeChapters && (
+                  <div className="mt-3 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+                    <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="text-sm text-red-700">
+                      <span className="font-medium">Corrupted data: duplicate chapters detected.</span>
+                      <span> Chapters {dupeChapters.join(', ')}.</span>
+                      <span> Reset this level and regenerate.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Line alignment warnings */}
+                {alignmentWarnings.length > 0 && (
+                  <div className="mt-3 bg-orange-50 border border-orange-300 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-orange-700 font-medium text-sm mb-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                      {alignmentWarnings.length} line alignment issue{alignmentWarnings.length > 1 ? "s" : ""} — may affect translation step
+                    </div>
+                    <ul className="space-y-1">
+                      {alignmentWarnings.map((w, i) => (
+                        <li key={i} className="text-xs text-orange-600">
+                          Ch {w.chapter}, line {w.line}: {w.type === 'left_blank' ? 'original blank, rewrite has content' : 'original has content, rewrite blank'}
+                          {" — "}<code className="bg-orange-100 px-1 rounded">
+                            {w.type === 'left_blank'
+                              ? `"" ↔ "${w.rightContent}"`
+                              : `"${w.leftContent}" ↔ ""`}
+                          </code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {warnings.length > 0 && (
+                  <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {warnings.length} content warning{warnings.length > 1 ? "s" : ""} detected
+                    </div>
+                    <ul className="space-y-1">
+                      {warnings.map((w, i) => (
+                        <li key={i} className="text-xs text-amber-600">
+                          Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                          {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -243,11 +448,13 @@ export function Step4Generate({
               className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
               {isProcessing
-                ? chapterProgress
-                  ? chapterProgress.subChunk
-                    ? `Ch ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total}...`
-                    : `Processing chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total}...`
-                  : "Processing..."
+                ? retryStatus
+                  ? retryStatus
+                  : chapterProgress
+                    ? chapterProgress.subChunk
+                      ? `Ch ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total} part ${chapterProgress.subChunk.current}/${chapterProgress.subChunk.total}...`
+                      : `Processing chapters ${chapterProgress.current}-${chapterProgress.batchEnd}/${chapterProgress.total}...`
+                    : "Processing..."
                 : "Process All Levels"}
             </button>
             {isProcessing && (
@@ -272,12 +479,17 @@ export function Step4Generate({
           leftText={originalText}
           rightTitle={`Rewritten (L${comparisonLevel})`}
           rightText={comparisonContent.sourceText}
-          onSave={(text) => {
+          onSave={(edits) => {
+            if (comparisonLevel === null) return;
             const current = storyData.levelContent[comparisonLevel];
+            if (!current) return;
             updateStoryData({
               levelContent: {
                 ...storyData.levelContent,
-                [comparisonLevel]: { ...current, sourceText: text },
+                [comparisonLevel]: {
+                  ...current,
+                  ...(edits.right !== undefined && { sourceText: edits.right }),
+                },
               },
             });
           }}
@@ -287,75 +499,26 @@ export function Step4Generate({
 
       {/* Original Text Review Modal (level -1) */}
       {comparisonLevel === -1 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeComparison} />
-          <div className="relative w-[95vw] h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white px-6 py-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-4">
-                <span className="text-lg font-semibold">Review Original Text</span>
-                <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                  {originalText.split("\n").filter(l => l.trim()).length} lines • {storyData.parsedResult?.chapters.length || 1} chapters
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                {isEditing ? (
-                  <>
-                    <button onClick={saveEditedText} className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm font-medium transition-colors">
-                      Save Changes
-                    </button>
-                    <button onClick={() => { setEditedText(originalText); setIsEditing(false); }} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors">
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors">
-                    Edit Text
-                  </button>
-                )}
-                <button onClick={closeComparison} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Close (Esc)">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="bg-amber-50 px-6 py-3 text-sm font-medium text-amber-700 border-b flex items-center justify-between shrink-0">
-                <span>Original Text (L{storyData.detectedLevel}) - Review before generation</span>
-                <span className="text-amber-500">{(isEditing ? editedText : originalText).split("\n").filter(l => l.trim()).length} lines</span>
-              </div>
-              <div className="flex-1 overflow-auto p-6">
-                {isEditing ? (
-                  <textarea value={editedText} onChange={(e) => setEditedText(e.target.value)} className="w-full h-full text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none" spellCheck={false} />
-                ) : (
-                  <div className="grid gap-3">
-                    {storyData.parsedResult?.chapters.map((chapter, idx) => (
-                      <details key={idx} className="border border-amber-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                        <summary className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 cursor-pointer hover:from-amber-100 hover:to-orange-100 transition-colors flex items-center justify-between">
-                          <span className="text-sm font-semibold text-amber-800">Chapter {chapter.number}: {chapter.title}</span>
-                          <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">{chapter.rawText.split("\n").filter(l => l.trim()).length} lines • {chapter.rawText.length.toLocaleString()} chars</span>
-                        </summary>
-                        <div className="p-4 bg-white border-t border-amber-100 max-h-[50vh] overflow-auto">
-                          <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">{chapter.rawText}</pre>
-                        </div>
-                      </details>
-                    )) || (
-                      <pre className="text-sm whitespace-pre-wrap font-mono text-gray-700 leading-relaxed">{originalText}</pre>
-                    )}
-                  </div>
-                )}
-              </div>
-              {!isEditing && (
-                <div className="bg-amber-50 px-6 py-3 text-sm text-amber-600 border-t shrink-0 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  Review the text above. Look for non-story content like license text, advertisements, or metadata that should be removed before generation.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <OriginalTextModal
+          originalText={originalText}
+          detectedLevel={storyData.detectedLevel}
+          onSave={(newText) => {
+            // Update rawText and sync source level's sourceText
+            const updates: Partial<StoryData> = { rawText: newText };
+            const sourceLevel = storyData.detectedLevel;
+            if (sourceLevel && storyData.levelContent[sourceLevel]?.status === "done") {
+              updates.levelContent = {
+                ...storyData.levelContent,
+                [sourceLevel]: {
+                  ...storyData.levelContent[sourceLevel],
+                  sourceText: newText,
+                },
+              };
+            }
+            updateStoryData(updates);
+          }}
+          onClose={closeComparison}
+        />
       )}
     </>
   );
