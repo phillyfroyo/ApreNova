@@ -108,6 +108,15 @@ export function Step4Generate({
               ? scanLineAlignment(originalText, content.sourceText)
               : [];
 
+            // Quick line mismatch check for card border coloring
+            const hasLineMismatch = content?.status === "done" && content.mode !== "use-original" && content?.sourceText && (() => {
+              const origLines = originalText.split("\n");
+              const rewriteLines = content.sourceText.split("\n");
+              const origContent = origLines.filter(l => l.trim()).length;
+              const rewriteContent = rewriteLines.filter(l => l.trim()).length;
+              return origLines.length !== rewriteLines.length || origContent !== rewriteContent;
+            })();
+
             return (
               <div
                 key={level}
@@ -116,6 +125,8 @@ export function Step4Generate({
                     ? "border-red-500 bg-red-50"
                     : isOmitted
                     ? "border-gray-200 bg-gray-50 opacity-60"
+                    : content?.status === "done" && hasLineMismatch
+                    ? "border-amber-500 bg-amber-50"
                     : content?.status === "done"
                     ? "border-green-500 bg-green-50"
                     : content?.status === "generating"
@@ -133,6 +144,8 @@ export function Step4Generate({
                           ? "bg-red-600 text-white"
                           : isOmitted
                           ? "bg-gray-300 text-gray-500"
+                          : content?.status === "done" && hasLineMismatch
+                          ? "bg-amber-500 text-white"
                           : content?.status === "done"
                           ? "bg-green-600 text-white"
                           : content?.status === "generating"
@@ -140,7 +153,7 @@ export function Step4Generate({
                           : "bg-gray-200 text-gray-600"
                       }`}
                     >
-                      {dupeChapters ? "!" : isOmitted ? "—" : content?.status === "done" ? "✓" : `L${level}`}
+                      {dupeChapters ? "!" : isOmitted ? "—" : content?.status === "done" && hasLineMismatch ? "⚠" : content?.status === "done" ? "✓" : `L${level}`}
                     </div>
                     <div>
                       <div className={`font-medium ${isOmitted ? "text-gray-400" : "text-gray-900"}`}>
@@ -161,7 +174,7 @@ export function Step4Generate({
                                   : `Generating chapters ${chapterProgress.current}-${chapterProgress.batchEnd} of ${chapterProgress.total}...`
                                 : "Generating..."
                           : content?.status === "done"
-                          ? `${content.sourceText.split("\n").filter((l) => l.trim()).length} lines • ${content.mode === "use-original" ? "Original text" : "AI generated"}`
+                          ? `${content.sourceText.split("\n").filter((l) => l.trim()).length} lines • ${content.mode === "use-original" ? "Original text" : "AI generated"}${hasLineMismatch ? " • line mismatch" : ""}`
                           : content?.status === "error"
                           ? "Error - click to retry"
                           : "Pending"}
@@ -267,10 +280,10 @@ export function Step4Generate({
                   const isBreakdownExpanded = expandedLineBreakdown === level;
                   const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
 
-                  const parseChapters = (text: string) => {
-                    const lines = text.split("\n");
+                  const parseChapters = (lines: string[]) => {
+                    type ChapterInfo = { number: number; title: string; startLine: number };
                     const chapters: { number: number; title: string; startLine: number; totalLines: number; contentLines: number }[] = [];
-                    let currentChapter: { number: number; title: string; startLine: number } | null = null;
+                    let currentChapter: ChapterInfo | null = null;
 
                     lines.forEach((line, idx) => {
                       const match = line.match(chapterPattern);
@@ -278,7 +291,7 @@ export function Step4Generate({
                         if (currentChapter) {
                           const slice = lines.slice(currentChapter.startLine + 1, idx);
                           chapters.push({
-                            ...currentChapter,
+                            number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine,
                             totalLines: slice.length,
                             contentLines: slice.filter(l => l.trim()).length,
                           });
@@ -287,10 +300,10 @@ export function Step4Generate({
                       }
                     });
                     if (currentChapter) {
-                      const chap = currentChapter as { number: number; title: string; startLine: number };
+                      const chap = currentChapter as ChapterInfo;
                       const slice = lines.slice(chap.startLine + 1);
                       chapters.push({
-                        ...chap,
+                        number: chap.number, title: chap.title, startLine: chap.startLine,
                         totalLines: slice.length,
                         contentLines: slice.filter(l => l.trim()).length,
                       });
@@ -300,23 +313,57 @@ export function Step4Generate({
 
                   const origLines = originalText.split("\n");
                   const rewriteLines = content.sourceText.split("\n");
-                  const origChapters = parseChapters(originalText);
-                  const rewriteChapters = parseChapters(content.sourceText);
+                  const origChapters = parseChapters(origLines);
+                  const rewriteChapters = parseChapters(rewriteLines);
                   const hasChapters = origChapters.length > 1 || rewriteChapters.length > 1;
 
-                  const origContent = hasChapters
-                    ? origChapters.reduce((s, c) => s + c.contentLines, 0)
-                    : origLines.filter(l => l.trim()).length;
-                  const rewriteContent = hasChapters
-                    ? rewriteChapters.reduce((s, c) => s + c.contentLines, 0)
-                    : rewriteLines.filter(l => l.trim()).length;
+                  // Total lines (content + blank) — catches alignment/spacing issues
+                  const origTotal = hasChapters ? origChapters.reduce((s, c) => s + c.totalLines, 0) : origLines.length;
+                  const rewriteTotal = hasChapters ? rewriteChapters.reduce((s, c) => s + c.totalLines, 0) : rewriteLines.length;
+                  const totalMatch = origTotal === rewriteTotal;
 
-                  // For rewrites, line count differences are normal — only warn for extreme mismatches
-                  const ratio = origContent > 0 ? rewriteContent / origContent : 1;
-                  const isExtremeMismatch = ratio < 0.5 || ratio > 2.0;
+                  // Content lines only — catches missing/extra content
+                  const origContent = hasChapters ? origChapters.reduce((s, c) => s + c.contentLines, 0) : origLines.filter(l => l.trim()).length;
+                  const rewriteContent = hasChapters ? rewriteChapters.reduce((s, c) => s + c.contentLines, 0) : rewriteLines.filter(l => l.trim()).length;
+                  const contentMatch = origContent === rewriteContent;
+
+                  const allGood = totalMatch && contentMatch;
+
+                  // Find mismatched chapters for each metric
+                  const totalMismatched = hasChapters ? origChapters
+                    .filter(sc => { const rc = rewriteChapters.find(c => c.number === sc.number); return rc ? rc.totalLines !== sc.totalLines : true; })
+                    .map(sc => `Ch ${sc.number}`) : [];
+                  const contentMismatched = hasChapters ? origChapters
+                    .filter(sc => { const rc = rewriteChapters.find(c => c.number === sc.number); return rc ? rc.contentLines !== sc.contentLines : true; })
+                    .map(sc => `Ch ${sc.number}`) : [];
+
+                  const LineRow = ({ label, src, trans, match, mismatched }: { label: string; src: number; trans: number; match: boolean; mismatched: string[] }) => (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 text-xs w-20">{label}:</span>
+                      <span className={`text-sm font-medium ${match ? 'text-green-600' : 'text-amber-600'}`}>
+                        {src} <span className="text-gray-400 mx-0.5">{"→"}</span> {trans}
+                        {match ? (
+                          <span className="text-green-500 ml-1">&#10003;</span>
+                        ) : (
+                          <span className="text-amber-500 ml-1">
+                            ({trans - src > 0 ? '+' : ''}{trans - src})
+                            {mismatched.length > 0 && <span className="text-xs ml-1">{mismatched.join(', ')}</span>}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  );
 
                   return (
                     <div className="mt-3">
+                      {!allGood && (
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span className="text-xs font-medium text-amber-600">Line mismatch — may affect translation alignment</span>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {hasChapters && (
@@ -335,17 +382,9 @@ export function Step4Generate({
                               </svg>
                             </button>
                           )}
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 text-xs">paragraphs:</span>
-                            <span className={`text-sm font-medium ${isExtremeMismatch ? 'text-amber-600' : 'text-gray-600'}`}>
-                              {origContent} <span className="text-gray-400 mx-0.5">{"→"}</span> {rewriteContent}
-                              {isExtremeMismatch && (
-                                <span className="text-amber-500 ml-1">
-                                  ({rewriteContent - origContent > 0 ? '+' : ''}{rewriteContent - origContent})
-                                </span>
-                              )}
-                              {!isExtremeMismatch && <span className="text-green-500 ml-1">&#10003;</span>}
-                            </span>
+                          <div className="flex flex-col gap-0.5">
+                            <LineRow label="total lines" src={origTotal} trans={rewriteTotal} match={totalMatch} mismatched={totalMismatched} />
+                            <LineRow label="content lines" src={origContent} trans={rewriteContent} match={contentMatch} mismatched={contentMismatched} />
                           </div>
                         </div>
                       </div>
@@ -353,23 +392,30 @@ export function Step4Generate({
                         <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
                           {origChapters.map((origCh) => {
                             const rwCh = rewriteChapters.find(c => c.number === origCh.number);
-                            const chRatio = origCh.contentLines > 0 && rwCh
-                              ? rwCh.contentLines / origCh.contentLines : 1;
-                            const chExtreme = chRatio < 0.5 || chRatio > 2.0;
+                            const chTotalOk = rwCh ? rwCh.totalLines === origCh.totalLines : false;
+                            const chContentOk = rwCh ? rwCh.contentLines === origCh.contentLines : false;
+                            const chapterOk = chTotalOk && chContentOk;
 
                             return (
                               <div
                                 key={origCh.number}
-                                className={`flex items-center justify-between px-2 py-1 rounded ${chExtreme ? 'bg-amber-50' : 'bg-green-50'}`}
+                                className={`flex items-center justify-between px-2 py-1 rounded ${chapterOk ? 'bg-green-50' : 'bg-amber-50'}`}
                               >
                                 <span className="text-gray-700 font-medium">
                                   Ch. {origCh.number}
                                   {origCh.title && <span className="font-normal text-gray-500 ml-1">({origCh.title.slice(0, 20)}{origCh.title.length > 20 ? '...' : ''})</span>}
                                 </span>
-                                <span className={chExtreme ? 'text-amber-600' : 'text-green-600'}>
-                                  {origCh.contentLines}{rwCh ? ` → ${rwCh.contentLines}` : ''}
-                                  {chExtreme && rwCh && <span className="ml-0.5 opacity-75">({(rwCh.contentLines - origCh.contentLines) > 0 ? '+' : ''}{rwCh.contentLines - origCh.contentLines})</span>}
-                                </span>
+                                <div className="flex gap-3 text-xs">
+                                  <span className={chTotalOk ? 'text-green-600' : 'text-amber-600'}>
+                                    {origCh.totalLines}{rwCh ? ` → ${rwCh.totalLines}` : ''}
+                                    {!chTotalOk && rwCh && <span className="ml-0.5 opacity-75">({(rwCh.totalLines - origCh.totalLines) > 0 ? '+' : ''}{rwCh.totalLines - origCh.totalLines})</span>}
+                                  </span>
+                                  <span className="text-gray-300">|</span>
+                                  <span className={chContentOk ? 'text-green-600' : 'text-amber-600'}>
+                                    {origCh.contentLines}{rwCh ? ` → ${rwCh.contentLines}` : ''}
+                                    {!chContentOk && rwCh && <span className="ml-0.5 opacity-75">({(rwCh.contentLines - origCh.contentLines) > 0 ? '+' : ''}{rwCh.contentLines - origCh.contentLines})</span>}
+                                  </span>
+                                </div>
                               </div>
                             );
                           })}

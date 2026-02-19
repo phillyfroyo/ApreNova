@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
   try {
     const { text, fromLanguage, level, slug, isPoetry } = await req.json();
 
+    console.log(`[/api/admin/translate] Received: L${level}, ${fromLanguage}, ${text?.length || 0} chars, poetry=${isPoetry}, slug=${slug}`);
+
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
       { adminStorySlug: slug, isPoetry: isPoetry === true }
     );
 
+    console.log(`[/api/admin/translate] Success: L${level}, ${result.alignment.translatedLines}/${result.alignment.contentLines} lines, truncated=${result.truncated}`);
+
     return NextResponse.json({
       translatedText: result.translatedText,
       fromLanguage,
@@ -48,7 +52,11 @@ export async function POST(req: NextRequest) {
       truncationInfo: result.truncationInfo,
     });
   } catch (error) {
-    console.error("Translation error:", error);
+    // Log the full error with stack trace for terminal diagnostics
+    console.error(`[/api/admin/translate] ERROR:`, error);
+    if (error instanceof Error && error.stack) {
+      console.error(`[/api/admin/translate] Stack:`, error.stack);
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {

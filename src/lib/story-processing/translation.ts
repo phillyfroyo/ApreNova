@@ -143,11 +143,12 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
 
   // Dynamically calculate max_tokens based on input size.
   // Translation output is roughly the same size as input (line-for-line).
-  // Spanish text tends to be ~15-20% longer than English, so use 1.5x multiplier.
+  // Spanish text tends to be ~15-20% longer than English, so use 2x multiplier for safety.
+  // Claude Haiku 4.5 supports up to 64K output tokens, so we have plenty of headroom.
   const estimatedInputTokens = Math.ceil(numberedText.length / 4);
   const dynamicMaxTokens = Math.min(
-    Math.max(Math.ceil(estimatedInputTokens * 1.5), 4000),
-    16384
+    Math.max(Math.ceil(estimatedInputTokens * 2), 4000),
+    64000
   );
   console.log(`[Translation] Dynamic max_tokens: ${dynamicMaxTokens} (input: ${numberedText.length} chars, ~${estimatedInputTokens} tokens)`);
 

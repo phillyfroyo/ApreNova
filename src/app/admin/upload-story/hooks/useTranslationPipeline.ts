@@ -156,82 +156,138 @@ export function useTranslationPipeline({
   // Translation API
   // ============================================
 
+  /**
+   * Check if an error is a network/connectivity issue worth auto-retrying.
+   * These are transient errors where the request never reached the server
+   * (sleep, wifi drop, etc.) — retrying is cheap and likely to succeed.
+   */
+  const isNetworkError = (err: Error): boolean => {
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes('failed to fetch') ||
+      msg.includes('network') ||
+      msg.includes('err_network') ||
+      msg.includes('econnrefused') ||
+      msg.includes('econnreset') ||
+      msg.includes('load failed') ||
+      err.name === 'TypeError' && msg.includes('fetch')
+    );
+  };
+
+  // Auto-retry only for network errors (sleep, wifi drop, etc.)
+  // AI/content errors are not retried — use the manual chapter retry buttons instead.
+  const NETWORK_RETRY_MAX = 2;
+  const NETWORK_RETRY_DELAY_MS = 10000; // 10s — give network time to recover
+
+  /**
+   * Translate a chunk of text via the admin API.
+   * Auto-retries up to 2x for network errors only (sleep, wifi drop).
+   * AI/content errors fail immediately — use manual retry buttons.
+   */
   const translateChunk = useCallback(async (text: string, level: number): Promise<string> => {
     if (cancelledRef.current) throw new Error("Cancelled");
 
-    // Create a timeout controller (12 minutes per request - large chapters need time)
-    const timeoutController = new AbortController();
-    const timeoutId = setTimeout(() => timeoutController.abort(), 720000);
+    const textPreview = text.substring(0, 80).replace(/\n/g, '\\n');
+    console.log(`[translateChunk] L${level}: Starting (${text.length} chars, ~${Math.ceil(text.length / 4)} tokens) "${textPreview}..."`);
 
-    // Link manual cancel to timeout controller
-    const manualAbortHandler = () => timeoutController.abort();
-    abortControllerRef.current?.signal.addEventListener('abort', manualAbortHandler);
-
-    try {
-      if (abortControllerRef.current?.signal.aborted || cancelledRef.current) {
-        throw new Error("Cancelled");
-      }
-
-      // Determine if content is poetry based on STRUCTURE (not storyType which is cosmetic)
-      const effectiveStructure = storyData.structureType === "auto"
-        ? storyData.parsedResult?.stats?.structureType
-        : storyData.structureType;
-      const isPoetry = effectiveStructure === "anthology" || effectiveStructure === "epic";
-
-      const response = await fetch("/api/admin/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          fromLanguage: storyData.sourceLanguage,
-          level,
-          slug: storyData.slug || undefined,
-          isPoetry,
-        }),
-        signal: timeoutController.signal,
-      });
-
-      clearTimeout(timeoutId);
-
+    for (let attempt = 1; attempt <= NETWORK_RETRY_MAX + 1; attempt++) {
       if (cancelledRef.current) throw new Error("Cancelled");
 
-      let data;
+      // Create a timeout controller (12 minutes per request - large chapters need time)
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 720000);
+
+      // Link manual cancel to timeout controller
+      const manualAbortHandler = () => timeoutController.abort();
+      abortControllerRef.current?.signal.addEventListener('abort', manualAbortHandler);
+
       try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error(`[translateChunk] JSON parse error, status=${response.status}:`, parseError);
-        throw new Error(`Translation response parse error (status ${response.status})`);
+        if (abortControllerRef.current?.signal.aborted || cancelledRef.current) {
+          throw new Error("Cancelled");
+        }
+
+        // Determine if content is poetry based on STRUCTURE (not storyType which is cosmetic)
+        const effectiveStructure = storyData.structureType === "auto"
+          ? storyData.parsedResult?.stats?.structureType
+          : storyData.structureType;
+        const isPoetry = effectiveStructure === "anthology" || effectiveStructure === "epic";
+
+        const response = await fetch("/api/admin/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            fromLanguage: storyData.sourceLanguage,
+            level,
+            slug: storyData.slug || undefined,
+            isPoetry,
+          }),
+          signal: timeoutController.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (cancelledRef.current) throw new Error("Cancelled");
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error(`[translateChunk] JSON parse error, status=${response.status}:`, parseError);
+          throw new Error(`Translation response parse error (HTTP ${response.status})`);
+        }
+
+        if (!response.ok) {
+          console.error(`[translateChunk] API error (HTTP ${response.status}):`, data);
+          const errMsg = data.details || data.error || `Translation failed (HTTP ${response.status})`;
+          throw new Error(errMsg);
+        }
+
+        if (!data.translatedText || typeof data.translatedText !== 'string') {
+          console.error(`[translateChunk] Invalid response - missing translatedText`);
+          throw new Error(`Invalid translation response - missing translatedText field`);
+        }
+
+        // Log truncation and alignment info
+        if (data.truncated) {
+          const reasons = data.truncationInfo?.reasons || ["Unknown"];
+          console.warn(`[translateChunk] Truncation detected: ${reasons.join("; ")}`);
+        }
+        if (data.alignment) {
+          const a = data.alignment;
+          console.log(`[translateChunk] Alignment: ${a.contentLines} content, ${a.translatedLines} translated, ${a.blankLines} blank, ${a.sourceLines} total`);
+        }
+
+        abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
+        if (attempt > 1) {
+          console.log(`[translateChunk] L${level}: SUCCESS on retry ${attempt - 1} (${data.translatedText.length} chars)`);
+        } else {
+          console.log(`[translateChunk] L${level}: SUCCESS (${data.translatedText.length} chars)`);
+        }
+        return data.translatedText;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
+
+        const err = error instanceof Error ? error : new Error(String(error));
+        if (err.message === "Cancelled" || cancelledRef.current) throw new Error("Cancelled");
+        if (err.name === "AbortError") throw new Error("Request timed out after 12 minutes");
+
+        // Only auto-retry network errors (sleep, wifi drop, etc.)
+        if (isNetworkError(err) && attempt <= NETWORK_RETRY_MAX) {
+          console.warn(`[translateChunk] L${level}: Network error on attempt ${attempt} — retrying in ${NETWORK_RETRY_DELAY_MS / 1000}s... (${err.message})`);
+          await new Promise(resolve => setTimeout(resolve, NETWORK_RETRY_DELAY_MS));
+          continue;
+        }
+
+        console.error(`[translateChunk] L${level}: FAILED — ${err.message}`);
+        throw err;
       }
-
-      if (!response.ok) {
-        console.error(`[translateChunk] API error response:`, data);
-        throw new Error(data.error || `Translation failed with status ${response.status}`);
-      }
-
-      if (!data.translatedText || typeof data.translatedText !== 'string') {
-        console.error(`[translateChunk] Invalid response - missing translatedText`);
-        throw new Error(`Invalid translation response - missing translatedText field`);
-      }
-
-      // Log truncation info (no retries — use manual retranslate in the modal)
-      if (data.truncated) {
-        const reasons = data.truncationInfo?.reasons || ["Unknown"];
-        console.warn(`[translateChunk] Truncation detected: ${reasons.join("; ")} — use manual retranslate to fix`);
-      }
-
-      abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
-      return data.translatedText;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      abortControllerRef.current?.signal.removeEventListener('abort', manualAbortHandler);
-
-      const err = error instanceof Error ? error : new Error(String(error));
-      if (err.message === "Cancelled" || cancelledRef.current) throw new Error("Cancelled");
-      if (err.name === "AbortError") throw new Error("Request timed out after 12 minutes");
-
-      throw err;
     }
-  }, [storyData.sourceLanguage, storyData.slug]);
+
+    // Should never reach here
+    throw new Error("Translation failed");
+  }, [storyData.sourceLanguage, storyData.slug, storyData.structureType, storyData.parsedResult?.stats?.structureType]);
 
   // ============================================
   // Processing Control
@@ -395,11 +451,12 @@ export function useTranslationPipeline({
       const existingTranslation = accumulator[level].translatedText || "";
       const chapters = parseChaptersFromText(sourceText);
 
-      // DEBUG: Log chapter detection to diagnose alignment issues
-      console.log(`[translateLevel] L${level} parsed ${chapters.length} chapters from sourceText (${sourceText.length} chars)`);
-      chapters.slice(0, 3).forEach((ch, i) => {
-        const preview = ch.substring(0, 100).replace(/\n/g, '\\n');
-        console.log(`  Chapter ${i}: "${preview}..."`);
+      // Log chapter detection with size info for each chapter
+      console.log(`[translateLevel] L${level}: ${chapters.length} chapters from sourceText (${sourceText.length} chars total)`);
+      chapters.forEach((ch, i) => {
+        const lines = ch.split('\n');
+        const contentLines = lines.filter(l => l.trim()).length;
+        console.log(`  Ch ${i + 1}: ${ch.length} chars, ${lines.length} total lines, ${contentLines} content lines`);
       });
 
       if (chapters.length > 1 || sourceText.length > MAX_CHUNK_CHARS) {
@@ -484,11 +541,18 @@ export function useTranslationPipeline({
             }
           });
 
+          // Log batch results summary
+          const successes = batchResults.filter(r => r.status === "fulfilled" && r.value.success).length;
+          const failures = batchResults.length - successes;
+          console.log(`[translateLevel] L${level} Batch ${batchStart + 1}-${batchEnd}: ${successes} succeeded, ${failures} failed`);
+
           saveTranslationProgress(level, translatedChapters.filter(t => t !== ""), accumulator);
 
-          // Delay between chapters to avoid API rate limits (matches user portal)
+          // Delay between chapters to avoid API rate limits.
+          // Use a longer delay (5s) to be safe — we optimize for reliability, not speed.
           if (batchEnd < chapters.length && !cancelledRef.current) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log(`[translateLevel] L${level}: Waiting 5s before next chapter...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
           }
         }
 
