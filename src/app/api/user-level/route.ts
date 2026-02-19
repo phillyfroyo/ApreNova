@@ -55,7 +55,16 @@ export async function POST(req: Request) {
       data: { quizLevel: level },
     })
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 })
+    // Bulk-update all bookmarks to the new level (keep same chapter/page position)
+    const updateResult = await prisma.storyBookmark.updateMany({
+      where: { userId: targetUserId },
+      data: { level, updatedAt: new Date() },
+    })
+
+    return new Response(JSON.stringify({
+      success: true,
+      bookmarksUpdated: updateResult.count,
+    }), { status: 200 })
   } catch (error) {
     if (error instanceof AuthError) {
       return createAuthResponse(error)

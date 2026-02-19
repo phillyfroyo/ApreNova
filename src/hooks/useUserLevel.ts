@@ -6,7 +6,13 @@ import { useSession } from 'next-auth/react'
 
 export function useUserLevel(defaultLevel: string = 'A2') {
   const { data: session } = useSession()
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(() => {
+    // Use localStorage as immediate fallback while DB fetch is in-flight
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('level') || null
+    }
+    return null
+  })
 
   useEffect(() => {
     const fetchLevel = async () => {
@@ -17,6 +23,8 @@ export function useUserLevel(defaultLevel: string = 'A2') {
         const data = await res.json()
         if (data.level) {
           setSelectedLevel(data.level)
+          // Keep localStorage in sync with DB (source of truth)
+          localStorage.setItem('level', data.level)
         }
       } catch (err) {
         console.error('Failed to load user level', err)

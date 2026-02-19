@@ -11,6 +11,7 @@ import BottomNavigation from './BottomNavigation';
 import { BookOpen, Crown, Gem, Settings } from 'lucide-react';
 import type { Language } from '@/types/i18n';
 import { t } from '@/lib/t';
+import { toCEFR } from '@/lib/cefr';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -115,7 +116,7 @@ export default function AppLayout({ children, lang, hideNavigation = false, hide
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
                     <Crown className="w-2.5 h-2.5" />
-                    {session.user.quizLevel || 'L2'}
+                    {toCEFR(session.user.quizLevel)}
                   </span>
                   {session.user.isPremium && (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-medium">

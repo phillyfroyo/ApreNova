@@ -16,12 +16,37 @@ type Level = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
 
 const LEVELS: Level[] = ['l1', 'l2', 'l3', 'l4', 'l5'];
 
+// Example sentences at each level — same concept, increasing complexity
+const LEVEL_EXAMPLES: Record<Level, { es: string; en: string }> = {
+  l1: {
+    es: "Él dibujaba cuando era niño. Ahora es adulto. Ya no dibuja.",
+    en: "He drew when he was a child. Now he is an adult. He doesn't draw anymore.",
+  },
+  l2: {
+    es: "De niño solía dibujar, pero luego dejó de hacerlo. Ya lleva muchos años sin dibujar.",
+    en: "He used to draw when he was a child, but then he stopped. He hasn't drawn now for many years.",
+  },
+  l3: {
+    es: "De repente se dio cuenta de que llevaba años sin dibujar nada. La última vez que realmente se sentó a dibujar algo fue cuando era niño. Había pasado tanto tiempo que casi se había olvidado.",
+    en: "He suddenly realized that he hadn't drawn anything in years. The last time he really sat down and drew something was when he was a kid. It had been such a long time that he had almost forgotten about it.",
+  },
+  l4: {
+    es: "Le sorprendió darse cuenta de que no había cogido un lápiz para dibujar desde la infancia. En algún momento, entre crecer y seguir adelante con la vida, simplemente había dejado de hacerlo — y ni siquiera se había dado cuenta hasta ahora.",
+    en: "It struck him that he hadn't so much as picked up a pencil to draw since childhood. Somewhere along the way, between growing up and getting on with life, he'd simply stopped — and hadn't even noticed until now.",
+  },
+  l5: {
+    es: "Cayó en la cuenta, casi de pasada, de que no había hecho un solo dibujo desde que era niño. La revelación traía consigo un peso silencioso, como la pérdida de un viejo amor — de algún modo, toda una forma de expresión se había escurrido de su vida sin que él llegara a registrar su ausencia.",
+    en: "It dawned on him, almost as an afterthought, that he hadn't produced a single drawing since he was a child. The realization carried a quiet weight, like the loss of an old love — somehow an entire form of expression had slipped out of his life without him ever registering its absence.",
+  },
+};
+
 export default function OnboardingHome() {
   const typedLang = useTypedLang();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
+  const [exampleOpen, setExampleOpen] = useState<Level | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -48,7 +73,7 @@ export default function OnboardingHome() {
     localStorage.setItem('level', level);
     sessionStorage.setItem('quizLevel', level);
 
-    // If user is logged in, save to database
+    // If user is logged in, save to database and refresh session
     if (session?.user?.id) {
       try {
         await fetch('/api/user-level', {
@@ -56,6 +81,8 @@ export default function OnboardingHome() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: session.user.id, level }),
         });
+        // Refresh JWT so session.user.quizLevel reflects the new level
+        await updateSession();
       } catch (error) {
         console.error('Failed to save level:', error);
       }
@@ -63,10 +90,6 @@ export default function OnboardingHome() {
 
     // Navigate to confirmation page (not directly to stories)
     router.push(`/${typedLang}/home/ready`);
-  };
-
-  const handleStartQuiz = () => {
-    router.push(`/${typedLang}/home/quiz/placement`);
   };
 
   // Step 2: Level Selection
@@ -151,86 +174,82 @@ export default function OnboardingHome() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15, duration: 0.3 }}
         >
-          {/* Quiz option - prominent */}
+          {/* Level selection prompt */}
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-white/50">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {t(typedLang, "onboarding", "findYourLevel")}
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  {t(typedLang, "onboarding", "findYourLevelDesc")}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleStartQuiz}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-colors shadow-md"
-            >
-              <span className="flex items-center justify-center gap-2">
-                {t(typedLang, "home", "startQuiz")}
-                <span className="text-white/80 text-sm font-normal">
-                  ({t(typedLang, "onboarding", "quizDuration")})
-                </span>
-              </span>
-            </button>
+            <h2 className="text-xl font-bold text-gray-900 text-center">
+              {t(typedLang, "onboarding", "selectYourLevel" as any) || (typedLang === "es" ? "Selecciona tu nivel" : "Select your level")}
+            </h2>
+            <p className="text-gray-600 text-sm mt-1 text-center">
+              {typedLang === "es"
+                ? "Puedes cambiarlo en cualquier momento en ajustes"
+                : "You can change this anytime in settings"}
+            </p>
           </div>
 
-          {/* Divider with "or" */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-gray-300"></div>
-            <span className="text-gray-500 text-sm font-medium">
-              {t(typedLang, "onboarding", "knowYourLevel")}
-            </span>
-            <div className="flex-1 h-px bg-gray-300"></div>
-          </div>
+          {/* Level selection - single column, full width */}
+          <div className="space-y-3">
+            {LEVELS.map((level) => {
+              // Strip "A1 - " prefix from level name since badge already shows CEFR code
+              const fullName = t(typedLang, "levels", level) || "";
+              const displayName = fullName.replace(/^[A-C]\d\s*[-–—]\s*/, "");
+              const isExampleOpen = exampleOpen === level;
+              const example = LEVEL_EXAMPLES[level];
+              // Show target language first (the one user is learning)
+              const primaryText = typedLang === "en" ? example.es : example.en;
+              const secondaryText = typedLang === "en" ? example.en : example.es;
+              return (
+                <div
+                  key={level}
+                  className="w-full bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl text-left hover:border-indigo-300 hover:bg-white transition-colors group"
+                >
+                  {/* Main card area — clicking selects the level */}
+                  <button
+                    onClick={() => handleLevelSelect(level)}
+                    className="w-full p-5 text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-sm font-bold text-indigo-600 bg-indigo-100 px-2.5 py-0.5 rounded">
+                        {t(typedLang, "levels", `cefrLabels.${level}`)}
+                      </span>
+                      <h3 className="font-semibold text-base text-gray-900 group-hover:text-indigo-700 transition-colors">
+                        {displayName}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {t(typedLang, "levels", `cefrDescriptions.${level}`)}
+                    </p>
+                  </button>
 
-          {/* Level selection grid - 2x2 for first 4, then 1 below */}
-          <div className="grid grid-cols-2 gap-3">
-            {LEVELS.slice(0, 4).map((level) => (
-              <button
-                key={level}
-                onClick={() => handleLevelSelect(level)}
-                className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-4 text-left hover:border-indigo-300 hover:bg-white transition-colors group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
-                    {t(typedLang, "levels", `cefrLabels.${level}`)}
-                  </span>
+                  {/* Example toggle — separate click target, does NOT select level */}
+                  <div className="px-5 pb-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExampleOpen(isExampleOpen ? null : level);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-500 hover:text-indigo-700 transition-colors py-1 px-2 -ml-2 rounded-md hover:bg-indigo-50"
+                    >
+                      <svg className={`w-3.5 h-3.5 transition-transform ${isExampleOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {typedLang === "es" ? "Ver ejemplo" : "See example"}
+                    </button>
+
+                    {isExampleOpen && (
+                      <div className="mt-2 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                        <p className="text-sm text-gray-800 italic leading-relaxed">
+                          &ldquo;{primaryText}&rdquo;
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                          &ldquo;{secondaryText}&rdquo;
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                  {t(typedLang, "levels", level)}
-                </h3>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                  {t(typedLang, "levels", `cefrDescriptions.${level}`)}
-                </p>
-              </button>
-            ))}
+              );
+            })}
           </div>
-
-          {/* Level 5 (C1) - full width at bottom */}
-          <button
-            onClick={() => handleLevelSelect('l5')}
-            className="w-full mt-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-4 text-left hover:border-indigo-300 hover:bg-white transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
-                {t(typedLang, "levels", "cefrLabels.l5")}
-              </span>
-              <h3 className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">
-                {t(typedLang, "levels", "l5")}
-              </h3>
-              <span className="text-xs text-gray-500">
-                {t(typedLang, "levels", "cefrDescriptions.l5")}
-              </span>
-            </div>
-          </button>
         </motion.div>
 
         {/* About link */}
