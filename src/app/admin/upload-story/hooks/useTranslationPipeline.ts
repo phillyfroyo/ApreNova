@@ -14,6 +14,36 @@ import {
 const TRANSLATION_SUB_CHUNK_CHARS = 24000;
 
 // ============================================
+// Alignment Utilities
+// ============================================
+
+/**
+ * Align leading blank lines of translated text to match the source text.
+ * Ensures the first content line of source and translation are at the same position.
+ * This prevents off-by-one misalignment when a blank line is lost or added during translation.
+ */
+function alignLeadingBlanks(sourceText: string, translatedText: string): string {
+  const sourceLines = sourceText.split('\n');
+  const translatedLines = translatedText.split('\n');
+
+  // Find first non-blank line position in each
+  const sourceFirstContent = sourceLines.findIndex(l => l.trim() !== '');
+  const translatedFirstContent = translatedLines.findIndex(l => l.trim() !== '');
+
+  // If both start with content immediately, or both have same leading blanks, nothing to do
+  if (sourceFirstContent === translatedFirstContent) return translatedText;
+
+  // If neither has content, return as-is
+  if (sourceFirstContent === -1 || translatedFirstContent === -1) return translatedText;
+
+  // Adjust: strip existing leading blanks from translated, then prepend the right number
+  const contentPortion = translatedLines.slice(translatedFirstContent);
+  const leadingBlanks = new Array(sourceFirstContent).fill('');
+
+  return [...leadingBlanks, ...contentPortion].join('\n');
+}
+
+// ============================================
 // Types
 // ============================================
 
@@ -527,7 +557,8 @@ export function useTranslationPipeline({
             if (result.status === "fulfilled") {
               const r = result.value;
               if (r.success) {
-                translatedChapters[r.index] = r.translated;
+                // Align leading blank lines with source chapter to prevent off-by-one
+                translatedChapters[r.index] = alignLeadingBlanks(chapters[r.index], r.translated);
               } else {
                 translatedChapters[r.index] = `[TRANSLATION_FAILED:${r.index}]\n\n${r.original}`;
                 levelErrors.push({
@@ -564,6 +595,8 @@ export function useTranslationPipeline({
           // Single chapter case
           currentChapterRef.current = 0;
           const translatedText = await translateChunk(sourceText, level);
+          // Align leading blank lines with source to prevent off-by-one
+          const alignedText = alignLeadingBlanks(sourceText, translatedText);
           // Preserve whitespace based on STRUCTURE (not storyType which is cosmetic)
           const effectiveStructure = storyData.structureType === "auto"
             ? storyData.parsedResult?.stats?.structureType
@@ -571,7 +604,7 @@ export function useTranslationPipeline({
           const preserveWhitespace = effectiveStructure === "anthology" || effectiveStructure === "epic";
           accumulator[level] = {
             ...accumulator[level],
-            translatedText: cleanText(translatedText, { preserveWhitespace }),
+            translatedText: cleanText(alignedText, { preserveWhitespace }),
           };
           updateStoryData({ levelContent: { ...accumulator } });
         } catch (singleChunkError) {

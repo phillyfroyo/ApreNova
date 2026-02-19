@@ -112,11 +112,14 @@ export function cleanText(text: string, options: CleanTextOptions = {}): string 
     .join("\n");
 
   // Final cleanup - remove any remaining quote-only lines
-  return cleaned
+  cleaned = cleaned
     .split("\n")
     .filter(line => !/^["'"'""'']+$/.test(line.trim()))
-    .join("\n")
-    .trim();
+    .join("\n");
+
+  // Only trim outer whitespace when NOT preserving whitespace
+  // (preserveWhitespace mode needs leading/trailing blank lines intact for alignment)
+  return preserveWhitespace ? cleaned : cleaned.trim();
 }
 
 /**
