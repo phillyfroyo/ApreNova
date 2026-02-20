@@ -11,6 +11,7 @@ import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { getStoryTitle, getStoryDescription } from "@/lib/stories";
+import ExpandableDescription from "@/components/ExpandableDescription";
 
 
 
@@ -209,9 +210,14 @@ export default function StoryModal({
                   </p>
                 )}
 
-                <p className="my-4 text-sm text-black">
-                {getStoryDescription(typedLang, storySlug)}
-                </p>
+                {getStoryDescription(typedLang, storySlug) && (
+                  <ExpandableDescription
+                    text={getStoryDescription(typedLang, storySlug)}
+                    lang={typedLang}
+                    maxLines={4}
+                    className="my-4 text-black"
+                  />
+                )}
 
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (

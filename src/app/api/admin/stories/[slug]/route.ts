@@ -193,9 +193,9 @@ export async function PATCH(
     if (title || description || hook) {
       // Helper to build the entry string for a given language
       const buildEntry = (lang: "en" | "es") => {
-        const t = title?.[lang] || "";
-        const h = hook?.[lang] || "";
-        const d = description?.[lang] || "";
+        const t = escapeJsString(title?.[lang] || "");
+        const h = escapeJsString(hook?.[lang] || "");
+        const d = escapeJsString(description?.[lang] || "");
         const hookLine = h ? `\n    hook: "${h}",` : "";
         return `"${slug}": {
     title: "${t}",${hookLine}

@@ -13,6 +13,7 @@ import { t } from "@/lib/t";
 import { getStoryTitle, getStoryDescription, getStoryHook } from "@/lib/stories";
 import type { StoryMetadata, StoryAttribution } from "@/types/story";
 import { toCEFR, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
+import ExpandableDescription from "@/components/ExpandableDescription";
 
 // CEFR badge colors
 const CEFR_BADGE_COLORS: Record<string, string> = {
@@ -313,10 +314,10 @@ export default function StoryDetailModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
+            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-start md:items-center justify-center pt-12 md:pt-0 pointer-events-none"
           >
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] md:h-[80vh] md:max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[75vh] md:h-[80vh] md:max-h-[600px] overflow-y-auto hide-scrollbar pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
@@ -485,9 +486,12 @@ export default function StoryDetailModal({
 
                 {/* Description — below the action items */}
                 {getStoryDescription(typedLang, storySlug) && (
-                  <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                    {getStoryDescription(typedLang, storySlug)}
-                  </p>
+                  <ExpandableDescription
+                    text={getStoryDescription(typedLang, storySlug)}
+                    lang={typedLang}
+                    maxLines={4}
+                    className="text-gray-600 mb-6"
+                  />
                 )}
 
                 {/* Full Attribution Section for non-original works */}

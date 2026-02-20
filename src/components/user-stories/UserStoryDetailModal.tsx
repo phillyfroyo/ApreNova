@@ -13,6 +13,7 @@ import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 import { useUserLevel } from "@/hooks/useUserLevel";
 import { STORY_TYPE_LABELS } from "@/lib/stories";
 import type { StoryType } from "@/types/story";
+import ExpandableDescription from "@/components/ExpandableDescription";
 
 interface UserStoryLevel {
   level: string;
@@ -305,10 +306,10 @@ export default function UserStoryDetailModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
+            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-start md:items-center justify-center pt-12 md:pt-0 pointer-events-none"
           >
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] md:h-[80vh] md:max-h-[440px] overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[75vh] md:h-[80vh] md:max-h-[600px] overflow-y-auto hide-scrollbar pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
@@ -414,9 +415,12 @@ export default function UserStoryDetailModal({
                   />
                 ) : (
                   displayDescription && (
-                    <p className="text-gray-700 leading-relaxed mb-6">
-                      {displayDescription}
-                    </p>
+                    <ExpandableDescription
+                      text={displayDescription}
+                      lang={typedLang}
+                      maxLines={4}
+                      className="text-gray-700 mb-6"
+                    />
                   )
                 )}
 

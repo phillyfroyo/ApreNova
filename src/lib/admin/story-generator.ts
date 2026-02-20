@@ -13,7 +13,7 @@ export type { LineBreakStyle } from "./text-preprocessor";
 /**
  * Helper to escape strings for JavaScript code output
  */
-function escapeJsString(str: string): string {
+export function escapeJsString(str: string): string {
   return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
