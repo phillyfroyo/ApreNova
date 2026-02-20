@@ -1173,12 +1173,39 @@ export default function StoryLayoutWithAzureTTS({
                 />
               );
             })()}
+
+            {/* Listen button – starts continuous playback */}
+            {!audioPlayer.isPlaying && audioPlayer.state.status !== "navigating" && (
+              <button
+                onClick={() => {
+                  stop();
+                  setActiveAudio(null);
+                  setMenuOpen(false);
+
+                  audioPlayer.startContinuousPlayback({
+                    storySlug,
+                    storyTitle: title,
+                    level: currentLevel,
+                    chapter: chapterNumber,
+                    page: pageNumber,
+                    sentences,
+                    storyMap,
+                    isUserStory,
+                    userStoryId,
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-200"
+              >
+                <Headphones className="w-4 h-4" />
+                {t(typedLang, "audioPlayer", "listen")}
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* Navigation buttons (same as original) */}
-      <div className={`fixed left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''} ${audioPlayer.state.isVisible ? 'bottom-[140px] md:bottom-[76px]' : 'bottom-4'}`}>
+      <div className={`fixed left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''} ${audioPlayer.state.isVisible ? 'hidden' : 'bottom-4'}`}>
         {(() => {
           const { prev, next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
           const buttonClass = (disabled: boolean, color: string) =>
@@ -1211,25 +1238,6 @@ export default function StoryLayoutWithAzureTTS({
                 )}
               </div>
 
-              {isFinalPage && (
-                <button
-                  className="text-sm text-green-700 hover:underline"
-                  onClick={() => {
-                    fetch('/api/mark-complete', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        storySlug,
-                        level: currentLevel,
-                        chapter: chapterNumber,
-                        page: pageNumber,
-                      }),
-                    }).then(() => alert(t(typedLang, "story", "markedComplete")));
-                  }}
-                >
-                  ✅ {t(typedLang, "story", "markComplete")}
-                </button>
-              )}
             </div>
           );
         })()}
@@ -1248,32 +1256,13 @@ export default function StoryLayoutWithAzureTTS({
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-2 w-full">{dynamicPageTitle}</h2>
 
-          {/* Listen button for continuous playback */}
-          {!audioPlayer.isPlaying && audioPlayer.state.status !== "navigating" && (
+          {/* Listening badge – visible when continuous playback is active */}
+          {(audioPlayer.isPlaying || audioPlayer.state.status === "navigating" || audioPlayer.state.status === "paused" || audioPlayer.state.status === "loading") && (
             <div className="flex justify-center w-full mb-4">
-              <button
-                onClick={() => {
-                  // Stop per-sentence audio first (mutual exclusion)
-                  stop();
-                  setActiveAudio(null);
-
-                  audioPlayer.startContinuousPlayback({
-                    storySlug,
-                    storyTitle: title,
-                    level: currentLevel,
-                    chapter: chapterNumber,
-                    page: pageNumber,
-                    sentences,
-                    storyMap,
-                    isUserStory,
-                    userStoryId,
-                  });
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-200"
-              >
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-full border border-indigo-200">
                 <Headphones className="w-4 h-4" />
-                {t(typedLang, "audioPlayer", "listen")}
-              </button>
+                {t(typedLang, "audioPlayer", "listening")}
+              </span>
             </div>
           )}
 
@@ -2142,6 +2131,29 @@ export default function StoryLayoutWithAzureTTS({
             // FLAT SENTENCES: Use renderLine helper for prose, scripts, and legacy poem content
             return sentences.map((s, i) => renderLine(s, i, false));
           })()}
+
+          {/* Mark story as complete – shown on the last page below story text */}
+          {isFinalPage && (
+            <div className="flex justify-center w-full mt-8 mb-4">
+              <button
+                className="text-sm text-green-700 hover:underline"
+                onClick={() => {
+                  fetch('/api/mark-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      storySlug,
+                      level: currentLevel,
+                      chapter: chapterNumber,
+                      page: pageNumber,
+                    }),
+                  }).then(() => alert(t(typedLang, "story", "markedComplete")));
+                }}
+              >
+                ✅ {t(typedLang, "story", "markComplete")}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tab for story page - visible on all screen sizes, fades when chat opens */}

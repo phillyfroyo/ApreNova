@@ -42,6 +42,8 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
   const [isDesktop, setIsDesktop] = useState(false);
   // Track if bottom navigation is visible
   const [hasBottomNav, setHasBottomNav] = useState(true);
+  // Track if audio player bar is visible
+  const [hasAudioPlayer, setHasAudioPlayer] = useState(false);
 
   // Save corner preference
   useEffect(() => {
@@ -55,6 +57,9 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
       // Check if the bottom navigation is rendered and visible
       const bottomNav = document.querySelector('nav.fixed.bottom-0');
       setHasBottomNav(!!bottomNav);
+      // Check if audio player bar is visible (it has a unique z-[55] class)
+      const audioBar = document.querySelector('[data-audio-player-bar]');
+      setHasAudioPlayer(!!audioBar);
     };
     check();
     window.addEventListener("resize", check);
@@ -238,9 +243,9 @@ export default function FeedbackWidget({ lng }: FeedbackWidgetProps) {
 
   return (
     <>
-      {/* Draggable feedback button */}
+      {/* Draggable feedback button – hidden when audio player bar is visible */}
       <div
-        className="z-50"
+        className={`z-50 ${hasAudioPlayer && !isDesktop ? 'hidden' : ''}`}
         style={positionStyles}
       >
         <button

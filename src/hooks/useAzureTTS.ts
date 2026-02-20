@@ -265,10 +265,17 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       // Start playback - check once more that this is still the current request
       if (currentRequestRef.current === requestKey) {
         await audio.play();
-        setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+        // Verify audio element is still current after await (could have been replaced)
+        if (audioRef.current === audio) {
+          setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+        }
       }
 
     } catch (error) {
+      // Ignore AbortError — this happens when play() is interrupted by a new stop/play cycle
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       // Only log non-auth errors to console
       const isAuthError = error instanceof Error && error.message.includes("sign in");
       if (!isAuthError) {

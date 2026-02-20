@@ -68,6 +68,10 @@ interface AudioPlayerContextType {
   stopPlayback: () => void;
   toggleMode: () => void;
   registerPageContent: (sentences: StoryLine[], chapter: number, page: number) => void;
+  skipForward: () => void;
+  skipBack: () => void;
+  nextPage: () => void;
+  prevPage: () => void;
   isPlaying: boolean;
 }
 
@@ -127,6 +131,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // The continuous playback TTS instance (separate from per-sentence)
   const {
     playTTS,
+    generateTTS,
     stop: stopTTS,
     pause: pauseTTS,
     resume: resumeTTS,
@@ -172,6 +177,30 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
     return lng === "es" ? "es-ES" : "en-US";
   }, [lng, oppositeLang]);
+
+  // ---- Pre-fetch all sentences on a page into TTS cache ----
+  const prefetchPageAudio = useCallback((sentences: StoryLine[], storySlug?: string) => {
+    const contentSentences = getContentSentences(sentences);
+    const s = stateRef.current;
+    const targetLang = getTTSLanguage("target");
+    const nativeLang = getTTSLanguage("native");
+
+    for (const entry of contentSentences) {
+      // Pre-fetch target language
+      const targetText = (entry.line[oppositeLang] || "").trim();
+      if (targetText) {
+        generateTTS({ text: targetText, language: targetLang, speed: "normal", storySlug }).catch(() => {});
+      }
+
+      // Pre-fetch native language too (needed for bilingual mode)
+      if (s.mode === "bilingual") {
+        const nativeText = (entry.line[lng] || "").trim();
+        if (nativeText) {
+          generateTTS({ text: nativeText, language: nativeLang, speed: "normal", storySlug }).catch(() => {});
+        }
+      }
+    }
+  }, [generateTTS, getTTSLanguage, oppositeLang, lng]);
 
   // ---- Play a specific sentence ----
   const playSentence = useCallback((
@@ -331,6 +360,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     persistState(position, stateRef.current.mode);
 
+    // Pre-fetch all sentences on this page into TTS cache
+    prefetchPageAudio(options.sentences, options.storySlug);
+
     // Delay slightly to let state settle
     setTimeout(() => {
       playSentence(options.sentences, startEntry.originalIndex, "target");
@@ -345,7 +377,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       navigator.mediaSession.setActionHandler("play", () => resumePlayback());
       navigator.mediaSession.setActionHandler("pause", () => pausePlayback());
     }
-  }, [stopTTS, playSentence]);
+  }, [stopTTS, playSentence, prefetchPageAudio]);
 
   const pausePlayback = useCallback(() => {
     pauseTTS();
@@ -385,6 +417,102 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return { ...prev, mode: newMode };
     });
   }, []);
+
+  // ---- Skip / Page Navigation ----
+
+  const skipForward = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.position || s.status === "navigating") return;
+    stopTTS();
+
+    const contentSentences = getContentSentences(s.currentPageSentences);
+    const currentContentIdx = contentSentences.findIndex(e => e.originalIndex === s.position!.sentenceIndex);
+    const nextContentIdx = currentContentIdx + 1;
+
+    if (nextContentIdx < contentSentences.length) {
+      playSentence(s.currentPageSentences, contentSentences[nextContentIdx].originalIndex, "target");
+    } else {
+      // At end of page — trigger page turn
+      handleSentenceComplete();
+    }
+  }, [stopTTS, playSentence, handleSentenceComplete]);
+
+  const skipBack = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.position || s.status === "navigating") return;
+    stopTTS();
+
+    const contentSentences = getContentSentences(s.currentPageSentences);
+    const currentContentIdx = contentSentences.findIndex(e => e.originalIndex === s.position!.sentenceIndex);
+    const prevContentIdx = currentContentIdx - 1;
+
+    if (prevContentIdx >= 0) {
+      playSentence(s.currentPageSentences, contentSentences[prevContentIdx].originalIndex, "target");
+    } else {
+      // Already at first sentence — replay it
+      if (contentSentences.length > 0) {
+        playSentence(s.currentPageSentences, contentSentences[0].originalIndex, "target");
+      }
+    }
+  }, [stopTTS, playSentence]);
+
+  const nextPage = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.position || !s.storyMap || s.status === "navigating") return;
+    stopTTS();
+
+    const { next } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
+    if (!next) return;
+
+    pendingNavigationRef.current = { chapter: next.ch, page: next.pg };
+    setState(prev => ({
+      ...prev,
+      status: "navigating",
+      highlightedSentenceIndex: null,
+      position: prev.position ? {
+        ...prev.position,
+        chapter: next.ch,
+        page: next.pg,
+        sentenceIndex: 0,
+        currentLanguage: "target",
+      } : null,
+    }));
+
+    const url = getNavigationUrl(
+      lng, s.position.storySlug, s.position.level,
+      next.ch, next.pg, s.position.isUserStory, s.position.userStoryId
+    );
+    router.push(url);
+  }, [stopTTS, lng, router]);
+
+  const prevPage = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.position || !s.storyMap || s.status === "navigating") return;
+    stopTTS();
+
+    const { prev: prevPg } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
+    if (!prevPg) return;
+
+    pendingNavigationRef.current = { chapter: prevPg.ch, page: prevPg.pg };
+    setState(st => ({
+      ...st,
+      status: "navigating",
+      highlightedSentenceIndex: null,
+      position: st.position ? {
+        ...st.position,
+        chapter: prevPg.ch,
+        page: prevPg.pg,
+        sentenceIndex: 0,
+        currentLanguage: "target",
+      } : null,
+    }));
+
+    const url = getNavigationUrl(
+      lng, s.position.storySlug, s.position.level,
+      prevPg.ch, prevPg.pg, s.position.isUserStory, s.position.userStoryId
+    );
+    router.push(url);
+  }, [stopTTS, lng, router]);
 
   // ---- Content Registration (called by StoryLayoutWithAzureTTS on mount) ----
   const registerPageContent = useCallback((
@@ -428,13 +556,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           } : null,
         }));
 
+        // Pre-fetch all sentences on this new page
+        prefetchPageAudio(sentences, s.position?.storySlug);
+
         // Small delay to let the page render
         setTimeout(() => {
           playSentence(sentences, firstIndex, "target");
         }, 500);
       }
     }
-  }, [playSentence, handleSentenceComplete]);
+  }, [playSentence, handleSentenceComplete, prefetchPageAudio]);
 
   // ---- Auto-hide after finish ----
   useEffect(() => {
@@ -461,6 +592,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     stopPlayback,
     toggleMode,
     registerPageContent,
+    skipForward,
+    skipBack,
+    nextPage,
+    prevPage,
     isPlaying: state.status === "playing",
   };
 

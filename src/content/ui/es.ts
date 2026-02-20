@@ -615,7 +615,7 @@ storiesMetadata: {
 
 audioPlayer: {
   listen: "Escuchar",
-  listening: "Escuchando...",
+  listening: "Escuchando",
   turningPage: "Pasando página...",
   storyComplete: "¡Historia completada!",
   targetOnly: "Solo idioma de aprendizaje",
