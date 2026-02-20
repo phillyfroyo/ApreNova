@@ -260,7 +260,8 @@ export default function StoryDetailModal({
   const handleReadStory = useCallback(async () => {
     if (!story) return;
 
-    // Check for bookmark first
+    // Check for bookmark first — bookmarks are bulk-updated when user changes level,
+    // so the bookmark level always reflects the user's current level
     const bookmarkResponse = await fetch(
       `/api/story-bookmark?storySlug=${encodeURIComponent(story.slug)}`
     );
@@ -280,10 +281,12 @@ export default function StoryDetailModal({
       }
     }
 
-    // No bookmark - use default level (convert any format to CEFR)
+    // No bookmark — use user's current level
+    // Prioritize localStorage (updated synchronously on level change) over
+    // session.user.quizLevel (JWT-based, can be stale until next token refresh)
     const storedLevel =
       typeof window !== "undefined" ? localStorage.getItem("level") : null;
-    const level = toCEFR(user?.quizLevel || storedLevel || "A2");
+    const level = toCEFR(storedLevel || user?.quizLevel || "A2");
 
     const url = getStoryUrl(story.slug, level, 1, 1, typedLang);
     router.push(url);

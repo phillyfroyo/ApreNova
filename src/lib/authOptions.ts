@@ -61,7 +61,8 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger }) => {
+  // On initial sign-in, populate token from DB
   if (user) {
     const dbUser = user.id
   ? await prisma.user.findUnique({ where: { id: user.id } })
@@ -78,6 +79,21 @@ export const authOptions: AuthOptions = {
       if (dbUser.isPremium !== undefined) token.isPremium = dbUser.isPremium;
     }
   }
+
+  // On session update (e.g. after level change), refresh mutable fields from DB
+  if (trigger === "update" && token.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: token.id as string },
+      select: { quizLevel: true, isPremium: true, nativeLanguage: true, name: true },
+    });
+    if (dbUser) {
+      token.quizLevel = dbUser.quizLevel ?? undefined;
+      token.isPremium = dbUser.isPremium ?? false;
+      token.nativeLanguage = dbUser.nativeLanguage ?? undefined;
+      if (dbUser.name) token.name = dbUser.name;
+    }
+  }
+
   return token;
 },
 

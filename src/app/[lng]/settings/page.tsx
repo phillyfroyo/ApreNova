@@ -28,6 +28,8 @@ import { t } from '@/lib/t'
 import { AppLayout } from '@/components/layout'
 import Logo from '@/components/Logo'
 import UserStatsCard from '@/components/UserStatsCard'
+import SettingsLevelDisplay from './SettingsLevelDisplay'
+import { toCEFR } from '@/lib/cefr'
 
 export default function SettingsPage() {
   const { data: session, status, update } = useSession()
@@ -190,9 +192,9 @@ export default function SettingsPage() {
       email: 'Email',
       preferences: 'Preferences',
       nativeLanguage: 'Native Language',
-      learning: 'Learning',
+      learning: 'Level',
       currentLevel: 'Current Level',
-      retakeQuiz: 'Retake Placement Quiz',
+      retakeQuiz: 'Change Your Level',
       membership: 'Membership',
       currentPlan: 'Current Plan',
       free: 'Free',
@@ -217,9 +219,9 @@ export default function SettingsPage() {
       email: 'Correo',
       preferences: 'Preferencias',
       nativeLanguage: 'Idioma Nativo',
-      learning: 'Aprendizaje',
+      learning: 'Nivel',
       currentLevel: 'Nivel Actual',
-      retakeQuiz: 'Repetir Quiz de Nivel',
+      retakeQuiz: 'Cambiar Tu Nivel',
       membership: 'Membresía',
       currentPlan: 'Plan Actual',
       free: 'Gratis',
@@ -410,7 +412,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Learning Card */}
+          {/* Level Card */}
           <div className="glass-card">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
               {txt.learning}
@@ -424,22 +426,13 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-xs text-gray-500">{txt.currentLevel}</p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {session.user.quizLevel || 'Level 2'}
+                    {toCEFR(session.user.quizLevel)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={() => router.push(`/${typedLang}/home/quiz/placement`)}
-              className="w-full flex items-center justify-between py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <GraduationCap className="w-5 h-5" />
-                <span>{txt.retakeQuiz}</span>
-              </div>
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            <SettingsLevelDisplay />
           </div>
 
           {/* Membership Card */}

@@ -22,6 +22,7 @@ export default function ResultsPage() {
 
   const [level, setLevel] = useState<Level>("l1");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [sessionSynced, setSessionSynced] = useState(false);
 
   useEffect(() => {
     const quizLevel = (sessionStorage.getItem("quizLevel") || "l1") as Level;
@@ -30,7 +31,7 @@ export default function ResultsPage() {
 
     localStorage.setItem("level", quizLevel);
 
-    if (session?.user?.id) {
+    if (session?.user?.id && !sessionSynced) {
       fetch("/api/user-level", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,9 +44,15 @@ export default function ResultsPage() {
         })
         .catch((err) => {
           console.error("Failed to save quiz level:", err);
+        })
+        .finally(() => {
+          setSessionSynced(true);
         });
+    } else if (!session?.user?.id) {
+      // Not logged in — no session to sync
+      setSessionSynced(true);
     }
-  }, [session, updateSession]);
+  }, [session?.user?.id, updateSession, sessionSynced]);
 
   const handleContinue = () => {
     router.push(`/${typedLang}/stories`);
