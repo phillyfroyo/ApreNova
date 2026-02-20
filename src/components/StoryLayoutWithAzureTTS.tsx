@@ -5,7 +5,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { getTheme } from "@/components/storyThemes";
 import Link from "next/link";
-import { Menu, X, Volume2, Loader2, AlertCircle } from "lucide-react";
+import { Menu, X, Volume2, Loader2, AlertCircle, Headphones } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import UnifiedTranslator from "@/components/UnifiedTranslator";
@@ -14,6 +14,8 @@ import { useSessionLogger } from '@/hooks/useSessionLogger';
 import { useAzureTTS } from '@/hooks/useAzureTTS';
 import { slugify } from '@/lib/stories';
 import { getStoryUrl } from "@/utils/getStoryUrl";
+import { getPrevNextPage as getPrevNextPageUtil, getNavigationUrl as getNavigationUrlUtil } from "@/utils/storyNavigation";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import type { Language } from "@/types/i18n";
 import { t } from '@/lib/t';
 import { ALL_CEFR_LEVELS, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
@@ -544,37 +546,11 @@ export default function StoryLayoutWithAzureTTS({
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
 
-  function getPrevNextPage(
-    currentChapter: number,
-    currentPage: number,
-    storyMap: {
-      hasChapters: boolean;
-      chapters: { chapter: number; pages: number[]; title?: string; subtitle?: string }[];
-    }
-  ): {
-    prev: { ch: number; pg: number } | null;
-    next: { ch: number; pg: number } | null;
-  } {
-    const flatPages: { ch: number; pg: number }[] = [];
-
-    for (const ch of storyMap.chapters) {
-      for (const pg of ch.pages) {
-        flatPages.push({ ch: ch.chapter, pg });
-      }
-    }
-
-    const index = flatPages.findIndex(
-      (p) => p.ch === currentChapter && p.pg === currentPage
-    );
-
-    return {
-      prev: index > 0 ? flatPages[index - 1] : null,
-      next: index >= 0 && index < flatPages.length - 1 ? flatPages[index + 1] : null,
-    };
-  }
+  // Audio player context for continuous playback
+  const audioPlayer = useAudioPlayer();
 
   useEffect(() => {
-    const { next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
+    const { next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
     setIsFinalPage(!next);
 
     // Prefetch next page route so navigation is near-instant
@@ -582,6 +558,20 @@ export default function StoryLayoutWithAzureTTS({
       router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
     }
   }, [chapterNumber, pageNumber, storyMap]);
+
+  // Register page content with audio player context (for cross-page navigation)
+  useEffect(() => {
+    audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber);
+  }, [sentences, chapterNumber, pageNumber]);
+
+  // Sentence highlighting for continuous playback
+  const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
+  useEffect(() => {
+    const idx = audioPlayer.state.highlightedSentenceIndex;
+    if (idx !== null && sentenceRefs.current[idx]) {
+      sentenceRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [audioPlayer.state.highlightedSentenceIndex]);
 
   // Premium restrictions removed - translationMode is always "premium" for all users
 
@@ -669,6 +659,11 @@ export default function StoryLayoutWithAzureTTS({
   // skipWordSelection: when true, don't apply wordSelections slicing (used for pre-extracted cross-line text)
   const handlePlay = async (index: number, isSlow: boolean, text: string, skipWordSelection: boolean = false) => {
     setTtsError(null);
+
+    // Mutual exclusion: stop continuous playback when per-sentence audio is triggered
+    if (audioPlayer.isPlaying || audioPlayer.state.status === "paused") {
+      audioPlayer.stopPlayback();
+    }
 
     // If clicking the same line and mode, toggle play/pause
     if (activeAudio && activeAudio.index === index && activeAudio.isSlow === isSlow) {
@@ -1183,9 +1178,9 @@ export default function StoryLayoutWithAzureTTS({
       )}
 
       {/* Navigation buttons (same as original) */}
-      <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''}`}>
+      <div className={`fixed left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''} ${audioPlayer.state.isVisible ? 'bottom-[140px] md:bottom-[76px]' : 'bottom-4'}`}>
         {(() => {
-          const { prev, next } = getPrevNextPage(chapterNumber, pageNumber, storyMap);
+          const { prev, next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
           const buttonClass = (disabled: boolean, color: string) =>
             `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
               disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
@@ -1251,7 +1246,36 @@ export default function StoryLayoutWithAzureTTS({
           isStoryTutorOpen ? '-translate-x-full lg:-translate-x-[50%]' : 'translate-x-0 lg:translate-x-0 mx-auto'
         }`}>
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
-          <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>
+          <h2 className="text-lg sm:text-xl text-center mb-2 w-full">{dynamicPageTitle}</h2>
+
+          {/* Listen button for continuous playback */}
+          {!audioPlayer.isPlaying && audioPlayer.state.status !== "navigating" && (
+            <div className="flex justify-center w-full mb-4">
+              <button
+                onClick={() => {
+                  // Stop per-sentence audio first (mutual exclusion)
+                  stop();
+                  setActiveAudio(null);
+
+                  audioPlayer.startContinuousPlayback({
+                    storySlug,
+                    storyTitle: title,
+                    level: currentLevel,
+                    chapter: chapterNumber,
+                    page: pageNumber,
+                    sentences,
+                    storyMap,
+                    isUserStory,
+                    userStoryId,
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-200"
+              >
+                <Headphones className="w-4 h-4" />
+                {t(typedLang, "audioPlayer", "listen")}
+              </button>
+            </div>
+          )}
 
           {/* Determine if this is poetry for tight line spacing */}
           {(() => {
@@ -1325,9 +1349,15 @@ export default function StoryLayoutWithAzureTTS({
 
               // Regular line - tight spacing for poems/stanzas
               const lineSpacing = (isPoemType || isInsideStanza) ? "my-0" : "my-6";
+              const isHighlighted = audioPlayer.state.highlightedSentenceIndex === lineIndex;
 
               return (
-                <div key={lineIndex} className={`${lineSpacing} w-full relative`} data-sentence-index={lineIndex}>
+                <div
+                  key={lineIndex}
+                  ref={el => { sentenceRefs.current[lineIndex] = el; }}
+                  className={`${lineSpacing} w-full relative transition-colors duration-300 ${isHighlighted ? 'bg-indigo-50 rounded-lg' : ''}`}
+                  data-sentence-index={lineIndex}
+                >
                   {/* Speaker name for scripts */}
                   {isScriptType && s.speaker && (
                     <div className="px-2 mb-1">

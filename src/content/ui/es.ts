@@ -612,6 +612,18 @@ storiesMetadata: {
     description: "En el resplandeciente verano de 1922, un joven del Medio Oeste llega a las costas de Long Island y se adentra en un mundo de riqueza inimaginable, desenfreno imprudente y sueños rotos. Su enigmático vecino, Jay Gatsby, ofrece fastuosas fiestas en su mansión gótica, pero nadie parece saber quién es realmente ni qué es lo que desea.\n\nA medida que Nick Carraway se ve atraído por la órbita de Gatsby, descubre la verdad detrás del espectáculo: un amor consumidor y desesperado por Daisy Buchanan, una mujer de vieja fortuna, encanto y negligencia. Gatsby se ha reinventado por completo, construyendo una fortuna en los oscuros márgenes del Sueño Americano, todo por la oportunidad de recuperar un pasado que quizás nunca existió realmente.\n\nPero bajo el brillo de la Nueva York de la Era del Jazz se oculta un mundo de traición, violencia y decadencia moral. Cuando los secretos se desmoronan y las lealtades se ponen a prueba, las consecuencias resultan devastadoras e ineludibles.\n\nAmpliamente considerada como una de las mejores novelas jamás escritas, El gran Gatsby es el luminoso retrato de F. Scott Fitzgerald sobre el Sueño Americano: su promesa, su seducción y su ruina.\n",
   },
 },
+
+audioPlayer: {
+  listen: "Escuchar",
+  listening: "Escuchando...",
+  turningPage: "Pasando página...",
+  storyComplete: "¡Historia completada!",
+  targetOnly: "Solo idioma de aprendizaje",
+  bilingual: "Ambos idiomas",
+  resumeListening: "Reanudar escucha",
+  errorRetry: "Reintentar",
+  errorSkip: "Saltar",
+},
 };
 
 export default es;
