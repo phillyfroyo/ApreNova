@@ -147,8 +147,8 @@ export function parseChapters(rawText: string): string[][] {
     .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*---/gi, '\n---CHAPTER_BREAK---\n')
     // Handle standalone CHAPTER markers (not wrapped in ---)
     .replace(/^\s*(CHAPTER|Capítulo)\s+\d+\s*[:\-—–]?\s*.*$/gim, '\n---CHAPTER_BREAK---\n')
-    // Handle simple --- dividers (but not our placeholder)
-    .replace(/^---(?!CHAPTER_BREAK)---*\s*$/gm, '\n---CHAPTER_BREAK---\n');
+    // Strip plain --- scene dividers (NOT chapter breaks) so they don't split chapters
+    .replace(/^---(?!CHAPTER_BREAK)---*\s*$/gm, '');
 
   // Step 2: Split by our clean marker
   const chapterTexts = normalized

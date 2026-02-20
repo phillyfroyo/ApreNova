@@ -6,676 +6,724 @@ export const chapterContent = {
     "1": {
       "lines": [
         {
-          "en": "Music flowed from my neighbor's house during the summer nights. In his blue gardens, men and women moved like moths among the whispers, champagne, and stars. In the afternoons, I watched his guests diving from a tower on his raft or sunbathing on the hot sand of his beach while his two motorboats cut through the water, pulling aquaplanes over foamy waves. On weekends, his Rolls-Royce turned into a bus, carrying partygoers to and from the city from morning until late at night, while his station wagon dashed around like a busy yellow bug to meet all the trains. On Mondays, eight servants, including an extra gardener, worked all day with mops, brushes, and tools, fixing the damage from the night before.",
-          "es": "La música fluía desde la casa de mi vecino durante las noches de verano. En sus jardines azules, hombres y mujeres se movían como polillas entre los susurros, el champán y las estrellas. Por las tardes, observaba a sus invitados buceando desde una torre en su balsa o tomando el sol en la arena caliente de su playa mientras sus dos motoras cortaban el agua, tirando de esquiadores acuáticos sobre olas espumosas. Los fines de semana, su Rolls-Royce se convertía en autobús, llevando a los asistentes a la fiesta hacia la ciudad y de regreso desde la mañana hasta altas horas de la noche, mientras su furgoneta se movía como un escarabajo amarillo muy ocupado para recoger a todos de los trenes. Los lunes, ocho criados, incluyendo un jardinero extra, trabajaban todo el día con trapeadores, cepillos y herramientas, reparando los daños de la noche anterior."
+          "en": "When I returned to West Egg that night, I briefly feared my house was on fire. It was two o'clock, and the entire corner of the peninsula was ablaze with light, casting an unreal glow on the bushes and creating long reflections on the roadside wires. Turning a corner, I realized it was Gatsby’s house, illuminated from top to bottom.",
+          "es": "Cuando regresé a West Egg esa noche, brevemente temí que mi casa estuviera en llamas. Eran las dos de la mañana, y toda la esquina de la península brillaba con luz, proyectando un resplandor irreal sobre los arbustos y creando largas reflexiones en los cables al borde de la carretera. Al doblar una esquina, me di cuenta de que era la casa de Gatsby, iluminada de arriba abajo."
         },
         {
-          "en": "Every Friday, five crates of oranges and lemons arrived from a fruit seller in New York, and every Monday, these same oranges and lemons left his back door as a pile of juiceless halves. There was a machine in the kitchen that could squeeze the juice from two hundred oranges in half an hour if a butler pressed a button two hundred times with his thumb.",
-          "es": "Cada viernes, cinco cajas de naranjas y limones llegaban de un vendedor de frutas en Nueva York, y cada lunes, estas mismas naranjas y limones salían por la puerta trasera como un montón de mitades sin jugo. Había una máquina en la cocina que podía exprimir el jugo de doscientas naranjas en media hora si un mayordomo presionaba un botón doscientas veces con el pulgar."
+          "en": "Initially, I thought it was another party, a wild gathering that had turned into games like \"hide-and-go-seek\" or \"sardines-in-the-box,\" with the entire house open for play. But there was no sound, only the wind in the trees, which made the wires sway and the lights flicker as if the house was winking into darkness. As my taxi drove away, I saw Gatsby walking towards me across his lawn.",
+          "es": "Inicialmente, pensé que era otra fiesta, una reunión salvaje que se había convertido en juegos como \"escondidas\" o \"sardinas en la lata\", con toda la casa abierta para jugar. Pero no había sonido alguno, solo el viento en los árboles, que hacía balancearse los cables y parpadear las luces como si la casa parpadeara hacia la oscuridad. Mientras mi taxi se alejaba, vi a Gatsby caminando hacia mí a través de su césped."
         },
         {
-          "en": "At least once every two weeks, a team of caterers arrived with hundreds of feet of canvas and enough colored lights to turn Gatsby's enormous garden into a Christmas tree. Buffet tables were decorated with shiny hors-d'oeuvres, baked hams spiced and crowded against colorful salads, pastry pigs, and turkeys cooked to a golden brown. In the main hall, a bar was set up with a real brass rail, stocked with gins, liquors, and cordials so long forgotten that many of his female guests were too young to recognize them.",
-          "es": "Al menos una vez cada dos semanas, un equipo de camareros llegaba con cientos de metros de lona y suficientes luces de colores para convertir el jardín enorme de Gatsby en un árbol de Navidad. Las mesas bufé estaban decoradas con aperitivos brillantes, jamones horneados condimentados y amontonados contra ensaladas coloridas, cerdos de pastelería y pavos cocinados hasta un marrón dorado. En la sala principal, se instalaba una barra con un pasamanos de latón real, abastecida de ginebras, licores y cordiales tan olvidados que muchas de sus invitadas eran demasiado jóvenes para reconocerlos."
+          "en": "“Your place looks like the World’s Fair,” I said.",
+          "es": "\"Tu lugar parece la Feria Mundial\", dije."
         },
         {
-          "en": "By seven o'clock, the orchestra arrived—not a small five-piece band, but a whole pit filled with oboes, trombones, saxophones, violins, cornets, piccolos, and high and low drums. The last swimmers had come in from the beach and were dressing upstairs; cars from New York were parked five deep in the driveway, and the halls, salons, and verandas were already bright with primary colors and hairstyles bobbed in strange new ways, and shawls beyond the dreams of Castile. The bar was in full swing, and rounds of cocktails floated through the garden outside, filling the air with chatter, laughter, casual remarks, forgotten introductions, and enthusiastic meetings between women who never knew each other's names.",
-          "es": "A las siete en punto, llegó la orquesta—no una pequeña banda de cinco piezas, sino toda una fosa llena de oboes, trombones, saxofones, violines, cornetas, piccolos y tambores altos y bajos. Los últimos nadadores habían salido de la playa y se estaban vistiendo arriba; los autos de Nueva York estaban estacionados cinco filas de profundidad en la entrada, y los pasillos, salones y verandas ya estaban llenos de colores primarios y peinados ondulados de formas extrañas y nuevas, y chales más allá de los sueños de Castilla. El bar funcionaba a pleno rendimiento, y rondas de cócteles flotaban por el jardín afuera, llenando el aire con charla, risas, comentarios casuales, presentaciones olvidadas y encuentros entusiastas entre mujeres que nunca conocieron los nombres unas de otras."
+          "en": "“Does it?” he replied, glancing at it absentmindedly. “I’ve been looking into some of the rooms. Let’s go to Coney Island, old sport. In my car.”",
+          "es": "\"¿De verdad?\", respondió, mirándolo distraídamente. \"He estado explorando algunas de las habitaciones. Vamos a Coney Island, viejo. En mi coche\"."
         },
         {
-          "en": "The lights grew brighter as the earth moved away from the sun, and the orchestra began playing yellow cocktail music, while the voices rose a key higher. Laughter became easier by the minute, overflowing with generosity, encouraged by cheerful words. Groups changed quickly, growing with new arrivals, dissolving and forming in the same breath. Already there were wanderers, confident girls weaving among the more stable guests, becoming the center of attention for a brief, happy moment, then moving on through the sea of faces, voices, and colors under the ever-changing light.",
-          "es": "Las luces se hicieron más brillantes conforme la tierra se alejaba del sol, y la orquesta comenzó a tocar música de cócteles amarillos, mientras las voces subían un tono más alto. La risa se volvió más fácil cada minuto, desbordándose de generosidad, alentada por palabras alegres. Los grupos cambiaban rápidamente, creciendo con nuevas llegadas, disolviéndose y formándose en el mismo aliento. Ya había vagabundos, chicas confiadas tejiendo entre los invitados más estables, convirtiéndose en el centro de atención por un breve momento feliz, luego moviéndose a través del mar de caras, voces y colores bajo la luz siempre cambiante."
+          "en": "“It’s too late.”",
+          "es": "\"Es demasiado tarde\"."
         },
         {
-          "en": "Suddenly, one of these lively girls, in a shimmering opal dress, grabbed a cocktail from the air, drank it for courage, and, moving her hands like a dancer, performed alone on the canvas platform. A momentary silence fell; the orchestra leader adjusted his rhythm for her, and a burst of chatter spread as the mistaken rumor went around that she was Gilda Gray's understudy from the Follies. The party had truly begun.",
-          "es": "De repente, una de estas chicas animadas, en un vestido de ópalo reluciente, agarró un cócteles del aire, lo bebió para cobrar valor y, moviendo las manos como una bailarina, se actuó sola en la plataforma de lona. Un silencio momentáneo cayó; el director de la orquesta ajustó su ritmo para ella, y una ráfaga de charla se propagó cuando el rumor equivocado circuló de que ella era la suplente de Gilda Gray de los Follies. La fiesta había comenzado verdaderamente."
+          "en": "“Well, how about a swim in the pool? I haven’t used it all summer.”",
+          "es": "\"¿Qué tal un baño en la piscina? No la he usado en todo el verano\"."
         },
         {
-          "en": "I believe that on the first night I went to Gatsby's house, I was one of the few guests who had actually been invited. People weren't usually invited—they just went there. They got into cars that took them out to Long Island, and somehow they ended up at Gatsby's door. Once there, they were introduced by someone who knew Gatsby, and then they behaved according to the rules of an amusement park. Sometimes they came and left without ever meeting Gatsby, attending the party with a simple heart that was its own ticket for entry.",
-          "es": "Creo que la primera noche que fui a la casa de Gatsby, fui uno de los pocos invitados que realmente habían sido invitados. La gente generalmente no era invitada—simplemente iba. Se metían en autos que los llevaban a Long Island, y de alguna manera terminaban en la puerta de Gatsby. Una vez allí, eran presentados por alguien que conocía a Gatsby, y luego se comportaban según las reglas de un parque de diversiones. A veces venían y se iban sin jamás conocer a Gatsby, asistiendo a la fiesta con un corazón simple que era su propio boleto para entrar."
+          "en": "“I’ve got to go to bed.”",
+          "es": "\"Tengo que irme a dormir\"."
         },
         {
-          "en": "I had actually been invited. A chauffeur in a robin's-egg blue uniform crossed my lawn early that Saturday morning with a surprisingly formal note from his employer: Gatsby would be honored if I attended his \"little party\" that night. He had seen me several times and had intended to visit me long before, but a strange combination of events had prevented it—signed Jay Gatsby, in an impressive hand.",
-          "es": "Yo había sido realmente invitado. Un chófer en un uniforme azul huevo de petirrojo cruzó mi césped temprano esa mañana de sábado con una nota sorprendentemente formal de su empleador: Gatsby estaría honrado si asistía a su \"pequeña fiesta\" esa noche. Me había visto varias veces e intentaba visitarme mucho antes, pero una extraña combinación de eventos lo había impedido—firmado Jay Gatsby, con una letra impresionante."
+          "en": "“All right.”",
+          "es": "\"Está bien\"."
         },
         {
-          "en": "Dressed in white flannels, I went over to his lawn a little after seven, feeling somewhat awkward among the swirling crowds of people I didn't know—though here and there I recognized faces from the commuting train. I was immediately struck by the number of young Englishmen scattered about; all well-dressed, all looking a bit hungry, and all speaking in low, serious tones to solid, prosperous Americans. I was sure they were selling something: bonds, insurance, or cars. They were at least painfully aware of the easy money around them and convinced it could be theirs with a few well-chosen words.",
-          "es": "Vestido con franelas blancas, fui a su jardín un poco después de las siete, sintiendo algo incómodo entre las multitudes tumultuosas de personas que no conocía—aunque aquí y allá reconocía caras del tren de cercanías. Inmediatamente me sorprendió el número de jóvenes ingleses dispersos; todos bien vestidos, todos luciendo un poco hambrientos, y todos hablando en tonos bajos y serios a estadounidenses sólidos y prósperos. Estaba seguro de que estaban vendiendo algo: bonos, seguros o autos. Al menos eran dolorosamente conscientes del dinero fácil a su alrededor y estaban convencidos de que podría ser suyo con unas pocas palabras bien elegidas."
+          "en": "He waited, looking at me with a restrained eagerness.",
+          "es": "Esperó, mirándome con una impaciencia contenida."
         },
         {
-          "en": "As soon as I arrived, I tried to find my host, but the two or three people I asked about his whereabouts stared at me in such amazement and denied any knowledge of his movements so vehemently that I retreated toward the cocktail table—the only place in the garden where a single man could linger without appearing aimless and alone.",
-          "es": "Tan pronto como llegué, intenté encontrar a mi anfitrión, pero las dos o tres personas a quienes pregunté sobre su paradero me miraron con tanta sorpresa y negaron tan enérgicamente cualquier conocimiento de sus movimientos que me retiré hacia la mesa de cócteles—el único lugar en el jardín donde un hombre solo podía quedarse sin parecer sin propósito y solo."
+          "en": "“I talked with Miss Baker,” I said after a moment. “I’m going to call Daisy tomorrow and invite her over for tea.”",
+          "es": "\"Hablé con la señorita Baker\", dije después de un momento. \"Voy a llamar a Daisy mañana e invitarla a tomar el té\"."
+        },
+        {
+          "en": "“Oh, that’s all right,” he said carelessly. “I don’t want to inconvenience you.”",
+          "es": ""
+        },
+        {
+          "en": "“What day would suit you?”",
+          "es": ""
         }
       ]
     },
     "2": {
       "lines": [
         {
-          "en": "I was on my way to drink heavily out of sheer embarrassment when Jordan Baker came out of the house and stood at the top of the marble steps, leaning slightly backward and looking down into the garden with a mix of contempt and interest.",
-          "es": "Estaba a punto de beber mucho por pura vergüenza cuando Jordan Baker salió de la casa y se paró en la cima de los escalones de mármol, inclinándose ligeramente hacia atrás y mirando hacia abajo en el jardín con una mezcla de desprecio e interés."
+          "en": "“What day would suit you?” he corrected me quickly. “I don’t want to inconvenience you, you see.”",
+          "es": "\"Oh, está bien\", dijo sin importancia. \"No quiero molestarte\"."
         },
         {
-          "en": "Whether welcome or not, I felt it necessary to attach myself to someone before I started making friendly remarks to passersby.",
-          "es": "Bienvenido o no, sentí que era necesario adherirme a alguien antes de comenzar a hacer comentarios amistosos a los transeúntes."
+          "en": "“How about the day after tomorrow?”",
+          "es": "\"¿Qué día te vendría bien?\"."
         },
         {
-          "en": "\"Hello!\" I called out, moving toward her. My voice seemed unnaturally loud across the garden.",
-          "es": "\"¡Hola!\" grité, moviéndome hacia ella. Mi voz parecía innaturalmente fuerte en el jardín."
+          "en": "He thought for a moment, then reluctantly said, “I want to get the grass cut.”",
+          "es": "\"¿Qué día te vendría bien?\", me corrigió rápidamente. \"No quiero molestarte, ves\"."
         },
         {
-          "en": "I thought you might be here,\" she replied absentmindedly as I approached. \"I remembered you lived next door to—",
-          "es": "Pensé que podrías estar aquí,\" respondió distraídamente mientras me acercaba. \"Recordé que vivías al lado de—"
+          "en": "We both looked at the grass—there was a clear line where my unkempt lawn ended and his well-kept one began. I suspected he meant my grass.",
+          "es": "\"¿Qué tal pasado mañana?\"."
         },
         {
-          "en": "She held my hand impersonally, as if promising to take care of me in a moment, and listened to two girls in matching yellow dresses who stopped at the foot of the steps.",
-          "es": "Sostuvo mi mano sin impersonal, como si prometiera cuidarme en un momento, y escuchó a dos chicas con vestidos amarillos a juego que se detuvieron al pie de los escalones."
+          "en": "“There’s another little thing,” he said uncertainly, hesitating.",
+          "es": "Pensó un momento, luego dijo con reluctancia, \"Quiero que corten el pasto\"."
         },
         {
-          "en": "Hello!\" they exclaimed together. \"Sorry you didn't win.",
-          "es": "¡Hola!\" exclamaron juntas. \"Lamento que no hayas ganado."
+          "en": "“Would you rather postpone it for a few days?” I asked.",
+          "es": "Ambos miramos el pasto—había una línea clara donde terminaba mi césped descuidado y comenzaba el suyo bien mantenido. Sospechaba que se refería a mi pasto."
         },
         {
-          "en": "That was about the golf tournament. She had lost in the finals the previous week.",
-          "es": "Era acerca del torneo de golf. Ella había perdido en las finales la semana anterior."
+          "en": "“Oh, it isn’t about that. At least—” He struggled with his words. “Well, I thought—look here, old sport, you don’t earn much, do you?”",
+          "es": "\"Hay otra cosita\", dijo con incertidumbre, dudando."
         },
         {
-          "en": "You don't know who we are,\" said one of the girls in yellow, \"but we met you here about a month ago.",
-          "es": "No sabes quiénes somos,\" dijo una de las chicas en amarillo, \"pero nos conocimos aquí hace aproximadamente un mes."
+          "en": "“Not very much.”",
+          "es": "\"¿Preferirías posponerlo unos días?\", pregunté."
         },
         {
-          "en": "\"You've dyed your hair since then,\" Jordan remarked, and I was startled, but the girls had moved on, and her comment was directed at the early moon, which seemed to have come from a caterer's basket, just like the supper. With Jordan's slender golden arm resting in mine, we descended the steps and strolled through the garden. A tray of cocktails floated toward us in the twilight, and we sat down at a table with the two girls in yellow and three men, all introduced to us as Mr. Mumble.",
-          "es": "\"Te has teñido el cabello desde entonces,\" observó Jordan, y quedé sorprendido, pero las chicas se habían ido, y su comentario fue dirigido a la luna temprana, que parecía haber venido de una cesta de camarero, justo como la cena. Con el brazo dorado y esbelto de Jordan descansando en el mío, descendimos los escalones y paseamos por el jardín. Una bandeja de cócteles flotó hacia nosotros en el crepúsculo, y nos sentamos en una mesa con las dos chicas en amarillo y tres hombres, todos presentados a nosotros como el Sr. Murmuro."
+          "en": "This seemed to reassure him, and he continued more confidently.",
+          "es": "\"Oh, no es por eso. Al menos—\" Tuvo dificultades con sus palabras. \"Bueno, pensé—mira aquí, viejo, no ganas mucho dinero, ¿verdad?\"."
         },
         {
-          "en": "\"Do you come to these parties often?\" Jordan asked the girl beside her.",
-          "es": "\"¿Vienes a estas fiestas a menudo?\" preguntó Jordan a la chica a su lado."
+          "en": "“I thought you didn’t, if you’ll pardon my—you see, I run a little business on the side, a sort of side line, you understand. And I thought that if you don’t earn much—You’re selling bonds, aren’t you, old sport?”",
+          "es": "\"No mucho\"."
+        },
+        {
+          "en": "“Trying to.”",
+          "es": ""
+        },
+        {
+          "en": "“Well, this might interest you. It wouldn’t take much of your time, and you could earn a nice amount. It’s a rather confidential matter.”",
+          "es": ""
         }
       ]
     },
     "3": {
       "lines": [
         {
-          "en": "The last one was when I met you,\" the girl replied confidently. She turned to her companion: \"Wasn't it for you, Lucille?",
-          "es": "La última fue cuando te conocí,\" respondió confiadamente la chica. Se giró hacia su compañera: \"¿No fue para ti, Lucille?"
+          "en": "I realize now that, under different circumstances, that conversation might have been a turning point in my life. But, because the offer was obviously and tactlessly for a service to be rendered, I had no choice but to cut him off.",
+          "es": "Esto pareció tranquilizarlo, y continuó con más confianza."
         },
         {
-          "en": "It was for Lucille, too.",
-          "es": "Fue para Lucille también."
+          "en": "“I’ve got my hands full,” I said. “I’m much obliged, but I can’t take on more work.”",
+          "es": "\"Pensé que no lo hacías, si me perdonas—ves, dirijo un pequeño negocio aparte, una especie de línea secundaria, entiende. Y pensé que si no ganas mucho—Estás vendiendo bonos, ¿verdad, viejo?\"."
         },
         {
-          "en": "I like to come,\" Lucille said. \"I never care what I do, so I always have a good time. When I was last here, I tore my gown on a chair, and he asked for my name and address—within a week, I got a package from Croirier's with a new evening gown in it.",
-          "es": "Me gusta venir,\" dijo Lucille. \"Nunca me importa lo que hago, así que siempre paso bien. Cuando estuve aquí la última vez, rasgué mi vestido en una silla, y pidió mi nombre y dirección—dentro de una semana, recibí un paquete de Croirier's con un nuevo vestido de noche."
+          "en": "“You wouldn’t have to do any business with Wolfshiem.” He evidently thought I was avoiding the “connection” mentioned at lunch, but I assured him he was wrong. He waited a moment longer, hoping I’d start a conversation, but I was too preoccupied to respond, so he reluctantly went home.",
+          "es": "\"Intentándolo\"."
         },
         {
-          "en": "\"Did you keep it?\" asked Jordan.",
-          "es": "\"¿Lo mantuviste?\" preguntó Jordan."
+          "en": "The evening had made me lightheaded and happy; I think I walked into a deep sleep as I entered my front door. So I don’t know whether Gatsby went to Coney Island or how long he “glanced into rooms” while his house blazed brightly. I called Daisy from the office the next morning and invited her to tea.",
+          "es": "\"Bueno, esto podría interesarte. No te tomaría mucho tiempo, y podrías ganar una cantidad agradable. Es un asunto bastante confidencial\"."
         },
         {
-          "en": "Sure I did. I was going to wear it tonight, but it was too big in the bust and needed altering. It was gas blue with lavender beads. Two hundred and sixty-five dollars.",
-          "es": "Claro que sí. Iba a usarlo esta noche, pero era demasiado grande en el busto y necesitaba ajustes. Era azul gas con cuentas lavanda. Doscientos sesenta y cinco dólares."
+          "en": "“Don’t bring Tom,” I warned her.",
+          "es": "Me doy cuenta ahora de que, bajo circunstancias diferentes, esa conversación podría haber sido un punto de inflexión en mi vida. Pero, como la oferta era obviamente y de manera incómoda por un servicio a ser prestado, no me quedó más remedio que cortarlo."
         },
         {
-          "en": "There's something strange about a guy who'd do that,\" said the other girl eagerly. \"He doesn't want any trouble with anyone.",
-          "es": "Hay algo extraño en un tipo que haría eso,\" dijo la otra chica con entusiasmo. \"No quiere problemas con nadie."
+          "en": "“What?”",
+          "es": "\"Tengo las manos ocupadas\", dije. \"Estoy muy agradecido, pero no puedo asumir más trabajo\"."
         },
         {
-          "en": "\"Who doesn't?\" I asked.",
-          "es": "\"¿Quién no?\" pregunté."
+          "en": "“Don’t bring Tom.”",
+          "es": "\"No tendrías que hacer ningún negocio con Wolfshiem\". Evidentemente pensó que evitaba la \"conexión\" mencionada al almuerzo, pero le aseguré que estaba equivocado. Esperó un momento más, esperando que iniciara una conversación, pero estaba demasiado preocupado para responder, así que se fue a casa con reluctancia."
         },
         {
-          "en": "Gatsby. Somebody told me—",
-          "es": "Gatsby. Alguien me dijo—"
+          "en": "“Who is ‘Tom’?” she asked innocently.",
+          "es": "La tarde me había dejado mareado y feliz; creo que entré en un sueño profundo cuando entré por mi puerta principal. Así que no sé si Gatsby fue a Coney Island o cuánto tiempo estuvo \"mirando hacia adentro las habitaciones\" mientras su casa brillaba intensamente. Llamé a Daisy desde la oficina a la mañana siguiente e la invité a tomar el té."
         },
         {
-          "en": "The two girls and Jordan leaned in together confidentially.",
-          "es": "Las dos chicas y Jordan se inclinaron juntas confidencialmente."
+          "en": "The day we agreed on was pouring rain. At eleven o’clock, a man in a raincoat, dragging a lawnmower, knocked at my door and said Mr. Gatsby had sent him to cut my grass. This reminded me I had forgotten to tell my Finn to come back, so I drove into West Egg Village to find her among wet whitewashed alleys and to buy cups, lemons, and flowers.",
+          "es": "\"No traigas a Tom\", la advertí."
         },
         {
-          "en": "Somebody told me they thought he killed a man once.",
-          "es": "Alguien me dijo que pensaban que mató a un hombre una vez."
+          "en": "The flowers were unnecessary because, at two o’clock, a greenhouse arrived from Gatsby’s, with countless containers to hold it. An hour later, the front door opened nervously, and Gatsby, in a white flannel suit, silver shirt, and gold-colored tie, hurried in. He was pale, with dark signs of sleeplessness under his eyes.",
+          "es": "\"¿Qué?\"."
         }
       ]
     },
     "4": {
       "lines": [
         {
-          "en": "A thrill passed over all of us. The three Mr. Mumbles leaned forward and listened eagerly.",
-          "es": "Un escalofrío pasó sobre todos nosotros. Los tres señores Murmuro se inclinaron hacia adelante y escucharon con entusiasmo."
+          "en": "“Is everything all right?” he asked immediately.",
+          "es": "\"No traigas a Tom\"."
         },
         {
-          "en": "I don't think it's that,\" Lucille argued skeptically; \"it's more that he was a German spy during the war.",
-          "es": "No creo que sea eso,\" argumentó Lucille escépticamente; \"es más que él fue un espía alemán durante la guerra."
+          "en": "“The grass looks fine, if that’s what you mean.”",
+          "es": "\"¿Quién es 'Tom'?\", preguntó inocentemente."
         },
         {
-          "en": "One of the men nodded in agreement.",
-          "es": "Uno de los hombres asintió en acuerdo."
+          "en": "“What grass?” he asked blankly. “Oh, the grass in the yard.” He looked out the window at it, but judging by his expression, I don’t think he saw anything.",
+          "es": "El día que acordamos estuvo lloviendo a cántaros. A las once en punto, un hombre con impermeable, arrastrando una cortadora de césped, tocó a mi puerta y dijo que el señor Gatsby lo había enviado para cortar mi pasto. Esto me recordó que había olvidado decirle a mi finlandesa que regresara, así que conduje a West Egg Village para encontrarla entre los callejones blanqueados mojados y comprar tazas, limones y flores."
         },
         {
-          "en": "\"I heard that from a man who knew all about him, grew up with him in Germany,\" he assured us confidently.",
-          "es": "\"Escuché eso de un hombre que lo sabía todo sobre él, creció con él en Alemania,\" nos aseguró confiadamente."
+          "en": "“Looks very good,” he remarked vaguely. “One of the papers said they thought the rain would stop around four. I think it was The Journal. Do you have everything you need for tea?”",
+          "es": "Las flores eran innecesarias porque, a las dos en punto, un invernadero llegó desde la casa de Gatsby, con incontables contenedores para sostenerla. Una hora después, la puerta principal se abrió nerviosamente, y Gatsby, en un traje de franela blanco, camisa plateada y corbata color oro, entró apresuradamente. Estaba pálido, con señales oscuras de insomnio bajo sus ojos."
         },
         {
-          "en": "Oh, no,\" said the first girl, \"it couldn't be that, because he was in the American army during the war.\" As we shifted our belief back to her, she leaned forward with enthusiasm. \"You look at him sometimes when he thinks nobody's watching. I'll bet he killed a man.",
-          "es": "Oh, no,\" dijo la primera chica, \"no podría ser eso, porque estaba en el ejército estadounidense durante la guerra.\" Cuando cambiamos nuestra creencia hacia ella, se inclinó hacia adelante con entusiasmo. \"Míralo a veces cuando cree que nadie está mirando. Apuesto a que mató a un hombre."
+          "en": "I took him into the pantry, where he looked a little reproachfully at the Finn. Together we examined the twelve lemon cakes from the delicatessen.",
+          "es": "\"¿Está todo bien?\", preguntó inmediatamente."
         },
         {
-          "en": "She narrowed her eyes and shivered. Lucille shivered. We all turned to look for Gatsby. It was a testament to the romantic speculation he inspired that there were whispers about him from those who rarely found much to whisper about in this world.",
-          "es": "Entrecerró los ojos y tembló. Lucille tembló. Todos nos volvimos para buscar a Gatsby. Era un testimonio de la especulación romántica que inspiraba que hubiera susurros sobre él de aquellos que rara vez encontraban mucho de qué susurrar en este mundo."
+          "en": "“Will they do?” I asked.",
+          "es": "\"El pasto se ve bien, si es eso lo que quieres decir\"."
         },
         {
-          "en": "The first supper—there would be another after midnight—was now being served, and Jordan invited me to join her party, who were gathered around a table on the other side of the garden. There were three married couples and Jordan's escort, a persistent undergraduate prone to bold innuendo and clearly under the impression that Jordan would eventually give in to him to some extent. Instead of wandering, this group maintained a dignified unity, assuming the role of representing the stable nobility of the countryside—East Egg condescending to West Egg and carefully guarding against its vibrant gaiety.",
-          "es": "La primera cena—habría otra después de medianoche—ahora se estaba sirviendo, y Jordan me invitó a unirme a su grupo, que estaba reunido alrededor de una mesa al otro lado del jardín. Había tres parejas casadas y la escolta de Jordan, un estudiante de último año persistente propenso a insinuaciones audaces y claramente bajo la impresión de que Jordan eventualmente cedería a él hasta cierto punto. En lugar de vagar, este grupo mantenía una unidad digna, asumiendo el papel de representar la nobleza estable del campo—East Egg mirando por encima del hombro a West Egg y cuidadosamente guardándose contra su alegría vibrante."
+          "en": "“Of course, of course! They’re fine!” and he added hollowly, “… old sport.”",
+          "es": "\"¿Qué pasto?\", preguntó confundido. \"Oh, el pasto en el patio\". Miró hacia afuera por la ventana, pero juzgando por su expresión, no creo que viera nada."
         },
         {
-          "en": "Let's get out,\" Jordan whispered after a somehow wasteful and inappropriate half-hour; \"this is much too polite for me.",
-          "es": "\"Salgamos,\" susurró Jordan después de una media hora de alguna manera derrochadora e inapropiada; \"esto es demasiado educado para mí."
+          "en": "The rain eased around half-past three to a damp mist, through which occasional thin drops floated like dew. Gatsby looked with vacant eyes through a copy of Clay’s Economics, starting at the Finnish footsteps that shook the kitchen floor, and peering towards the blurred windows now and then as if a series of invisible but alarming events were happening outside. Finally, he got up and told me, in an uncertain voice, that he was going home.",
+          "es": "\"Se ve muy bien\", comentó vagamente. \"Uno de los periódicos dijo que creían que la lluvia pararía alrededor de las cuatro. Creo que fue The Journal. ¿Tienes todo lo que necesitas para el té?\"."
         },
         {
-          "en": "We got up, and she explained that we were going to find the host: I had never met him, she said, and it was making me uneasy. The undergraduate nodded in a cynical, melancholy way.",
-          "es": "Nos levantamos, y explicó que íbamos a encontrar al anfitrión: nunca lo había conocido, dijo, y eso me estaba poniendo incómodo. El estudiante de último año asintió de una manera cínica y melancólica."
+          "en": "“Why’s that?”",
+          "es": "Lo llevé a la despensa, donde miró un poco con reproche a la finlandesa. Juntos examinamos los doce pasteles de limón de la delicatessen."
         },
         {
-          "en": "The bar, where we looked first, was crowded, but Gatsby wasn't there. She couldn't find him from the top of the steps, and he wasn't on the veranda. On a whim, we tried an important-looking door and walked into a high Gothic library, paneled with carved English oak, probably brought complete from some ruin overseas.",
-          "es": "El bar, donde buscamos primero, estaba lleno, pero Gatsby no estaba allí. No pudiera encontrarlo desde la cima de los escalones, y no estaba en la veranda. Por capricho, probamos una puerta que parecía importante y entramos en una biblioteca gótica alta, panelada con roble inglés tallado, probablemente traído completo de alguna ruina en el extranjero."
+          "en": "“Nobody’s coming to tea. It’s too late!” He looked at his watch as if there was some urgent demand on his time elsewhere. “I can’t wait all day.”",
+          "es": "\"¿Sirven?\", pregunté."
+        },
+        {
+          "en": "“Don’t be silly; it’s just two minutes to four.”",
+          "es": ""
+        },
+        {
+          "en": "He sat down miserably, as if I had pushed him, and simultaneously there was the sound of a motor turning into my lane. We both jumped up, and, feeling a little anxious myself, I went out into the yard.",
+          "es": ""
         }
       ]
     },
     "5": {
       "lines": [
         {
-          "en": "A stout, middle-aged man, with enormous owl-eyed glasses, was sitting somewhat drunk on the edge of a large table, staring intently at the shelves of books. As we entered, he turned excitedly and examined Jordan from head to toe.",
-          "es": "Un hombre robusto de mediana edad, con enormes gafas de búho, estaba sentado algo borracho en el borde de una mesa grande, mirando intensamente los estantes de libros. Cuando entramos, se giró emocionado y examinó a Jordan de pies a cabeza."
+          "en": "Under the dripping bare lilac trees, a large open car was coming up the drive. It stopped. Daisy’s face, tilted sideways beneath a three-cornered lavender hat, looked out at me with a bright, ecstatic smile.",
+          "es": "\"¡Por supuesto, por supuesto! ¡Están bien!\", y añadió huecamente, \"... viejo\"."
         },
         {
-          "en": "\"What do you think?\" he asked impulsively.",
-          "es": "\"¿Qué crees?\" preguntó impulsivamente."
+          "en": "“Is this absolutely where you live, my dearest one?”",
+          "es": "La lluvia aminoró alrededor de las tres y media a una neblina húmeda, a través de la cual ocasionales gotas finas flotaban como rocío. Gatsby miraba con ojos vacíos a través de una copia de Economía de Clay, sobresaltándose con los pasos finlandeses que sacudían el piso de la cocina, y asomando hacia las ventanas borrosas de vez en cuando como si una serie de eventos invisibles pero alarmantes estuvieran sucediendo afuera. Finalmente, se levantó y me dijo, con una voz incierta, que se iba a casa."
         },
         {
-          "en": "About what?",
-          "es": "¿Sobre qué?"
+          "en": "The exhilarating ripple of her voice was a wild tonic in the rain. I had to follow the sound of it for a moment, up and down, with my ear alone, before any words came through. A damp streak of hair lay like a dash of blue paint across her cheek, and her hand was wet with glistening drops as I took it to help her from the car.",
+          "es": "\"¿Por qué?\"."
         },
         {
-          "en": "He gestured toward the bookshelves.",
-          "es": "Hizo un gesto hacia los estantes."
+          "en": "“Are you in love with me,” she said low in my ear, “or why did I have to come alone?”",
+          "es": "\"Nadie viene a tomar el té. ¡Es demasiado tarde!\" Miró su reloj como si hubiera alguna demanda urgente en su tiempo en otro lugar. \"No puedo esperar todo el día\"."
         },
         {
-          "en": "About that. As a matter of fact, you don't need to check. I checked. They're real.",
-          "es": "Sobre eso. De hecho, no necesitas revisar. Yo revisé. Son reales."
+          "en": "“That’s the secret of Castle Rackrent. Tell your chauffeur to go far away and spend an hour.”",
+          "es": "\"No seas tonto; faltan solo dos minutos para las cuatro\"."
         },
         {
-          "en": "The books?",
-          "es": "¿Los libros?"
+          "en": "“Come back in an hour, Ferdie.” Then in a grave murmur: “His name is Ferdie.”",
+          "es": "Se sentó miserablemente, como si lo hubiera empujado, y simultáneamente hubo el sonido de un motor que giraba hacia mi camino. Ambos nos levantamos, y, sintiendo un poco ansioso yo mismo, salí al patio."
         },
         {
-          "en": "He nodded.",
-          "es": "Asintió."
+          "en": "“Does the gasoline affect his nose?”",
+          "es": "Bajo los árboles de lila desnudos y goteantes, un gran automóvil abierto venía subiendo por el camino. Se detuvo. La cara de Daisy, inclinada hacia un lado bajo un sombrero color lavanda de tres picos, me miraba con una sonrisa brillante y extática."
         },
         {
-          "en": "Absolutely real—they have pages and everything. I thought they'd be a nice durable cardboard. As a matter of fact, they're absolutely real. Pages and—Here! Let me show you.",
-          "es": "Absolutamente reales—tienen páginas y todo. Pensé que serían un cartón duradero agradable. De hecho, son absolutamente reales. Páginas y—¡Aquí! Déjame mostrarte."
+          "en": "“I don’t think so,” she said innocently. “Why?”",
+          "es": "\"¿Es absolutamente donde vives, mi amor más querido?\"."
         },
         {
-          "en": "Assuming our skepticism, he rushed to the bookcases and returned with Volume One of the Stoddard Lectures.",
-          "es": "Asumiendo nuestro escepticismo, corrió a los libreros y regresó con el Volumen Uno de las Conferencias de Stoddard."
+          "en": "We went in. To my overwhelming surprise, the living room was deserted.",
+          "es": "El rizo exhilarante de su voz fue un tónico silvestre en la lluvia. Tuve que seguir el sonido de ella durante un momento, arriba y abajo, con mi oído solamente, antes de que llegaran palabras. Un mechón de cabello mojado yacía como un trazo de pintura azul en su mejilla, y su mano estaba mojada con gotas brillantes cuando la tomé para ayudarla a salir del coche."
         },
         {
-          "en": "See!\" he exclaimed triumphantly. \"It's a genuine piece of printed matter. It fooled me. This guy's a regular Belasco. It's a triumph. What thoroughness! What realism! Knew when to stop, too—didn't cut the pages. But what do you want? What do you expect?",
-          "es": "¡Mira!\" exclamó triunfalmente. \"Es una obra de materia impresa genuina. Me engañó. Este tipo es un Belasco regular. Es un triunfo. ¡Qué minuciosidad! ¡Qué realismo! Supo cuándo detenerse, también—no cortó las páginas. ¿Pero qué quieres? ¿Qué esperas?"
+          "en": "“Well, that’s funny,” I exclaimed.",
+          "es": "\"¿Estás enamorado de mí\", dijo bajo en mi oído, \"o por qué tuve que venir sola?\"."
         }
       ]
     },
     "6": {
       "lines": [
         {
-          "en": "He snatched the book from me and quickly returned it to the shelf, muttering that if one brick were removed, the whole library might collapse.",
-          "es": "Arrebató el libro de mí y rápidamente lo devolvió al estante, murmurando que si se sacara un ladrillo, toda la biblioteca podría colapsar."
+          "en": "“What’s funny?”",
+          "es": "\"Ese es el secreto de Castle Rackrent. Dile a tu chófer que se vaya lejos y que pase una hora\"."
         },
         {
-          "en": "Who brought you?\" he asked. \"Or did you just come? I was brought. Most people were brought.",
-          "es": "¿Quién te trajo?\" preguntó. \"¿O simplemente viniste? Yo fui traído. La mayoría de la gente fue traída."
+          "en": "She turned her head as there was a light, dignified knocking at the front door. I went out and opened it. Gatsby, pale as death, with his hands plunged like weights in his coat pockets, was standing in a puddle of water, glaring tragically into my eyes.",
+          "es": "\"Regresa en una hora, Ferdie\". Luego en un murmur serio: \"Su nombre es Ferdie\"."
         },
         {
-          "en": "Jordan looked at him alertly, cheerfully, without answering.",
-          "es": "Jordan lo miró atentamente, alegremente, sin responder."
+          "en": "With his hands still in his coat pockets, he walked past me into the hall, turned sharply as if he were on a wire, and disappeared into the living room. It wasn’t a bit funny. Aware of the loud beating of my own heart, I closed the door against the increasing rain.",
+          "es": "\"¿La gasolina afecta su nariz?\"."
         },
         {
-          "en": "I was brought by a woman named Roosevelt,\" he continued. \"Mrs. Claud Roosevelt. Do you know her? I met her somewhere last night. I've been drunk for about a week now, and I thought it might sober me up to sit in a library.",
-          "es": "Fui traído por una mujer llamada Roosevelt,\" continuó. \"La Sra. Claud Roosevelt. ¿La conoces? Me la encontré en algún lugar la noche pasada. He estado borracho durante aproximadamente una semana, y pensé que podría desintoxicarme sentándome en una biblioteca."
+          "en": "For half a minute, there wasn’t a sound. Then from the living room, I heard a sort of choking murmur and part of a laugh, followed by Daisy’s voice on a clear artificial note:",
+          "es": "\"No lo creo\", dijo inocentemente. \"¿Por qué?\"."
         },
         {
-          "en": "Has it?",
-          "es": "¿Ha funcionado?"
+          "en": "“I certainly am awfully glad to see you again.”",
+          "es": "Entramos. Para mi sorpresa abrumadora, la sala de estar estaba desierta."
         },
         {
-          "en": "A little bit, I think. I can't tell yet. I've only been here an hour. Did I tell you about the books? They're real. They're—",
-          "es": "Un poco, creo. No puedo decir todavía. Solo he estado aquí una hora. ¿Te hablé sobre los libros? Son reales. Ellos son—"
+          "en": "A pause; it endured horribly. I had nothing to do in the hall, so I went into the room.",
+          "es": "\"Bueno, eso es raro\", exclamé."
         },
         {
-          "en": "You told us.",
-          "es": "Nos lo dijiste."
+          "en": "Gatsby, his hands still in his pockets, was leaning against the mantelpiece in a strained imitation of perfect ease, even of boredom. His head leaned back so far that it rested against the face of a defunct mantelpiece clock, and from this position, his distracted eyes stared down at Daisy, who was sitting, frightened but graceful, on the edge of a stiff chair.",
+          "es": "\"¿Qué es raro?\"."
         },
         {
-          "en": "We shook hands with him seriously and went back outside.",
-          "es": "Nos dimos la mano con él seriamente y salimos afuera."
+          "en": "“We’ve met before,” muttered Gatsby. His eyes glanced momentarily at me, and his lips parted with an abortive attempt at a laugh. Luckily, the clock took this moment to tilt dangerously at the pressure of his head, whereupon he turned and caught it with trembling fingers, and set it back in place. Then he sat down, rigidly, his elbow on the arm of the sofa and his chin in his hand.",
+          "es": "Giró la cabeza mientras había un golpe ligero y digno en la puerta principal. Salí y la abrí. Gatsby, pálido como la muerte, con sus manos hundidas como pesos en los bolsillos de su abrigo, estaba de pie en un charco de agua, mirándome trágicamente a los ojos."
         },
         {
-          "en": "There was dancing now on the canvas in the garden; old men awkwardly moving young girls backward in endless circles, and superior couples holding each other stylishly, staying in the corners. Many single girls were dancing alone or taking over from the orchestra for a while. By midnight, the excitement had grown. A famous tenor had sung in Italian, and a well-known contralto had performed jazz. In between, people were doing tricks all over the garden, while joyful, empty laughter rose into the summer sky. A pair of stage twins, who turned out to be the girls in yellow, did a baby act in costume, and champagne was poured into glasses larger than finger-bowls. The moon had risen higher, and on the Sound, there was a triangle of silver scales, trembling slightly to the stiff, tinny sound of the banjos on the lawn.",
-          "es": "Ahora había baile en la lona en el jardín; hombres mayores moviéndose incómodamente hacia atrás a las chicas jóvenes en círculos sin fin, y parejas superiores sosteniéndose mutuamente con estilo, quedándose en las esquinas. Muchas chicas solteras estaban bailando solas o tomando el relevo de la orquesta por un tiempo. A medianoche, la emoción había crecido. Un tenor famoso había cantado en italiano, y una contralto bien conocida había actuado jazz. Entre medio, personas estaban haciendo trucos por todo el jardín, mientras la risa alegre y vacía se elevaba al cielo de verano. Un par de gemelas de escena, que resultaron ser las chicas en amarillo, hicieron un acto de bebé en traje, y se vertió champán en vasos más grandes que escurridores. La luna había subido más alto, y en el Sonido, había un triángulo de escamas de plata, temblando ligeramente al sonido rígido y metálico de los banjos en el césped."
+          "en": "“I’m sorry about the clock,” he said.",
+          "es": "Con las manos aún en los bolsillos de su abrigo, caminó pasándome hacia el vestíbulo, giró bruscamente como si estuviera en un alambre, y desapareció en la sala de estar. No fue nada divertido. Consciente del fuerte latido de mi propio corazón, cerré la puerta contra la lluvia cada vez mayor."
         },
         {
-          "en": "I was still with Jordan Baker. We were sitting at a table with a man about my age and a lively young girl, who burst into uncontrollable laughter at the slightest provocation. I was enjoying myself now. I had drunk two finger-bowls of champagne, and the scene had transformed before my eyes into something meaningful, basic, and deep.",
-          "es": "Todavía estaba con Jordan Baker. Estábamos sentados en una mesa con un hombre de mi edad y una chica joven y animada, que estalló en una risa incontrolable por la más leve provocación. Ahora me estaba divirtiendo. Había bebido dos copas de champán del tamaño de escurridores, y la escena se había transformado ante mis ojos en algo significativo, básico y profundo."
+          "en": "My own face had now assumed a deep tropical burn. I couldn’t muster up a single commonplace out of the thousand in my head.",
+          "es": "Durante medio minuto, no hubo sonido alguno. Luego desde la sala de estar, escuché una especie de murmur ahogado y parte de una risa, seguida por la voz de Daisy en un tono claro artificial:"
+        },
+        {
+          "en": "",
+          "es": "\"Ciertamente estoy muy feliz de verte de nuevo\"."
         }
       ]
     },
     "7": {
       "lines": [
         {
-          "en": "During a pause in the entertainment, the man looked at me and smiled.",
-          "es": "Durante una pausa en el entretenimiento, el hombre me miró y sonrió."
+          "en": "“It’s an old clock,” I told them idiotically.",
+          "es": "Una pausa; duró horriblemente. No tenía nada que hacer en el vestíbulo, así que entré en la habitación."
         },
         {
-          "en": "Your face is familiar,\" he said politely. \"Weren't you in the First Division during the war?",
-          "es": "Tu cara me resulta familiar,\" dijo educadamente. \"¿No estuviste en la Primera División durante la guerra?"
+          "en": "I think we all believed for a moment that it had smashed in pieces on the floor.",
+          "es": "Gatsby, con las manos aún en los bolsillos, estaba inclinado contra la chimenea en una imitación forzada de perfecta comodidad, incluso de aburrimiento. Su cabeza se inclinaba hacia atrás tan lejos que descansaba contra la cara de un reloj de chimenea difunto, y desde esta posición, sus ojos distraídos miraban hacia abajo a Daisy, que estaba sentada, asustada pero graciosa, en el borde de una silla rígida."
         },
         {
-          "en": "Yes, I was in the Twenty-eighth Infantry.",
-          "es": "Sí, estuve en la Infantería Veintiocho."
+          "en": "“We haven’t met for many years,” said Daisy, her voice as matter-of-fact as it could ever be.",
+          "es": "\"Nos hemos visto antes\", murmuró Gatsby. Sus ojos me miraron brevemente, y sus labios se separaron con un intento abortado de risa. Afortunadamente, el reloj tomó este momento para inclinarse peligrosamente por la presión de su cabeza, por lo que se giró y lo atrapó con dedos temblones, y lo volvió a colocar en su lugar. Luego se sentó, rígidamente, su codo en el brazo del sofá y su barbilla en su mano."
         },
         {
-          "en": "I was in the Sixteenth until June 1918. I knew I'd seen you somewhere before.",
-          "es": "Estuve en la Decimosexta hasta junio de 1918. Sabía que te había visto en algún lugar antes."
+          "en": "“Five years next November.”",
+          "es": "\"Disculpa por el reloj\", dijo."
         },
         {
-          "en": "We talked briefly about some wet, gray little villages in France. It seemed he lived nearby, as he told me he'd just bought a hydroplane and planned to try it out in the morning.",
-          "es": "Hablamos brevemente sobre algunos pueblos pequeños, mojados y grises en Francia. Parecía que vivía cerca, ya que me dijo que acababa de comprar un hidroavión y planeaba probarlo por la mañana."
+          "en": "The automatic quality of Gatsby’s answer set us all back at least another minute. I had them both on their feet with the desperate suggestion that they help me make tea in the kitchen when the demoniac Finn brought it in on a tray.",
+          "es": "Mi propia cara había asumido ahora un bronceado tropical profundo. No pude reunir ni un solo lugar común de los mil en mi cabeza."
         },
         {
-          "en": "Want to come with me, old sport? Just along the shore near the Sound.",
-          "es": "¿Quieres venir conmigo, viejo deporte? Solo a lo largo de la orilla cerca del Sonido."
+          "en": "Amid the welcome confusion of cups and cakes, a certain physical decency established itself. Gatsby got himself into a shadow and, while Daisy and I talked, looked conscientiously from one to the other of us with tense, unhappy eyes. However, as calmness wasn’t an end in itself, I made an excuse at the first possible moment and got to my feet.",
+          "es": "\"Es un reloj antiguo\", les dije idiotamente."
         },
         {
-          "en": "What time?",
-          "es": "¿A qué hora?"
+          "en": "“Where are you going?” demanded Gatsby in immediate alarm.",
+          "es": "Creo que todos creímos por un momento que se había hecho pedazos en el piso."
         },
         {
-          "en": "Any time that suits you best.",
-          "es": "A cualquier hora que te convenga mejor."
+          "en": "“I’ll be back.”",
+          "es": "\"No nos hemos visto en muchos años\", dijo Daisy, su voz tan factual como podría serlo."
         },
         {
-          "en": "I was about to ask his name when Jordan turned and smiled.",
-          "es": "Estaba a punto de preguntar su nombre cuando Jordan se giró y sonrió."
+          "en": "“I’ve got to speak to you about something before you go.”",
+          "es": "\"Cinco años el próximo noviembre\"."
         },
         {
-          "en": "\"Having a good time now?\" she asked.",
-          "es": "\"¿Lo estás pasando bien ahora?\" preguntó."
+          "en": "He followed me wildly into the kitchen, closed the door, and whispered: “Oh, God!” in a miserable way.",
+          "es": "La calidad automática de la respuesta de Gatsby nos hizo retroceder al menos otro minuto. Los puse a ambos de pie con la sugerencia desesperada de que me ayudaran a hacer té en la cocina cuando la finlandesa demoníaca lo trajo en una bandeja."
         }
       ]
     },
     "8": {
       "lines": [
         {
-          "en": "Much better.\" I turned back to my new acquaintance. \"This is a unique party for me. I haven't even seen the host. I live over there—\" I gestured towards the distant invisible hedge, \"and this man Gatsby sent his chauffeur with an invitation.",
-          "es": "Mucho mejor.\" Me giré hacia mi nuevo conocido. \"Esta es una fiesta única para mí. Ni siquiera he visto al anfitrión. Vivo por allá—\" señalé el seto distante e invisible, \"y este tipo Gatsby envió a su chófer con una invitación."
+          "en": "“What’s the matter?”",
+          "es": "En medio de la confusión bienvenida de tazas y pasteles, se estableció una cierta decencia física. Gatsby se metió en una sombra y, mientras Daisy y yo hablábamos, miraba conscienzudamente de uno a otro de nosotros con ojos tensos e infelices. Sin embargo, como la calma no era un fin en sí mismo, puse una excusa en el primer momento posible y me puse de pie."
         },
         {
-          "en": "For a moment, he looked at me as if he didn't understand.",
-          "es": "Por un momento, me miró como si no entendiera."
+          "en": "“This is a terrible mistake,” he said, shaking his head from side to side, “a terrible, terrible mistake.”",
+          "es": "\"¿A dónde vas?\", exigió Gatsby en alarma inmediata."
         },
         {
-          "en": "\"I'm Gatsby,\" he said suddenly.",
-          "es": "\"Soy Gatsby,\" dijo de repente."
+          "en": "“You’re just embarrassed, that’s all,” and luckily I added: “Daisy’s embarrassed too.”",
+          "es": "\"Volveré\"."
         },
         {
-          "en": "What!\" I exclaimed. \"Oh, I beg your pardon.",
-          "es": "¿Qué!\" exclamé. \"Oh, te pido disculpas."
+          "en": "“She’s embarrassed?” he repeated incredulously.",
+          "es": "\"Tengo que hablar contigo sobre algo antes de que te vayas\"."
         },
         {
-          "en": "I thought you knew, old sport. I'm afraid I'm not a very good host.",
-          "es": "Pensé que sabías, viejo deporte. Me temo que no soy un muy buen anfitrión."
+          "en": "“Just as much as you are.”",
+          "es": "Me siguió salvajemente hacia la cocina, cerró la puerta, y susurró: \"¡Oh, Dios!\" de manera miserable."
         },
         {
-          "en": "He smiled understandingly—more than just understandingly. It was one of those rare smiles with a quality of eternal reassurance in it, that you might encounter four or five times in life. It faced—or seemed to face—the whole eternal world for a moment, then focused on you with an irresistible bias in your favor. It understood you just as far as you wanted to be understood, believed in you as you would like to believe in yourself, and assured you that it had exactly the impression of you that, at your best, you hoped to convey. Precisely at that point it vanished—and I was looking at an elegant young roughneck, a year or two over thirty, whose elaborate formality of speech just avoided being absurd. Before he introduced himself, I had a strong impression that he was choosing his words carefully.",
-          "es": "Sonrió de manera comprensiva—más que solo comprensiva. Era una de esas raras sonrisas con una calidad de tranquilidad eterna, que podrías encontrar cuatro o cinco veces en la vida. Enfrentó—o parecía enfrentar—el mundo eternamente completo por un momento, luego se enfocó en ti con un sesgo irresistible a tu favor. Te entendía exactamente tan lejos como querías ser entendido, creía en ti como te gustaría creer en ti mismo, y te aseguró que tenía exactamente la impresión de ti que, en tu mejor momento, esperabas transmitir. Precisamente en ese punto desapareció—y estaba mirando a un matón joven y elegante, de uno o dos años pasados los treinta, cuya formalidad del habla elaborada evitaba apenas ser absurda. Antes de presentarse a sí mismo, tuve la fuerte impresión de que estaba eligiendo sus palabras cuidadosamente."
+          "en": "“Don’t talk so loud.”",
+          "es": "\"¿Qué sucede?\"."
         },
         {
-          "en": "Almost at the moment Mr. Gatsby identified himself, a butler hurried toward him with the news that Chicago was calling him on the phone. He excused himself with a small bow that included each of us in turn.",
-          "es": "Casi en el momento en que el Sr. Gatsby se identificó, un mayordomo se apresuró hacia él con la noticia de que Chicago lo estaba llamando por teléfono. Se excusó con una pequeña reverencia que incluía a cada uno de nosotros por turno."
+          "en": "“You’re acting like a little boy,” I broke out impatiently. “Not only that, but you’re rude. Daisy’s sitting in there all alone.”",
+          "es": "\"Esto es un error terrible\", dijo, moviendo la cabeza de lado a lado, \"un error terrible, terrible\"."
         },
         {
-          "en": "If you need anything, just ask for it, old sport,\" he urged me. \"Excuse me. I will rejoin you later.",
-          "es": "Si necesitas algo, solo pídelo, viejo deporte,\" me urgió. \"Disculpa. Me reuniré contigo más tarde."
+          "en": "He raised his hand to stop my words, looked at me with unforgettable reproach, and, opening the door cautiously, went back into the other room.",
+          "es": "\"Solo estás avergonzado, eso es todo\", y afortunadamente añadí: \"Daisy también está avergonzada\"."
         },
         {
-          "en": "When he had left, I turned immediately to Jordan—compelled to express my surprise. I had expected that Mr. Gatsby would be a florid and corpulent man in his middle years.",
-          "es": "Cuando se fue, me giré inmediatamente hacia Jordan—obligado a expresar mi sorpresa. Había esperado que el Sr. Gatsby fuera un hombre florido y corpulento en sus años medios."
+          "en": "I walked out the back way—just as Gatsby had when he had made his nervous circuit of the house half an hour before—and ran for a huge black knotted tree, whose massed leaves made a fabric against the rain. Once more it was pouring, and my irregular lawn, well-shaved by Gatsby’s gardener, abounded in small muddy swamps and prehistoric marshes. There was nothing to look at from under the tree except Gatsby’s enormous house, so I stared at it, like Kant at his church steeple, for half an hour. A brewer had built it early in the “period” craze, a decade before, and there was a story that he’d agreed to pay five years’ taxes on all the neighboring cottages if the owners would have their roofs thatched with straw. Perhaps their refusal took the heart out of his plan to Found a Family—he went into an immediate decline. His children sold his house with the black wreath still on the door. Americans, while willing, even eager, to be serfs, have always been obstinate about being peasantry.",
+          "es": "\"¿Ella está avergonzada?\", repitió incrédulamente."
         },
         {
-          "en": "Who is he?\" I asked. \"Do you know?",
-          "es": "¿Quién es?\" pregunté. \"¿Lo sabes?"
+          "en": "After half an hour, the sun shone again, and the grocer’s automobile rounded Gatsby’s drive with the raw material for his servants’ dinner—I felt sure he wouldn’t eat a spoonful. A maid began opening the upper windows of his house, appeared momentarily in each, and, leaning from the large central bay, spat meditatively into the garden. It was time I went back. While the rain continued, it had seemed like the murmur of their voices, rising and swelling a little now and then with gusts of emotion. But in the new silence, I felt that silence had fallen within the house too.",
+          "es": "\"Tanto como tú\"."
         }
       ]
     },
     "9": {
       "lines": [
         {
-          "en": "He's just a man named Gatsby.",
-          "es": "Es solo un tipo llamado Gatsby."
+          "en": "I entered the room after making all kinds of noise in the kitchen, except for knocking over the stove, but I doubt they heard a thing. They sat at opposite ends of the couch, gazing at each other as if a question had been asked or was lingering between them, and all traces of awkwardness had vanished. Daisy's face was streaked with tears, and when she saw me, she quickly stood and began wiping them away with her handkerchief in front of a mirror. However, Gatsby had changed in a way that was truly bewildering. He seemed to glow; without speaking or showing any signs of joy, a new sense of happiness radiated from him and filled the small room.",
+          "es": "\"No hables tan fuerte\"."
         },
         {
-          "en": "Where is he from, I mean? And what does he do?",
-          "es": "¿De dónde es, quiero decir? ¿Y qué hace?"
+          "en": "\"Oh, hello, old sport,\" he greeted me, as if we hadn't seen each other in years. For a moment, I thought he might want to shake hands.",
+          "es": "\"Estás actuando como un niño pequeño\", exploté impacientemente. \"No solo eso, sino que eres grosero. Daisy está sentada ahí completamente sola\"."
         },
         {
-          "en": "Now you're getting into it,\" she answered with a faint smile. \"Well, he once told me he was an Oxford man.",
-          "es": "Ahora estás entrando en ello,\" respondió con una sonrisa leve. \"Bueno, una vez me dijo que era un hombre de Oxford."
+          "en": "It's stopped raining.",
+          "es": "Levantó la mano para detener mis palabras, me miró con un reproche inolvidable, y, abriendo la puerta cautelosamente, regresó a la otra habitación."
         },
         {
-          "en": "A vague background started to form behind him, but with her next remark, it disappeared.",
-          "es": "Un trasfondo vago comenzó a formarse detrás de él, pero con su próxima observación, desapareció."
+          "en": "Has it?\" When he understood what I meant, noticing the bits of sunshine in the room, he smiled like a weatherman, like someone delighted by the return of light, and repeated the news to Daisy. \"What do you think of that? It's stopped raining.",
+          "es": "Salí por la puerta trasera—tal como Gatsby lo había hecho cuando había hecho su circuito nervioso de la casa media hora antes—y corrí hacia un enorme árbol negro nudoso, cuyos follajes apilados hacían un tejido contra la lluvia. De nuevo estaba lloviendo a cántaros, y mi césped irregular, bien cortado por el jardinero de Gatsby, abundaba en pequeños pantanos fangosos y pantanos prehistóricos. No había nada que mirar desde debajo del árbol excepto la enorme casa de Gatsby, así que la miré, como Kant a su campanario de iglesia, durante media hora. Un cervecero la había construido al principio de la \"época\" de la moda, una década antes, y había una historia de que había acordado pagar cinco años de impuestos en todas las casitas vecinas si los propietarios tenían sus techos techados con paja. Quizás su rechazo quitó el corazón de su plan de Fundar una Familia—entró en un declive inmediato. Sus hijos vendieron su casa con la corona negra aún en la puerta. Los estadounidenses, aunque dispuestos, incluso ansiosos, de ser siervos, siempre han sido obstinados sobre ser campesinos."
         },
         {
-          "en": "However, I don't believe it.",
-          "es": "Sin embargo, no lo creo."
+          "en": "\"I'm glad, Jay.\" Her voice, full of aching beauty, revealed her unexpected joy.",
+          "es": "Después de media hora, el sol brilló de nuevo, y el automóvil del tendero giró hacia el camino de Gatsby con la materia prima para la cena de sus sirvientes—estaba seguro de que no comería una cucharada. Una criada comenzó a abrir las ventanas superiores de su casa, apareció momentáneamente en cada una, y, inclinándose desde la gran bahía central, escupió meditabundamente hacia el jardín. Era hora de que regresara. Mientras la lluvia continuaba, había parecido como el murmullo de sus voces, subiendo y bajando un poco de vez en cuando con ráfagas de emoción. Pero en el nuevo silencio, sentí que el silencio también había caído dentro de la casa."
         },
         {
-          "en": "Why not?",
-          "es": "¿Por qué no?"
+          "en": "I want you and Daisy to come over to my house,\" he suggested. \"I'd like to show her around.",
+          "es": "Entré en la habitación después de hacer todo tipo de ruido en la cocina, excepto volcar la estufa, pero dudo que hayan escuchado algo. Estaban sentados en extremos opuestos del sofá, mirándose como si se hubiera hecho una pregunta o estuviera pendiente entre ellos, y todos los rastros de torpeza habían desaparecido. La cara de Daisy estaba manchada de lágrimas, y cuando me vio, rápidamente se levantó y comenzó a limpiarlas con su pañuelo frente a un espejo. Sin embargo, Gatsby había cambiado de una manera que era verdaderamente desconcertante. Parecía brillar; sin hablar ni mostrar signos de alegría, un nuevo sentido de felicidad irradiaba de él y llenaba la pequeña habitación."
         },
         {
-          "en": "I don't know,\" she insisted, \"I just don't think he went there.",
-          "es": "No sé,\" insistió, \"solo no creo que haya ido allá."
+          "en": "You're sure you want me to come?",
+          "es": "\"Oh, hola, viejo\", me saludó, como si no nos hubiéramos visto en años. Por un momento, pensé que podría querer estrecharme la mano."
         },
         {
-          "en": "Something in her tone reminded me of the other girl's \"I think he killed a man,\" and it piqued my curiosity. I would have accepted without question the information that Gatsby came from the swamps of Louisiana or the lower East Side of New York. That was understandable. But young men didn't—at least in my limited experience I believed they didn't—drift coolly out of nowhere and buy a mansion on Long Island Sound.",
-          "es": "Algo en su tono me recordó el \"Creo que mató a un hombre\" de la otra chica, y picó mi curiosidad. Habría aceptado sin pregunta la información de que Gatsby vino de los pantanos de Luisiana o de la parte baja de East Side de Nueva York. Eso era comprensible. Pero los hombres jóvenes no—al menos en mi experiencia limitada creía que no—se derivaban fríamente de la nada y compraban una mansión en Long Island Sound."
+          "en": "Absolutely, old sport.",
+          "es": "Ha dejado de llover."
         },
         {
-          "en": "Anyway, he gives large parties,\" said Jordan, changing the subject with a city dweller's distaste for the concrete. \"And I like large parties. They're so intimate. At small parties, there isn't any privacy.",
-          "es": "De todas maneras, da grandes fiestas,\" dijo Jordan, cambiando de tema con el disgusto de un habitante de la ciudad por lo concreto. \"Y me encantan las fiestas grandes. Son tan íntimas. En las fiestas pequeñas, no hay privacidad."
+          "en": "Daisy went upstairs to wash her face—too late, I felt embarrassed about my towels—while Gatsby and I waited on the lawn.",
+          "es": "\"¿Sí?\" Cuando entendió lo que quería decir, notando los rayos de sol en la habitación, sonrió como un meteorólogo, como alguien deleitado por el retorno de la luz, y repitió las noticias a Daisy. \"¿Qué te parece? Ha dejado de llover\"."
         },
         {
-          "en": "There was the boom of a bass drum, and the orchestra leader's voice rang out suddenly above the garden's echo.",
-          "es": "Hubo el boom de un bombo, y la voz del director de la orquesta sonó de repente por encima del eco del jardín."
+          "en": "My house looks good, doesn't it?\" he asked. \"See how the whole front catches the light.",
+          "es": "\"Me alegra, Jay\". Su voz, llena de belleza dolorosa, reveló su alegría inesperada."
         }
       ]
     },
     "10": {
       "lines": [
         {
-          "en": "\"Ladies and gentlemen,\" he cried. \"At Mr. Gatsby's request, we are going to play Mr. Vladmir Tostoff's latest work, which attracted so much attention at Carnegie Hall last May. If you read the papers, you know there was a big sensation.\" He smiled with jovial condescension and added, \"Some sensation!\" Everyone laughed.",
-          "es": "\"Damas y caballeros,\" gritó. \"Por solicitud del Sr. Gatsby, vamos a tocar la última obra del Sr. Vladimir Tostoff, que atrajo tanta atención en Carnegie Hall el pasado mayo. Si lee los periódicos, sabrá que hubo una gran sensación.\" Sonrió con condescendencia jovial y agregó, \"¡Alguna sensación!\" Todos rieron."
+          "en": "I agreed it was magnificent.",
+          "es": "\"Quiero que tú y Daisy vengan a mi casa\", sugirió. \"Me gustaría mostrarle alrededor\"."
         },
         {
-          "en": "The piece is known,\" he concluded energetically, \"as 'Vladmir Tostoff's Jazz History of the World!'",
-          "es": "La pieza se conoce,\" concluyó energéticamente, \"como '¡La Historia de Jazz del Mundo de Vladimir Tostoff!'"
+          "en": "Yes.\" His eyes scanned every arched door and square tower. \"It took me three years to earn the money to buy it.",
+          "es": "\"¿Estás seguro de que quieres que venga?\"."
         },
         {
-          "en": "The nature of Mr. Tostoff's composition eluded me, because just as it began, my eyes fell on Gatsby, standing alone on the marble steps and looking from one group to another with approving eyes. His tanned skin was attractively tight on his face, and his short hair looked as though it were trimmed every day. I could see nothing sinister about him. I wondered if the fact that he wasn't drinking helped to set him apart from his guests, for it seemed to me that he grew more correct as the friendly hilarity increased. When the \"Jazz History of the World\" was over, girls were resting their heads on men's shoulders in a playful, friendly way, girls were falling backward playfully into men's arms, even into groups, knowing that someone would catch them—but no one fell backward on Gatsby, and no short hair touched Gatsby's shoulder, and no singing quartets formed with Gatsby as one link.",
-          "es": "La naturaleza de la composición del Sr. Tostoff me eludió, porque justo cuando comenzó, mis ojos cayeron en Gatsby, de pie solo en los escalones de mármol y mirando de un grupo a otro con ojos aprobadores. Su piel bronceada estaba atractivamente ajustada en su cara, y su cabello corto parecía como si estuviera recortado todos los días. No podía ver nada siniestro en él. Me pregunté si el hecho de que no estuviera bebiendo lo ayudaba a distinguirse de sus invitados, porque me parecía que se volvía más correcto conforme la hilaridad amistosa aumentaba. Cuando la \"Historia de Jazz del Mundo\" terminó, las chicas descansaban sus cabezas en los hombros de los hombres de una manera juguetona y amistosa, las chicas caían hacia atrás juguetonamente en los brazos de los hombres, incluso en grupos, sabiendo que alguien las atraparía—pero nadie cayó hacia atrás sobre Gatsby, y ningún cabello corto tocó el hombro de Gatsby, y ningún cuarteto de canto se formó con Gatsby como un eslabón."
+          "en": "I thought you inherited your money.",
+          "es": "\"Absolutamente, viejo\"."
         },
         {
-          "en": "I beg your pardon.",
-          "es": "Le pido disculpas."
+          "en": "I did, old sport,\" he replied automatically, \"but I lost most of it in the big panic—the war panic.",
+          "es": "Daisy subió para lavarse la cara—demasiado tarde, me sentí avergonzado por mis toallas—mientras Gatsby y yo esperábamos en el césped."
         },
         {
-          "en": "Gatsby's butler was suddenly standing beside us.",
-          "es": "El mayordomo de Gatsby estaba de repente de pie junto a nosotros."
+          "en": "I think he barely knew what he was saying, because when I asked about his business, he answered, \"That's my affair,\" before realizing it wasn't an appropriate reply.",
+          "es": "\"Mi casa se ve bien, ¿verdad?\" preguntó. \"Mira cómo todo el frente captura la luz\"."
         },
         {
-          "en": "Miss Baker?\" he inquired. \"I beg your pardon, but Mr. Gatsby would like to speak to you alone.",
-          "es": "¿Señorita Baker?\" preguntó. \"Le pido disculpas, pero el Sr. Gatsby le gustaría hablar con usted a solas."
+          "en": "Oh, I've been in several things,\" he corrected himself. \"I was in the drug business and then the oil business. But I'm not in either now.\" He looked at me more closely. \"Have you been thinking over what I proposed the other night?",
+          "es": "Estuve de acuerdo en que era magnífico."
         },
         {
-          "en": "\"With me?\" she exclaimed in surprise.",
-          "es": "\"¿Conmigo?\" exclamó sorprendida."
+          "en": "Before I could answer, Daisy emerged from the house, and the rows of brass buttons on her dress gleamed in the sunlight.",
+          "es": "\"Sí\". Sus ojos escaneaban cada puerta arqueada y cada torre cuadrada. \"Me tomó tres años ganar el dinero para comprarlo\"."
         },
         {
-          "en": "Yes, madame.",
-          "es": "Sí, señora."
+          "en": "\"That huge place there?\" she exclaimed, pointing.",
+          "es": "\"Pensé que habías heredado tu dinero\"."
         },
         {
-          "en": "She got up slowly, raising her eyebrows at me in astonishment, and followed the butler toward the house. I noticed that she wore her evening dress, like all her dresses, like sports clothes—there was a liveliness about her movements as if she had first learned to walk on golf courses on clean, crisp mornings.",
-          "es": "Se levantó lentamente, levantando las cejas hacia mí en asombro, y siguió al mayordomo hacia la casa. Noté que usaba su vestido de noche, como todos sus vestidos, como ropa deportiva—había una vivacidad en sus movimientos como si primero hubiera aprendido a caminar en campos de golf en mañanas limpias y nítidas."
+          "en": "Do you like it?",
+          "es": "\"Lo hice, viejo\", respondió automáticamente, \"pero perdí la mayor parte en el gran pánico—el pánico de la guerra\"."
         },
         {
-          "en": "I was alone, and it was almost two. For some time, confused and intriguing sounds had come from a long, many-windowed room that overhung the terrace. Avoiding Jordan's undergraduate, who was now engaged in a conversation about childbirth with two chorus girls and who begged me to join him, I went inside.",
-          "es": "Estaba solo, y eran casi las dos. Durante algún tiempo, sonidos confusos e intrigantes habían provenido de una sala larga con muchas ventanas que se proyectaba sobre la terraza. Evitando al estudiante de último año de Jordan, que ahora estaba comprometido en una conversación sobre el parto con dos coristas y que me rogó que me uniera a él, entré adentro."
+          "en": "I love it, but I can't see how you live there alone.",
+          "es": "Creo que apenas sabía lo que estaba diciendo, porque cuando le pregunté sobre su negocio, respondió, \"Eso es asunto mío\", antes de darse cuenta de que no era una respuesta apropiada."
         }
       ]
     },
     "11": {
       "lines": [
         {
-          "en": "The large room was full of people. One of the girls in yellow was playing the piano, and beside her stood a tall, red-haired young lady from a famous chorus, singing. She had drunk a lot of champagne, and during her song, she had decided, awkwardly, that everything was very, very sad—she was not only singing, she was crying too. Whenever there was a pause in the song, she filled it with gasping, broken sobs, then resumed the lyric in a trembling soprano. The tears ran down her cheeks—not freely, however, for when they touched her heavily mascaraed eyelashes, they turned inky and continued their way in slow black streams. A humorous suggestion was made that she sing the notes on her face, whereupon she threw up her hands, sank into a chair, and fell into a deep, wine-induced sleep.",
-          "es": "La sala grande estaba llena de gente. Una de las chicas en amarillo estaba tocando el piano, y a su lado estaba una dama joven y alta de cabello rojo de un famoso coro, cantando. Había bebido mucho champán, y durante su canción, había decidido, torpemente, que todo era muy, muy triste—no solo estaba cantando, también estaba llorando. Cada vez que había una pausa en la canción, la llenaba con sollozos jadeantes y rotos, luego reanudaba la letra en un soprano tembloroso. Las lágrimas corrían por sus mejillas—no libremente, sin embargo, porque cuando tocaban sus pestañas fuertemente maquilladas, se volvían negras y continuaban su camino en corrientes negras lentas. Se hizo una sugerencia humorística de que cantara las notas en su cara, ante lo cual levantó las manos, se hundió en una silla, y cayó en un sueño profundo inducido por el vino."
+          "en": "I always keep it full of interesting people, day and night. People doing interesting things. Famous people.",
+          "es": "\"Oh, he estado en varias cosas\", se corrigió. \"Estaba en el negocio de drogas y luego en el negocio del petróleo. Pero ya no estoy en ninguno de los dos\". Me miró más de cerca. \"¿Has estado pensando en lo que te propuse la otra noche?\"."
         },
         {
-          "en": "\"She had a fight with a man who says he's her husband,\" explained a girl at my elbow.",
-          "es": "\"Tuvo una pelea con un hombre que dice que es su esposo,\" explicó una chica a mi lado."
+          "en": "Instead of taking the shortcut along the Sound, we went down to the road and entered by the big gate. With enchanting murmurs, Daisy admired various aspects of the feudal silhouette against the sky, admired the gardens, the sparkling scent of jonquils, the frothy scent of hawthorn and plum blossoms, and the pale gold scent of kiss-me-at-the-gate. It was strange to reach the marble steps and find no movement of bright dresses in and out of the door, and hear only the birds in the trees.",
+          "es": "Antes de que pudiera responder, Daisy salió de la casa, y las filas de botones de latón en su vestido brillaban al sol."
         },
         {
-          "en": "I looked around. Most of the remaining women were now having fights with men who were said to be their husbands. Even Jordan's group, the quartet from East Egg, was torn apart by disagreement. One of the men was talking intensely to a young actress, and his wife, after trying to laugh at the situation in a dignified and indifferent manner, broke down entirely and resorted to flank attacks—at intervals, she appeared suddenly at his side like an angry diamond and hissed, \"You promised!\" into his ear.",
-          "es": "Miré alrededor. La mayoría de las mujeres restantes ahora estaban peleando con hombres que se decía que eran sus esposos. Incluso el grupo de Jordan, el cuarteto de East Egg, fue desgarrado por desacuerdo. Uno de los hombres estaba hablando intensamente con una joven actriz, y su esposa, después de intentar reír de la situación de una manera digna e indiferente, se derrumbó completamente y recurrió a ataques laterales—en intervalos, apareció de repente a su lado como un diamante enojado y siseó, \"¡Prometiste!\" en su oído."
+          "en": "Inside, as we wandered through Marie Antoinette music-rooms and Restoration Salons, I felt there were guests hidden behind every couch and table, under orders to remain silent until we had passed through. As Gatsby closed the door of \"the Merton College Library,\" I could have sworn I heard the owl-eyed man break into ghostly laughter.",
+          "es": "\"¿Ese lugar enorme ahí?\" exclamó, señalando."
         },
         {
-          "en": "The reluctance to go home was not limited to the men. The hall was currently occupied by two sober men and their highly indignant wives. The wives were sympathizing with each other in slightly raised voices.",
-          "es": "La renuencia a irse a casa no se limitaba a los hombres. El pasillo estaba actualmente ocupado por dos hombres sobrios y sus esposas altamente indignadas. Las esposas estaban simpatizando entre sí en voces ligeramente levantadas."
+          "en": "We went upstairs, through bedrooms draped in rose and lavender silk, vivid with fresh flowers, through dressing-rooms and poolrooms, and bathrooms with sunken baths—intruding into one room where a disheveled man in pajamas was doing liver exercises on the floor. It was Mr. Klipspringer, the \"boarder.\" I had seen him wandering hungrily around the beach that morning. Finally, we reached Gatsby's own apartment, a bedroom and a bath, and an Adam's study, where we sat down and drank a glass of Chartreuse he took from a cupboard in the wall.",
+          "es": "\"¿Te gusta?\"."
         },
         {
-          "en": "Whenever he sees I'm having a good time, he wants to go home.",
-          "es": "Cada vez que ve que me lo estoy pasando bien, quiere irse a casa."
+          "en": "He hadn't stopped looking at Daisy, and I think he re-evaluated everything in his house based on her reaction. Sometimes he stared around at his possessions in a dazed way, as if in her presence, none of it was real anymore. Once he nearly fell down a flight of stairs.",
+          "es": "\"Me encanta, pero no puedo ver cómo vives ahí solo\"."
         },
         {
-          "en": "Never heard anything so selfish in my life.",
-          "es": "Nunca he escuchado algo tan egoísta en mi vida."
+          "en": "His bedroom was the simplest room of all—except where the dresser was adorned with a toilet set of pure dull gold. Daisy took the brush with delight and smoothed her hair, at which point Gatsby sat down, shaded his eyes, and began to laugh.",
+          "es": "\"Siempre lo mantengo lleno de gente interesante, día y noche. Gente haciendo cosas interesantes. Gente famosa\"."
         },
         {
-          "en": "We're always the first ones to leave.",
-          "es": "Siempre somos los primeros en irnos."
+          "en": "It's the funniest thing, old sport,\" he said joyfully. \"I can't—When I try to—",
+          "es": "En lugar de tomar el atajo a lo largo del Sound, bajamos a la carretera y entramos por la gran puerta. Con murmullos encantadores, Daisy admiraba varios aspectos de la silueta feudal contra el cielo, admiraba los jardines, el aroma centelleante de los jacintos, el aroma espumoso de la espina blanca y las flores de ciruela, y el aroma pálido dorado de beso-en-la-puerta. Era extraño llegar a los escalones de mármol y no encontrar movimiento de vestidos brillantes dentro y fuera de la puerta, y escuchar solo los pájaros en los árboles."
         },
         {
-          "en": "So are we.",
-          "es": "También nosotros."
+          "en": "He had visibly gone through two states and was entering a third. After his embarrassment and unreasoning joy, he was filled with wonder at her presence. He had been full of the idea for so long, dreamed it through to the end, waited with his teeth set, so to speak, at an unimaginable intensity. Now, in the reaction, he was running down like an over-wound clock.",
+          "es": "Adentro, mientras vagábamos por las salas de música de María Antonieta y los Salones de Restauración, sentí que había invitados escondidos detrás de cada sofá y mesa, bajo órdenes de permanecer en silencio hasta que hubiéramos pasado. Cuando Gatsby cerró la puerta de \"la Biblioteca de Merton College\", podría haber jurado que escuché al hombre de los ojos de búho romper en risa fantasmal."
         },
         {
-          "en": "Well, we're almost the last tonight,\" said one of the men sheepishly. \"The orchestra left half an hour ago.",
-          "es": "Bueno, somos casi los últimos esta noche,\" dijo uno de los hombres tímidamente. \"La orquesta se fue hace media hora."
+          "en": "Recovering himself in a moment, he opened two large cabinets that held his collection of suits, dressing-gowns, and ties, and his shirts, stacked like bricks in piles a dozen high.",
+          "es": "Subimos, a través de dormitorios drapados en seda rosa y lavanda, vivaces con flores frescas, a través de camerinos y cuartos de piscina, y baños con bañeras hundidas—intrusos en una habitación donde un hombre despeinado en pijamas estaba haciendo ejercicios de hígado en el piso. Era el señor Klipspringer, el \"huésped\". Lo había visto deambulando con hambre por la playa esa mañana. Finalmente, llegamos al propio apartamento de Gatsby, un dormitorio y un baño, y un estudio de Adam, donde nos sentamos y bebimos un vaso de Chartreuse que sacó de un armario en la pared."
         },
         {
-          "en": "Despite the wives' agreement that such malevolence was beyond belief, the argument ended in a brief struggle, and both wives were lifted, kicking, into the night.",
-          "es": "A pesar del acuerdo de las esposas de que tal malevolencia era increíble, el argumento terminó en una breve lucha, y ambas esposas fueron levantadas, pateando, en la noche."
+          "en": "I have a man in England who buys me clothes. He sends over a selection at the start of each season, spring and fall.",
+          "es": "No había dejado de mirar a Daisy, y creo que reevaluó todo en su casa basado en su reacción. A veces miraba alrededor de sus posesiones de una manera aturdida, como si en su presencia, nada de eso fuera real ya. Una vez casi se cae por una escalera."
         }
       ]
     },
     "12": {
       "lines": [
         {
-          "en": "As I waited for my hat in the hall, the library door opened, and Jordan Baker and Gatsby came out together. He was saying some last words to her, but his eagerness suddenly turned into formality as several people approached him to say goodbye.",
-          "es": "Mientras esperaba mi sombrero en el pasillo, la puerta de la biblioteca se abrió, y Jordan Baker y Gatsby salieron juntos. Él estaba diciendo algunas últimas palabras para ella, pero su entusiasmo de repente se convirtió en formalidad mientras varias personas se acercaban para despedirse."
+          "en": "He took out a pile of shirts and began throwing them, one by one, before us, shirts of sheer linen, thick silk, and fine flannel, which lost their folds as they fell and covered the table in a colorful heap. As we admired them, he brought more, and the soft rich pile grew higher—shirts with stripes, scrolls, and plaids in coral, apple-green, lavender, and faint orange, with monograms of Indian blue. Suddenly, with a strained sound, Daisy bent her head into the shirts and began to cry stormily.",
+          "es": "Su dormitorio era la habitación más simple de todas—excepto donde la cómoda estaba adornada con un set de tocador de oro puro mate. Daisy tomó el cepillo con deleite y se alisó el cabello, en cuyo punto Gatsby se sentó, se cubrió los ojos, y comenzó a reír."
         },
         {
-          "en": "Jordan's group was calling impatiently to her from the porch, but she lingered for a moment to shake hands.",
-          "es": "El grupo de Jordan la llamaba impacientemente desde el porche, pero se demoró un momento para estrechar la mano."
+          "en": "They're such beautiful shirts,\" she sobbed, her voice muffled in the thick folds. \"It makes me sad because I've never seen such—such beautiful shirts before.",
+          "es": "\"Es lo más divertido, viejo\", dijo alegremente. \"No puedo—Cuando intento—\"."
         },
         {
-          "en": "I've just heard the most amazing thing,\" she whispered. \"How long were we in there?",
-          "es": "Acabo de escuchar la cosa más sorprendente,\" susurró. \"¿Cuánto tiempo estuvimos allá adentro?"
+          "en": "After the house, we were supposed to see the grounds, the swimming pool, the hydroplane, and the midsummer flowers—but outside Gatsby's window, it started raining again, so we stood in a row looking at the rippling surface of the Sound.",
+          "es": "Había visiblemente pasado por dos estados y estaba entrando en un tercero. Después de su vergüenza y alegría irrazonable, estaba lleno de asombro por su presencia. Había estado lleno de la idea durante tanto tiempo, la había soñado hasta el final, esperado con los dientes apretados, por así decirlo, con una intensidad inimaginable. Ahora, en la reacción, estaba funcionando como un reloj sobreenrollado."
         },
         {
-          "en": "Why, about an hour.",
-          "es": "Pues, aproximadamente una hora."
+          "en": "If it weren't for the mist, we could see your home across the bay,\" said Gatsby. \"You always have a green light that burns all night at the end of your dock.",
+          "es": "Recuperándose en un momento, abrió dos grandes gabinetes que contenían su colección de trajes, batas y corbatas, y sus camisas, apiladas como ladrillos en pilas de una docena de alto."
         },
         {
-          "en": "\"It was... simply amazing,\" she repeated abstractedly. \"But I swore I wouldn't tell it, and here I am teasing you.\" She yawned gracefully in my face. \"Please come and see me... Phone book... Under the name of Mrs. Sigourney Howard... My aunt...\" She was hurrying off as she spoke—her brown hand waved a jaunty salute as she melted into her group at the door.",
-          "es": "\"Fue... simplemente sorprendente,\" repitió distraídamente. \"Pero juré que no lo diría, y aquí estoy tentándote.\" Bostezó graciosamente en mi cara. \"Por favor ven a verme... Guía telefónica... Bajo el nombre de la Sra. Sigourney Howard... Mi tía...\" Se estaba apresurando mientras hablaba—su mano marrón agitó un saludo desenfadado conforme se disolvió en su grupo en la puerta."
+          "en": "Daisy abruptly put her arm through his, but he seemed absorbed in what he had just said. It might have occurred to him that the immense significance of that light had now vanished forever. Compared to the great distance that had separated him from Daisy, it had seemed very close to her, almost touching her. It had seemed as close as a star to the moon. Now it was just a green light on a dock. His count of enchanted objects had decreased by one.",
+          "es": "\"Tengo un hombre en Inglaterra que me compra ropa. Envía una selección al comienzo de cada temporada, primavera y otoño\"."
         },
         {
-          "en": "Rather embarrassed that on my first appearance I had stayed so late, I joined the last of Gatsby's guests, who were gathered around him. I wanted to explain that I'd looked for him early in the evening and to apologize for not having recognized him in the garden.",
-          "es": "Algo avergonzado de haber permanecido tan tarde en mi primera aparición, me uní a los últimos invitados de Gatsby, que estaban reunidos a su alrededor. Quería explicar que lo había buscado temprano en la noche y disculparme por no haberlo reconocido en el jardín."
+          "en": "I began to walk around the room, examining various indistinct objects in the dim light. A large photograph of an elderly man in yachting attire caught my attention, hanging on the wall above his desk.",
+          "es": "Sacó una pila de camisas y comenzó a lanzarlas, una por una, frente a nosotros, camisas de lino puro, seda gruesa y franela fina, que perdieron sus pliegues cuando cayeron y cubrieron la mesa en un montón colorido. Mientras las admirábamos, trajo más, y la pila suave y rica creció más alta—camisas con rayas, pergaminos y cuadros en coral, verde manzana, lavanda y naranja pálido, con monogramas de azul índigo. De repente, con un sonido forzado, Daisy inclinó la cabeza en las camisas y comenzó a llorar tormentosamente."
         },
         {
-          "en": "Don't mention it,\" he told me eagerly. \"Don't give it another thought, old sport.\" The familiar expression held no more familiarity than the hand that reassuringly brushed my shoulder. \"And don't forget we're going up in the hydroplane tomorrow morning, at nine o'clock.",
-          "es": "No lo menciones,\" me dijo con entusiasmo. \"No le des otro pensamiento, viejo deporte.\" La expresión familiar no tenía más familiaridad que la mano que tranquilizadoramente rozó mi hombro. \"Y no olvides que vamos a subir al hidroavión mañana por la mañana, a las nueve en punto."
+          "en": "Who's this?",
+          "es": "\"Son camisas tan hermosas\", sollozó, su voz amortiguada en los pliegues espesos. \"Me hace triste porque nunca he visto tales—tales camisas hermosas antes\"."
         },
         {
-          "en": "Then the butler, behind his shoulder:",
-          "es": "Luego el mayordomo, detrás de su hombro:"
+          "en": "That? That's Mr. Dan Cody, old sport.",
+          "es": "Después de la casa, se suponía que veríamos los terrenos, la piscina, el hidroavión, y las flores de mediados de verano—pero fuera de la ventana de Gatsby, comenzó a llover de nuevo, así que nos paramos en fila mirando la superficie ondulante del Sound."
         },
         {
-          "en": "Philadelphia wants you on the phone, sir.",
-          "es": "Filadelfia te quiere en el teléfono, señor."
+          "en": "The name sounded vaguely familiar.",
+          "es": "\"Si no fuera por la bruma, podríamos ver tu hogar al otro lado de la bahía\", dijo Gatsby. \"Siempre tienes una luz verde que arde toda la noche al final de tu muelle\"."
         },
         {
-          "en": "All right, in a minute. Tell them I'll be right there... Good night.",
-          "es": "De acuerdo, en un minuto. Diles que llegaré en un momento... Buenas noches."
+          "en": "He's dead now. He used to be my best friend years ago.",
+          "es": "Daisy de repente metió su brazo a través del suyo, pero él parecía absorto en lo que acababa de decir. Podría haberle ocurrido que la inmensa importancia de esa luz había desaparecido para siempre. Comparada con la gran distancia que lo había separado de Daisy, había parecido muy cerca de ella, casi tocándola. Había parecido tan cerca como una estrella a la luna. Ahora era solo una luz verde en un muelle. Su conteo de objetos encantados había disminuido en uno."
         }
       ]
     },
     "13": {
       "lines": [
         {
-          "en": "Good night.",
-          "es": "Buenas noches."
+          "en": "There was a small picture of Gatsby, also in yachting attire, on the bureau—Gatsby with his head thrown back defiantly—apparently taken when he was about eighteen.",
+          "es": "Comencé a caminar alrededor de la habitación, examinando varios objetos indistintos en la luz tenue. Una gran fotografía de un hombre mayor con atuendo de navegación captó mi atención, colgada en la pared arriba de su escritorio."
         },
         {
-          "en": "Good night.\" He smiled—and suddenly there seemed to be a pleasant significance in having been among the last to leave, as if he had wanted it all along. \"Good night, old sport... Good night.",
-          "es": "Buenas noches.\" Sonrió—y de repente parecía haber un significado agradable en haber estado entre los últimos en irme, como si lo hubiera querido todo el tiempo. \"Buenas noches, viejo deporte... Buenas noches."
+          "en": "I adore it,\" exclaimed Daisy. \"The pompadour! You never told me you had a pompadour—or a yacht.",
+          "es": "\"¿Quién es este?\"."
         },
         {
-          "en": "But as I walked down the steps, I saw that the evening was not quite over. Fifty feet from the door, a dozen headlights illuminated a bizarre and chaotic scene. In the ditch beside the road, upright but missing one wheel, rested a new coupé that had left Gatsby's drive just two minutes before. The sharp jut of a wall had caused the wheel to detach, which was now getting considerable attention from half a dozen curious chauffeurs. However, as they had left their cars blocking the road, a harsh, discordant noise from those in the rear had been audible for some time, adding to the already chaotic confusion of the scene.",
-          "es": "Pero cuando caminé por los escalones, vi que la noche no había terminado completamente. A cincuenta pies de la puerta, una docena de faros iluminaron una escena extraña y caótica. En la zanja junto a la carretera, vertical pero faltándole una rueda, descansaba un nuevo coupé que había salido de la entrada de Gatsby hace solo dos minutos. El saliente agudo de una pared había causado que la rueda se desprendiera, que ahora estaba recibiendo considerable atención de media docena de chóferes curiosos. Sin embargo, como habían dejado sus autos bloqueando la carretera, un ruido áspero y discordante de aquellos en la parte trasera había sido audible durante algún tiempo, agregando a la confusión ya caótica de la escena."
+          "en": "Look at this,\" said Gatsby quickly. \"Here's a lot of clippings—about you.",
+          "es": "\"¿Eso? Ese es el señor Dan Cody, viejo\"."
         },
         {
-          "en": "A man in a long coat had gotten off the wrecked car and now stood in the middle of the road. He looked from the car to the tire and then to the people watching, with a pleasant but puzzled expression.",
-          "es": "Un hombre en un abrigo largo se había bajado del auto destrozado y ahora estaba de pie en medio de la carretera. Miraba del auto a la llanta y luego a la gente mirando, con una expresión agradable pero desconcertada."
+          "en": "They stood side by side examining it. I was about to ask to see the rubies when the phone rang, and Gatsby picked up the receiver.",
+          "es": "El nombre sonaba vagamente familiar."
         },
         {
-          "en": "See!\" he exclaimed. \"It went into the ditch.",
-          "es": "¡Mira!\" exclamó. \"Se fue a la zanja."
+          "en": "Yes… Well, I can't talk now… I can't talk now, old sport… I said a small town… He must know what a small town is… Well, he's no use to us if Detroit is his idea of a small town…",
+          "es": "\"Ahora está muerto. Solía ser mi mejor amigo hace años\"."
         },
         {
-          "en": "The fact seemed utterly surprising to him. I first noticed his unusual sense of wonder, and then I recognized the man—it was the previous guest of Gatsby's library.",
-          "es": "El hecho pareció absolutamente sorprendente para él. Primero noté su sentido inusual de asombro, y luego reconocí al hombre—era el invitado anterior de la biblioteca de Gatsby."
+          "en": "He hung up.",
+          "es": "Había una pequeña fotografía de Gatsby, también con atuendo de navegación, en la cómoda—Gatsby con la cabeza echada hacia atrás desafiante—aparentemente tomada cuando tenía alrededor de dieciocho años."
         },
         {
-          "en": "How'd it happen?",
-          "es": "¿Cómo pasó?"
+          "en": "\"Come here quick!\" cried Daisy at the window.",
+          "es": "\"La adoro\", exclamó Daisy. \"¡El pómez! Nunca me dijiste que tenías un pómez—o un yate\"."
         },
         {
-          "en": "He shrugged his shoulders.",
-          "es": "Se encogió de hombros."
+          "en": "The rain was still falling, but the darkness had parted in the west, and there was a pink and golden cloud of foamy clouds above the sea.",
+          "es": "\"Mira esto\", dijo Gatsby rápidamente. \"Aquí hay un montón de recortes—sobre ti\"."
         },
         {
-          "en": "\"I know nothing at all about mechanics,\" he said firmly.",
-          "es": "\"No sé nada en absoluto sobre mecánica,\" dijo firmemente."
+          "en": "Look at that,\" she whispered, and then after a moment: \"I'd like to just get one of those pink clouds and put you in it and push you around.",
+          "es": "Estaban de pie uno al lado del otro examinándolo. Estaba a punto de pedir ver los rubíes cuando sonó el teléfono, y Gatsby levantó el auricular."
         },
         {
-          "en": "But how did it happen? Did you hit the wall?",
-          "es": "Pero ¿cómo pasó? ¿Golpeaste la pared?"
+          "en": "I tried to leave then, but they wouldn't hear of it; perhaps my presence made them feel more satisfactorily alone.",
+          "es": "\"Sí… Bueno, no puedo hablar ahora… No puedo hablar ahora, viejo… Dije un pueblo pequeño… Debe saber lo que es un pueblo pequeño… Bueno, no nos sirve si Detroit es su idea de un pueblo pequeño…\"."
         }
       ]
     },
     "14": {
       "lines": [
         {
-          "en": "Don't ask me,\" said Owl Eyes, dismissing the whole issue. \"I know very little about driving—almost nothing. It happened, and that's all I know.",
-          "es": "No me preguntes,\" dijo Owl Eyes, descartando todo el asunto. \"Sé muy poco sobre conducir—casi nada. Pasó, y eso es todo lo que sé."
+          "en": "I know what we'll do,\" said Gatsby, \"we'll have Klipspringer play the piano.",
+          "es": "Colgó."
         },
         {
-          "en": "Well, if you're a bad driver, you shouldn't try driving at night.",
-          "es": "Bueno, si eres un mal conductor, no deberías intentar conducir de noche."
+          "en": "He left the room calling \"Ewing!\" and returned in a few minutes with an embarrassed, slightly worn young man, with shell-rimmed glasses and thin blond hair. He was now decently dressed in a \"sport shirt,\" open at the neck, sneakers, and duck trousers of an indistinct color.",
+          "es": "\"¡Ven aquí rápido!\" gritó Daisy en la ventana."
         },
         {
-          "en": "But I wasn't even trying,\" he explained indignantly, \"I wasn't even trying.",
-          "es": "Pero ni siquiera lo intentaba,\" explicó indignado, \"ni siquiera lo intentaba."
+          "en": "\"Did we interrupt your exercise?\" asked Daisy politely.",
+          "es": "La lluvia aún estaba cayendo, pero la oscuridad se había abierto en el oeste, y había una nube rosa y dorada de nubes espumosas sobre el mar."
         },
         {
-          "en": "A shocked silence fell among the bystanders.",
-          "es": "Un silencio sorprendido cayó entre los espectadores."
+          "en": "I was asleep,\" cried Mr. Klipspringer, in a spasm of embarrassment. \"That is, I'd been asleep. Then I got up…",
+          "es": "\"Mira eso\", susurró, y luego después de un momento: \"Me gustaría simplemente coger una de esas nubes rosadas y ponerte dentro y empujarte alrededor\"."
         },
         {
-          "en": "Do you want to commit suicide?",
-          "es": "¿Quieres cometer suicidio?"
+          "en": "Klipspringer plays the piano,\" said Gatsby, cutting him off. \"Don't you, Ewing, old sport?",
+          "es": "Intenté irme entonces, pero no quisieron escucharlo; quizás mi presencia los hizo sentir más satisfactoriamente solos."
         },
         {
-          "en": "You're lucky it was just a wheel! A bad driver and not even trying!",
-          "es": "¡Tuviste suerte de que fuera solo una rueda! ¡Un mal conductor y ni siquiera lo intentaba!"
+          "en": "I don't play well. I don't—hardly play at all. I'm all out of prac—",
+          "es": "\"Sé lo que haremos\", dijo Gatsby, \"le diremos a Klipspringer que toque el piano\"."
         },
         {
-          "en": "You don't understand,\" explained the accused. \"I wasn't driving. There's another man in the car.",
-          "es": "No entiendes,\" explicó el acusado. \"No estaba conduciendo. Hay otro hombre en el auto."
+          "en": "\"We'll go downstairs,\" interrupted Gatsby. He flipped a switch. The gray windows disappeared as the house filled with light.",
+          "es": "Salió de la habitación gritando \"¡Ewing!\" y regresó en unos pocos minutos con un joven avergonzado, ligeramente gastado, con gafas de marco de concha y cabello rubio delgado. Ahora estaba decentemente vestido con una \"camisa deportiva\", abierta en el cuello, zapatillas de lona, y pantalones de pato de un color indistinto."
         },
         {
-          "en": "The shock that followed this statement was expressed in a long \"Ah-h-h!\" as the coupé's door slowly opened. The crowd—it was now a crowd—stepped back instinctively, and when the door opened wide, there was a ghostly pause. Then, very slowly, piece by piece, a pale, dangling figure emerged from the wreck, tentatively feeling the ground with a large, uncertain dancing shoe.",
-          "es": "El shock que siguió a esta declaración se expresó en un largo \"¡Ah-h-h!\" conforme la puerta del coupé se abría lentamente. La multitud—ahora era una multitud—se echó hacia atrás instintivamente, y cuando la puerta se abrió completamente, hubo una pausa fantasmal. Luego, muy lentamente, pieza por pieza, una figura pálida y colgante emergió del naufragio, sintiendo tentativa la tierra con un zapato de baile grande e incierto."
+          "en": "In the music-room, Gatsby turned on a single lamp beside the piano. He lit Daisy's cigarette with a trembling match and sat down with her on a couch far across the room, where there was no light except what the gleaming floor reflected from the hall.",
+          "es": "\"¿Interrumpimos tu ejercicio?\" preguntó Daisy cortésmente."
         },
         {
-          "en": "Blinded by the headlights' glare and confused by the constant honking of horns, the figure stood swaying for a moment before he noticed the man in the coat.",
-          "es": "Cegado por el resplandor de los faros y confundido por el constante sonido de bocinas, la figura se balanceaba durante un momento antes de que notara al hombre del abrigo."
+          "en": "When Klipspringer had played \"The Love Nest,\" he turned around on the bench and searched unhappily for Gatsby in the gloom.",
+          "es": "\"Estaba dormido\", gritó el señor Klipspringer, en un espasmo de vergüenza. \"Es decir, había estado durmiendo. Luego me levanté…\"."
         },
         {
-          "en": "What's the matter?\" he asked calmly. \"Did we run out of gas?",
-          "es": "¿Qué pasa? —preguntó con calma—. ¿Se nos acabó la gasolina?"
+          "en": "I'm all out of practice, you see. I told you I couldn't play. I'm all out of prac—",
+          "es": "\"Klipspringer toca el piano\", dijo Gatsby, cortándolo. \"¿Verdad, Ewing, viejo?\"."
+        },
+        {
+          "en": "Don't talk so much, old sport,\" commanded Gatsby. \"Play!",
+          "es": ""
         }
       ]
     },
     "15": {
       "lines": [
         {
-          "en": "Look!",
-          "es": "¡Mira!"
+          "en": "\"In the morning,",
+          "es": "\"No toco bien. No—apenas toco en absoluto. Estoy completamente sin práctic—\"."
         },
         {
-          "en": "Half a dozen fingers pointed at the missing wheel—he stared at it for a moment, then looked upward as if suspecting it had fallen from the sky.",
-          "es": "Media docena de dedos señalaban la rueda desaparecida—él la miró durante un momento, luego levantó la vista como si sospechara que había caído del cielo."
+          "en": "In the evening,",
+          "es": "\"Bajaremos\", interrumpió Gatsby. Cambió un interruptor. Las ventanas grises desaparecieron mientras la casa se llenaba de luz."
         },
         {
-          "en": "\"It came off,\" someone explained.",
-          "es": "\"Se desprendió\", explicó alguien."
+          "en": "Ain't we got fun—\"",
+          "es": "En la sala de música, Gatsby encendió una sola lámpara junto al piano. Encendió el cigarrillo de Daisy con una cerilla temblona y se sentó con ella en un sofá lejos en la habitación, donde no había luz excepto la que el piso brillante reflejaba del vestíbulo."
         },
         {
-          "en": "He nodded.",
-          "es": "Él asintió."
+          "en": "Outside, the wind was loud, and there was a faint roll of thunder along the Sound. All the lights were coming on in West Egg now; the electric trains, carrying people, were rushing home through the rain from New York. It was the hour of a profound human change, and excitement was building in the air.",
+          "es": "Cuando Klipspringer había tocado \"The Love Nest\", se giró en el banco y buscó infelizmente a Gatsby en la penumbra."
         },
         {
-          "en": "At first, I didn't notice we'd stopped.",
-          "es": "Al principio, no me di cuenta de que habíamos parado."
+          "en": "\"One thing's sure and nothing's surer",
+          "es": "\"Estoy completamente sin práctica, ves. Te dije que no podía tocar. Estoy completamente sin práctic—\"."
         },
         {
-          "en": "A pause. Then, taking a deep breath and straightening his shoulders, he said with determination:",
-          "es": "Una pausa. Luego, respirando profundamente y enderezándose, dijo con determinación:"
+          "en": "The rich get richer and the poor get—children.",
+          "es": "\"No hables tanto, viejo\", ordenó Gatsby. \"¡Toca!\"."
         },
         {
-          "en": "Wonder if you can tell me where there's a gas station?",
-          "es": "¿Podrías decirme dónde hay una gasolinera?"
+          "en": "In the meantime,",
+          "es": "\"En la mañana,"
         },
         {
-          "en": "At least a dozen men, some in slightly better condition than he was, explained to him that the wheel and car were no longer connected.",
-          "es": "Al menos una docena de hombres, algunos en mejor condición que él, le explicaron que la rueda y el coche ya no estaban conectados."
+          "en": "In between time—\"",
+          "es": "En la noche,"
         },
         {
-          "en": "Back out,\" he suggested after a moment. \"Put it in reverse.",
-          "es": "Atrás —sugirió después de un momento—. Pon marcha atrás."
+          "en": "As I went over to say goodbye, I saw that the expression of bewilderment had returned to Gatsby's face, as though a faint doubt had occurred to him about the quality of his current happiness. Almost five years! There must have been moments even that afternoon when Daisy fell short of his dreams—not because of her own fault, but because of the immense vitality of his illusion. It had gone beyond her, beyond everything. He had thrown himself into it with creative passion, adding to it all the time, decorating it with every bright feather that drifted his way. No amount of fire or freshness can challenge what a man can store up in his ghostly heart.",
+          "es": "¿No nos estamos divirtiendo—?\"."
         },
         {
-          "en": "But the wheel's off!",
-          "es": "¡Pero si le falta la rueda!"
+          "en": "As I watched him, he adjusted himself a little, visibly. His hand took hold of hers, and as she whispered something in his ear, he turned toward her with a rush of emotion. I think that voice held him most, with its fluctuating, feverish warmth, because it couldn't be over-dreamed—that voice was a timeless song.",
+          "es": "Afuera, el viento era fuerte, y había un tenue rodar de trueno a lo largo del Sound. Todas las luces estaban encendidas en West Egg ahora; los trenes eléctricos, llevando gente, se apresuraban a casa a través de la lluvia desde Nueva York. Era la hora de un cambio humano profundo, y la emoción estaba construyéndose en el aire."
         }
       ]
     },
     "16": {
       "lines": [
         {
-          "en": "He hesitated.",
-          "es": "Él dudó."
+          "en": "They had forgotten me, but Daisy looked up and held out her hand; Gatsby didn't recognize me at all now. I looked at them once more, and they looked back at me, distantly, absorbed by intense life. Then I left the room and went down the marble steps into the rain, leaving them together.",
+          "es": "\"Una cosa es segura y nada es más seguro"
         },
         {
-          "en": "\"No harm in trying,\" he said.",
-          "es": "\"No hay mal en intentarlo\", dijo."
+          "en": "",
+          "es": "Los ricos se hacen más ricos y los pobres obtienen—hijos."
         },
         {
-          "en": "The blaring horns had reached a peak, and I turned away, cutting across the lawn toward home. I glanced back once. A sliver of moon shone over Gatsby's house, making the night as beautiful as before, and surviving the laughter and the sound of his still glowing garden. A sudden emptiness now seemed to flow from the windows and the great doors, isolating the figure of the host, who stood on the porch, his hand lifted in a formal gesture of farewell.",
-          "es": "Las bocinas ensordecedoras habían alcanzado su punto máximo, así que me alejé, cruzando el césped hacia casa. Miré atrás una vez. Un fino rayo de luna brillaba sobre la casa de Gatsby, haciendo la noche tan hermosa como antes, y sobreviviendo a las risas y al sonido de su jardín aún iluminado. Una repentina sensación de vacío parecía fluir desde las ventanas y las grandes puertas, aislando la figura del anfitrión, quien estaba en el porche, su mano levantada en un gesto formal de despedida."
+          "en": "",
+          "es": "Mientras tanto,"
+        },
+        {
+          "en": "",
+          "es": "Entre tiempo—\"."
+        },
+        {
+          "en": "",
+          "es": "Cuando fui a despedirme, vi que la expresión de confusión había vuelto al rostro de Gatsby, como si una ligera duda le hubiera ocurrido sobre la calidad de su felicidad actual. ¡Casi cinco años! Debe haber habido momentos incluso esa tarde cuando Daisy no estuvo a la altura de sus sueños—no por culpa suya, sino por la vitalidad inmensa de su ilusión. Había ido más allá de ella, más allá de todo. Se había lanzado en ella con pasión creativa, añadiendo a ella todo el tiempo, decorándola con cada pluma brillante que se cruzaba en su camino. Ninguna cantidad de fuego o frescura puede desafiar lo que un hombre puede almacenar en su corazón fantasmal."
+        },
+        {
+          "en": "",
+          "es": "Mientras lo miraba, se ajustó un poco, visiblemente. Su mano tomó la de ella, y cuando ella susurró algo en su oído, se giró hacia ella con una ráfaga de emoción. Creo que esa voz lo sostuvo más, con su calidez fluctuante y febril, porque no podía ser sobre-soñada—esa voz era una canción atemporal."
+        },
+        {
+          "en": "",
+          "es": "Me habían olvidado, pero Daisy levantó la vista y extendió su mano; Gatsby no me reconoció en absoluto ahora. Los miré una vez más, y me devolvieron la mirada, distantemente, absorbidos por la vida intensa. Luego salí de la habitación y bajé por los escalones de mármol hacia la lluvia, dejándolos juntos."
         }
       ]
     }

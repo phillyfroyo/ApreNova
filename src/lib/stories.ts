@@ -263,12 +263,12 @@ export const STORY_METADATA: StoryMetadata[] = [
 
   {
     slug: "the-great-gatsby",
-    image: "/images/the-great-gatsby-thumbnail-7146.jpeg",
+    image: "/images/the-great-gatsby-thumbnail-8480.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." } } },
+    tags: ["romance", "love", "tragedy", "urban"],
     targetAudience: "all",
-    tags: []
   },
 ];
 
