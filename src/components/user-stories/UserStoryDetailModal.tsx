@@ -6,7 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { Badge, Button } from "@/components/ui";
-import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle } from "lucide-react";
+import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, BarChart3 } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
@@ -14,6 +14,7 @@ import { useUserLevel } from "@/hooks/useUserLevel";
 import { STORY_TYPE_LABELS } from "@/lib/stories";
 import type { StoryType } from "@/types/story";
 import ExpandableDescription from "@/components/ExpandableDescription";
+import { ComparisonModal } from "@/components/ComparisonModal";
 
 interface UserStoryLevel {
   level: string;
@@ -117,6 +118,15 @@ export default function UserStoryDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Comparison modal state
+  const [comparisonLevel, setComparisonLevel] = useState<string | null>(null);
+  const [comparisonData, setComparisonData] = useState<{
+    sourceText: string;
+    translatedText: string;
+    sourceLanguage: string;
+  } | null>(null);
+  const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+
   // Initialize edit fields when story changes
   useEffect(() => {
     if (story) {
@@ -129,7 +139,10 @@ export default function UserStoryDetailModal({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showDeleteConfirm) {
+        if (comparisonLevel) {
+          // ComparisonModal handles its own Escape
+          return;
+        } else if (showDeleteConfirm) {
           setShowDeleteConfirm(false);
         } else if (isEditing) {
           setIsEditing(false);
@@ -154,7 +167,7 @@ export default function UserStoryDetailModal({
       window.removeEventListener("popstate", handlePopState);
       document.body.style.overflow = "auto";
     };
-  }, [story, onClose, isEditing, showDeleteConfirm]);
+  }, [story, onClose, isEditing, showDeleteConfirm, comparisonLevel]);
 
   const handleReadStory = useCallback(async () => {
     if (!story) return;
@@ -192,6 +205,30 @@ export default function UserStoryDetailModal({
     const targetLevel = userLevelReady?.level || readyLevels[0]?.level || story.detectedLevel || "A1";
     router.push(`/${typedLang}/my-stories/${story.id}/${targetLevel}/1/1`);
   }, [story, typedLang, router, userLevel]);
+
+  const handleOpenComparison = useCallback(async (levelKey: string) => {
+    if (!story) return;
+    setIsLoadingComparison(true);
+    setComparisonLevel(levelKey);
+    try {
+      const res = await fetch(
+        `/api/user-stories/${story.id}/content?level=${encodeURIComponent(levelKey)}&format=raw`
+      );
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setComparisonData(data);
+    } catch {
+      setComparisonLevel(null);
+      setComparisonData(null);
+    } finally {
+      setIsLoadingComparison(false);
+    }
+  }, [story]);
+
+  const handleCloseComparison = useCallback(() => {
+    setComparisonLevel(null);
+    setComparisonData(null);
+  }, []);
 
   const handleSave = async () => {
     if (!story) return;
@@ -504,21 +541,34 @@ export default function UserStoryDetailModal({
                           | "level5"
                           | "level6";
                         return (
-                          <button
-                            key={lvl.level}
-                            onClick={() => router.push(`/${typedLang}/my-stories/${story.id}/${cefrLevel}/1/1`)}
-                            className="cursor-pointer hover:scale-105 transition-transform"
-                            title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
-                          >
-                            <Badge level={badgeLevel}>
-                              {cefrLevel}
-                              {isOriginal && (
-                                <span className="ml-1 text-[10px] opacity-75">
-                                  ({typedLang === "es" ? "Original" : "Original"})
-                                </span>
+                          <div key={lvl.level} className="flex items-center gap-1">
+                            <button
+                              onClick={() => router.push(`/${typedLang}/my-stories/${story.id}/${cefrLevel}/1/1`)}
+                              className="cursor-pointer hover:scale-105 transition-transform"
+                              title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
+                            >
+                              <Badge level={badgeLevel}>
+                                {cefrLevel}
+                                {isOriginal && (
+                                  <span className="ml-1 text-[10px] opacity-75">
+                                    ({typedLang === "es" ? "Original" : "Original"})
+                                  </span>
+                                )}
+                              </Badge>
+                            </button>
+                            <button
+                              onClick={() => handleOpenComparison(lvl.level)}
+                              disabled={isLoadingComparison && comparisonLevel === lvl.level}
+                              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+                              title={typedLang === "es" ? `Comparar alineamiento ${cefrLevel}` : `Compare alignment ${cefrLevel}`}
+                            >
+                              {isLoadingComparison && comparisonLevel === lvl.level ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <BarChart3 className="w-3.5 h-3.5" />
                               )}
-                            </Badge>
-                          </button>
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -640,6 +690,21 @@ export default function UserStoryDetailModal({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Comparison Modal (read-only diagnostic viewer) */}
+          {comparisonData && comparisonLevel && (
+            <ComparisonModal
+              isOpen={true}
+              onClose={handleCloseComparison}
+              level={comparisonLevel ? parseInt(comparisonLevel.replace(/\D/g, ""), 10) : null}
+              leftTitle={`Source (${(comparisonData.sourceLanguage || "en").toUpperCase()})`}
+              leftText={comparisonData.sourceText}
+              rightTitle={`Translation (${comparisonData.sourceLanguage === "en" ? "ES" : "EN"})`}
+              rightText={comparisonData.translatedText}
+              editableSide="none"
+              headerGradient="bg-gradient-to-r from-purple-600 to-indigo-600"
+            />
+          )}
         </>
       )}
     </AnimatePresence>

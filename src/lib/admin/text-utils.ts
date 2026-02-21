@@ -80,6 +80,12 @@ export function cleanText(text: string, options: CleanTextOptions = {}): string 
     // For prose: normalize whitespace
     // Preserve meaningful spacing for structured content (up to 4 blank lines)
     cleaned = cleaned.replace(/\n{6,}/g, "\n\n\n\n\n");
+    // Normalize consecutive blank lines (2+) → structural scene breaks (prose only).
+    // Double+ blanks in novels signal intentional scene/section breaks.
+    // Convert to ---------- markers so they survive translation alignment
+    // and content building (.filter(l => l.trim()) preserves them).
+    // Must run AFTER the \n{6,} collapse above.
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n----------\n");
   }
 
   // Process line by line to remove quote wrapping

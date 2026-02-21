@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { extractTextFromContent } from "@/lib/user-stories/content-utils";
+import type { LevelContent } from "@/lib/story-processing/text-processing";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
@@ -68,6 +70,26 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         },
         { status: 202 }
       );
+    }
+
+    // Raw format: return source/translated text strings for comparison
+    const format = searchParams.get("format");
+    if (format === "raw") {
+      const srcLang = (story.sourceLanguage === "es" ? "es" : "en") as "en" | "es";
+      const { sourceText, translatedText } = extractTextFromContent(
+        levelContent.content as unknown as LevelContent,
+        srcLang
+      );
+      // Debug: log first few lines to verify blank line spacing
+      const srcLines = sourceText.split('\n');
+      console.log(`[content/route] extractTextFromContent returned ${srcLines.length} source lines (first 10):`);
+      srcLines.slice(0, 10).forEach((l, i) => console.log(`  ${i}: ${l ? `"${l.slice(0, 60)}"` : '(blank)'}`));
+
+      return NextResponse.json({
+        sourceText,
+        translatedText,
+        sourceLanguage: story.sourceLanguage,
+      });
     }
 
     return NextResponse.json({

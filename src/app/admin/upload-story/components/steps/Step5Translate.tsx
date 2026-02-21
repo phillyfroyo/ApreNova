@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import type { StoryData, ChunkError, TranslationErrorType } from "../../types";
 import { useTranslationPipeline } from "../../hooks/useTranslationPipeline";
 import { scanContentWarnings, scanTranslationQuality } from "../../hooks/useRewritePipeline";
-import { ComparisonModal } from "../ComparisonModal";
+import { ComparisonModal } from "@/components/ComparisonModal";
 
 interface Step5TranslateProps {
   storyData: StoryData;

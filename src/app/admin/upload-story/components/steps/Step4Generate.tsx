@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type { StoryData } from "../../types";
 import { useRewritePipeline, scanLineAlignment } from "../../hooks/useRewritePipeline";
-import { ComparisonModal } from "../ComparisonModal";
+import { ComparisonModal } from "@/components/ComparisonModal";
 import { OriginalTextModal } from "../OriginalTextModal";
+import { cleanText } from "@/lib/admin/text-utils";
 
 interface Step4GenerateProps {
   storyData: StoryData;
@@ -46,7 +47,7 @@ export function Step4Generate({
     return mode === "omit" || storyData.levelContent[l]?.status === "done";
   });
 
-  const originalText = storyData.rawText;
+  const originalText = cleanText(storyData.rawText);
   const comparisonContent = comparisonLevel !== null ? storyData.levelContent[comparisonLevel] : null;
 
   // Line breakdown expansion state

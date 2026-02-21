@@ -561,6 +561,7 @@ upload: {
   rewritingChapterOf: "Reescribiendo capítulo {current} de {total}",
   translatingChapterOf: "Traduciendo capítulo {current} de {total}",
   stanzaBreak: "⸺ salto de estrofa ⸺",
+  paragraphBreak: "⸺ salto de párrafo ⸺",
   // StreamSelector
   previewCompletedStory: "Vista previa de historia completada",
   viewProgress: "Ver progreso",

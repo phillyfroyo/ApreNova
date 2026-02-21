@@ -31,6 +31,11 @@ import {
   type ProcessedChapter,
   type ProcessedChapterDataWithMetadata,
 } from "./level-processor";
+import {
+  processText,
+  type FileType,
+  type ContentType,
+} from "@/lib/text-processing";
 import { updateStoryStatus, determineFinalStatus, updateStoryProgress, isStoryCancelled, StoryCancelledError } from "./progress-tracker";
 
 // Shared library imports
@@ -294,10 +299,43 @@ async function processAllLevels(
   // PHASE 1: Parse chapters (once, shared across all levels)
   // =========================================================================
   await updateStoryProgress(story.id, "parsing_chapters");
-  // Pass storyType to help infer structure type for poetry
-  const { hasChapters, chapters: originalChapters, structureType } = parseStoryContent(story.rawContent, {
-    storyType: story.storyType
-  });
+
+  // Use the unified processText pipeline when raw HTML is available
+  // This ensures the same algorithm used in admin dev tools is used here
+  let hasChapters: boolean;
+  let originalChapters: { text: string; metadata: { number: number; title: string; subtitle?: string } }[];
+  let structureType: "prose" | "anthology" | "epic" | "script";
+
+  if (story.rawHtml && story.sourceFormat === "html") {
+    // Route through the same unified pipeline the admin dev tools uses
+    const validContentTypes: string[] = ["anthology", "prose", "epic", "script"];
+    const contentType = story.storyType && validContentTypes.includes(story.storyType)
+      ? (story.storyType as ContentType)
+      : undefined;
+    const result = processText(story.rawHtml, {
+      fileType: "html" as FileType,
+      contentType,
+    });
+    const preprocessed = result.preprocessed;
+    hasChapters = preprocessed.chapters.length > 1;
+    structureType = preprocessed.stats.structureType;
+    originalChapters = preprocessed.chapters.map(ch => ({
+      text: ch.rawText,
+      metadata: {
+        number: ch.number,
+        title: ch.title || `Chapter ${ch.number}`,
+        subtitle: ch.subtitle,
+      },
+    }));
+  } else {
+    // Plain text / non-HTML: use existing parseStoryContent path
+    const parsed = parseStoryContent(story.rawContent, {
+      storyType: story.storyType
+    });
+    hasChapters = parsed.hasChapters;
+    originalChapters = parsed.chapters;
+    structureType = parsed.structureType;
+  }
 
   console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}, storyType=${story.storyType}`);
 

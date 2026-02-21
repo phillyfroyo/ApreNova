@@ -320,8 +320,10 @@ export class LevelProgressTracker {
 
   /**
    * Update progress during translation.
-   * Now content is written directly to content field via updateChapterContent(),
-   * so this method just tracks progress for the UI (chapter counts).
+   * Content is also written to content field via updateChapterContent() for reading.
+   * This method stores raw source/translated lines in completedData for the
+   * ProgressViewerModal (preserving blank lines for display), matching how
+   * updateRewriteProgress stores rewriteData.
    */
   async updateTranslationProgress(
     currentChapter: number,
@@ -339,7 +341,6 @@ export class LevelProgressTracker {
     await this.mergeProgress({
       stage: "translating",
       currentChapter,
-      // Keep completedData for backward compat, but it may be empty if using updateChapterContent
       completedData: this.translationData.length > 0 ? this.translationData : undefined,
       chaptersCompleted: Array.from({ length: chaptersCompleted }, (_, i) => i),
       translateProgress: {

@@ -112,6 +112,17 @@ export function ComparisonModal({
   onRetranslateChapter,
   isRetranslating = false,
 }: ComparisonModalProps) {
+  // DEBUG: Log what text the modal receives
+  useEffect(() => {
+    if (isOpen && leftText) {
+      const lines = leftText.split('\n');
+      const blankCount = lines.filter(l => l === '').length;
+      console.log(`[ComparisonModal] leftText: ${leftText.length} chars, ${lines.length} lines, ${blankCount} blank lines`);
+      console.log(`[ComparisonModal] First 8 lines:`);
+      lines.slice(0, 8).forEach((l, i) => console.log(`  ${i}: ${l ? `"${l.slice(0, 60)}"` : '(BLANK)'}`));
+    }
+  }, [isOpen, leftText]);
+
   // Chapter parsing
   const leftChapters = useMemo(() => parseChaptersFromText(leftText), [leftText]);
   const rightChapters = useMemo(() => parseChaptersFromText(rightText), [rightText]);

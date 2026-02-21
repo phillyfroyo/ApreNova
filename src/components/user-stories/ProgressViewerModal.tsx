@@ -398,31 +398,31 @@ export function ProgressViewerModal({
                     const leftLine = leftLines[idx] ?? "";
                     const rightLine = rightLines[idx] ?? "";
                     const hasMismatch = leftLine && rightLine && leftLines.length !== rightLines.length;
-                    // Detect stanza break: both lines are empty (or just whitespace)
-                    const isStanzaBreak = !leftLine.trim() && !rightLine.trim();
+                    // Detect blank/empty line (paragraph or stanza break)
+                    const isBlankLine = !leftLine.trim() && !rightLine.trim();
 
                     return (
                       <div
                         key={idx}
-                        className={`grid border-b ${isStanzaBreak ? "border-gray-300 bg-gray-100" : "border-gray-100"} ${hasMismatch ? "bg-amber-50" : isStanzaBreak ? "" : "hover:bg-gray-50"}`}
+                        className={`grid border-b ${isBlankLine ? "border-gray-200" : "border-gray-100"} ${hasMismatch ? "bg-amber-50" : isBlankLine ? "" : "hover:bg-gray-50"}`}
                         style={{ gridTemplateColumns: "3rem 1fr 1fr" }}
                       >
                         {/* Line number */}
-                        <div className={`select-none text-gray-400 text-right pr-2 py-1 border-r border-gray-200 ${isStanzaBreak ? "bg-gray-200" : "bg-gray-50"}`}>
-                          {isStanzaBreak ? "—" : idx + 1}
+                        <div className={`select-none text-gray-400 text-right pr-2 py-1 border-r border-gray-200 ${isBlankLine ? "bg-gray-100" : "bg-gray-50"}`}>
+                          {isBlankLine ? "—" : idx + 1}
                         </div>
 
                         {/* Left cell */}
-                        <div className={`py-1 px-2 md:px-3 border-r border-gray-200 overflow-hidden min-w-0 ${isStanzaBreak ? "bg-gray-100" : ""}`}>
-                          <span className={`whitespace-pre-wrap break-words block ${isStanzaBreak ? "text-gray-400 text-center italic text-xs" : "text-gray-700"}`}>
-                            {isStanzaBreak ? t(lng, "upload", "stanzaBreak") : (leftLine || "\u00A0")}
+                        <div className={`py-1 px-2 md:px-3 border-r border-gray-200 overflow-hidden min-w-0 ${isBlankLine ? "bg-gray-50" : ""}`}>
+                          <span className={`whitespace-pre-wrap break-words block ${isBlankLine ? "text-gray-400 text-center italic text-xs" : "text-sm font-mono text-gray-700"}`}>
+                            {isBlankLine ? t(lng, "upload", "paragraphBreak") : (leftLine || "\u00A0")}
                           </span>
                         </div>
 
                         {/* Right cell */}
-                        <div className={`py-1 px-2 md:px-3 overflow-hidden min-w-0 ${isStanzaBreak ? "bg-gray-100" : ""}`}>
-                          <span className={`whitespace-pre-wrap break-words block ${isStanzaBreak ? "text-gray-400 text-center italic text-xs" : "text-gray-700"}`}>
-                            {isStanzaBreak ? t(lng, "upload", "stanzaBreak") : (rightLine || "\u00A0")}
+                        <div className={`py-1 px-2 md:px-3 overflow-hidden min-w-0 ${isBlankLine ? "bg-gray-50" : ""}`}>
+                          <span className={`whitespace-pre-wrap break-words block ${isBlankLine ? "text-gray-400 text-center italic text-xs" : "text-sm font-mono text-gray-700"}`}>
+                            {isBlankLine ? t(lng, "upload", "paragraphBreak") : (rightLine || "\u00A0")}
                           </span>
                         </div>
                       </div>

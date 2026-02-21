@@ -16,6 +16,7 @@ import {
   joinStanzasToText,
   joinStanzasWithSpacing,
   translateChapter,
+  cleanText,
   parseChapters,
   buildContentStructure,
   buildContentStructureWithMetadata,
@@ -309,7 +310,8 @@ async function rewriteChapterWithChunking(
       console.log(`[RewriteChapterWithChunking] Poetry rewrite used ${chapterResult.usedFallback}-level fallback`);
     }
 
-    return chapterResult.rewrittenText;
+    // Apply cleanText to normalize whitespace (same as admin pipeline)
+    return cleanText(chapterResult.rewrittenText, { preserveWhitespace: true });
   }
 
   // For prose: check if chapter needs chunking
@@ -322,7 +324,8 @@ async function rewriteChapterWithChunking(
       sourceLanguage,
       rewriteOptions
     );
-    return result.rewrittenText;
+    // Apply cleanText to normalize whitespace (same as admin pipeline)
+    return cleanText(result.rewrittenText);
   }
 
   // Large prose chapter - split into chunks
@@ -370,8 +373,8 @@ async function rewriteChapterWithChunking(
     }
   }
 
-  // Reassemble chunks
-  return reassembleChunks(rewrittenChunks);
+  // Reassemble chunks and apply cleanText (same as admin pipeline)
+  return cleanText(reassembleChunks(rewrittenChunks));
 }
 
 // ============================================================================
@@ -533,9 +536,13 @@ export async function rewriteLevelChapters(
       });
 
       // Update progress with completed chapter data
+      // Apply cleanText so double blanks become ---------- markers, then split
+      // Keep blank lines (single \n\n paragraph spacing) for display in ProgressViewerModal
+      const cleanedOriginal = cleanText(chapterText);
+      const cleanedRewritten = cleanText(rewrittenText);
       await tracker.updateRewriteProgress(i + 1, {
-        originalLines: chapterText.split("\n").filter((l) => l.trim()),
-        rewrittenLines: rewrittenText.split("\n").filter((l) => l.trim()),
+        originalLines: cleanedOriginal.split("\n"),
+        rewrittenLines: cleanedRewritten.split("\n"),
       });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
@@ -645,6 +652,7 @@ export async function translateLevelChapters(
 
       let filteredSourceLines: string[];
       let filteredTranslatedLines: string[];
+      let rawTranslatedText: string; // Unfiltered translated text for progress tracker
 
       if (needsMetadata) {
         // Poems/scripts need special preprocessing for stanza/speaker metadata
@@ -662,6 +670,7 @@ export async function translateLevelChapters(
         const result = await translateChapter(textToTranslate, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry
         });
+        rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
         filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
@@ -673,9 +682,11 @@ export async function translateLevelChapters(
         const result = await translateChapter(chapterText, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
         });
+        rawTranslatedText = result.translatedText;
 
-        // Filter blanks for content building (same as admin's parseChapters)
-        filteredSourceLines = chapterText.split('\n').filter((l) => l.trim());
+        // Clean source text so double blanks become ---------- markers (same as translation side)
+        const cleanedSource = cleanText(chapterText);
+        filteredSourceLines = cleanedSource.split('\n').filter((l) => l.trim());
         filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
       }
 
@@ -765,8 +776,13 @@ export async function translateLevelChapters(
         }
       );
 
-      // Also update progress tracker for UI progress display
-      await tracker.updateTranslationProgress(i + 1);
+      // Also update progress tracker with chapter data for ProgressViewerModal
+      // Apply cleanText so double blanks become ---------- markers, keep blank lines for display
+      const cleanedTransSource = cleanText(chapterText);
+      await tracker.updateTranslationProgress(i + 1, {
+        sourceLines: cleanedTransSource.split("\n"),
+        translatedLines: rawTranslatedText.split("\n"),
+      });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -1075,9 +1091,13 @@ async function* rewriteChaptersProducer(
         );
 
         // Update progress with chapter data
+        // Apply cleanText so double blanks become ---------- markers, then split
+        // Keep blank lines for display in ProgressViewerModal
+        const cleanedOrig = cleanText(chapterText);
+        const cleanedRewrite = cleanText(rewrittenContent);
         await tracker.updateRewriteProgress(i + 1, {
-          originalLines: chapterText.split("\n").filter((l) => l.trim()),
-          rewrittenLines: rewrittenContent.split("\n").filter((l) => l.trim()),
+          originalLines: cleanedOrig.split("\n"),
+          rewrittenLines: cleanedRewrite.split("\n"),
         });
       } catch (error: any) {
         console.error(`[StreamingProducer] Rewrite failed for chapter ${i + 1}:`, error.message);
@@ -1190,6 +1210,7 @@ async function translateChaptersConsumer(
       let speakerNames: string[] = [];
       let filteredSourceLines: string[];
       let filteredTranslatedLines: string[];
+      let rawTranslatedText: string; // Unfiltered translated text for progress tracker
 
       if (needsMetadata) {
         // Poems/scripts need special preprocessing for stanza/speaker metadata
@@ -1208,6 +1229,7 @@ async function translateChaptersConsumer(
         const result = await translateChapter(textToTranslate, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry
         });
+        rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
         filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
@@ -1219,9 +1241,11 @@ async function translateChaptersConsumer(
         const result = await translateChapter(content, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
         });
+        rawTranslatedText = result.translatedText;
 
-        // Filter blanks for content building (same as admin's parseChapters)
-        filteredSourceLines = content.split('\n').filter((l) => l.trim());
+        // Clean source text so double blanks become ---------- markers (same as translation side)
+        const cleanedSource = cleanText(content);
+        filteredSourceLines = cleanedSource.split('\n').filter((l) => l.trim());
         filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
       }
 
@@ -1284,8 +1308,12 @@ async function translateChaptersConsumer(
         }
       );
 
-      // Also update progress tracker for UI progress display
-      await tracker.updateTranslationProgress(chaptersProcessed + 1);
+      // Also update progress tracker with chapter data for ProgressViewerModal
+      const cleanedTransSource = cleanText(content);
+      await tracker.updateTranslationProgress(chaptersProcessed + 1, {
+        sourceLines: cleanedTransSource.split("\n"),
+        translatedLines: rawTranslatedText.split("\n"),
+      });
 
     } catch (error: any) {
       console.error(`[StreamingConsumer] Translation failed for chapter ${chapterIndex + 1}:`, error.message);
