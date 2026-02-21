@@ -1,6 +1,41 @@
 // src/lib/story-processing/translation-utils.ts
-// Client-safe translation utilities (no AI SDK dependencies)
-// These functions handle line numbering and alignment for bilingual text
+// ⚠️  SHARED MODULE — Used by BOTH admin and user pipelines.
+//     Do NOT duplicate this logic. Both pipelines must use these functions.
+//
+// Client-safe translation utilities (no AI SDK dependencies).
+// Handles: leading blank alignment, line numbering, blank-line reconstruction,
+//          and truncation detection for bilingual text.
+
+// ============================================================================
+// LEADING BLANK LINE ALIGNMENT
+// Ensures translated text has the same leading blank lines as the source
+// ============================================================================
+
+/**
+ * Align leading blank lines of translated text to match the source text.
+ * Ensures the first content line of source and translation are at the same position.
+ * This prevents off-by-one misalignment when a blank line is lost or added during translation.
+ */
+export function alignLeadingBlanks(sourceText: string, translatedText: string): string {
+  const sourceLines = sourceText.split('\n');
+  const translatedLines = translatedText.split('\n');
+
+  // Find first non-blank line position in each
+  const sourceFirstContent = sourceLines.findIndex(l => l.trim() !== '');
+  const translatedFirstContent = translatedLines.findIndex(l => l.trim() !== '');
+
+  // If both start with content immediately, or both have same leading blanks, nothing to do
+  if (sourceFirstContent === translatedFirstContent) return translatedText;
+
+  // If neither has content, return as-is
+  if (sourceFirstContent === -1 || translatedFirstContent === -1) return translatedText;
+
+  // Adjust: strip existing leading blanks from translated, then prepend the right number
+  const contentPortion = translatedLines.slice(translatedFirstContent);
+  const leadingBlanks = new Array(sourceFirstContent).fill('');
+
+  return [...leadingBlanks, ...contentPortion].join('\n');
+}
 
 // ============================================================================
 // LINE NUMBER ALIGNMENT UTILITIES

@@ -22,8 +22,10 @@ export * from "./client";
 
 export {
   translateText,
+  translateChapter,
   type TranslationResult,
   type TranslationOptions,
+  type TranslateChapterOptions,
 } from "./translation";
 
 // ============================================================================

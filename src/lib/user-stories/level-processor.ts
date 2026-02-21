@@ -7,7 +7,7 @@
 // - This is more logical and allows for potential parallelization
 
 import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
-import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, createThrottledCancellationChecker, ChapterTranslationData, ProcessingProgress } from "./progress-tracker";
+import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, ChapterTranslationData, ProcessingProgress } from "./progress-tracker";
 import { prisma } from "@/lib/prisma";
 import {
   rewriteToLevel,
@@ -15,7 +15,7 @@ import {
   rewritePoetryChapter,
   joinStanzasToText,
   joinStanzasWithSpacing,
-  translateText,
+  translateChapter,
   parseChapters,
   buildContentStructure,
   buildContentStructureWithMetadata,
@@ -374,81 +374,6 @@ async function rewriteChapterWithChunking(
   return reassembleChunks(rewrittenChunks);
 }
 
-/**
- * Translate a single chapter, chunking if necessary for large content.
- * Returns the translated lines.
- */
-async function translateChapterWithChunking(
-  chapterText: string,
-  sourceLanguage: "en" | "es",
-  level: string,
-  ctx: CostContext,
-  isPoetry: boolean = false
-): Promise<string[]> {
-  const translateOptions = {
-    storyId: ctx.storyId,
-    userId: ctx.userId,
-    isPoetry,
-  };
-
-  // Check if chapter needs chunking
-  // Note: For poetry, we avoid chunking as it can break stanza/verse structure
-  if (chapterText.length <= MAX_CHUNK_CHARS || isPoetry) {
-    // Small chapter or poetry - process directly (don't chunk poetry)
-    const result = await translateText(chapterText, sourceLanguage, level, translateOptions);
-    return result.translatedLines;
-  }
-
-  // Large chapter - split into chunks (prose only)
-  const chunks = splitIntoSubChunks(chapterText, MAX_CHUNK_CHARS);
-
-  const allTranslatedLines: string[] = [];
-
-  // Create throttled cancellation checker for long chunking operations
-  // Checks every 10 seconds to avoid wasting API calls after user cancels
-  const cancellationChecker = createThrottledCancellationChecker(ctx.storyId, 10000);
-
-  for (let i = 0; i < chunks.length; i++) {
-    // Check for cancellation (throttled - only queries DB every 10 seconds)
-    await cancellationChecker.checkIfCancelled();
-
-    const chunk = chunks[i];
-    let lastError: Error | null = null;
-
-    // Retry loop for each chunk
-    for (let attempt = 1; attempt <= RETRY_CONFIG.MAX_TRANSLATION_RETRIES; attempt++) {
-      try {
-        const result = await translateText(chunk, sourceLanguage, level, translateOptions);
-        allTranslatedLines.push(...result.translatedLines);
-        lastError = null;
-        break;
-      } catch (error: any) {
-        lastError = error;
-        const errorType = categorizeError(error);
-
-        if (!isRetryableError(errorType) || attempt === RETRY_CONFIG.MAX_TRANSLATION_RETRIES) {
-          console.error(`[Chunking] Translation chunk ${i + 1}/${chunks.length} failed (${errorType}): ${error.message}`);
-          // Use placeholder as fallback
-          const chunkLines = chunk.split("\n").filter((l) => l.trim());
-          allTranslatedLines.push(...chunkLines.map(() => "[Translation failed]"));
-          break;
-        }
-
-        const retryDelay = getRetryDelay(errorType, attempt);
-        console.warn(`[Chunking] Translation chunk ${i + 1} retry ${attempt}/${RETRY_CONFIG.MAX_TRANSLATION_RETRIES} after ${retryDelay}ms`);
-        await delay(retryDelay);
-      }
-    }
-
-    // Rate limit between chunks
-    if (i < chunks.length - 1) {
-      await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
-    }
-  }
-
-  return allTranslatedLines;
-}
-
 // ============================================================================
 // PHASE 1: PARSING (shared across all levels)
 // ============================================================================
@@ -712,33 +637,47 @@ export async function translateLevelChapters(
       // NOTE: Don't update level progress here - wait until chapter is complete
       // The chapter count should only increment AFTER content is written to the database
 
-      // Preprocess for story type (poems: stanzas, scripts: speakers)
-      // Pass source format info for robust HTML stanza detection
-      const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
-        chapterText,
-        storyType,
-        { sourceFormat, rawHtml }
-      );
+      // For prose: translate the chapter text directly (same as admin pipeline)
+      // For poems/scripts: preprocess first to extract stanza/speaker metadata
+      let processedLines: string[];
+      let lineMetadata = new Map<number, LineMetadata>();
+      let speakerNames: string[] = [];
 
-      // Translate the processed lines (with chunking for large chapters, artistic handling for poetry)
-      const textToTranslate = processedLines.join('\n');
-      const translatedLines = await translateChapterWithChunking(
-        textToTranslate,
-        sourceLanguage,
-        level,
-        ctx,
-        isPoetry
-      );
+      let filteredSourceLines: string[];
+      let filteredTranslatedLines: string[];
 
-      // Filter translated lines - but preserve blank lines for poetry (they mark stanza breaks)
-      const filteredTranslatedLines = isPoetry
-        ? translatedLines
-        : translatedLines.filter((l) => l.trim());
+      if (needsMetadata) {
+        // Poems/scripts need special preprocessing for stanza/speaker metadata
+        const preprocessed = preprocessChapterForStoryType(
+          chapterText,
+          storyType,
+          { sourceFormat, rawHtml }
+        );
+        processedLines = preprocessed.processedLines;
+        lineMetadata = preprocessed.lineMetadata;
+        speakerNames = preprocessed.speakerNames;
 
-      // For poetry, also preserve blank lines in source
-      const filteredSourceLines = isPoetry
-        ? processedLines
-        : processedLines.filter((l) => l.trim());
+        // Translate the processed lines using shared translateChapter
+        const textToTranslate = processedLines.join('\n');
+        const result = await translateChapter(textToTranslate, sourceLanguage, level, {
+          storyId: ctx.storyId, userId: ctx.userId, isPoetry
+        });
+
+        // For poetry, preserve blank lines (they mark stanza breaks)
+        filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
+        filteredTranslatedLines = isPoetry
+          ? result.translatedText.split('\n')
+          : result.translatedText.split('\n').filter((l) => l.trim());
+      } else {
+        // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
+        const result = await translateChapter(chapterText, sourceLanguage, level, {
+          storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
+        });
+
+        // Filter blanks for content building (same as admin's parseChapters)
+        filteredSourceLines = chapterText.split('\n').filter((l) => l.trim());
+        filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
+      }
 
       // Build processed chapter (basic version for backward compatibility)
       const chapterData: ProcessedChapter = {
@@ -765,17 +704,14 @@ export async function translateLevelChapters(
         if (stageDirectionsToTranslate.length > 0) {
           const directionsText = stageDirectionsToTranslate.map(d => d.direction).join('\n');
           try {
-            const translatedDirections = await translateChapterWithChunking(
-              directionsText,
-              sourceLanguage,
-              level,
-              ctx,
-              false // Stage directions are prose, not poetry
-            );
+            const dirResult = await translateChapter(directionsText, sourceLanguage, level, {
+              storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
+            });
             // Map back to line indices
+            const dirLines = dirResult.translatedText.split('\n');
             stageDirectionsToTranslate.forEach((d, translateIdx) => {
-              if (translatedDirections[translateIdx]) {
-                translatedStageDirections.set(d.idx, translatedDirections[translateIdx]);
+              if (dirLines[translateIdx]) {
+                translatedStageDirections.set(d.idx, dirLines[translateIdx]);
               }
             });
           } catch (err) {
@@ -1247,33 +1183,47 @@ async function translateChaptersConsumer(
     // The chapter count should only increment AFTER content is written to the database
 
     try {
-      // Preprocess for story type (poems: stanzas, scripts: speakers)
-      // This extracts metadata from the REWRITTEN content
-      // Note: For rewritten content, we don't have HTML anymore (it was plain text after rewrite)
-      // So we pass sourceFormat but not rawHtml for the streaming consumer
-      const { processedLines, lineMetadata, speakerNames } = preprocessChapterForStoryType(
-        content,
-        storyType,
-        { sourceFormat, rawHtml: null } // rawHtml is not applicable after rewrite
-      );
+      // For prose: translate the chapter text directly using shared translateChapter
+      // For poems/scripts: preprocess first to extract stanza/speaker metadata
+      let processedLines: string[];
+      let lineMetadata = new Map<number, LineMetadata>();
+      let speakerNames: string[] = [];
+      let filteredSourceLines: string[];
+      let filteredTranslatedLines: string[];
 
-      // Call Claude to translate (with chunking for large chapters, artistic handling for poetry)
-      const textToTranslate = processedLines.join('\n');
-      const translatedLines = await translateChapterWithChunking(
-        textToTranslate,
-        sourceLanguage,
-        level,
-        ctx,
-        isPoetry
-      );
+      if (needsMetadata) {
+        // Poems/scripts need special preprocessing for stanza/speaker metadata
+        // Note: For rewritten content, we don't have HTML anymore (plain text after rewrite)
+        const preprocessed = preprocessChapterForStoryType(
+          content,
+          storyType,
+          { sourceFormat, rawHtml: null }
+        );
+        processedLines = preprocessed.processedLines;
+        lineMetadata = preprocessed.lineMetadata;
+        speakerNames = preprocessed.speakerNames;
 
-      // Preserve blank lines for poetry (they mark stanza breaks), filter for prose
-      const filteredSourceLines = isPoetry
-        ? processedLines
-        : processedLines.filter((l) => l.trim());
-      const filteredTranslatedLines = isPoetry
-        ? translatedLines
-        : translatedLines.filter((l) => l.trim());
+        // Translate the processed lines using shared translateChapter
+        const textToTranslate = processedLines.join('\n');
+        const result = await translateChapter(textToTranslate, sourceLanguage, level, {
+          storyId: ctx.storyId, userId: ctx.userId, isPoetry
+        });
+
+        // For poetry, preserve blank lines (they mark stanza breaks)
+        filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
+        filteredTranslatedLines = isPoetry
+          ? result.translatedText.split('\n')
+          : result.translatedText.split('\n').filter((l) => l.trim());
+      } else {
+        // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
+        const result = await translateChapter(content, sourceLanguage, level, {
+          storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
+        });
+
+        // Filter blanks for content building (same as admin's parseChapters)
+        filteredSourceLines = content.split('\n').filter((l) => l.trim());
+        filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
+      }
 
       // Preserve metadata from original chapter
       const processedChapter: ProcessedChapter = {

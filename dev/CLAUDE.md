@@ -36,9 +36,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |--------|---------|---------|
 | `src/lib/text-processing/` | **SINGLE SOURCE OF TRUTH** for all text processing | Admin uploads, User uploads, Dev Tools |
 | `src/lib/poem-processing/` | Canonical stanza detection | User pipeline, Admin pipeline, Rewriting |
-| `src/lib/story-processing/` | Detection, translation, content building | Both portals |
+| `src/lib/story-processing/` | Detection, translation, rewriting, content building | Both portals |
 | `src/lib/user-stories/` | User upload orchestration | User portal API routes |
 | `src/lib/admin/` | Admin upload orchestration | Admin portal API routes |
+
+### Translation Pipeline Architecture (CRITICAL):
+
+**The admin and user pipelines SHARE translation logic. Do NOT create parallel implementations.**
+
+```
+SHARED (src/lib/story-processing/):
+  translation.ts        → translateChapter()  — chunking + translate + align + clean
+                        → translateText()     — low-level line-numbered translation
+  translation-utils.ts  → alignLeadingBlanks(), addLineNumbers(), parseNumberedLines()
+  processing-config.ts  → splitChapterForTranslation(), TRANSLATION_SUB_CHUNK_CHARS
+
+USER PIPELINE (src/lib/user-stories/level-processor.ts):
+  translateLevelChapters()     → calls translateChapter() from shared module
+  translateChaptersConsumer()  → calls translateChapter() from shared module
+
+ADMIN PIPELINE (src/app/admin/upload-story/hooks/useTranslationPipeline.ts):
+  translateChunk()     → calls /api/admin/translate (HTTP) → translateText()
+  alignLeadingBlanks() → imported from shared translation-utils.ts
+  cleanText()          → imported from shared text-utils.ts
+```
+
+**Rules:**
+- `translateChapter()` is the single source of truth for chapter-level translation
+- User pipeline calls it directly (server-side)
+- Admin pipeline calls `translateText()` via HTTP API, then applies `alignLeadingBlanks()` + `cleanText()` client-side (same steps, same shared functions)
+- NEVER add translation post-processing (alignment, cleaning, blank-line filtering) to pipeline-specific code — put it in the shared module
+- Files in `src/lib/story-processing/` are marked with `⚠️ SHARED MODULE` headers
 
 ---
 

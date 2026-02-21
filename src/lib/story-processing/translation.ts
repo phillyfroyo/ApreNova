@@ -1,6 +1,11 @@
 // src/lib/story-processing/translation.ts
-// Server-only translation using Anthropic Claude Haiku
-// Used by both admin and user story pipelines (API routes only)
+// ⚠️  SHARED MODULE — Used by BOTH admin and user pipelines.
+//     Do NOT duplicate translation logic elsewhere.
+//
+// Server-only translation using Anthropic Claude Haiku.
+// Key exports:
+//   translateText()    — Low-level: translate a block of text (line-numbered alignment)
+//   translateChapter() — High-level: translate a full chapter (chunking + alignment + cleaning)
 
 import "server-only";
 
@@ -13,8 +18,11 @@ import {
   reconstructWithBlankLines,
   stripLineNumberPrefixes,
   detectTruncation,
+  alignLeadingBlanks,
   type TruncationResult,
 } from "./translation-utils";
+import { cleanText } from "@/lib/admin/text-utils";
+import { splitChapterForTranslation, TRANSLATION_SUB_CHUNK_CHARS } from "./processing-config";
 
 // Re-export utilities for backward compatibility
 export {
@@ -298,4 +306,81 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
   }
 
   throw new Error(`Translation failed after ${maxRetries} attempts`);
+}
+
+// ============================================================================
+// CHAPTER-LEVEL TRANSLATION
+// Shared by both admin and user pipelines.
+// Handles chunking, alignment, and cleaning — the complete translate-a-chapter flow.
+// ============================================================================
+
+export interface TranslateChapterOptions {
+  storyId?: string;
+  userId?: string;
+  isPoetry?: boolean;
+  adminStorySlug?: string;
+}
+
+/**
+ * Translate a full chapter of text, handling sub-chunking for large chapters.
+ * This is the single source of truth for chapter translation logic, shared
+ * by both admin and user pipelines.
+ *
+ * Steps (matching the admin pipeline's working behavior):
+ * 1. If small enough, call translateText() directly
+ * 2. If large, splitChapterForTranslation() → translateText() per chunk → join with '\n\n'
+ * 3. alignLeadingBlanks(sourceText, translatedText) — match leading blank lines
+ * 4. cleanText(translatedText) — strip markdown artifacts, normalize whitespace
+ * 5. Return { translatedText, translatedLines }
+ */
+export async function translateChapter(
+  chapterText: string,
+  sourceLanguage: "en" | "es",
+  level: string | number,
+  options: TranslateChapterOptions = {}
+): Promise<{ translatedText: string; translatedLines: string[] }> {
+  const { storyId, userId, isPoetry = false, adminStorySlug } = options;
+
+  const translateOptions: TranslationOptions = {
+    storyId,
+    userId,
+    isPoetry,
+    adminStorySlug,
+  };
+
+  let translatedText: string;
+
+  // Step 1 & 2: Translate (with sub-chunking for large chapters)
+  // For poetry, skip chunking as it can break stanza/verse structure
+  if (chapterText.length > TRANSLATION_SUB_CHUNK_CHARS && !isPoetry) {
+    // Large chapter — split at paragraph boundaries and translate each sub-chunk
+    const subChunks = splitChapterForTranslation(chapterText);
+    console.log(`[translateChapter] Splitting into ${subChunks.length} sub-chunks (${subChunks.map(c => c.length).join(', ')} chars)`);
+
+    const translatedSubChunks: string[] = [];
+    for (let i = 0; i < subChunks.length; i++) {
+      console.log(`[translateChapter] Sub-chunk ${i + 1}/${subChunks.length}: ${subChunks[i].length} chars`);
+      const result = await translateText(subChunks[i], sourceLanguage, level, translateOptions);
+      translatedSubChunks.push(result.translatedText);
+    }
+
+    // Rejoin with blank line between sub-chunks (matching original paragraph breaks)
+    translatedText = translatedSubChunks.join('\n\n');
+  } else {
+    // Small chapter or poetry — translate directly
+    const result = await translateText(chapterText, sourceLanguage, level, translateOptions);
+    translatedText = result.translatedText;
+  }
+
+  // Step 3: Align leading blank lines with source
+  translatedText = alignLeadingBlanks(chapterText, translatedText);
+
+  // Step 4: Clean text (strip markdown artifacts, normalize whitespace)
+  translatedText = cleanText(translatedText, { preserveWhitespace: isPoetry });
+
+  // Step 5: Return both text and lines
+  return {
+    translatedText,
+    translatedLines: translatedText.split('\n'),
+  };
 }

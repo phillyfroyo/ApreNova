@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import type { StoryData, LevelContent, ChunkError, TranslationErrorType } from "../types";
 import { cleanText, parseChaptersFromText } from "@/lib/admin/text-utils";
+import { alignLeadingBlanks } from "@/lib/story-processing/translation-utils";
 import {
   TRANSLATION_BATCH_SIZE,
   MAX_CHUNK_CHARS,
@@ -12,36 +13,6 @@ import {
 // is line-based ([N] prefix) and preserves structure better. Larger chunks mean
 // fewer splits and more context for the AI, reducing partial translations.
 const TRANSLATION_SUB_CHUNK_CHARS = 24000;
-
-// ============================================
-// Alignment Utilities
-// ============================================
-
-/**
- * Align leading blank lines of translated text to match the source text.
- * Ensures the first content line of source and translation are at the same position.
- * This prevents off-by-one misalignment when a blank line is lost or added during translation.
- */
-function alignLeadingBlanks(sourceText: string, translatedText: string): string {
-  const sourceLines = sourceText.split('\n');
-  const translatedLines = translatedText.split('\n');
-
-  // Find first non-blank line position in each
-  const sourceFirstContent = sourceLines.findIndex(l => l.trim() !== '');
-  const translatedFirstContent = translatedLines.findIndex(l => l.trim() !== '');
-
-  // If both start with content immediately, or both have same leading blanks, nothing to do
-  if (sourceFirstContent === translatedFirstContent) return translatedText;
-
-  // If neither has content, return as-is
-  if (sourceFirstContent === -1 || translatedFirstContent === -1) return translatedText;
-
-  // Adjust: strip existing leading blanks from translated, then prepend the right number
-  const contentPortion = translatedLines.slice(translatedFirstContent);
-  const leadingBlanks = new Array(sourceFirstContent).fill('');
-
-  return [...leadingBlanks, ...contentPortion].join('\n');
-}
 
 // ============================================
 // Types

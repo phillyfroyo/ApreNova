@@ -1,6 +1,8 @@
 // src/lib/story-processing/processing-config.ts
-// Centralized configuration for story processing pipelines
-// Used by both admin and user story pipelines
+// ⚠️  SHARED MODULE — Used by BOTH admin and user pipelines.
+//     Do NOT duplicate chunking or config logic elsewhere.
+//
+// Centralized configuration and chunking utilities for story processing.
 
 // ============================================================================
 // CHUNKING CONFIGURATION
@@ -317,6 +319,66 @@ export function detectFileType(
   }
 
   return "unknown";
+}
+
+// ============================================================================
+// TRANSLATION CHUNKING
+// ============================================================================
+
+/**
+ * Maximum characters per sub-chunk for translation API calls.
+ * Translation sub-chunks can be larger than rewrite chunks because translation
+ * is line-based ([N] prefix) and preserves structure better. Larger chunks mean
+ * fewer splits and more context for the AI, reducing partial translations.
+ */
+export const TRANSLATION_SUB_CHUNK_CHARS = 24000;
+
+/**
+ * Split a large chapter into sub-chunks at paragraph boundaries (blank lines)
+ * for translation. Each sub-chunk stays under TRANSLATION_SUB_CHUNK_CHARS.
+ *
+ * This is the admin pipeline's proven chunking logic for translation,
+ * shared across both admin and user pipelines.
+ */
+export function splitChapterForTranslation(chapterText: string): string[] {
+  const lines = chapterText.split('\n');
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let currentSize = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineSize = line.length + 1; // +1 for newline
+
+    // If adding this line would exceed limit AND we have content AND we're at a paragraph break
+    if (currentSize + lineSize > TRANSLATION_SUB_CHUNK_CHARS && currentChunk.length > 0 && line.trim() === '') {
+      chunks.push(currentChunk.join('\n'));
+      currentChunk = [];
+      currentSize = 0;
+      // Skip the blank line — it'll be re-added when we rejoin chunks
+      continue;
+    }
+
+    currentChunk.push(line);
+    currentSize += lineSize;
+  }
+
+  // Push remaining content
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join('\n'));
+  }
+
+  // If we couldn't split (no paragraph breaks), force-split at line boundaries
+  if (chunks.length === 1 && chapterText.length > TRANSLATION_SUB_CHUNK_CHARS) {
+    const maxLines = Math.ceil(lines.length / Math.ceil(chapterText.length / TRANSLATION_SUB_CHUNK_CHARS));
+    const forceChunks: string[] = [];
+    for (let i = 0; i < lines.length; i += maxLines) {
+      forceChunks.push(lines.slice(i, i + maxLines).join('\n'));
+    }
+    return forceChunks;
+  }
+
+  return chunks;
 }
 
 // ============================================================================
