@@ -691,19 +691,21 @@ export default function UserStoryDetailModal({
             )}
           </AnimatePresence>
 
-          {/* Comparison Modal (read-only diagnostic viewer) */}
+          {/* Comparison Modal (read-only diagnostic viewer) — rendered above detail modal */}
           {comparisonData && comparisonLevel && (
-            <ComparisonModal
-              isOpen={true}
-              onClose={handleCloseComparison}
-              level={comparisonLevel ? parseInt(comparisonLevel.replace(/\D/g, ""), 10) : null}
-              leftTitle={`Source (${(comparisonData.sourceLanguage || "en").toUpperCase()})`}
-              leftText={comparisonData.sourceText}
-              rightTitle={`Translation (${comparisonData.sourceLanguage === "en" ? "ES" : "EN"})`}
-              rightText={comparisonData.translatedText}
-              editableSide="none"
-              headerGradient="bg-gradient-to-r from-purple-600 to-indigo-600"
-            />
+            <div className="fixed inset-0 z-[110]">
+              <ComparisonModal
+                isOpen={true}
+                onClose={handleCloseComparison}
+                level={comparisonLevel ? parseInt(comparisonLevel.replace(/\D/g, ""), 10) : null}
+                leftTitle={`Source (${(comparisonData.sourceLanguage || "en").toUpperCase()})`}
+                leftText={comparisonData.sourceText}
+                rightTitle={`Translation (${comparisonData.sourceLanguage === "en" ? "ES" : "EN"})`}
+                rightText={comparisonData.translatedText}
+                editableSide="none"
+                headerGradient="bg-gradient-to-r from-purple-600 to-indigo-600"
+              />
+            </div>
           )}
         </>
       )}
