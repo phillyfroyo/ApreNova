@@ -120,7 +120,7 @@ export {
   quickClean,
 } from "@/lib/admin/text-preprocessor";
 
-export { cleanText, parseChaptersFromText } from "@/lib/admin/text-utils";
+export { cleanText, parseChaptersFromText, collapseConsecutiveBlanks } from "@/lib/admin/text-utils";
 
 // NEW: Stanza detection from the canonical poem-processing module
 // This is THE single source of truth for all stanza detection

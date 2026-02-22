@@ -120,6 +120,7 @@ export {
   detectLineBreakStyle,
   cleanText,
   parseChaptersFromText,
+  collapseConsecutiveBlanks,
 } from "./text-processing";
 
 // ============================================================================

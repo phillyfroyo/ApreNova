@@ -33,7 +33,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * A structural/separator line that should be passed through unchanged.
- * Matches lines like "----------", "***", "* * *", "===", etc.
+ * Matches lines like "***", "* * *", "===", "---", etc.
  */
 function isStructuralLine(line: string): boolean {
   const trimmed = line.trim();

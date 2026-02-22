@@ -32,6 +32,34 @@ export interface HTMLExtractionResult {
 }
 
 // ============================================
+// Blank Line Utilities
+// ============================================
+
+/**
+ * Collapse runs of 2+ consecutive blank lines to a single blank line,
+ * and trim leading/trailing blank lines.
+ *
+ * Use this instead of `.filter(l => l.trim())` to preserve single blank
+ * lines as paragraph breaks (StoryLine { en: "", es: "" }).
+ */
+export function collapseConsecutiveBlanks(lines: string[]): string[] {
+  const result: string[] = [];
+  let lastWasBlank = false;
+  for (const line of lines) {
+    if (!line.trim()) {
+      if (!lastWasBlank) result.push(line);
+      lastWasBlank = true;
+    } else {
+      result.push(line);
+      lastWasBlank = false;
+    }
+  }
+  while (result.length > 0 && !result[0].trim()) result.shift();
+  while (result.length > 0 && !result[result.length - 1].trim()) result.pop();
+  return result;
+}
+
+// ============================================
 // Text Cleaning
 // ============================================
 
@@ -78,14 +106,9 @@ export function cleanText(text: string, options: CleanTextOptions = {}): string 
     cleaned = cleaned.replace(/\n{11,}/g, "\n\n\n\n\n\n\n\n\n\n");
   } else {
     // For prose: normalize whitespace
-    // Preserve meaningful spacing for structured content (up to 4 blank lines)
-    cleaned = cleaned.replace(/\n{6,}/g, "\n\n\n\n\n");
-    // Normalize consecutive blank lines (2+) → structural scene breaks (prose only).
-    // Double+ blanks in novels signal intentional scene/section breaks.
-    // Convert to ---------- markers so they survive translation alignment
-    // and content building (.filter(l => l.trim()) preserves them).
-    // Must run AFTER the \n{6,} collapse above.
-    cleaned = cleaned.replace(/\n{3,}/g, "\n\n----------\n");
+    // Collapse all runs of 2+ blank lines to a single blank line (paragraph break).
+    // Blank lines are preserved through the pipeline as StoryLine { en: "", es: "" }.
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
   }
 
   // Process line by line to remove quote wrapping

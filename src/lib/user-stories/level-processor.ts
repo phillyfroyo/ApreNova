@@ -17,6 +17,7 @@ import {
   joinStanzasWithSpacing,
   translateChapter,
   cleanText,
+  collapseConsecutiveBlanks,
   parseChapters,
   buildContentStructure,
   buildContentStructureWithMetadata,
@@ -259,7 +260,7 @@ export function preprocessChapterForStoryType(
   }
 
   // Default: no special preprocessing needed
-  const lines = chapterText.split('\n').filter(l => l.trim());
+  const lines = collapseConsecutiveBlanks(chapterText.split('\n'));
   return { processedLines: lines, lineMetadata, speakerNames };
 }
 
@@ -536,8 +537,8 @@ export async function rewriteLevelChapters(
       });
 
       // Update progress with completed chapter data
-      // Apply cleanText so double blanks become ---------- markers, then split
-      // Keep blank lines (single \n\n paragraph spacing) for display in ProgressViewerModal
+      // Apply cleanText to normalize whitespace, then split
+      // Keep blank lines (single \n\n paragraph spacing) for display in ComparisonModal
       const cleanedOriginal = cleanText(chapterText);
       const cleanedRewritten = cleanText(rewrittenText);
       await tracker.updateRewriteProgress(i + 1, {
@@ -673,10 +674,10 @@ export async function translateLevelChapters(
         rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
-        filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
+        filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
         filteredTranslatedLines = isPoetry
           ? result.translatedText.split('\n')
-          : result.translatedText.split('\n').filter((l) => l.trim());
+          : collapseConsecutiveBlanks(result.translatedText.split('\n'));
       } else {
         // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
         const result = await translateChapter(chapterText, sourceLanguage, level, {
@@ -684,10 +685,10 @@ export async function translateLevelChapters(
         });
         rawTranslatedText = result.translatedText;
 
-        // Clean source text so double blanks become ---------- markers (same as translation side)
+        // Clean source text and collapse consecutive blanks to single paragraph breaks
         const cleanedSource = cleanText(chapterText);
-        filteredSourceLines = cleanedSource.split('\n').filter((l) => l.trim());
-        filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
+        filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
+        filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
       }
 
       // Build processed chapter (basic version for backward compatibility)
@@ -776,8 +777,7 @@ export async function translateLevelChapters(
         }
       );
 
-      // Also update progress tracker with chapter data for ProgressViewerModal
-      // Apply cleanText so double blanks become ---------- markers, keep blank lines for display
+      // Also update progress tracker with chapter data for ComparisonModal
       const cleanedTransSource = cleanText(chapterText);
       await tracker.updateTranslationProgress(i + 1, {
         sourceLines: cleanedTransSource.split("\n"),
@@ -1091,8 +1091,8 @@ async function* rewriteChaptersProducer(
         );
 
         // Update progress with chapter data
-        // Apply cleanText so double blanks become ---------- markers, then split
-        // Keep blank lines for display in ProgressViewerModal
+        // Apply cleanText to normalize whitespace, then split
+        // Keep blank lines for display in ComparisonModal
         const cleanedOrig = cleanText(chapterText);
         const cleanedRewrite = cleanText(rewrittenContent);
         await tracker.updateRewriteProgress(i + 1, {
@@ -1232,10 +1232,10 @@ async function translateChaptersConsumer(
         rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
-        filteredSourceLines = isPoetry ? processedLines : processedLines.filter((l) => l.trim());
+        filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
         filteredTranslatedLines = isPoetry
           ? result.translatedText.split('\n')
-          : result.translatedText.split('\n').filter((l) => l.trim());
+          : collapseConsecutiveBlanks(result.translatedText.split('\n'));
       } else {
         // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
         const result = await translateChapter(content, sourceLanguage, level, {
@@ -1243,10 +1243,10 @@ async function translateChaptersConsumer(
         });
         rawTranslatedText = result.translatedText;
 
-        // Clean source text so double blanks become ---------- markers (same as translation side)
+        // Clean source text and collapse consecutive blanks to single paragraph breaks
         const cleanedSource = cleanText(content);
-        filteredSourceLines = cleanedSource.split('\n').filter((l) => l.trim());
-        filteredTranslatedLines = result.translatedText.split('\n').filter((l) => l.trim());
+        filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
+        filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
       }
 
       // Preserve metadata from original chapter
@@ -1308,7 +1308,7 @@ async function translateChaptersConsumer(
         }
       );
 
-      // Also update progress tracker with chapter data for ProgressViewerModal
+      // Also update progress tracker with chapter data for ComparisonModal
       const cleanedTransSource = cleanText(content);
       await tracker.updateTranslationProgress(chaptersProcessed + 1, {
         sourceLines: cleanedTransSource.split("\n"),
