@@ -169,16 +169,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     // For translation preview
     if (type === "translating") {
-      // First try processingProgress.completedData
-      if (processingProgress?.completedData && processingProgress.completedData.length > 0) {
-        return NextResponse.json({
-          chapters: processingProgress.completedData,
-          totalChapters: processingProgress.totalChapters || processingProgress.completedData.length,
-          source: "processingProgress",
-        });
-      }
-
-      // Fall back to reconstructing from content
+      // Prefer content field (source of truth — updated by PATCH edits)
       const content = levelData.content as LevelContent | null;
       if (content?.chapters) {
         const chapters = extractChaptersFromContent(content, story.sourceLanguage as "en" | "es");
@@ -186,6 +177,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           chapters,
           totalChapters: chapters.length,
           source: "content",
+        });
+      }
+
+      // Fall back to processingProgress.completedData (during processing, before content is built)
+      if (processingProgress?.completedData && processingProgress.completedData.length > 0) {
+        return NextResponse.json({
+          chapters: processingProgress.completedData,
+          totalChapters: processingProgress.totalChapters || processingProgress.completedData.length,
+          source: "processingProgress",
         });
       }
 

@@ -212,6 +212,8 @@ export interface ChapterContent {
   metadata?: ChapterMetadata; // Optional for backward compatibility with existing stories
   // Anthology-specific: list of poems in this collection for navigation
   poems?: PoemInfo[];
+  // Alignment check results (persisted in content JSON)
+  alignmentIssues?: import("@/lib/user-stories/alignment-check").ChapterAlignmentResult;
 }
 
 export interface LevelContent {
@@ -226,6 +228,8 @@ export interface LevelContent {
     chapter: { en: string; es: string };
     page: { en: string; es: string };
   };
+  // True if any chapter has alignment issues
+  hasAlignmentIssues?: boolean;
 }
 
 // ============================================================================
@@ -470,17 +474,21 @@ export function buildSingleChapterContent(
   // PROSE/DEFAULT PATH: Simple line-based pagination
   // For epic poetry, preserve indentation
   const preserveIndent = structureType === "epic";
-  const sourcePages = paginateLines(sourceLines);
-  const translatedPages = paginateLines(translatedLines);
-  const maxPages = Math.max(sourcePages.length, translatedPages.length);
 
-  for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-    const sourcePageLines = sourcePages[pIdx] || [];
-    const translatedPageLines = translatedPages[pIdx] || [];
-    const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+  // Paginate source lines to determine page boundaries, then slice
+  // translation at the same boundaries so both sides stay aligned.
+  const sourcePages = paginateLines(sourceLines);
+  const maxLineCount = Math.max(sourceLines.length, translatedLines.length);
+
+  let translatedOffset = 0;
+  for (let pIdx = 0; pIdx < sourcePages.length; pIdx++) {
+    const sourcePageLines = sourcePages[pIdx];
+    const pageSize = sourcePageLines.length;
+    const translatedPageLines = translatedLines.slice(translatedOffset, translatedOffset + pageSize);
+    translatedOffset += pageSize;
 
     const lines: StoryLine[] = [];
-    for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+    for (let lIdx = 0; lIdx < pageSize; lIdx++) {
       const sourceLine = trimLine(sourcePageLines[lIdx], preserveIndent);
       const translatedLine = trimLine(translatedPageLines[lIdx], preserveIndent);
 
@@ -492,6 +500,18 @@ export function buildSingleChapterContent(
     }
 
     pages[pIdx + 1] = { lines };
+  }
+
+  // If translation has more lines than source (rare), add remaining as extra page
+  if (translatedOffset < translatedLines.length) {
+    const remaining = translatedLines.slice(translatedOffset);
+    const lines: StoryLine[] = remaining.map(tl => {
+      const storyLine: StoryLine = sourceLanguage === "es"
+        ? { es: "", en: trimLine(tl, preserveIndent) }
+        : { en: "", es: trimLine(tl, preserveIndent) };
+      return storyLine;
+    });
+    pages[sourcePages.length + 1] = { lines };
   }
 
   return { pages };
@@ -625,19 +645,20 @@ export function buildContentStructure(
   const chapters: Record<number, ChapterContent> = {};
 
   chaptersData.forEach((chapter, chapterIndex) => {
+    // Paginate source lines, then slice translation at the same page boundaries
+    // so both sides stay aligned (avoids misalignment from independent pagination).
     const sourcePages = paginateLines(chapter.sourceLines);
-    const translatedPages = paginateLines(chapter.translatedLines);
     const pages: Record<number, PageContent> = {};
 
-    const maxPages = Math.max(sourcePages.length, translatedPages.length);
-
-    for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-      const sourcePageLines = sourcePages[pIdx] || [];
-      const translatedPageLines = translatedPages[pIdx] || [];
-      const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+    let translatedOffset = 0;
+    for (let pIdx = 0; pIdx < sourcePages.length; pIdx++) {
+      const sourcePageLines = sourcePages[pIdx];
+      const pageSize = sourcePageLines.length;
+      const translatedPageLines = chapter.translatedLines.slice(translatedOffset, translatedOffset + pageSize);
+      translatedOffset += pageSize;
 
       const lines: StoryLine[] = [];
-      for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+      for (let lIdx = 0; lIdx < pageSize; lIdx++) {
         const sourceLine = sourcePageLines[lIdx]?.trim() || "";
         const translatedLine = translatedPageLines[lIdx]?.trim() || "";
 
@@ -652,6 +673,19 @@ export function buildContentStructure(
       }
 
       pages[pIdx + 1] = { lines };
+    }
+
+    // If translation has more lines than source, add remaining as extra page
+    if (translatedOffset < chapter.translatedLines.length) {
+      const remaining = chapter.translatedLines.slice(translatedOffset);
+      const lines: StoryLine[] = remaining.map(tl => {
+        if (sourceLanguage === "es") {
+          return { es: "", en: tl?.trim() || "" };
+        } else {
+          return { en: "", es: tl?.trim() || "" };
+        }
+      });
+      pages[sourcePages.length + 1] = { lines };
     }
 
     // Store chapter with pages and metadata (if available)
@@ -866,23 +900,24 @@ export function buildContentStructureWithMetadata(
       }
     } else {
       // NON-POEM PATH: Build flat lines structure (scripts, prose, etc.)
+      // Paginate source lines, then slice translation at the same page boundaries
+      // so both sides stay aligned (avoids misalignment from independent pagination).
       const sourcePages = paginateLines(chapter.sourceLines);
-      const translatedPages = paginateLines(chapter.translatedLines);
-
-      const maxPages = Math.max(sourcePages.length, translatedPages.length);
 
       // Track which source line index we're at for metadata lookup
       let sourceLineIndex = 0;
+      let translatedOffset = 0;
 
-      for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-        const sourcePageLines = sourcePages[pIdx] || [];
-        const translatedPageLines = translatedPages[pIdx] || [];
-        const maxLines = Math.max(sourcePageLines.length, translatedPageLines.length);
+      for (let pIdx = 0; pIdx < sourcePages.length; pIdx++) {
+        const sourcePageLines = sourcePages[pIdx];
+        const pageSize = sourcePageLines.length;
+        const translatedPageLines = chapter.translatedLines.slice(translatedOffset, translatedOffset + pageSize);
+        translatedOffset += pageSize;
 
         const lines: StoryLine[] = [];
         // Preserve indentation for epic poetry
         const preserveIndent = structureType === "epic";
-        for (let lIdx = 0; lIdx < maxLines; lIdx++) {
+        for (let lIdx = 0; lIdx < pageSize; lIdx++) {
           const sourceLine = trimLine(sourcePageLines[lIdx], preserveIndent);
           const translatedLine = trimLine(translatedPageLines[lIdx], preserveIndent);
 
@@ -924,6 +959,19 @@ export function buildContentStructureWithMetadata(
         }
 
         pages[pIdx + 1] = { lines };
+      }
+
+      // If translation has more lines than source, add remaining as extra page
+      if (translatedOffset < chapter.translatedLines.length) {
+        const remaining = chapter.translatedLines.slice(translatedOffset);
+        const preserveIndent = structureType === "epic";
+        const lines: StoryLine[] = remaining.map(tl => {
+          const storyLine: StoryLine = sourceLanguage === "es"
+            ? { es: "", en: trimLine(tl, preserveIndent) }
+            : { en: "", es: trimLine(tl, preserveIndent) };
+          return storyLine;
+        });
+        pages[sourcePages.length + 1] = { lines };
       }
     }
 

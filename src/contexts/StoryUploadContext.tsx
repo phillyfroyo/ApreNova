@@ -3,8 +3,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
-import { ProgressViewerModal } from "@/components/user-stories/ProgressViewerModal";
-import { toCEFR } from "@/lib/cefr";
+import { ComparisonModal } from "@/components/ComparisonModal";
+import type { ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
+import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 
@@ -59,6 +60,7 @@ export interface StreamProgress {
   totalChapters: number;
   chapters: ChapterData[] | RewriteChapterData[];
   label: string; // Display label for UI
+  hasAlignmentIssues?: boolean; // True if any chapter has translation alignment issues
 }
 
 // Story-level progress from backend
@@ -365,6 +367,11 @@ function buildStreamsFromLevels(
         (needsRewrite && rewriteChaptersCount > 0) ? 'waiting' :  // Streaming: waiting for rewrite
         'waiting';
 
+      // Check if any completed chapter has alignment issues
+      const translationHasAlignmentIssues = levelProgress.completedData?.some(
+        (ch: any) => ch.alignmentIssues?.hasIssues
+      ) || false;
+
       streams.push({
         id: `translate-${level.level}`,
         type: 'translating',
@@ -375,6 +382,7 @@ function buildStreamsFromLevels(
         totalChapters: totalChapters,
         chapters: levelProgress.completedData || [],
         label: isDetectedLevel ? `Translate ${level.level} (original)` : `Translate ${level.level} (rewritten)`,
+        hasAlignmentIssues: translationHasAlignmentIssues || undefined,
       });
     }
   }
@@ -478,6 +486,29 @@ export function getLocalizedStageMessage(
   }
 }
 
+// Convert chapter arrays (ChapterData[] or RewriteChapterData[]) to text strings
+// with "--- Chapter N ---" markers for ComparisonModal's parseChaptersFromText()
+function chaptersToText(
+  chapters: Array<{ left: string[]; right: string[] }>
+): { leftText: string; rightText: string } {
+  if (chapters.length === 0) return { leftText: "", rightText: "" };
+  if (chapters.length === 1) {
+    return {
+      leftText: chapters[0].left.join("\n"),
+      rightText: chapters[0].right.join("\n"),
+    };
+  }
+  const leftParts: string[] = [];
+  const rightParts: string[] = [];
+  for (let i = 0; i < chapters.length; i++) {
+    leftParts.push(`--- Chapter ${i + 1} ---`);
+    leftParts.push(chapters[i].left.join("\n"));
+    rightParts.push(`--- Chapter ${i + 1} ---`);
+    rightParts.push(chapters[i].right.join("\n"));
+  }
+  return { leftText: leftParts.join("\n"), rightText: rightParts.join("\n") };
+}
+
 // Session storage key for persisting upload state across navigation
 const UPLOAD_STATE_KEY = "cuentana_upload_state";
 
@@ -536,6 +567,12 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     message: "",
   });
 
+  // On-demand fetch state (for when viewport modal opens with empty chapters)
+  const [fetchedChapters, setFetchedChapters] = useState<ChapterData[]>([]);
+  const [fetchedRewriteChapters, setFetchedRewriteChapters] = useState<RewriteChapterData[]>([]);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [fetchPreviewError, setFetchPreviewError] = useState<string | null>(null);
+
   // Debug: Log state changes that would hide the widget
   useEffect(() => {
     console.log("[StoryUploadContext] State changed:", {
@@ -589,6 +626,66 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       }
     }
   }, []); // Only run once on mount
+
+  // On-demand fetch when viewport modal opens with empty chapters
+  useEffect(() => {
+    if (!showProgressViewer || !storyData?.id) return;
+
+    const selectedStream = selectedStreamId
+      ? progress.streams?.find(s => s.id === selectedStreamId)
+      : null;
+
+    // Determine what data we need based on selected stream or legacy progress
+    const isRewriting = selectedStream
+      ? selectedStream.type === "rewriting"
+      : progress.stage === "rewriting-levels";
+
+    const targetLevel = selectedStream?.level || progress.currentLevel;
+    const hasData = isRewriting
+      ? (selectedStream ? (selectedStream.chapters as RewriteChapterData[]).length > 0 : (progress.rewriteChapters?.length || 0) > 0) || fetchedRewriteChapters.length > 0
+      : (selectedStream ? (selectedStream.chapters as ChapterData[]).length > 0 : (progress.completedChapters?.length || 0) > 0) || fetchedChapters.length > 0;
+
+    if (hasData || !targetLevel) return;
+
+    const fetchPreviewData = async () => {
+      setIsFetchingPreview(true);
+      setFetchPreviewError(null);
+
+      try {
+        const type = isRewriting ? "rewriting" : "translating";
+        const response = await fetch(
+          `/api/user-stories/${storyData.id}/preview?level=${encodeURIComponent(targetLevel)}&type=${type}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch preview data");
+        }
+
+        const data = await response.json();
+
+        if (isRewriting) {
+          setFetchedRewriteChapters(data.chapters || []);
+        } else {
+          setFetchedChapters(data.chapters || []);
+        }
+      } catch (error: any) {
+        console.error("[StoryUploadContext] Fetch preview error:", error);
+        setFetchPreviewError(error.message);
+      } finally {
+        setIsFetchingPreview(false);
+      }
+    };
+
+    fetchPreviewData();
+  }, [showProgressViewer, storyData?.id, selectedStreamId, progress.streams, progress.stage, progress.currentLevel, progress.rewriteChapters?.length, progress.completedChapters?.length, fetchedChapters.length, fetchedRewriteChapters.length]);
+
+  // Clear fetched data when selected stream changes (not on modal close,
+  // so post-save refreshed data persists across close/reopen)
+  useEffect(() => {
+    setFetchedChapters([]);
+    setFetchedRewriteChapters([]);
+    setFetchPreviewError(null);
+  }, [selectedStreamId]);
 
   const updateProgress = useCallback((stage: UploadStage, stageProgress: number = 0, extra?: Partial<UploadProgress>) => {
     const weights = STAGE_WEIGHTS[stage];
@@ -1378,68 +1475,222 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     ? progress.streams?.find(s => s.id === selectedStreamId)
     : null;
 
-  // Determine modal props based on selected stream or legacy progress
-  const getModalProps = () => {
-    if (selectedStream) {
-      // Use selected stream data
-      const isRewriting = selectedStream.type === "rewriting";
-      // Keep stage as "rewriting" or "translating" to properly display the data
-      // Only use "complete" for legacy fallback mode
-      const modalStage: "rewriting" | "translating" | "complete" =
-        isRewriting ? "rewriting" : "translating";
+  // Build ComparisonModal props from stream/progress data
+  const getComparisonModalProps = () => {
+    // Determine source data
+    let chapters: ChapterData[] = [];
+    let rewriteChapters: RewriteChapterData[] = [];
+    let isRewriting: boolean;
+    let currentChapter: number;
+    let totalChapters: number;
+    let detectedLevel: string | undefined;
+    let targetLevel: string | undefined;
+    let isInProgress: boolean;
 
-      return {
-        chapters: isRewriting ? [] : selectedStream.chapters as ChapterData[],
-        rewriteChapters: isRewriting ? selectedStream.chapters as RewriteChapterData[] : [],
-        currentChapter: selectedStream.currentChapter,
-        totalChapters: selectedStream.totalChapters,
-        stage: modalStage,
-        detectedLevel: selectedStream.fromLevel || progress.detectedLevel,
-        targetLevel: selectedStream.level,
-      };
+    if (selectedStream) {
+      isRewriting = selectedStream.type === "rewriting";
+      if (isRewriting) {
+        rewriteChapters = selectedStream.chapters as RewriteChapterData[];
+      } else {
+        chapters = selectedStream.chapters as ChapterData[];
+      }
+      currentChapter = selectedStream.currentChapter;
+      totalChapters = selectedStream.totalChapters;
+      detectedLevel = selectedStream.fromLevel || progress.detectedLevel;
+      targetLevel = selectedStream.level;
+      isInProgress = selectedStream.status === "in-progress";
+    } else {
+      isRewriting = progress.stage === "rewriting-levels";
+      chapters = progress.completedChapters || [];
+      rewriteChapters = progress.rewriteChapters || [];
+      currentChapter = progress.currentChapter || 0;
+      totalChapters = progress.totalChapters || 0;
+      detectedLevel = progress.detectedLevel;
+      targetLevel = progress.currentLevel;
+      isInProgress = progress.stage === "rewriting-levels" || progress.stage === "translating";
     }
 
-    // Legacy fallback: use overall progress data
-    const isRewriting = progress.stage === "rewriting-levels";
-    const modalStage: "rewriting" | "translating" | "complete" =
-      isRewriting ? "rewriting" : progress.stage === "translating" ? "translating" : "complete";
+    // Prefer fetched data when available (reflects saved edits from DB)
+    if (isRewriting && fetchedRewriteChapters.length > 0) {
+      rewriteChapters = fetchedRewriteChapters;
+    } else if (!isRewriting && fetchedChapters.length > 0) {
+      chapters = fetchedChapters;
+    }
+
+    // Convert chapter arrays to text strings for ComparisonModal
+    const chapterArrays = isRewriting
+      ? rewriteChapters.map(ch => ({ left: ch.originalLines || [], right: ch.rewrittenLines || [] }))
+      : chapters.map(ch => ({ left: ch.sourceLines || [], right: ch.translatedLines || [] }));
+    const { leftText, rightText } = chaptersToText(chapterArrays);
+
+    // Determine titles
+    const sourceLanguage = storyData?.sourceLanguage || "es";
+    let leftTitle: string;
+    let rightTitle: string;
+    if (isRewriting) {
+      const fromLabel = detectedLevel ? getCEFRLabel(toCEFR(detectedLevel), providerLng) : t(providerLng, "upload", "original");
+      const toLabel = targetLevel ? getCEFRLabel(toCEFR(targetLevel), providerLng) : t(providerLng, "upload", "rewritten");
+      leftTitle = `${fromLabel} (${t(providerLng, "upload", "original")})`;
+      rightTitle = `${toLabel} (${t(providerLng, "upload", "rewritten")})`;
+    } else {
+      leftTitle = sourceLanguage === "en" ? t(providerLng, "upload", "englishSource") : t(providerLng, "upload", "spanishSource");
+      rightTitle = sourceLanguage === "en" ? t(providerLng, "upload", "spanishTranslation") : t(providerLng, "upload", "englishTranslation");
+    }
+
+    // Header gradient
+    const headerGradient = isRewriting
+      ? "bg-gradient-to-r from-amber-500 to-orange-500"
+      : "bg-gradient-to-r from-blue-600 to-purple-600";
+
+    // Progress bar gradient
+    const barGradient = isRewriting
+      ? "bg-gradient-to-r from-amber-400 to-orange-400"
+      : "bg-gradient-to-r from-blue-500 to-purple-500";
+
+    // Progress percentage
+    const completedChaptersCount = chapterArrays.length;
+    const progressPct = totalChapters > 0
+      ? Math.round((completedChaptersCount / totalChapters) * 100)
+      : undefined;
+
+    // Processing badge (only during live processing, not preview)
+    const isPreview = !!selectedStreamId || progress.stage === "review" || progress.stage === "complete";
+    let badge: string | undefined;
+    if (!isPreview && isInProgress) {
+      badge = isRewriting
+        ? t(providerLng, "upload", "rewritingChapter", { current: currentChapter })
+        : t(providerLng, "upload", "translatingChapterLive", { current: currentChapter });
+    }
+
+    // Blank line label (i18n)
+    const blankLabel = t(providerLng, "upload", "paragraphBreak");
+
+    // Extract alignment issues from chapter data (if available)
+    // The raw data from processingProgress.completedData preserves alignmentIssues
+    let chapterAlignmentIssuesMap: Record<number, ChapterAlignmentResult> | undefined;
+    if (!isRewriting) {
+      const rawChapters = chapters as any[];
+      const issueMap: Record<number, ChapterAlignmentResult> = {};
+      let hasAny = false;
+      for (let i = 0; i < rawChapters.length; i++) {
+        const ai = rawChapters[i]?.alignmentIssues;
+        if (ai?.hasIssues) {
+          issueMap[i + 1] = ai;
+          hasAny = true;
+        }
+      }
+      if (hasAny) {
+        chapterAlignmentIssuesMap = issueMap;
+      }
+    }
 
     return {
-      chapters: progress.completedChapters || [],
-      rewriteChapters: progress.rewriteChapters || [],
-      currentChapter: progress.currentChapter || 0,
-      totalChapters: progress.totalChapters || 0,
-      stage: modalStage,
-      detectedLevel: progress.detectedLevel,
-      targetLevel: progress.currentLevel,
+      leftText,
+      rightText,
+      leftTitle,
+      rightTitle,
+      headerGradient,
+      progressPercent: progressPct,
+      progressBarGradient: barGradient,
+      processingBadge: badge,
+      totalExpectedChapters: totalChapters > 0 ? totalChapters : undefined,
+      isLoading: isFetchingPreview,
+      loadingError: fetchPreviewError || undefined,
+      blankLineLabel: blankLabel,
+      chapterAlignmentIssues: chapterAlignmentIssuesMap,
     };
   };
 
-  const modalProps = getModalProps();
+  const comparisonProps = getComparisonModalProps();
+
+  // Determine if the current stream is editable (completed translation with a saved story)
+  const isStreamEditable = !!(
+    selectedStream &&
+    selectedStream.type === "translating" &&
+    selectedStream.status === "complete" &&
+    storyData?.id
+  );
+
+  // Save handler for editing translations in the comparison modal
+  const handleComparisonSave = async (edits: { left?: string; right?: string }) => {
+    if (!storyData?.id || !selectedStream) return;
+    try {
+      const res = await fetch(`/api/user-stories/${storyData.id}/content`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: selectedStream.level,
+          sourceText: edits.left,
+          translatedText: edits.right,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+      const result = await res.json();
+      console.log(`[StoryUploadContext] Saved comparison edits for level ${selectedStream.level}`);
+
+      // Re-fetch preview data so in-memory state reflects saved edits
+      try {
+        const previewRes = await fetch(
+          `/api/user-stories/${storyData.id}/preview?level=${encodeURIComponent(selectedStream.level)}&type=translating`
+        );
+        if (previewRes.ok) {
+          const previewData = await previewRes.json();
+          const refreshedChapters: ChapterData[] = previewData.chapters || [];
+          setFetchedChapters(refreshedChapters);
+
+          // Also update the stream's in-memory chapters so close/reopen stays current
+          setProgress(prev => ({
+            ...prev,
+            streams: prev.streams?.map(s =>
+              s.id === selectedStream.id
+                ? {
+                    ...s,
+                    chapters: refreshedChapters,
+                    hasAlignmentIssues: result.hasAlignmentIssues || undefined,
+                  }
+                : s
+            ),
+          }));
+        }
+      } catch (fetchErr) {
+        console.warn("[StoryUploadContext] Failed to refresh preview after save:", fetchErr);
+      }
+    } catch (error: any) {
+      console.error("[StoryUploadContext] Save comparison failed:", error.message);
+      alert(error.message || "Failed to save changes");
+    }
+  };
 
   return (
     <StoryUploadContext.Provider value={value}>
       {children}
 
-      {/* Progress Viewer Modal - rendered at provider level for full-screen capability */}
-      <ProgressViewerModal
+      {/* Progress Viewer Modal - uses unified ComparisonModal */}
+      <ComparisonModal
         isOpen={showProgressViewer}
         onClose={() => {
           setShowProgressViewer(false);
-          setSelectedStreamId(null); // Clear selection when closing
+          setSelectedStreamId(null);
         }}
-        chapters={modalProps.chapters}
-        rewriteChapters={modalProps.rewriteChapters}
-        sourceLanguage={storyData?.sourceLanguage || "es"}
-        currentChapter={modalProps.currentChapter}
-        totalChapters={modalProps.totalChapters}
-        stage={modalProps.stage}
-        detectedLevel={modalProps.detectedLevel}
-        targetLevel={modalProps.targetLevel}
-        storyId={storyData?.id}
-        // Preview mode: when opened from review modal (selectedStreamId) or stage is review/complete
-        isPreview={!!selectedStreamId || progress.stage === "review" || progress.stage === "complete"}
-        lng={providerLng}
+        level={null}
+        leftTitle={comparisonProps.leftTitle}
+        leftText={comparisonProps.leftText}
+        rightTitle={comparisonProps.rightTitle}
+        rightText={comparisonProps.rightText}
+        editableSide={isStreamEditable ? "both" : "none"}
+        onSave={isStreamEditable ? handleComparisonSave : undefined}
+        headerGradient={comparisonProps.headerGradient}
+        blankLineLabel={comparisonProps.blankLineLabel}
+        progressPercent={comparisonProps.progressPercent}
+        progressBarGradient={comparisonProps.progressBarGradient}
+        processingBadge={comparisonProps.processingBadge}
+        totalExpectedChapters={comparisonProps.totalExpectedChapters}
+        isLoading={comparisonProps.isLoading}
+        loadingError={comparisonProps.loadingError}
+        chapterAlignmentIssues={comparisonProps.chapterAlignmentIssues}
       />
 
       {/* Cancel Confirmation Dialog */}

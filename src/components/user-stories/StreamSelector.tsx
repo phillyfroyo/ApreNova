@@ -22,6 +22,8 @@ interface StreamSelectorProps {
     sourceLanguage?: string;
     detectedLevel?: string;
   };
+  /** Whether any stream has alignment issues — controls warning styling */
+  hasAlignmentWarning?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function StreamSelector({
   setShowProgressViewer,
   isPreviewMode = false,
   storyData,
+  hasAlignmentWarning = false,
 }: StreamSelectorProps) {
   const { setSelectedStreamId } = useStoryUpload();
   const [isOpen, setIsOpen] = useState(false);
@@ -148,18 +151,30 @@ export function StreamSelector({
       <div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full py-2 px-4 bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`}
+          className={`w-full py-2 px-4 font-medium transition-colors flex items-center gap-2 ${
+            hasAlignmentWarning
+              ? `bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`
+              : `bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`
+          }`}
         >
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
+          {hasAlignmentWarning ? (
+            <svg className="w-4 h-4 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          )}
           <span className="flex-1 text-left">
             {isPreviewMode
               ? t(typedLng, "upload", "previewCompletedStory")
               : t(typedLng, "upload", "viewProgress")}
           </span>
-          <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full flex-shrink-0">
+          <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+            hasAlignmentWarning ? "bg-amber-200 text-amber-700" : "bg-blue-100 text-blue-600"
+          }`}>
             {streamsWithData.length}
           </span>
           <svg
@@ -218,7 +233,12 @@ export function StreamSelector({
                       </span>
                     ) : null}
                   </span>
-                  <span className="flex-shrink-0">
+                  <span className="flex-shrink-0 flex items-center gap-1">
+                    {stream.hasAlignmentIssues && (
+                      <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    )}
                     {getStatusIcon(stream.status)}
                   </span>
                 </button>

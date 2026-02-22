@@ -6,7 +6,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { Badge, Button } from "@/components/ui";
-import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, BarChart3 } from "lucide-react";
+import { Trash2, Pencil, X, Loader2, CheckCircle, AlertCircle, Clock, XCircle, BarChart3, AlertTriangle } from "lucide-react";
+import type { ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
@@ -124,8 +125,14 @@ export default function UserStoryDetailModal({
     sourceText: string;
     translatedText: string;
     sourceLanguage: string;
+    hasAlignmentIssues?: boolean;
+    chapterAlignmentIssues?: Record<number, ChapterAlignmentResult>;
   } | null>(null);
   const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+  const [, setIsSavingComparison] = useState(false);
+
+  // Track which levels have alignment issues (persists across comparison modal open/close)
+  const [levelsWithAlignmentIssues, setLevelsWithAlignmentIssues] = useState<Set<string>>(new Set());
 
   // Initialize edit fields when story changes
   useEffect(() => {
@@ -217,6 +224,16 @@ export default function UserStoryDetailModal({
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setComparisonData(data);
+      // Track alignment issues for this level
+      if (data.hasAlignmentIssues) {
+        setLevelsWithAlignmentIssues(prev => new Set([...prev, levelKey]));
+      } else {
+        setLevelsWithAlignmentIssues(prev => {
+          const next = new Set(prev);
+          next.delete(levelKey);
+          return next;
+        });
+      }
     } catch {
       setComparisonLevel(null);
       setComparisonData(null);
@@ -229,6 +246,50 @@ export default function UserStoryDetailModal({
     setComparisonLevel(null);
     setComparisonData(null);
   }, []);
+
+  const handleSaveComparison = useCallback(async (edits: { left?: string; right?: string }) => {
+    if (!story || !comparisonLevel) return;
+    setIsSavingComparison(true);
+    try {
+      const res = await fetch(`/api/user-stories/${story.id}/content`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: comparisonLevel,
+          sourceText: edits.left,
+          translatedText: edits.right,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+      const result = await res.json();
+      // Update local comparison data to reflect saved edits + updated alignment
+      setComparisonData(prev => prev ? {
+        ...prev,
+        ...(edits.left !== undefined && { sourceText: edits.left }),
+        ...(edits.right !== undefined && { translatedText: edits.right }),
+        hasAlignmentIssues: result.hasAlignmentIssues || false,
+        chapterAlignmentIssues: result.chapterAlignmentIssues || {},
+      } : null);
+      // Update tracked alignment issues for this level
+      if (result.hasAlignmentIssues) {
+        setLevelsWithAlignmentIssues(prev => new Set([...prev, comparisonLevel]));
+      } else {
+        setLevelsWithAlignmentIssues(prev => {
+          const next = new Set(prev);
+          next.delete(comparisonLevel);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Error saving comparison edits:", error);
+      alert("Failed to save edits. Please try again.");
+    } finally {
+      setIsSavingComparison(false);
+    }
+  }, [story, comparisonLevel]);
 
   const handleSave = async () => {
     if (!story) return;
@@ -490,6 +551,18 @@ export default function UserStoryDetailModal({
                   </div>
                 ) : (
                   <>
+                    {/* Alignment warning banner */}
+                    {levelsWithAlignmentIssues.size > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-sm text-amber-800">
+                          {typedLang === "es"
+                            ? "Algunas traducciones pueden estar desalineadas. Abre la vista de comparación para revisar."
+                            : "Some translations may be misaligned. Open comparison view to review."}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Read Button - show if story has readable content */}
                     {canRead && (
                       <Button
@@ -556,18 +629,23 @@ export default function UserStoryDetailModal({
                                 )}
                               </Badge>
                             </button>
-                            <button
-                              onClick={() => handleOpenComparison(lvl.level)}
-                              disabled={isLoadingComparison && comparisonLevel === lvl.level}
-                              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
-                              title={typedLang === "es" ? `Comparar alineamiento ${cefrLevel}` : `Compare alignment ${cefrLevel}`}
-                            >
-                              {isLoadingComparison && comparisonLevel === lvl.level ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <BarChart3 className="w-3.5 h-3.5" />
+                            <div className="relative">
+                              <button
+                                onClick={() => handleOpenComparison(lvl.level)}
+                                disabled={isLoadingComparison && comparisonLevel === lvl.level}
+                                className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors disabled:opacity-50"
+                                title={typedLang === "es" ? `Comparar alineamiento ${cefrLevel}` : `Compare alignment ${cefrLevel}`}
+                              >
+                                {isLoadingComparison && comparisonLevel === lvl.level ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <BarChart3 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              {levelsWithAlignmentIssues.has(lvl.level) && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full" title={typedLang === "es" ? "Tiene problemas de alineación" : "Has alignment issues"} />
                               )}
-                            </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -691,7 +769,7 @@ export default function UserStoryDetailModal({
             )}
           </AnimatePresence>
 
-          {/* Comparison Modal (read-only diagnostic viewer) — rendered above detail modal */}
+          {/* Comparison Modal — rendered above detail modal */}
           {comparisonData && comparisonLevel && (
             <div className="fixed inset-0 z-[110]">
               <ComparisonModal
@@ -702,8 +780,10 @@ export default function UserStoryDetailModal({
                 leftText={comparisonData.sourceText}
                 rightTitle={`Translation (${comparisonData.sourceLanguage === "en" ? "ES" : "EN"})`}
                 rightText={comparisonData.translatedText}
-                editableSide="none"
+                editableSide="both"
+                onSave={handleSaveComparison}
                 headerGradient="bg-gradient-to-r from-purple-600 to-indigo-600"
+                chapterAlignmentIssues={comparisonData.chapterAlignmentIssues}
               />
             </div>
           )}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import type { ChapterAlignmentResult, AlignmentIssue } from "@/lib/user-stories/alignment-check";
 
 export interface ComparisonModalProps {
   isOpen: boolean;
@@ -17,6 +18,22 @@ export interface ComparisonModalProps {
   onRetranslateChapter?: (chapterIndex: number, chapterText: string, numChunks: number) => Promise<void>;
   /** Whether a chapter retranslation is in progress */
   isRetranslating?: boolean;
+  /** Label shown on blank/paragraph break rows (default: "⸺ paragraph break ⸺") */
+  blankLineLabel?: string;
+  /** Shows a progress bar below the header (0-100) */
+  progressPercent?: number;
+  /** Gradient class for the progress bar */
+  progressBarGradient?: string;
+  /** Pulsing badge text shown in header (e.g., "Translating chapter 3") */
+  processingBadge?: string;
+  /** Shows disabled pending chapter buttons after real chapter buttons */
+  totalExpectedChapters?: number;
+  /** Shows a loading spinner in the content area */
+  isLoading?: boolean;
+  /** Shows an error message in the content area */
+  loadingError?: string;
+  /** Per-chapter alignment issues (keyed by 1-based chapter number) */
+  chapterAlignmentIssues?: Record<number, ChapterAlignmentResult>;
 }
 
 // Parse chapter markers from text: "--- Chapter N ---" or "--- Chapter N: Title ---"
@@ -111,6 +128,14 @@ export function ComparisonModal({
   headerGradient = "bg-gradient-to-r from-indigo-600 to-purple-600",
   onRetranslateChapter,
   isRetranslating = false,
+  blankLineLabel = "⸺ paragraph break ⸺",
+  progressPercent,
+  progressBarGradient = "bg-gradient-to-r from-blue-500 to-purple-500",
+  processingBadge,
+  totalExpectedChapters,
+  isLoading = false,
+  loadingError,
+  chapterAlignmentIssues,
 }: ComparisonModalProps) {
   // DEBUG: Log what text the modal receives
   useEffect(() => {
@@ -149,13 +174,64 @@ export function ComparisonModal({
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [viewMode, setViewMode] = useState<'chapter' | 'all'>('chapter');
 
+  // Lines state for editing (declared early so alignment memos can reference them)
+  const [leftLines, setLeftLines] = useState<string[]>([]);
+  const [rightLines, setRightLines] = useState<string[]>([]);
+
+  // Live-compute alignment issues from current leftLines/rightLines state
+  // so highlighting updates in real-time as the user edits
+  const liveAlignment = useMemo((): ChapterAlignmentResult | null => {
+    if (leftLines.length === 0 && rightLines.length === 0) return null;
+    const maxLen = Math.max(leftLines.length, rightLines.length);
+    const contentVsBlankIssues: AlignmentIssue[] = [];
+    const lineCountMismatch = leftLines.length !== rightLines.length
+      ? { sourceLineCount: leftLines.length, translatedLineCount: rightLines.length }
+      : null;
+    for (let i = 0; i < maxLen; i++) {
+      const left = leftLines[i] ?? '';
+      const right = rightLines[i] ?? '';
+      const leftBlank = left.trim() === '';
+      const rightBlank = right.trim() === '';
+      if (leftBlank !== rightBlank) {
+        contentVsBlankIssues.push({
+          lineIndex: i,
+          type: 'content_vs_blank',
+          sourceContent: left,
+          translatedContent: right,
+        });
+      }
+    }
+    const issueCount = (lineCountMismatch ? 1 : 0) + contentVsBlankIssues.length;
+    if (issueCount === 0) return null;
+    return { hasIssues: true, issueCount, lineCountMismatch, contentVsBlankIssues };
+  }, [leftLines, rightLines]);
+
+  // Per-chapter alignment for chapter pill styling (server-provided for non-selected chapters,
+  // live-computed for the currently selected chapter)
+  const getChapterAlignment = useCallback((chapterIdx: number): ChapterAlignmentResult | null => {
+    if (chapterIdx === selectedChapter && viewMode === 'chapter') {
+      return liveAlignment;
+    }
+    if (!chapterAlignmentIssues) return null;
+    const leftChapter = leftChapters[chapterIdx];
+    const chapterNum = leftChapter?.number || chapterIdx + 1;
+    return chapterAlignmentIssues[chapterNum] || null;
+  }, [selectedChapter, viewMode, liveAlignment, chapterAlignmentIssues, leftChapters]);
+
+  // Current view's alignment = live-computed from displayed lines
+  const currentChapterAlignment = liveAlignment;
+
+  // Set of misaligned line indices for the current view (for row highlighting)
+  const misalignedLineIndices = useMemo(() => {
+    const alignment = liveAlignment;
+    if (!alignment) return new Set<number>();
+    return new Set(alignment.contentVsBlankIssues.map(issue => issue.lineIndex));
+  }, [liveAlignment]);
+
   // Retranslate state
   const [showRetranslatePopover, setShowRetranslatePopover] = useState(false);
   const [retranslateChunks, setRetranslateChunks] = useState(2);
 
-  // Lines state for editing
-  const [leftLines, setLeftLines] = useState<string[]>([]);
-  const [rightLines, setRightLines] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [splitPosition, setSplitPosition] = useState(50);
@@ -512,18 +588,23 @@ export function ComparisonModal({
     const isEditing = isEditingLeft || isEditingRight;
     const canEditLeft = canEditSide('left');
     const canEditRight = canEditSide('right');
+    const isBlankLine = !leftLine.trim() && !rightLine.trim();
+    const isMisaligned = misalignedLineIndices.has(idx);
 
     return (
       <div
         key={idx}
-        className={`flex border-b border-gray-100 group ${isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+        data-row-idx={idx}
+        className={`flex border-b ${isBlankLine ? 'border-gray-200' : 'border-gray-100'} group ${
+          isEditing ? 'bg-blue-50' : isMisaligned ? 'bg-amber-50 border-l-2 border-l-amber-400' : isBlankLine ? '' : 'hover:bg-gray-50'
+        }`}
       >
         {/* Line number + row actions */}
         <div
-          className="select-none text-gray-400 text-right pr-2 shrink-0 py-1 bg-gray-50 border-r border-gray-200 relative"
+          className={`select-none text-gray-400 text-right pr-2 shrink-0 py-1 ${isBlankLine ? 'bg-gray-100' : 'bg-gray-50'} border-r border-gray-200 relative`}
           style={{ width: "5.5rem" }}
         >
-          <span className="group-hover:hidden">{idx + 1}</span>
+          <span className="group-hover:invisible">{isBlankLine ? '—' : idx + 1}</span>
 
           {/* Row actions - hover: L R (add left/right), l r (delete left/right), ^ (add both), x (delete both) */}
           <div className="hidden group-hover:flex items-center justify-end gap-0 absolute inset-0 bg-gray-50 pr-0.5">
@@ -571,7 +652,8 @@ export function ComparisonModal({
         {/* Left cell */}
         <div
           className={`py-1 px-3 border-r border-gray-200 ${
-            canEditLeft ? 'cursor-pointer hover:bg-blue-50' : ''
+            isBlankLine ? 'bg-gray-50' : ''
+          } ${canEditLeft ? 'cursor-pointer hover:bg-blue-50' : ''
           } ${isEditingLeft ? 'p-0' : ''}`}
           style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 2.75rem)` }}
           onClick={() => !isEditingLeft && handleCellClick(idx, 'left')}
@@ -608,6 +690,10 @@ export function ComparisonModal({
                 </button>
               </div>
             </div>
+          ) : isBlankLine ? (
+            <span className="text-gray-400 text-center italic text-sm block whitespace-pre-wrap">
+              {blankLineLabel}
+            </span>
           ) : (
             <span className="text-sm font-mono text-gray-700 whitespace-pre-wrap break-words">
               {leftLine || '\u00A0'}
@@ -618,7 +704,8 @@ export function ComparisonModal({
         {/* Right cell */}
         <div
           className={`py-1 px-3 flex-1 ${
-            canEditRight ? 'cursor-pointer hover:bg-blue-50' : ''
+            isBlankLine ? 'bg-gray-50' : ''
+          } ${canEditRight ? 'cursor-pointer hover:bg-blue-50' : ''
           } ${isEditingRight ? 'p-0' : ''}`}
           onClick={() => !isEditingRight && handleCellClick(idx, 'right')}
         >
@@ -654,6 +741,10 @@ export function ComparisonModal({
                 </button>
               </div>
             </div>
+          ) : isBlankLine ? (
+            <span className="text-gray-400 text-center italic text-sm block whitespace-pre-wrap">
+              {blankLineLabel}
+            </span>
           ) : (
             <span className="text-sm font-mono text-gray-700 whitespace-pre-wrap break-words">
               {rightLine || '\u00A0'}
@@ -664,8 +755,21 @@ export function ComparisonModal({
     );
   };
 
-  if (!isOpen || level === null) return null;
+  if (!isOpen) return null;
 
+  // Count lines up to (and including) the last non-blank line
+  const trimmedLength = (lines: string[]) => {
+    let last = lines.length - 1;
+    while (last >= 0 && !lines[last].trim()) last--;
+    return last + 1;
+  };
+  // Count only non-blank lines
+  const contentCount = (lines: string[]) => lines.filter(l => l.trim()).length;
+
+  const leftTrimmed = trimmedLength(leftLines);
+  const rightTrimmed = trimmedLength(rightLines);
+  const leftContent = contentCount(leftLines);
+  const rightContent = contentCount(rightLines);
   const maxLines = Math.max(leftLines.length, rightLines.length);
 
   return (
@@ -688,11 +792,56 @@ export function ComparisonModal({
         <div className={`${headerGradient} text-white px-6 py-4 flex items-center justify-between shrink-0`}>
           <div className="flex items-center gap-4">
             <span className="text-lg font-semibold">
-              Level {level} Comparison
+              {level !== null ? `Level ${level} Comparison` : "Comparison"}
             </span>
-            <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
-              {leftLines.length} → {rightLines.length} lines
+            <span className="text-sm bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+              {leftTrimmed} → {rightTrimmed} Total lines
+              {leftTrimmed !== rightTrimmed && (
+                <>
+                  <svg className="w-3.5 h-3.5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-yellow-200 text-xs">Line mismatch</span>
+                </>
+              )}
             </span>
+            <span className="text-sm bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+              {leftContent} → {rightContent} Content lines
+              {leftContent !== rightContent && (
+                <>
+                  <svg className="w-3.5 h-3.5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-yellow-200 text-xs">Line mismatch</span>
+                </>
+              )}
+            </span>
+            {currentChapterAlignment && currentChapterAlignment.contentVsBlankIssues.length > 0 && (
+              <button
+                onClick={() => {
+                  // Scroll to first misaligned row
+                  const firstIdx = currentChapterAlignment.contentVsBlankIssues[0]?.lineIndex;
+                  if (firstIdx !== undefined && scrollContainerRef.current) {
+                    const rows = scrollContainerRef.current.querySelectorAll('[data-row-idx]');
+                    const target = Array.from(rows).find(r => r.getAttribute('data-row-idx') === String(firstIdx));
+                    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="text-sm bg-amber-500/80 hover:bg-amber-500 px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Click to scroll to first misaligned row"
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-white">{currentChapterAlignment.contentVsBlankIssues.length} misaligned row{currentChapterAlignment.contentVsBlankIssues.length !== 1 ? 's' : ''}</span>
+              </button>
+            )}
+            {processingBadge && (
+              <span className="text-sm bg-yellow-500/80 px-3 py-1 rounded-full animate-pulse flex items-center gap-2">
+                <span className="w-2 h-2 bg-white rounded-full animate-ping" />
+                {processingBadge}
+              </span>
+            )}
             {hasUnsavedChanges && (
               <span className="text-sm bg-yellow-500/80 px-3 py-1 rounded-full animate-pulse">
                 Unsaved changes
@@ -728,6 +877,16 @@ export function ComparisonModal({
           </div>
         </div>
 
+        {/* Progress bar */}
+        {progressPercent !== undefined && (
+          <div className="h-1 bg-gray-200 shrink-0">
+            <div
+              className={`h-full ${progressBarGradient} transition-all duration-500`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        )}
+
         {/* Duplicate chapter warning */}
         {duplicateWarning && (
           <div className="px-6 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2 text-red-700 text-sm shrink-0">
@@ -738,8 +897,8 @@ export function ComparisonModal({
           </div>
         )}
 
-        {/* Chapter selector - only show if multiple chapters */}
-        {hasMultipleChapters && (
+        {/* Chapter selector - show if multiple chapters or pending chapters expected */}
+        {(hasMultipleChapters || (totalExpectedChapters !== undefined && totalExpectedChapters > 1)) && (
           <div className="px-4 md:px-6 py-3 bg-gray-50 border-b flex items-center gap-3 overflow-x-auto shrink-0">
             <span className="text-sm text-gray-500 shrink-0">Chapters:</span>
             <div className="flex gap-2">
@@ -749,6 +908,7 @@ export function ComparisonModal({
                 const chapterNum = leftChapter?.number || rightChapter?.number || idx + 1;
                 const chapterTitle = leftChapter?.title || rightChapter?.title || '';
                 const isSelected = selectedChapter === idx && viewMode === 'chapter';
+                const chapterHasAlignmentIssues = getChapterAlignment(idx)?.hasIssues;
 
                 return (
                   <button
@@ -760,16 +920,33 @@ export function ComparisonModal({
                     }}
                     className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap ${
                       isSelected
-                        ? "bg-indigo-500 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                        ? chapterHasAlignmentIssues
+                          ? "bg-amber-500 text-white"
+                          : "bg-indigo-500 text-white"
+                        : chapterHasAlignmentIssues
+                          ? "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100"
+                          : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                     }`}
                     title={chapterTitle || `Chapter ${chapterNum}`}
                   >
+                    {chapterHasAlignmentIssues && !isSelected && <span className="mr-1">&#9888;</span>}
                     {chapterNum === 0 ? 'Pre' : chapterNum}
                     {chapterTitle && <span className="ml-1 text-xs opacity-75 hidden sm:inline">({chapterTitle.slice(0, 15)}{chapterTitle.length > 15 ? '...' : ''})</span>}
                   </button>
                 );
               })}
+              {/* Pending chapter buttons */}
+              {totalExpectedChapters !== undefined && totalExpectedChapters > maxChapters &&
+                Array.from({ length: totalExpectedChapters - maxChapters }, (_, idx) => (
+                  <button
+                    key={`pending-${idx}`}
+                    disabled
+                    className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-400 border border-gray-200 cursor-default"
+                  >
+                    {maxChapters + idx + 1}
+                  </button>
+                ))
+              }
             </div>
             <div className="ml-auto flex items-center gap-2 shrink-0">
               <button
@@ -804,7 +981,7 @@ export function ComparisonModal({
               style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 2.75rem)` }}
             >
               <span>{leftTitle}</span>
-              <span className="text-gray-400 text-xs">{leftLines.length} lines</span>
+              <span className="text-gray-400 text-xs">{leftTrimmed} total · {leftContent} content</span>
             </div>
             {/* Draggable divider */}
             <div
@@ -814,16 +991,42 @@ export function ComparisonModal({
             {/* Right header */}
             <div className="bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 flex-1 flex items-center justify-between">
               <span>{rightTitle}</span>
-              <span className="text-indigo-400 text-xs">{rightLines.length} lines</span>
+              <span className="text-indigo-400 text-xs">{rightTrimmed} total · {rightContent} content</span>
             </div>
           </div>
 
           {/* Scrollable content */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-auto">
-            <div className="font-mono text-sm leading-relaxed">
-              {Array.from({ length: maxLines }, (_, idx) => renderRow(idx))}
+          {isLoading ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Loading...</p>
+              </div>
             </div>
-          </div>
+          ) : loadingError ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-gray-600">Failed to load data</p>
+                <p className="text-sm text-gray-400 mt-2">{loadingError}</p>
+              </div>
+            </div>
+          ) : maxLines === 0 ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Waiting for data...</p>
+              </div>
+            </div>
+          ) : (
+            <div ref={scrollContainerRef} className="flex-1 overflow-auto">
+              <div className="font-mono text-sm leading-relaxed">
+                {Array.from({ length: maxLines }, (_, idx) => renderRow(idx))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -837,15 +1040,6 @@ export function ComparisonModal({
                 </span>
                 <span className="text-gray-300">|</span>
               </>
-            )}
-            <span>{leftLines.length} left → {rightLines.length} right lines</span>
-            {leftLines.length !== rightLines.length && (
-              <span className="text-amber-600 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span className="hidden sm:inline">Line mismatch</span>
-              </span>
             )}
             {/* Retranslate chapter button */}
             {onRetranslateChapter && viewMode === 'chapter' && hasMultipleChapters && (

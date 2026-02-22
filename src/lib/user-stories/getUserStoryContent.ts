@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Language } from "@/types/i18n";
 import type { CEFRCode } from "@/lib/cefr";
+import { detectAlignmentIssues } from "./alignment-check";
 
 interface StoryLine {
   es: string;
@@ -113,6 +114,8 @@ export interface UserStoryContentResult {
   levelPending?: boolean;
   availableChapters?: number[];
   totalChapters?: number;
+  // Alignment warning for this chapter
+  chapterHasAlignmentIssues?: boolean;
 }
 
 /**
@@ -142,6 +145,7 @@ export async function getUserStoryContent(
         titleEn: true,
         storyType: true,
         detectedLevel: true,
+        sourceLanguage: true,
       },
     });
 
@@ -252,6 +256,32 @@ export async function getUserStoryContent(
 
     const structureType = inferStructureType(story.storyType, levelContent);
 
+    // Check if this chapter has alignment issues
+    const chapterContent = levelContent.chapters[chapterNum];
+    let chapterHasAlignmentIssues = (chapterContent as any)?.alignmentIssues?.hasIssues || false;
+
+    // For content processed before alignment detection was added, detect on-the-fly
+    if ((chapterContent as any)?.alignmentIssues === undefined) {
+      const srcLang = story.sourceLanguage === "es" ? "es" : "en";
+      const tgtLang = srcLang === "en" ? "es" : "en";
+      const srcLines: string[] = [];
+      const tgtLines: string[] = [];
+      const pKeys = Object.keys(chapterContent.pages).map(Number).sort((a, b) => a - b);
+      for (const pk of pKeys) {
+        const pg = chapterContent.pages[pk];
+        if (!pg) continue;
+        const pgLines = (pg.stanzas && pg.stanzas.length > 0)
+          ? pg.stanzas.flat()
+          : (pg.lines || []);
+        for (const ln of pgLines) {
+          srcLines.push((ln as any)[srcLang] ?? "");
+          tgtLines.push((ln as any)[tgtLang] ?? "");
+        }
+      }
+      const result = detectAlignmentIssues(srcLines, tgtLines);
+      chapterHasAlignmentIssues = result.hasIssues;
+    }
+
     return {
       storySlug: story.slug,
       storyId: story.id,
@@ -271,6 +301,7 @@ export async function getUserStoryContent(
       isProcessing,
       availableChapters,
       totalChapters,
+      chapterHasAlignmentIssues,
     };
   } catch (err) {
     console.error(`Failed to load user story content:`, err);

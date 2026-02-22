@@ -7,7 +7,7 @@
 // - This is more logical and allows for potential parallelization
 
 import { USER_STORY_LIMITS, STREAMING_LIMITS } from "./limits";
-import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, ChapterTranslationData, ProcessingProgress } from "./progress-tracker";
+import { LevelProgressTracker, updateStoryProgress, isStoryCancelled, StoryCancelledError, ChapterTranslationData } from "./progress-tracker";
 import { prisma } from "@/lib/prisma";
 import {
   rewriteToLevel,
@@ -58,6 +58,7 @@ import {
 } from "@/lib/poem-processing";
 import { StreamingChapterQueue, QueuedChapter } from "./chapter-queue";
 import { StoryType } from "@/types/story";
+import { detectAlignmentIssues } from "./alignment-check";
 
 // ============================================================================
 // TYPES
@@ -653,7 +654,6 @@ export async function translateLevelChapters(
 
       let filteredSourceLines: string[];
       let filteredTranslatedLines: string[];
-      let rawTranslatedText: string; // Unfiltered translated text for progress tracker
 
       if (needsMetadata) {
         // Poems/scripts need special preprocessing for stanza/speaker metadata
@@ -671,7 +671,6 @@ export async function translateLevelChapters(
         const result = await translateChapter(textToTranslate, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry
         });
-        rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
         filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
@@ -683,12 +682,17 @@ export async function translateLevelChapters(
         const result = await translateChapter(chapterText, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
         });
-        rawTranslatedText = result.translatedText;
 
         // Clean source text and collapse consecutive blanks to single paragraph breaks
         const cleanedSource = cleanText(chapterText);
         filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
         filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
+      }
+
+      // Detect alignment issues
+      const alignmentResult = detectAlignmentIssues(filteredSourceLines, filteredTranslatedLines);
+      if (alignmentResult.hasIssues) {
+        console.warn(`[Translate] Ch ${i + 1} alignment: ${alignmentResult.issueCount} issues`);
       }
 
       // Build processed chapter (basic version for backward compatibility)
@@ -768,6 +772,7 @@ export async function translateLevelChapters(
           pages: builtChapter.pages as any,
           metadata: chapter.metadata,
           poems: builtChapter.poems,
+          alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
         },
         {
           storySlug,
@@ -778,10 +783,11 @@ export async function translateLevelChapters(
       );
 
       // Also update progress tracker with chapter data for ComparisonModal
-      const cleanedTransSource = cleanText(chapterText);
+      // Use the same filtered lines as stored content so progress viewer matches final output
       await tracker.updateTranslationProgress(i + 1, {
-        sourceLines: cleanedTransSource.split("\n"),
-        translatedLines: rawTranslatedText.split("\n"),
+        sourceLines: filteredSourceLines,
+        translatedLines: filteredTranslatedLines,
+        alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
       });
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
@@ -855,15 +861,20 @@ export function assembleContentFromBuiltPages(
     chapters[chapterNum] = chapterContent;
   }
 
+  // Check if any chapter has alignment issues
+  const hasAlignmentIssues = completedData.some(ch => ch.alignmentIssues?.hasIssues);
+
   const content: LevelContent = {
     storySlug,
     level,
     hasChapters,
     chapters,
     structureType,
+    hasAlignmentIssues: hasAlignmentIssues || undefined,
   };
 
-  console.log(`[assembleContentFromBuiltPages] Assembled ${Object.keys(chapters).length} chapters for level ${level}`);
+  console.log(`[assembleContentFromBuiltPages] Assembled ${Object.keys(chapters).length} chapters for level ${level}` +
+    (hasAlignmentIssues ? ' (has alignment issues)' : ''));
 
   return content;
 }
@@ -920,42 +931,38 @@ export async function buildAndSaveLevel(
 
     let content: LevelContent;
 
-    // Try to fetch pre-built pages from the database (stored during streaming translation)
-    let preBuiltChapterData: ChapterTranslationData[] | undefined;
+    // Prefer the content already written per-chapter by updateChapterContent() during
+    // translation. This avoids re-paginating (which historically caused misalignment)
+    // and keeps the final saved content identical to what the user previewed.
+    let existingContent: LevelContent | undefined;
     try {
       const levelData = await prisma.userStoryLevel.findUnique({
         where: { id: levelId },
-        select: { processingProgress: true },
+        select: { content: true },
       });
 
-      if (levelData?.processingProgress) {
-        const progress = levelData.processingProgress as unknown as ProcessingProgress;
-        if (progress.completedData && progress.completedData.length > 0) {
-          preBuiltChapterData = progress.completedData;
+      if (levelData?.content) {
+        const candidate = levelData.content as unknown as LevelContent;
+        if (candidate.chapters && Object.keys(candidate.chapters).length > 0) {
+          existingContent = candidate;
         }
       }
     } catch (error) {
-      // Non-fatal: fall back to full rebuild
-      console.warn(`[BuildAndSaveLevel] Could not fetch pre-built data for level ${level}:`, error);
+      // Non-fatal: fall back to rebuild
+      console.warn(`[BuildAndSaveLevel] Could not fetch existing content for level ${level}:`, error);
     }
 
-    // Check if we have valid pre-built pages from the streaming pipeline
-    const hasPreBuiltPages = preBuiltChapterData &&
-      preBuiltChapterData.length > 0 &&
-      preBuiltChapterData.every(ch => ch.builtPages && Object.keys(ch.builtPages).length > 0);
-
-    if (hasPreBuiltPages) {
-      // Assemble from pre-built pages (streaming pipeline optimization)
-      console.log(`[BuildAndSaveLevel] Assembling level ${level} from ${preBuiltChapterData!.length} pre-built chapters`);
-      content = assembleContentFromBuiltPages(
-        storySlug,
-        levelNum,
-        hasChapters,
-        preBuiltChapterData!,
-        structureType
-      );
+    if (existingContent) {
+      // Content was already built per-chapter during translation — use it directly
+      console.log(`[BuildAndSaveLevel] Using existing content for level ${level} (${Object.keys(existingContent.chapters).length} chapters, already built per-chapter)`);
+      content = existingContent;
+      // Ensure metadata is up to date
+      content.storySlug = storySlug;
+      content.level = levelNum;
+      content.hasChapters = hasChapters;
+      if (structureType) content.structureType = structureType;
     } else {
-      // Fall back to full rebuild (backward compatibility or non-streaming pipeline)
+      // Fall back to full rebuild (backward compatibility for levels without per-chapter content)
       console.log(`[BuildAndSaveLevel] Building level ${level} with structureType=${structureType} (full rebuild)`);
 
       content = processedChaptersWithMetadata
@@ -974,6 +981,14 @@ export async function buildAndSaveLevel(
             processedChapters,
             sourceLanguage
           );
+    }
+
+    // Scan chapters for alignment issues and set top-level flag
+    const anyChapterHasIssues = Object.values(content.chapters).some(
+      ch => ch.alignmentIssues?.hasIssues
+    );
+    if (anyChapterHasIssues) {
+      content.hasAlignmentIssues = true;
     }
 
     // Save and mark complete
@@ -1210,7 +1225,6 @@ async function translateChaptersConsumer(
       let speakerNames: string[] = [];
       let filteredSourceLines: string[];
       let filteredTranslatedLines: string[];
-      let rawTranslatedText: string; // Unfiltered translated text for progress tracker
 
       if (needsMetadata) {
         // Poems/scripts need special preprocessing for stanza/speaker metadata
@@ -1229,7 +1243,6 @@ async function translateChaptersConsumer(
         const result = await translateChapter(textToTranslate, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry
         });
-        rawTranslatedText = result.translatedText;
 
         // For poetry, preserve blank lines (they mark stanza breaks)
         filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
@@ -1241,12 +1254,17 @@ async function translateChaptersConsumer(
         const result = await translateChapter(content, sourceLanguage, level, {
           storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
         });
-        rawTranslatedText = result.translatedText;
 
         // Clean source text and collapse consecutive blanks to single paragraph breaks
         const cleanedSource = cleanText(content);
         filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
         filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
+      }
+
+      // Detect alignment issues
+      const alignmentResult = detectAlignmentIssues(filteredSourceLines, filteredTranslatedLines);
+      if (alignmentResult.hasIssues) {
+        console.warn(`[StreamingConsumer] Ch ${chapterIndex + 1} alignment: ${alignmentResult.issueCount} issues`);
       }
 
       // Preserve metadata from original chapter
@@ -1299,6 +1317,7 @@ async function translateChaptersConsumer(
           pages: builtChapter.pages as any,
           metadata,
           poems: builtChapter.poems,
+          alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
         },
         {
           storySlug,
@@ -1309,10 +1328,11 @@ async function translateChaptersConsumer(
       );
 
       // Also update progress tracker with chapter data for ComparisonModal
-      const cleanedTransSource = cleanText(content);
+      // Use the same filtered lines as stored content so progress viewer matches final output
       await tracker.updateTranslationProgress(chaptersProcessed + 1, {
-        sourceLines: cleanedTransSource.split("\n"),
-        translatedLines: rawTranslatedText.split("\n"),
+        sourceLines: filteredSourceLines,
+        translatedLines: filteredTranslatedLines,
+        alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
       });
 
     } catch (error: any) {

@@ -48,6 +48,8 @@ interface UserStoryReaderProps {
   lines: StoryLine[];
   stanzas?: StoryLine[][];
   level: string;
+  // Alignment warning
+  chapterHasAlignmentIssues?: boolean;
   chapter: number;
   page: number;
   storyMap: StoryMapData;
@@ -79,6 +81,7 @@ export default function UserStoryReader({
   detectedLevel,
   structureType,
   lng,
+  chapterHasAlignmentIssues = false,
   isProcessing = false,
   chapterPending = false,
   levelPending = false,
@@ -86,6 +89,7 @@ export default function UserStoryReader({
   totalChapters = 0,
 }: UserStoryReaderProps) {
   const router = useRouter();
+  const [dismissedAlignmentWarning, setDismissedAlignmentWarning] = useState(false);
   const [currentChapterPending, setCurrentChapterPending] = useState(chapterPending || levelPending);
   const [currentAvailableChapters, setCurrentAvailableChapters] = useState(availableChapters);
   const [currentTotalChapters, setCurrentTotalChapters] = useState(totalChapters);
@@ -152,19 +156,36 @@ export default function UserStoryReader({
 
   // Render normal story reader
   return (
-    <StoryLayoutWithAzureTTS
-      title={title}
-      storySlug={storySlug}
-      sentences={lines}
-      stanzas={stanzas}
-      initialLevel={level}
-      storyMap={storyMap}
-      isUserStory={true}
-      userStoryId={storyId}
-      availableLevels={availableLevels}
-      storyType={storyType}
-      detectedLevel={detectedLevel}
-      structureType={structureType}
-    />
+    <>
+      {chapterHasAlignmentIssues && !dismissedAlignmentWarning && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-sm relative z-10">
+          <span className="text-amber-700">
+            {lng === "es"
+              ? "\u26A0 Este capítulo puede tener problemas de alineación en la traducción."
+              : "\u26A0 This chapter may have translation alignment issues."}
+          </span>
+          <button
+            onClick={() => setDismissedAlignmentWarning(true)}
+            className="text-amber-400 hover:text-amber-600 text-xs ml-4 shrink-0"
+          >
+            {lng === "es" ? "Descartar" : "Dismiss"}
+          </button>
+        </div>
+      )}
+      <StoryLayoutWithAzureTTS
+        title={title}
+        storySlug={storySlug}
+        sentences={lines}
+        stanzas={stanzas}
+        initialLevel={level}
+        storyMap={storyMap}
+        isUserStory={true}
+        userStoryId={storyId}
+        availableLevels={availableLevels}
+        storyType={storyType}
+        detectedLevel={detectedLevel}
+        structureType={structureType}
+      />
+    </>
   );
 }

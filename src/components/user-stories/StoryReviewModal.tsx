@@ -478,6 +478,42 @@ export default function StoryReviewModal() {
             </div>
           </div>
 
+          {/* Preview dropdown - moved above detected info for visibility */}
+          {(() => {
+            const completedStreams = (progress.streams || []).filter((s) => s.status === "complete");
+            const anyAlignmentIssues = completedStreams.some((s) => s.hasAlignmentIssues);
+
+            if (completedStreams.length === 0) return null;
+
+            return (
+              <div>
+                {anyAlignmentIssues && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2 flex items-start gap-2">
+                    <svg className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p className="text-sm text-amber-800">
+                      {lng === "es"
+                        ? "Se detectó desalineación en la traducción. Revise y edite manualmente."
+                        : "Translation misalignment detected. Please review and edit manually."}
+                    </p>
+                  </div>
+                )}
+                <StreamSelector
+                  streams={progress.streams || []}
+                  lng={lng as string}
+                  setShowProgressViewer={setShowProgressViewer}
+                  isPreviewMode={true}
+                  storyData={{
+                    sourceLanguage: storyData.sourceLanguage,
+                    detectedLevel: storyData.detectedLevel,
+                  }}
+                  hasAlignmentWarning={anyAlignmentIssues}
+                />
+              </div>
+            );
+          })()}
+
           {/* Detected info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-xl">
@@ -550,20 +586,6 @@ export default function StoryReviewModal() {
               </div>
             );
           })()}
-
-          {/* Preview dropdown - now outside and below the green "what was created" area */}
-          {(progress.streams || []).filter((s) => s.status === "complete").length > 0 && (
-            <StreamSelector
-              streams={progress.streams || []}
-              lng={lng as string}
-              setShowProgressViewer={setShowProgressViewer}
-              isPreviewMode={true}
-              storyData={{
-                sourceLanguage: storyData.sourceLanguage,
-                detectedLevel: storyData.detectedLevel,
-              }}
-            />
-          )}
 
           {/* Advanced Options (Collapsible) */}
           <div className="border border-gray-200 rounded-xl overflow-hidden">

@@ -533,7 +533,7 @@ upload: {
   stepSavingContent: "Guardando contenido del nivel",
   stepComplete: "Completo",
   stepChapterOf: "{current} de {total}",
-  // ProgressViewerModal
+  // ComparisonModal (progress viewer)
   rewrite: "Reescritura",
   rewriteFromTo: "Reescritura {from} → {to}",
   translateLevel: "Traducción {level}",

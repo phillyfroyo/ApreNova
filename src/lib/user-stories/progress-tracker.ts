@@ -2,6 +2,7 @@
 // Centralized progress tracking for user story processing
 
 import { prisma } from "@/lib/prisma";
+import type { ChapterAlignmentResult } from "./alignment-check";
 
 // ============================================================================
 // TYPES
@@ -53,6 +54,8 @@ export interface ChapterTranslationData {
     title: string;
     subtitle?: string;
   };
+  // Alignment check results
+  alignmentIssues?: ChapterAlignmentResult;
 }
 
 export interface ChapterRewriteData {
@@ -81,6 +84,8 @@ export interface ProcessingProgress {
     currentChapter: number;
     chaptersCompleted: number;
   };
+  // Alignment issue tracking
+  hasAlignmentIssues?: boolean;
 }
 
 // Story-level progress phases
@@ -322,7 +327,7 @@ export class LevelProgressTracker {
    * Update progress during translation.
    * Content is also written to content field via updateChapterContent() for reading.
    * This method stores raw source/translated lines in completedData for the
-   * ProgressViewerModal (preserving blank lines for display), matching how
+   * ComparisonModal (preserving blank lines for display), matching how
    * updateRewriteProgress stores rewriteData.
    */
   async updateTranslationProgress(
@@ -365,6 +370,7 @@ export class LevelProgressTracker {
       pages: Record<number, BuiltPageContent>;
       metadata?: { number: number; title: string; subtitle?: string };
       poems?: PoemInfo[];
+      alignmentIssues?: ChapterAlignmentResult;
     },
     contentMetadata: {
       storySlug: string;

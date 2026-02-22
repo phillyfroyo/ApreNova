@@ -103,6 +103,7 @@ export default async function UserStoryReaderPage({
       detectedLevel={story.detectedLevel}
       structureType={story.structureType}
       lng={lng as Language}
+      chapterHasAlignmentIssues={story.chapterHasAlignmentIssues}
       isProcessing={story.isProcessing}
       chapterPending={story.chapterPending}
       levelPending={story.levelPending}
