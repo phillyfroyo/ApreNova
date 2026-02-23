@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
 import { ALL_STORY_TYPES, ALL_STORY_TAGS, STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
 import { FormAttribution, createEmptyFormAttribution, formToAttribution, attributionToForm } from "@/lib/admin/attribution-helpers";
+import ComparisonModal from "@/components/ComparisonModal";
+import type { ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
+import { scanContentWarnings, scanTranslationQuality } from "./hooks/useRewritePipeline";
+import { toNumericLevel } from "@/lib/cefr";
 
 interface Story {
   slug: string;
@@ -46,13 +50,12 @@ interface EditingStory {
 
 type EditorStep = 1 | 2;
 
-interface LevelContent {
-  level: string;
-  chapters: Record<number, {
-    pages: Record<number, {
-      lines: Array<{ en: string; es: string }>;
-    }>;
-  }>;
+interface LevelRawData {
+  sourceText: string;
+  translatedText: string;
+  sourceLanguage: string;
+  hasAlignmentIssues?: boolean;
+  chapterAlignmentIssues?: Record<number, ChapterAlignmentResult>;
 }
 
 export default function StoryManager() {
@@ -89,9 +92,21 @@ export default function StoryManager() {
   const [storyText, setStoryText] = useState<string | null>(null);
 
   // Step 2: Story content state
-  const [levelContents, setLevelContents] = useState<LevelContent[]>([]);
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [levelRawData, setLevelRawData] = useState<Record<string, LevelRawData>>({});
+  const [isLoadingLevels, setIsLoadingLevels] = useState(false);
+  const [expandedLineBreakdown, setExpandedLineBreakdown] = useState<string | null>(null);
+
+  // Step 2: Comparison modal state
+  const [comparisonLevel, setComparisonLevel] = useState<string | null>(null);
+  const [comparisonData, setComparisonData] = useState<{
+    sourceText: string;
+    translatedText: string;
+    sourceLanguage: string;
+    hasAlignmentIssues?: boolean;
+    chapterAlignmentIssues?: Record<number, ChapterAlignmentResult>;
+  } | null>(null);
+  const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+  const [levelsWithAlignmentIssues, setLevelsWithAlignmentIssues] = useState<Set<string>>(new Set());
 
   // AI Attribution Parser state
   const [frontMatterText, setFrontMatterText] = useState("");
@@ -168,8 +183,8 @@ export default function StoryManager() {
     setDescriptionOptions([]);
     setImageOptions([]);
     setBackgroundOptions([]);
-    setLevelContents([]);
-    setSelectedLevel(story.levels[0] || null);
+    setLevelRawData({});
+    setExpandedLineBreakdown(null);
 
     // Fetch story text for AI generation
     try {
@@ -195,32 +210,130 @@ export default function StoryManager() {
     setDescriptionOptions([]);
     setImageOptions([]);
     setBackgroundOptions([]);
-    setLevelContents([]);
-    setSelectedLevel(null);
+    setLevelRawData({});
+    setExpandedLineBreakdown(null);
     setFrontMatterText("");
     setParseAttributionError("");
   };
 
-  // Load story content for Step 2
-  const loadStoryContent = async (slug: string, levels: string[]) => {
-    setIsLoadingContent(true);
-    const contents: LevelContent[] = [];
+  // Load all levels' raw data for Step 2
+  const loadAllLevelRawData = async (slug: string, levels: string[]) => {
+    setIsLoadingLevels(true);
+    try {
+      const results = await Promise.all(
+        levels.map(async (level) => {
+          try {
+            const res = await fetch(
+              `/api/admin/stories/${slug}/content?level=${encodeURIComponent(level)}&format=raw`
+            );
+            if (!res.ok) return { level, data: null };
+            const data = await res.json();
+            return { level, data: data as LevelRawData };
+          } catch {
+            return { level, data: null };
+          }
+        })
+      );
 
-    for (const level of levels) {
-      try {
-        const response = await fetch(`/api/admin/stories/${slug}/content?level=${level}`);
-        if (response.ok) {
-          const data = await response.json();
-          contents.push({ level, chapters: data.chapters });
+      const newRawData: Record<string, LevelRawData> = {};
+      const issueSet = new Set<string>();
+      for (const { level, data } of results) {
+        if (data) {
+          newRawData[level] = data;
+          if (data.hasAlignmentIssues) issueSet.add(level);
         }
-      } catch (err) {
-        console.error(`Failed to load content for ${level}:`, err);
       }
+      setLevelRawData(newRawData);
+      setLevelsWithAlignmentIssues(issueSet);
+    } finally {
+      setIsLoadingLevels(false);
     }
-
-    setLevelContents(contents);
-    setIsLoadingContent(false);
   };
+
+  // Comparison modal handlers for Step 2
+  const handleOpenComparison = useCallback(async (levelKey: string) => {
+    if (!currentStoryData) return;
+    setIsLoadingComparison(true);
+    setComparisonLevel(levelKey);
+    try {
+      const res = await fetch(
+        `/api/admin/stories/${currentStoryData.slug}/content?level=${encodeURIComponent(levelKey)}&format=raw`
+      );
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setComparisonData(data);
+      if (data.hasAlignmentIssues) {
+        setLevelsWithAlignmentIssues(prev => new Set([...prev, levelKey]));
+      } else {
+        setLevelsWithAlignmentIssues(prev => {
+          const next = new Set(prev);
+          next.delete(levelKey);
+          return next;
+        });
+      }
+    } catch {
+      setComparisonLevel(null);
+      setComparisonData(null);
+    } finally {
+      setIsLoadingComparison(false);
+    }
+  }, [currentStoryData]);
+
+  const handleSaveComparison = useCallback(async (edits: { left?: string; right?: string }) => {
+    if (!currentStoryData || !comparisonLevel) return;
+    try {
+      const res = await fetch(`/api/admin/stories/${currentStoryData.slug}/content`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          level: comparisonLevel,
+          sourceText: edits.left,
+          translatedText: edits.right,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+      const result = await res.json();
+      // Update local comparison data to reflect saved edits + updated alignment
+      setComparisonData(prev => prev ? {
+        ...prev,
+        ...(edits.left !== undefined && { sourceText: edits.left }),
+        ...(edits.right !== undefined && { translatedText: edits.right }),
+        hasAlignmentIssues: result.hasAlignmentIssues || false,
+        chapterAlignmentIssues: result.chapterAlignmentIssues || {},
+      } : null);
+      if (result.hasAlignmentIssues) {
+        setLevelsWithAlignmentIssues(prev => new Set([...prev, comparisonLevel]));
+      } else {
+        setLevelsWithAlignmentIssues(prev => {
+          const next = new Set(prev);
+          next.delete(comparisonLevel);
+          return next;
+        });
+      }
+      // Refresh level raw data for the alignment cards
+      setLevelRawData(prev => ({
+        ...prev,
+        [comparisonLevel]: {
+          sourceText: edits.left ?? prev[comparisonLevel]?.sourceText ?? "",
+          translatedText: edits.right ?? prev[comparisonLevel]?.translatedText ?? "",
+          sourceLanguage: prev[comparisonLevel]?.sourceLanguage ?? "en",
+          hasAlignmentIssues: result.hasAlignmentIssues || false,
+          chapterAlignmentIssues: result.chapterAlignmentIssues || {},
+        },
+      }));
+    } catch (error) {
+      console.error("Error saving comparison edits:", error);
+      alert("Failed to save edits. Please try again.");
+    }
+  }, [currentStoryData, comparisonLevel]);
+
+  const handleCloseComparison = useCallback(() => {
+    setComparisonLevel(null);
+    setComparisonData(null);
+  }, []);
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -739,8 +852,8 @@ export default function StoryManager() {
                 <button
                   onClick={() => {
                     setEditorStep(2);
-                    if (levelContents.length === 0 && currentStoryData) {
-                      loadStoryContent(currentStoryData.slug, currentStoryData.levels);
+                    if (Object.keys(levelRawData).length === 0 && currentStoryData) {
+                      loadAllLevelRawData(currentStoryData.slug, currentStoryData.levels);
                     }
                   }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -1641,71 +1754,256 @@ export default function StoryManager() {
 
               {editorStep === 2 && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-gray-900">Story Content by Level</h3>
-                    {currentStoryData && (
-                      <div className="flex gap-1">
-                        {currentStoryData.levels.map((level) => (
-                          <button
-                            key={level}
-                            onClick={() => setSelectedLevel(level)}
-                            className={`px-3 py-1 rounded text-sm ${
-                              selectedLevel === level
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
-                          >
-                            {level.toUpperCase()}
-                          </button>
-                        ))}
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-2">Story Content by Level</h3>
+                    <p className="text-sm text-gray-500 mb-3">
+                      Review alignment data for each level. Click &ldquo;View Full Text&rdquo; to open the comparison editor.
+                    </p>
+
+                    {isLoadingLevels && (
+                      <div className="flex items-center gap-2 text-gray-500 py-4">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Loading level data...
+                      </div>
+                    )}
+
+                    {currentStoryData && !isLoadingLevels && (
+                      <div className="space-y-3">
+                        {currentStoryData.levels.map((level) => {
+                          const rawData = levelRawData[level];
+                          const hasData = !!rawData?.sourceText;
+                          const hasIssues = levelsWithAlignmentIssues.has(level);
+                          const numLevel = toNumericLevel(level);
+
+                          // Parse chapters for line count comparison
+                          const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
+
+                          const parseChapters = (lines: string[]) => {
+                            type ChapterInfo = { number: number; title: string; startLine: number };
+                            const chapters: { number: number; title: string; startLine: number; totalLines: number; contentLines: number }[] = [];
+                            let currentChapter: ChapterInfo | null = null;
+
+                            lines.forEach((line, idx) => {
+                              const match = line.match(chapterPattern);
+                              if (match) {
+                                if (currentChapter) {
+                                  const slice = lines.slice(currentChapter.startLine + 1, idx);
+                                  chapters.push({
+                                    number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine,
+                                    totalLines: slice.length,
+                                    contentLines: slice.filter(l => l.trim()).length,
+                                  });
+                                }
+                                currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
+                              }
+                            });
+
+                            if (currentChapter) {
+                              const chap = currentChapter as ChapterInfo;
+                              const slice = lines.slice(chap.startLine + 1);
+                              chapters.push({
+                                number: chap.number, title: chap.title, startLine: chap.startLine,
+                                totalLines: slice.length,
+                                contentLines: slice.filter(l => l.trim()).length,
+                              });
+                            }
+
+                            return chapters;
+                          };
+
+                          const sourceTextLines = (rawData?.sourceText || "").split("\n");
+                          const translatedTextLines = (rawData?.translatedText || "").split("\n");
+                          const sourceChapters = hasData ? parseChapters(sourceTextLines) : [];
+                          const translatedChapters = hasData ? parseChapters(translatedTextLines) : [];
+                          const hasChapters = sourceChapters.length > 1 || translatedChapters.length > 1;
+
+                          const srcTotal = hasChapters ? sourceChapters.reduce((s, c) => s + c.totalLines, 0) : sourceTextLines.length;
+                          const transTotal = hasChapters ? translatedChapters.reduce((s, c) => s + c.totalLines, 0) : translatedTextLines.length;
+                          const totalMatch = srcTotal === transTotal;
+
+                          const srcContent = hasChapters ? sourceChapters.reduce((s, c) => s + c.contentLines, 0) : sourceTextLines.filter(l => l.trim()).length;
+                          const transContent = hasChapters ? translatedChapters.reduce((s, c) => s + c.contentLines, 0) : translatedTextLines.filter(l => l.trim()).length;
+                          const contentMatch = srcContent === transContent;
+
+                          const totalMismatched = hasChapters ? sourceChapters
+                            .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.totalLines !== sc.totalLines : true; })
+                            .map(sc => `Ch ${sc.number}`) : [];
+                          const contentMismatched = hasChapters ? sourceChapters
+                            .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.contentLines !== sc.contentLines : true; })
+                            .map(sc => `Ch ${sc.number}`) : [];
+
+                          // Content warnings
+                          const sourceWarnings = hasData ? scanContentWarnings(rawData.sourceText, numLevel) : [];
+                          const translationWarnings = hasData && rawData.translatedText ? scanContentWarnings(rawData.translatedText, numLevel) : [];
+                          const qualityWarnings = hasData && rawData.translatedText ? scanTranslationQuality(rawData.sourceText, rawData.translatedText, numLevel) : [];
+                          const totalWarnings = sourceWarnings.length + translationWarnings.length + qualityWarnings.length;
+
+                          const isBreakdownExpanded = expandedLineBreakdown === level;
+
+                          const LineRow = ({ label, src, trans, match, mismatched }: { label: string; src: number; trans: number; match: boolean; mismatched: string[] }) => (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-500 text-xs w-20">{label}:</span>
+                              <span className={`text-sm font-medium ${match ? 'text-green-600' : 'text-amber-600'}`}>
+                                {src} <span className="text-gray-400 mx-0.5">{"→"}</span> {trans}
+                                {match ? (
+                                  <span className="text-green-500 ml-1">&#10003;</span>
+                                ) : (
+                                  <span className="text-amber-500 ml-1">
+                                    ({trans - src > 0 ? '+' : ''}{trans - src})
+                                    {mismatched.length > 0 && <span className="text-xs ml-1">{mismatched.join(', ')}</span>}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          );
+
+                          const borderColor = !hasData ? "border-gray-200" : hasIssues || totalWarnings > 0 ? "border-amber-300" : "border-green-300";
+
+                          return (
+                            <div key={level} className={`p-4 rounded-lg border-2 ${borderColor} bg-white`}>
+                              {/* Header row */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    hasData ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                                  }`}>
+                                    {hasData ? (
+                                      <span>&#10003;</span>
+                                    ) : (
+                                      level.toUpperCase()
+                                    )}
+                                  </div>
+                                  <span className="font-medium text-gray-900">{level.toUpperCase()}</span>
+                                </div>
+                                {hasData && (
+                                  <button
+                                    onClick={() => handleOpenComparison(level)}
+                                    disabled={isLoadingComparison}
+                                    className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    View Full Text
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Line count comparison */}
+                              {hasData && rawData.translatedText && (
+                                <div className="mt-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      {hasChapters && (
+                                        <button
+                                          onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
+                                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                          title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
+                                        >
+                                          <svg
+                                            className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                      <div className="flex flex-col gap-0.5">
+                                        <LineRow label="total lines" src={srcTotal} trans={transTotal} match={totalMatch} mismatched={totalMismatched} />
+                                        <LineRow label="content lines" src={srcContent} trans={transContent} match={contentMatch} mismatched={contentMismatched} />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Per-chapter breakdown */}
+                                  {isBreakdownExpanded && hasChapters && (
+                                    <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
+                                      {sourceChapters.map((srcChapter) => {
+                                        const tc = translatedChapters.find(c => c.number === srcChapter.number);
+                                        const totalOk = tc ? tc.totalLines === srcChapter.totalLines : false;
+                                        const contentOk = tc ? tc.contentLines === srcChapter.contentLines : false;
+                                        const chapterOk = totalOk && contentOk;
+
+                                        return (
+                                          <div
+                                            key={srcChapter.number}
+                                            className={`flex items-center justify-between px-2 py-1 rounded ${chapterOk ? 'bg-green-50' : 'bg-amber-50'}`}
+                                          >
+                                            <span className="text-gray-700 font-medium">
+                                              Ch. {srcChapter.number}
+                                              {srcChapter.title && <span className="font-normal text-gray-500 ml-1">({srcChapter.title.slice(0, 20)}{srcChapter.title.length > 20 ? '...' : ''})</span>}
+                                            </span>
+                                            <div className="flex gap-3 text-xs">
+                                              <span className={totalOk ? 'text-green-600' : 'text-amber-600'}>
+                                                {srcChapter.totalLines}{tc ? ` → ${tc.totalLines}` : ''}
+                                                {!totalOk && tc && <span className="ml-0.5 opacity-75">({(tc.totalLines - srcChapter.totalLines) > 0 ? '+' : ''}{tc.totalLines - srcChapter.totalLines})</span>}
+                                              </span>
+                                              <span className="text-gray-300">|</span>
+                                              <span className={contentOk ? 'text-green-600' : 'text-amber-600'}>
+                                                {srcChapter.contentLines}{tc ? ` → ${tc.contentLines}` : ''}
+                                                {!contentOk && tc && <span className="ml-0.5 opacity-75">({(tc.contentLines - srcChapter.contentLines) > 0 ? '+' : ''}{tc.contentLines - srcChapter.contentLines})</span>}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* No translation yet */}
+                              {hasData && !rawData.translatedText && (
+                                <p className="mt-2 text-xs text-gray-400 italic">Source text only — no translation available</p>
+                              )}
+
+                              {/* No data */}
+                              {!hasData && (
+                                <p className="mt-2 text-xs text-gray-400 italic">No content data available</p>
+                              )}
+
+                              {/* Content warnings */}
+                              {totalWarnings > 0 && (
+                                <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                                  <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-2">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    {totalWarnings} content warning{totalWarnings > 1 ? "s" : ""} detected
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {sourceWarnings.map((w, i) => (
+                                      <li key={`src-${i}`} className="text-xs text-amber-600">
+                                        <span className="font-medium text-amber-700">Source</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                                      </li>
+                                    ))}
+                                    {translationWarnings.map((w, i) => (
+                                      <li key={`trans-${i}`} className="text-xs text-amber-600">
+                                        <span className="font-medium text-amber-700">Translation</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                                      </li>
+                                    ))}
+                                    {qualityWarnings.map((w, i) => (
+                                      <li key={`quality-${i}`} className="text-xs text-amber-600">
+                                        <span className="font-medium text-amber-700">Short translation</span> Ch {w.chapter}, line {w.line}
+                                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 120)}{w.text.length > 120 ? "..." : ""}</code>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-
-                  {isLoadingContent ? (
-                    <div className="text-center py-12 text-gray-500">Loading story content...</div>
-                  ) : levelContents.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <p>No content loaded yet.</p>
-                      <button
-                        onClick={() => currentStoryData && loadStoryContent(currentStoryData.slug, currentStoryData.levels)}
-                        className="mt-2 text-blue-600 hover:text-blue-800"
-                      >
-                        Load Content
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                      {levelContents
-                        .filter((lc) => lc.level === selectedLevel)
-                        .map((levelContent) => (
-                          <div key={levelContent.level}>
-                            {Object.entries(levelContent.chapters).map(([chNum, chapter]) => (
-                              <div key={chNum} className="mb-4">
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Chapter {chNum}</h4>
-                                {Object.entries(chapter.pages).map(([pNum, page]) => (
-                                  <div key={pNum} className="mb-3 pl-4 border-l-2 border-gray-200">
-                                    <p className="text-xs text-gray-500 mb-1">Page {pNum}</p>
-                                    <div className="space-y-1">
-                                      {page.lines.map((line, lIdx) => (
-                                        <div key={lIdx} className="grid grid-cols-2 gap-2 text-sm">
-                                          <div className="text-gray-700">{line.es}</div>
-                                          <div className="text-gray-500">{line.en}</div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                    </div>
-                  )}
-
-                  <p className="text-xs text-gray-500">
-                    Note: Content editing coming soon. For now, you can view the story content at each level.
-                  </p>
                 </div>
               )}
 
@@ -1740,6 +2038,25 @@ export default function StoryManager() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Comparison Modal for Step 2 content editing */}
+      {comparisonData && comparisonLevel && (
+        <div className="fixed inset-0 z-[110]">
+          <ComparisonModal
+            isOpen={true}
+            onClose={handleCloseComparison}
+            level={comparisonLevel ? parseInt(comparisonLevel.replace(/\D/g, ""), 10) : null}
+            leftTitle={`Source (${(comparisonData.sourceLanguage || "en").toUpperCase()})`}
+            leftText={comparisonData.sourceText}
+            rightTitle={`Translation (${comparisonData.sourceLanguage === "en" ? "ES" : "EN"})`}
+            rightText={comparisonData.translatedText}
+            editableSide="both"
+            onSave={handleSaveComparison}
+            headerGradient="bg-gradient-to-r from-emerald-600 to-teal-600"
+            chapterAlignmentIssues={comparisonData.chapterAlignmentIssues}
+          />
         </div>
       )}
 
