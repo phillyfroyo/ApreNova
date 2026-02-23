@@ -7,6 +7,7 @@ import type {
   PageContent,
 } from "@/lib/story-processing/text-processing";
 import { hasStanzas, flattenStanzas } from "@/lib/story-processing/text-processing";
+import { detectAlignmentIssues, type ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
 
 /**
  * Extract source and translated text from a LevelContent JSON blob.
@@ -214,4 +215,58 @@ export function applyTextToContent(
   }
 
   return updated;
+}
+
+/**
+ * Extract alignment issues map from content chapters.
+ * Returns only chapters that have issues, keyed by chapter number.
+ */
+export function extractChapterAlignmentMap(
+  content: LevelContent
+): Record<number, ChapterAlignmentResult> {
+  const map: Record<number, ChapterAlignmentResult> = {};
+  for (const [key, chapter] of Object.entries(content.chapters)) {
+    if (chapter.alignmentIssues?.hasIssues) {
+      map[parseInt(key, 10)] = chapter.alignmentIssues;
+    }
+  }
+  return map;
+}
+
+/**
+ * Re-run alignment detection on a content structure by extracting
+ * source/translated lines per chapter from the pages.
+ * Mutates content in-place (sets alignmentIssues on each chapter
+ * and hasAlignmentIssues on the root).
+ */
+export function redetectAlignmentForContent(
+  content: LevelContent,
+  sourceLanguage: "en" | "es"
+): void {
+  const targetLanguage = sourceLanguage === "en" ? "es" : "en";
+  let anyHasIssues = false;
+
+  for (const [, chapter] of Object.entries(content.chapters)) {
+    const sourceLines: string[] = [];
+    const translatedLines: string[] = [];
+
+    const pageKeys = Object.keys(chapter.pages).map(Number).sort((a, b) => a - b);
+    for (const pageNum of pageKeys) {
+      const page = chapter.pages[pageNum];
+      if (!page) continue;
+      const lines = hasStanzas(page)
+        ? flattenStanzas(page.stanzas!)
+        : page.lines || [];
+      for (const line of lines) {
+        sourceLines.push(line[sourceLanguage] ?? "");
+        translatedLines.push(line[targetLanguage] ?? "");
+      }
+    }
+
+    const result = detectAlignmentIssues(sourceLines, translatedLines);
+    (chapter as any).alignmentIssues = result.hasIssues ? result : undefined;
+    if (result.hasIssues) anyHasIssues = true;
+  }
+
+  content.hasAlignmentIssues = anyHasIssues || undefined;
 }

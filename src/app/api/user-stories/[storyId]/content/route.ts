@@ -3,65 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import { extractTextFromContent, applyTextToContent } from "@/lib/user-stories/content-utils";
-import type { LevelContent, ChapterContent } from "@/lib/story-processing/text-processing";
-import { detectAlignmentIssues, type ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
-import { hasStanzas, flattenStanzas } from "@/lib/story-processing/text-processing";
+import {
+  extractTextFromContent,
+  applyTextToContent,
+  extractChapterAlignmentMap,
+  redetectAlignmentForContent,
+} from "@/lib/user-stories/content-utils";
+import type { LevelContent } from "@/lib/story-processing/text-processing";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
-}
-
-/**
- * Extract alignment issues map from content chapters.
- * Returns only chapters that have issues, keyed by chapter number.
- */
-function extractChapterAlignmentMap(
-  content: LevelContent
-): Record<number, ChapterAlignmentResult> {
-  const map: Record<number, ChapterAlignmentResult> = {};
-  for (const [key, chapter] of Object.entries(content.chapters)) {
-    if (chapter.alignmentIssues?.hasIssues) {
-      map[parseInt(key, 10)] = chapter.alignmentIssues;
-    }
-  }
-  return map;
-}
-
-/**
- * Re-run alignment detection on a content structure by extracting
- * source/translated lines per chapter from the pages.
- */
-function redetectAlignmentForContent(
-  content: LevelContent,
-  sourceLanguage: "en" | "es"
-): void {
-  const targetLanguage = sourceLanguage === "en" ? "es" : "en";
-  let anyHasIssues = false;
-
-  for (const [key, chapter] of Object.entries(content.chapters)) {
-    const sourceLines: string[] = [];
-    const translatedLines: string[] = [];
-
-    const pageKeys = Object.keys(chapter.pages).map(Number).sort((a, b) => a - b);
-    for (const pageNum of pageKeys) {
-      const page = chapter.pages[pageNum];
-      if (!page) continue;
-      const lines = hasStanzas(page)
-        ? flattenStanzas(page.stanzas!)
-        : page.lines || [];
-      for (const line of lines) {
-        sourceLines.push(line[sourceLanguage] ?? "");
-        translatedLines.push(line[targetLanguage] ?? "");
-      }
-    }
-
-    const result = detectAlignmentIssues(sourceLines, translatedLines);
-    (chapter as any).alignmentIssues = result.hasIssues ? result : undefined;
-    if (result.hasIssues) anyHasIssues = true;
-  }
-
-  content.hasAlignmentIssues = anyHasIssues || undefined;
 }
 
 // GET: Get story content for a specific level

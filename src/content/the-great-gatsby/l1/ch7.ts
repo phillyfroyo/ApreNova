@@ -1059,7 +1059,7 @@ export const chapterContent = {
         },
         {
           "en": "Jordan and I tried to leave, but Tom and Gatsby wanted us to stay. They acted like they had nothing to hide.",
-          "es": ""
+          "es": "Jordan y yo tratamos de irnos, pero Tom y Gatsby querían que nos quedáramos. Actuaron como si no tuvieran nada que esconder."
         }
       ]
     },
@@ -1067,47 +1067,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Sit down, Daisy,” Tom said. “What’s been going on? I want to know.”",
-          "es": "Jordan y yo tratamos de irnos, pero Tom y Gatsby querían que nos quedáramos. Actuaron como si no tuvieran nada que esconder."
-        },
-        {
-          "en": "“I told you what’s been going on,” said Gatsby. “It’s been five years—and you didn’t know.”",
           "es": "Siéntate, Daisy, dijo Tom. ¿Qué ha pasado? Quiero saber."
         },
         {
-          "en": "Tom looked at Daisy quickly.",
+          "en": "“I told you what’s been going on,” said Gatsby. “It’s been five years—and you didn’t know.”",
           "es": "Te dije qué ha pasado, dijo Gatsby. Han sido cinco años, y no lo sabías."
         },
         {
-          "en": "“You’ve been seeing him for five years?”",
+          "en": "Tom looked at Daisy quickly.",
           "es": "Tom miró a Daisy rápidamente."
         },
         {
-          "en": "“Not seeing,” said Gatsby. “No, we couldn’t meet. But we loved each other all that time, old sport, and you didn’t know. I used to laugh”—but his eyes didn’t laugh—“that you didn’t know.”",
+          "en": "“You’ve been seeing him for five years?”",
           "es": "¿Lo has estado viendo durante cinco años?"
         },
         {
-          "en": "“Oh—that’s all.” Tom tapped his fingers and leaned back.",
+          "en": "“Not seeing,” said Gatsby. “No, we couldn’t meet. But we loved each other all that time, old sport, and you didn’t know. I used to laugh”—but his eyes didn’t laugh—“that you didn’t know.”",
           "es": "No lo viendo, dijo Gatsby. No, no podíamos encontrarnos. Pero nos amábamos durante todo ese tiempo, amigo viejo, y no lo sabías. Solía reír, pero sus ojos no reían, de que no lo sabías."
         },
         {
-          "en": "“You’re crazy!” he shouted. “I can’t talk about five years ago, I didn’t know Daisy then. But Daisy loved me when she married me and she loves me now.”",
+          "en": "“Oh—that’s all.” Tom tapped his fingers and leaned back.",
           "es": "Oh, eso es todo. Tom golpeó los dedos y se recostó."
         },
         {
-          "en": "“No,” said Gatsby, shaking his head.",
+          "en": "“You’re crazy!” he shouted. “I can’t talk about five years ago, I didn’t know Daisy then. But Daisy loved me when she married me and she loves me now.”",
           "es": "¡Estás loco! gritó. No puedo hablar de hace cinco años, no conocía a Daisy entonces. Pero Daisy me amaba cuando se casó conmigo y me ama ahora."
         },
         {
-          "en": "“She does. Sometimes she gets silly ideas and doesn’t know what she’s doing.” He nodded. “And I love Daisy too. Sometimes I do silly things, but I always come back. I love her all the time.”",
+          "en": "“No,” said Gatsby, shaking his head.",
           "es": "No, dijo Gatsby, moviendo la cabeza."
         },
         {
-          "en": "“You’re awful,” said Daisy. She looked at me and her voice was low and angry: “Do you know why we left Chicago? I’m surprised they didn’t tell you about his little trip.”",
+          "en": "“She does. Sometimes she gets silly ideas and doesn’t know what she’s doing.” He nodded. “And I love Daisy too. Sometimes I do silly things, but I always come back. I love her all the time.”",
           "es": "Lo hace. A veces tiene ideas tontas y no sabe lo que está haciendo. Asintió. Y yo también amo a Daisy. A veces hago cosas tontas, pero siempre vuelvo. La amo todo el tiempo."
         },
         {
+          "en": "“You’re awful,” said Daisy. She looked at me and her voice was low and angry: “Do you know why we left Chicago? I’m surprised they didn’t tell you about his little trip.”",
+          "es": "Eres terrible, dijo Daisy. Me miró y su voz era baja y enojada: ¿Sabes por qué dejamos Chicago? Me sorprende que no te hayan contado sobre su pequeño viaje."
+        },
+        {
           "en": "Gatsby walked over and stood by her.",
-          "es": ""
+          "es": "Gatsby caminó y se paró a su lado."
         }
       ]
     },
@@ -1115,43 +1115,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Daisy, it’s over now,” he said. “It doesn’t matter. Just tell him the truth—that you never loved him—and it’s all over.”",
-          "es": "Eres terrible, dijo Daisy. Me miró y su voz era baja y enojada: ¿Sabes por qué dejamos Chicago? Me sorprende que no te hayan contado sobre su pequeño viaje."
-        },
-        {
-          "en": "She looked at him. “Why—how could I love him?”",
-          "es": "Gatsby caminó y se paró a su lado."
-        },
-        {
-          "en": "“You never loved him.”",
           "es": "Daisy, se acabó ahora, dijo. No importa. Solo dile la verdad, que nunca lo amaste, y se acabó."
         },
         {
-          "en": "She stopped. Her eyes looked at Jordan and me, like she knew what she was doing was wrong. But it was too late.",
+          "en": "She looked at him. “Why—how could I love him?”",
           "es": "Lo miró. ¿Por qué, cómo podría amarlo?"
         },
         {
-          "en": "“I never loved him,” she said slowly.",
+          "en": "“You never loved him.”",
           "es": "Nunca lo amaste."
         },
         {
-          "en": "“Not at Kapiolani?” Tom asked suddenly.",
+          "en": "She stopped. Her eyes looked at Jordan and me, like she knew what she was doing was wrong. But it was too late.",
           "es": "Se detuvo. Sus ojos miraron a Jordan y a mí, como si supiera que lo que estaba haciendo estaba mal. Pero era demasiado tarde."
         },
         {
-          "en": "“No.”",
+          "en": "“I never loved him,” she said slowly.",
           "es": "Nunca lo amé, dijo lentamente."
         },
         {
-          "en": "From the ballroom, music was coming up with the hot air.",
+          "en": "“Not at Kapiolani?” Tom asked suddenly.",
           "es": "¿No en Kapiolani? preguntó Tom de repente."
         },
         {
-          "en": "“Not that day I carried you to keep your shoes dry?” His voice was soft. “Daisy?”",
+          "en": "“No.”",
           "es": "No."
         },
         {
-          "en": "“Please don’t.” Her voice was cold, but not angry. She looked at Gatsby. “There, Jay,” she said, but her hand shook as she tried to light a cigarette. She threw it on the floor.",
+          "en": "From the ballroom, music was coming up with the hot air.",
           "es": "Del salón de baile, la música venía con el aire caliente."
+        },
+        {
+          "en": "“Not that day I carried you to keep your shoes dry?” His voice was soft. “Daisy?”",
+          "es": "¿No ese día que te cargué para mantener tus zapatos secos? Su voz era suave. ¿Daisy?"
+        },
+        {
+          "en": "“Please don’t.” Her voice was cold, but not angry. She looked at Gatsby. “There, Jay,” she said, but her hand shook as she tried to light a cigarette. She threw it on the floor.",
+          "es": "Por favor, no. Su voz era fría, pero no enojada. Miró a Gatsby. Ahí está, Jay, dijo, pero su mano temblaba mientras intentaba encender un cigarrillo. Lo tiró al piso."
         }
       ]
     },
@@ -1159,43 +1159,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Oh, you want too much!” she cried to Gatsby. “I love you now—isn’t that enough? I can’t change the past.” She started to cry. “I did love him once—but I loved you too.”",
-          "es": "¿No ese día que te cargué para mantener tus zapatos secos? Su voz era suave. ¿Daisy?"
-        },
-        {
-          "en": "Gatsby’s eyes opened and closed.",
-          "es": "Por favor, no. Su voz era fría, pero no enojada. Miró a Gatsby. Ahí está, Jay, dijo, pero su mano temblaba mientras intentaba encender un cigarrillo. Lo tiró al piso."
-        },
-        {
-          "en": "“You loved me too?” he said.",
           "es": "¡Oh, quieres demasiado! gritó a Gatsby. Te amo ahora, ¿no es suficiente? No puedo cambiar el pasado. Comenzó a llorar. Lo amé una vez, pero también te amé a ti."
         },
         {
-          "en": "“Even that’s a lie,” said Tom. “She didn’t know you were alive. There are things between Daisy and me that you’ll never know, things we can’t forget.”",
+          "en": "Gatsby’s eyes opened and closed.",
           "es": "Los ojos de Gatsby se abrieron y cerraron."
         },
         {
-          "en": "The words hurt Gatsby.",
+          "en": "“You loved me too?” he said.",
           "es": "¿Me amaste a mí también? dijo."
         },
         {
-          "en": "“I want to speak to Daisy alone,” he said. “She’s upset now—”",
+          "en": "“Even that’s a lie,” said Tom. “She didn’t know you were alive. There are things between Daisy and me that you’ll never know, things we can’t forget.”",
           "es": "Incluso eso es una mentira, dijo Tom. Ella no sabía que estabas vivo. Hay cosas entre Daisy y yo que nunca sabrás, cosas que no podemos olvidar."
         },
         {
-          "en": "“Even alone I can’t say I never loved Tom,” she said sadly. “It wouldn’t be true.”",
+          "en": "The words hurt Gatsby.",
           "es": "Las palabras lastimaron a Gatsby."
         },
         {
-          "en": "“Of course it wouldn’t,” said Tom.",
+          "en": "“I want to speak to Daisy alone,” he said. “She’s upset now—”",
           "es": "Quiero hablar con Daisy sola, dijo. Ella está alterada ahora..."
         },
         {
-          "en": "She turned to her husband.",
+          "en": "“Even alone I can’t say I never loved Tom,” she said sadly. “It wouldn’t be true.”",
           "es": "Incluso sola no puedo decir que nunca amé a Tom, dijo triste. No sería verdad."
         },
         {
-          "en": "“Like it matters to you,” she said.",
+          "en": "“Of course it wouldn’t,” said Tom.",
           "es": "Claro que no, dijo Tom."
+        },
+        {
+          "en": "She turned to her husband.",
+          "es": "Se volvió a su esposo."
+        },
+        {
+          "en": "“Like it matters to you,” she said.",
+          "es": "Como si te importara, dijo."
         }
       ]
     },
@@ -1203,43 +1203,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Of course it matters. I’m going to take better care of you now.”",
-          "es": "Se volvió a su esposo."
-        },
-        {
-          "en": "“You don’t understand,” said Gatsby, worried. “You’re not taking care of her anymore.”",
-          "es": "Como si te importara, dijo."
-        },
-        {
-          "en": "“I’m not?” Tom opened his eyes and laughed. “Why’s that?”",
           "es": "Claro que me importa. Voy a cuidarte mejor ahora."
         },
         {
-          "en": "“Daisy’s leaving you.”",
+          "en": "“You don’t understand,” said Gatsby, worried. “You’re not taking care of her anymore.”",
           "es": "No entiendes, dijo Gatsby, preocupado. Ya no estoy cuidándola."
         },
         {
-          "en": "“Nonsense.”",
+          "en": "“I’m not?” Tom opened his eyes and laughed. “Why’s that?”",
           "es": "¿No lo estoy? Tom abrió los ojos y rió. ¿Por qué?"
         },
         {
-          "en": "“I am,” she said with effort.",
+          "en": "“Daisy’s leaving you.”",
           "es": "Daisy se va."
         },
         {
-          "en": "“She’s not leaving me!” Tom said to Gatsby. “Not for a cheat who’d steal the ring for her finger.”",
+          "en": "“Nonsense.”",
           "es": "Tonterías."
         },
         {
-          "en": "“I won’t stand this!” cried Daisy. “Oh, please let’s go.”",
+          "en": "“I am,” she said with effort.",
           "es": "Me voy, dijo con esfuerzo."
         },
         {
-          "en": "“Who are you?” Tom shouted. “You’re with Meyer Wolfshiem. I checked you out—and I’ll do more tomorrow.”",
+          "en": "“She’s not leaving me!” Tom said to Gatsby. “Not for a cheat who’d steal the ring for her finger.”",
           "es": "¡Ella no se va! dijo Tom a Gatsby. ¡No por un tramposo que robaría el anillo de su dedo!"
         },
         {
-          "en": "“You can do that,” said Gatsby calmly.",
+          "en": "“I won’t stand this!” cried Daisy. “Oh, please let’s go.”",
           "es": "¡No aguanto esto! gritó Daisy. Oh, por favor vayamos."
+        },
+        {
+          "en": "“Who are you?” Tom shouted. “You’re with Meyer Wolfshiem. I checked you out—and I’ll do more tomorrow.”",
+          "es": "¿Quién eres? gritó Tom. Estás con Meyer Wolfshiem. Te investigué, y haré más mañana."
+        },
+        {
+          "en": "“You can do that,” said Gatsby calmly.",
+          "es": "Puedes hacer eso, dijo Gatsby calmamente."
         }
       ]
     },
@@ -1247,43 +1247,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“I found out about your ‘drugstores’.” He looked at us. “He and Wolfshiem bought stores and sold alcohol. I guessed he was a bootlegger the first time I saw him.”",
-          "es": "¿Quién eres? gritó Tom. Estás con Meyer Wolfshiem. Te investigué, y haré más mañana."
-        },
-        {
-          "en": "“What about it?” said Gatsby. “Your friend Walter Chase was happy to help.”",
-          "es": "Puedes hacer eso, dijo Gatsby calmamente."
-        },
-        {
-          "en": "“And you left him in trouble? You let him go to jail in New Jersey. God! Walter talks about you.”",
           "es": "Descubrí sobre tus farmacias. Nos miró. Él y Wolfshiem compraron tiendas y vendieron alcohol. Adiviné que era contrabandista la primera vez que lo vi."
         },
         {
-          "en": "“He came to us with no money. He was happy to get some, old sport.”",
+          "en": "“What about it?” said Gatsby. “Your friend Walter Chase was happy to help.”",
           "es": "¿Y qué? dijo Gatsby. Tu amigo Walter Chase estaba feliz de ayudar."
         },
         {
-          "en": "“Don’t call me ‘old sport’!” shouted Tom. Gatsby said nothing. “Walter could have you arrested too, but Wolfshiem scared him.”",
+          "en": "“And you left him in trouble? You let him go to jail in New Jersey. God! Walter talks about you.”",
           "es": "¿Y lo dejaste en problemas? ¿Lo dejaste ir a la cárcel en Nueva Jersey? ¡Dios! Walter habla de ti."
         },
         {
-          "en": "That look was back on Gatsby’s face.",
+          "en": "“He came to us with no money. He was happy to get some, old sport.”",
           "es": "Vino a nosotros sin dinero. Estaba feliz de recibir algo, amigo viejo."
         },
         {
-          "en": "“That drugstore business was small,” Tom said slowly, “but you’re doing something now that Walter won’t tell me.”",
+          "en": "“Don’t call me ‘old sport’!” shouted Tom. Gatsby said nothing. “Walter could have you arrested too, but Wolfshiem scared him.”",
           "es": "¡No me llames \"amigo viejo\"! gritó Tom. Gatsby no dijo nada. Walter podría hacerte arrestar también, pero Wolfshiem lo asustó."
         },
         {
-          "en": "I looked at Daisy, scared between Gatsby and Tom, and at Jordan, who was playing with something. Then I looked at Gatsby—his face looked like he had “killed a man.”",
+          "en": "That look was back on Gatsby’s face.",
           "es": "Esa mirada volvió a la cara de Gatsby."
         },
         {
-          "en": "It passed, and he talked to Daisy, saying he didn’t do anything wrong. But she moved away with every word, so he stopped, and only his lost dream stayed, trying to reach her across the room.",
+          "en": "“That drugstore business was small,” Tom said slowly, “but you’re doing something now that Walter won’t tell me.”",
           "es": "Ese negocio de farmacia fue pequeño, dijo Tom lentamente, pero estás haciendo algo ahora que Walter no me dirá."
         },
         {
-          "en": "The voice asked again to go.",
+          "en": "I looked at Daisy, scared between Gatsby and Tom, and at Jordan, who was playing with something. Then I looked at Gatsby—his face looked like he had “killed a man.”",
           "es": "Miré a Daisy, asustada entre Gatsby y Tom, y a Jordan, quien jugaba con algo. Luego miré a Gatsby, su cara se veía como si \"matara a un hombre.\""
+        },
+        {
+          "en": "It passed, and he talked to Daisy, saying he didn’t do anything wrong. But she moved away with every word, so he stopped, and only his lost dream stayed, trying to reach her across the room.",
+          "es": "Pasó, y habló con Daisy, diciendo que no hizo nada malo. Pero ella se alejó con cada palabra, así que paró, y solo su sueño perdido quedó, intentando alcanzarla al otro lado de la sala."
+        },
+        {
+          "en": "The voice asked again to go.",
+          "es": "La voz pidió irse de nuevo."
         }
       ]
     },
@@ -1291,43 +1291,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Please, Tom! I can’t take this anymore.”",
-          "es": "Pasó, y habló con Daisy, diciendo que no hizo nada malo. Pero ella se alejó con cada palabra, así que paró, y solo su sueño perdido quedó, intentando alcanzarla al otro lado de la sala."
-        },
-        {
-          "en": "Her scared eyes showed her courage was gone.",
-          "es": "La voz pidió irse de nuevo."
-        },
-        {
-          "en": "“You two go home, Daisy,” said Tom. “In Mr. Gatsby’s car.”",
           "es": "¡Por favor, Tom! No puedo soportar esto más."
         },
         {
-          "en": "She looked at Tom, worried, but he said it again.",
+          "en": "Her scared eyes showed her courage was gone.",
           "es": "Sus ojos asustados mostraban que su valor se había ido."
         },
         {
-          "en": "“Go on. He won’t bother you. I think he knows it’s over.”",
+          "en": "“You two go home, Daisy,” said Tom. “In Mr. Gatsby’s car.”",
           "es": "Ustedes dos vayan a casa, Daisy, dijo Tom. En el coche del señor Gatsby."
         },
         {
-          "en": "They left, without a word, like ghosts.",
+          "en": "She looked at Tom, worried, but he said it again.",
           "es": "Lo miró, preocupada, pero él lo dijo de nuevo."
         },
         {
-          "en": "After a moment Tom got up and wrapped the bottle of whisky.",
+          "en": "“Go on. He won’t bother you. I think he knows it’s over.”",
           "es": "Anda. Él no te molestará. Creo que sabe que se acabó."
         },
         {
-          "en": "“Want any of this? Jordan?… Nick?”",
+          "en": "They left, without a word, like ghosts.",
           "es": "Se fueron, sin una palabra, como fantasmas."
         },
         {
-          "en": "I didn’t answer.",
+          "en": "After a moment Tom got up and wrapped the bottle of whisky.",
           "es": "Después de un momento Tom se levantó y envolvió la botella de whisky."
         },
         {
-          "en": "“Nick?” He asked again.",
+          "en": "“Want any of this? Jordan?… Nick?”",
           "es": "¿Quieres algo? ¿Jordan?... ¿Nick?"
+        },
+        {
+          "en": "I didn’t answer.",
+          "es": "No respondí."
+        },
+        {
+          "en": "“Nick?” He asked again.",
+          "es": "¿Nick? preguntó de nuevo."
         }
       ]
     },
@@ -1335,43 +1335,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What?”",
-          "es": "No respondí."
-        },
-        {
-          "en": "“Want any?”",
-          "es": "¿Nick? preguntó de nuevo."
-        },
-        {
-          "en": "“No… I just remembered today’s my birthday.”",
           "es": "¿Qué?"
         },
         {
-          "en": "I was thirty. A new, scary life was ahead.",
+          "en": "“Want any?”",
           "es": "¿Quieres algo?"
         },
         {
-          "en": "It was seven when we got in the car and went to Long Island. Tom talked and laughed, but his voice was far from Jordan and me. We let their sad words fade with the city lights. Thirty—the promise of lonely years, fewer single friends, less excitement, less hair. But Jordan was beside me, too smart to hold onto old dreams. As we crossed the dark bridge her face rested on my shoulder and the fear of thirty went away with her hand.",
+          "en": "“No… I just remembered today’s my birthday.”",
           "es": "No... Solo recuerdo que hoy es mi cumpleaños."
         },
         {
-          "en": "So we drove on into the night.",
+          "en": "I was thirty. A new, scary life was ahead.",
           "es": "Tenía treinta. Una vida nueva y asustadora estaba adelante."
         },
         {
-          "en": "The young Greek, Michaelis, who ran the coffee shop by the ash-heaps, was the main witness. He slept through the heat until after five, then went to the garage and found George Wilson sick in his office—very sick, pale and shaking. Michaelis told him to go to bed, but Wilson said he’d miss business. While Michaelis talked, a loud noise started upstairs.",
+          "en": "It was seven when we got in the car and went to Long Island. Tom talked and laughed, but his voice was far from Jordan and me. We let their sad words fade with the city lights. Thirty—the promise of lonely years, fewer single friends, less excitement, less hair. But Jordan was beside me, too smart to hold onto old dreams. As we crossed the dark bridge her face rested on my shoulder and the fear of thirty went away with her hand.",
           "es": "Eran las siete cuando subimos al coche y nos fuimos a Long Island. Tom hablaba y reía, pero su voz estaba lejos de Jordan y de mí. Dejamos que sus palabras tristes se desaparecieran con las luces de la ciudad. Treinta, la promesa de años solos, menos amigos solteros, menos emoción, menos pelo. Pero Jordan estaba a mi lado, demasiado inteligente para aferrarse a viejos sueños. Cuando cruzamos el puente oscuro, su cara descansó en mi hombro y el miedo de treinta desapareció con su mano."
         },
         {
-          "en": "“I’ve locked my wife up there,” Wilson said calmly. “She’ll stay there until we move.”",
+          "en": "So we drove on into the night.",
           "es": "Así que seguimos adelante en la noche."
         },
         {
-          "en": "Michaelis was shocked; they were neighbors for four years, and Wilson never seemed like this. He was usually tired: when not working, he sat in the doorway and watched people and cars. When someone talked to him, he always laughed in a friendly way. He was his wife’s man, not his own.",
+          "en": "The young Greek, Michaelis, who ran the coffee shop by the ash-heaps, was the main witness. He slept through the heat until after five, then went to the garage and found George Wilson sick in his office—very sick, pale and shaking. Michaelis told him to go to bed, but Wilson said he’d miss business. While Michaelis talked, a loud noise started upstairs.",
           "es": "El joven griego, Michaelis, quien dirigía la cafetería por los montones de ceniza, fue el testigo principal. Durmió durante el calor hasta después de las cinco, luego fue al garaje y encontró a George Wilson enfermo en su oficina, muy enfermo, pálido y temblando. Michaelis le dijo que fuera a la cama, pero Wilson dijo que perdería negocios. Mientras Michaelis hablaba, un ruido fuerte comenzó arriba."
         },
         {
-          "en": "Michaelis wanted to know what happened, but Wilson said nothing. He looked at Michaelis and asked where he was on different days. Michaelis felt uneasy. Some workmen came, and Michaelis left. He thought he would come back, but he forgot. Later, he heard Mrs. Wilson yelling in the garage.",
+          "en": "“I’ve locked my wife up there,” Wilson said calmly. “She’ll stay there until we move.”",
           "es": "He encerrado a mi esposa allá arriba, dijo Wilson calmadamente. Se quedará allá hasta que nos vayamos."
+        },
+        {
+          "en": "Michaelis was shocked; they were neighbors for four years, and Wilson never seemed like this. He was usually tired: when not working, he sat in the doorway and watched people and cars. When someone talked to him, he always laughed in a friendly way. He was his wife’s man, not his own.",
+          "es": "Michaelis estaba asombrado; eran vecinos durante cuatro años, y Wilson nunca se vio así. Normalmente estaba cansado: cuando no trabajaba, se sentaba en la puerta y miraba a la gente y los coches. Cuando alguien le hablaba, siempre reía de forma amistosa. Era el hombre de su esposa, no suyo."
+        },
+        {
+          "en": "Michaelis wanted to know what happened, but Wilson said nothing. He looked at Michaelis and asked where he was on different days. Michaelis felt uneasy. Some workmen came, and Michaelis left. He thought he would come back, but he forgot. Later, he heard Mrs. Wilson yelling in the garage.",
+          "es": "Michaelis quería saber qué pasó, pero Wilson no dijo nada. Miró a Michaelis y preguntó dónde estaba en días diferentes. Michaelis se sintió incómodo. Vinieron unos trabajadores y Michaelis se fue. Pensó que volvería, pero se olvidó. Luego, oyó a la señora Wilson gritar en el garaje."
         }
       ]
     },
@@ -1379,43 +1379,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Hit me!” she shouted. “Throw me down and hit me, you coward!”",
-          "es": "Michaelis estaba asombrado; eran vecinos durante cuatro años, y Wilson nunca se vio así. Normalmente estaba cansado: cuando no trabajaba, se sentaba en la puerta y miraba a la gente y los coches. Cuando alguien le hablaba, siempre reía de forma amistosa. Era el hombre de su esposa, no suyo."
-        },
-        {
-          "en": "She ran outside, waving her hands and yelling. Before Michaelis could move, it was over.",
-          "es": "Michaelis quería saber qué pasó, pero Wilson no dijo nada. Miró a Michaelis y preguntó dónde estaba en días diferentes. Michaelis se sintió incómodo. Vinieron unos trabajadores y Michaelis se fue. Pensó que volvería, pero se olvidó. Luego, oyó a la señora Wilson gritar en el garaje."
-        },
-        {
-          "en": "The car, called the \"death car\" by newspapers, did not stop. It came out of the dark and then went away. Michaelis was not sure about its color. He told a policeman it was light green. Another car stopped, and its driver ran back to Myrtle Wilson, who was on the road.",
           "es": "¡Golpéame! gritó. ¡Tírame y golpéame, cobarde!"
         },
         {
-          "en": "Michaelis and the man got to her first. They opened her shirt, but her heart was not beating. Her mouth was open, and she looked like she was in pain.",
+          "en": "She ran outside, waving her hands and yelling. Before Michaelis could move, it was over.",
           "es": "Salió corriendo, moviendo las manos y gritando. Antes de que Michaelis pudiera moverse, se acabó."
         },
         {
-          "en": "We saw cars and people when we were far away.",
+          "en": "The car, called the \"death car\" by newspapers, did not stop. It came out of the dark and then went away. Michaelis was not sure about its color. He told a policeman it was light green. Another car stopped, and its driver ran back to Myrtle Wilson, who was on the road.",
           "es": "El coche, llamado el \"coche de la muerte\" por los periódicos, no paró. Salió de la oscuridad y luego se fue. Michaelis no estaba seguro de su color. Le dijo a un policía que era verde claro. Otro coche paró, y su conductor volvió corriendo a Myrtle Wilson, quien estaba en el camino."
         },
         {
-          "en": "Crash!\" said Tom. \"Wilson will have business now.",
+          "en": "Michaelis and the man got to her first. They opened her shirt, but her heart was not beating. Her mouth was open, and she looked like she was in pain.",
           "es": "Michaelis y el hombre llegaron a ella primero. Abrieron su camisa, pero su corazón no latía. Su boca estaba abierta y se veía como si estuviera en dolor."
         },
         {
-          "en": "Tom slowed down but did not stop. Then he saw the people at the garage and stopped.",
+          "en": "We saw cars and people when we were far away.",
           "es": "Vimos coches y gente cuando estábamos lejos."
         },
         {
-          "en": "\"Let's look,\" he said.",
+          "en": "Crash!\" said Tom. \"Wilson will have business now.",
           "es": "¡Crash! dijo Tom. Wilson tendrá negocios ahora."
         },
         {
-          "en": "I heard a sad sound from the garage. We walked to the door and heard \"Oh, my God!\" again and again.",
+          "en": "Tom slowed down but did not stop. Then he saw the people at the garage and stopped.",
           "es": "Tom redujo la velocidad pero no paró. Luego vio a la gente en el garaje y paró."
         },
         {
-          "en": "\"Something bad happened,\" said Tom.",
+          "en": "\"Let's look,\" he said.",
           "es": "Vayamos a mirar, dijo."
+        },
+        {
+          "en": "I heard a sad sound from the garage. We walked to the door and heard \"Oh, my God!\" again and again.",
+          "es": "Oí un sonido triste del garaje. Caminamos a la puerta y oímos ¡Oh, Dios mío! una y otra vez."
+        },
+        {
+          "en": "\"Something bad happened,\" said Tom.",
+          "es": "Algo malo pasó, dijo Tom."
         }
       ]
     },
@@ -1423,51 +1423,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Tom looked over the people into the garage. He made a noise and pushed through.",
-          "es": "Oí un sonido triste del garaje. Caminamos a la puerta y oímos ¡Oh, Dios mío! una y otra vez."
-        },
-        {
-          "en": "The people closed the space again. I could not see. Then more people came, and Jordan and I went inside.",
-          "es": "Algo malo pasó, dijo Tom."
-        },
-        {
-          "en": "Myrtle Wilson was on a table. Tom was next to her. A policeman was writing names. Wilson was at his office door, moving and holding the door. A man talked to him, but Wilson did not listen. He looked at the light and then the table, saying, \"Oh, my God!\"",
           "es": "Tom miró sobre la gente al garaje. Hizo un ruido y empujó."
         },
         {
-          "en": "“Oh, my Ga-od! Oh, my Ga-od! Oh, Ga-od! Oh, my Ga-od!”",
+          "en": "The people closed the space again. I could not see. Then more people came, and Jordan and I went inside.",
           "es": "La gente cerró el espacio de nuevo. No podía ver. Luego vinieron más personas, y Jordan y yo entramos."
         },
         {
-          "en": "Tom looked around and talked to the policeman.",
+          "en": "Myrtle Wilson was on a table. Tom was next to her. A policeman was writing names. Wilson was at his office door, moving and holding the door. A man talked to him, but Wilson did not listen. He looked at the light and then the table, saying, \"Oh, my God!\"",
           "es": "Myrtle Wilson estaba en una mesa. Tom estaba a su lado. Un policía escribía nombres. Wilson estaba en la puerta de su oficina, moviéndose y sosteniendo la puerta. Un hombre le hablaba, pero Wilson no escuchaba. Miró la luz y luego la mesa, diciendo, ¡Oh, Dios mío!"
         },
         {
-          "en": "“M-a-v—” the policeman said.",
+          "en": "“Oh, my Ga-od! Oh, my Ga-od! Oh, Ga-od! Oh, my Ga-od!”",
           "es": "¡Oh, mi Dio-s! ¡Oh, mi Dio-s! ¡Oh, Dio-s! ¡Oh, mi Dio-s!"
         },
         {
-          "en": "“No, r—” corrected the man, “M-a-v-r-o—”",
+          "en": "Tom looked around and talked to the policeman.",
           "es": "Tom miró alrededor y habló con el policía."
         },
         {
-          "en": "“Listen!” said Tom.",
+          "en": "“M-a-v—” the policeman said.",
           "es": "M-a-v, dijo el policía."
         },
         {
-          "en": "“r—” said the policeman, “o—”",
+          "en": "“No, r—” corrected the man, “M-a-v-r-o—”",
           "es": "No, r, corrigió el hombre, M-a-v-r-o..."
         },
         {
-          "en": "“g—”",
+          "en": "“Listen!” said Tom.",
           "es": "¡Escucha! dijo Tom."
         },
         {
+          "en": "“r—” said the policeman, “o—”",
+          "es": "r, dijo el policía, o..."
+        },
+        {
+          "en": "“g—”",
+          "es": "g..."
+        },
+        {
           "en": "“g—” The policeman looked at Tom. “What do you want?”",
-          "es": ""
+          "es": "g... El policía miró a Tom. ¿Qué quieres?"
         },
         {
           "en": "“What happened?” Tom asked.",
-          "es": ""
+          "es": "¿Qué pasó? preguntó Tom."
         }
       ]
     },
@@ -1475,43 +1475,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“A car hit her. She died right away.”",
-          "es": "r, dijo el policía, o..."
-        },
-        {
-          "en": "“She died right away,” Tom said.",
-          "es": "g..."
-        },
-        {
-          "en": "“She ran into the road. The car did not stop.”",
-          "es": "g... El policía miró a Tom. ¿Qué quieres?"
-        },
-        {
-          "en": "“There were two cars,” said Michaelis, “one coming, one going.”",
-          "es": "¿Qué pasó? preguntó Tom."
-        },
-        {
-          "en": "“Going where?” asked the policeman.",
           "es": "Un coche la golpeó. Murió de inmediato."
         },
         {
-          "en": "“One each way. She ran out, and the car from New York hit her.”",
+          "en": "“She died right away,” Tom said.",
           "es": "Murió de inmediato, dijo Tom."
         },
         {
-          "en": "“What is this place?” asked the officer.",
+          "en": "“She ran into the road. The car did not stop.”",
           "es": "Ella corrió a la carretera. El coche no paró."
         },
         {
-          "en": "“It has no name.”",
+          "en": "“There were two cars,” said Michaelis, “one coming, one going.”",
           "es": "Había dos coches, dijo Michaelis, uno viniendo, otro yendo."
         },
         {
-          "en": "A well-dressed man came near.",
+          "en": "“Going where?” asked the policeman.",
           "es": "¿Yendo a dónde? preguntó el policía."
         },
         {
-          "en": "“It was a yellow car,” he said.",
+          "en": "“One each way. She ran out, and the car from New York hit her.”",
           "es": "Uno en cada dirección. Ella salió corriendo y el coche de Nueva York la golpeó."
+        },
+        {
+          "en": "“What is this place?” asked the officer.",
+          "es": "¿Qué es este lugar? preguntó el oficial."
+        },
+        {
+          "en": "“It has no name.”",
+          "es": "No tiene nombre."
+        },
+        {
+          "en": "A well-dressed man came near.",
+          "es": "Un hombre bien vestido se acercó."
+        },
+        {
+          "en": "“It was a yellow car,” he said.",
+          "es": "Era un coche amarillo, dijo."
         }
       ]
     },
@@ -1519,43 +1519,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Did you see it?” asked the policeman.",
-          "es": "¿Qué es este lugar? preguntó el oficial."
-        },
-        {
-          "en": "“No, but the car passed me fast.”",
-          "es": "No tiene nombre."
-        },
-        {
-          "en": "“Come here. I need your name.”",
-          "es": "Un hombre bien vestido se acercó."
-        },
-        {
-          "en": "Wilson heard something. He cried out again:",
-          "es": "Era un coche amarillo, dijo."
-        },
-        {
-          "en": "“You don’t need to tell me! I know the car!”",
           "es": "¿Lo viste? preguntó el policía."
         },
         {
-          "en": "Tom watched Wilson and went to him. He held Wilson by the arms.",
+          "en": "“No, but the car passed me fast.”",
           "es": "No, pero el coche pasó muy rápido."
         },
         {
-          "en": "“Calm down,” Tom said.",
+          "en": "“Come here. I need your name.”",
           "es": "Ven aquí. Necesito tu nombre."
         },
         {
-          "en": "Wilson looked at Tom. He almost fell, but Tom held him.",
+          "en": "Wilson heard something. He cried out again:",
           "es": "Wilson oyó algo. Gritó de nuevo:"
         },
         {
-          "en": "“Listen,” said Tom. “I just got here. The yellow car was not mine. I have not seen it.”",
+          "en": "“You don’t need to tell me! I know the car!”",
           "es": "¡No necesitas decirme! ¡Conozco el coche!"
         },
         {
-          "en": "Only the man and I heard Tom. The policeman looked at Tom.",
+          "en": "Tom watched Wilson and went to him. He held Wilson by the arms.",
           "es": "Tom observó a Wilson y fue a él. Lo sostuvo por los brazos."
+        },
+        {
+          "en": "“Calm down,” Tom said.",
+          "es": "Cálmate, dijo Tom."
+        },
+        {
+          "en": "Wilson looked at Tom. He almost fell, but Tom held him.",
+          "es": "Wilson miró a Tom. Casi cae, pero Tom lo sostuvo."
+        },
+        {
+          "en": "“Listen,” said Tom. “I just got here. The yellow car was not mine. I have not seen it.”",
+          "es": "Escucha, dijo Tom. Acabo de llegar. El coche amarillo no era mío. No lo he visto."
+        },
+        {
+          "en": "Only the man and I heard Tom. The policeman looked at Tom.",
+          "es": "Solo el hombre y yo oímos a Tom. El policía miró a Tom."
         }
       ]
     },
@@ -1563,47 +1563,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What’s that?” he asked.",
-          "es": "Cálmate, dijo Tom."
-        },
-        {
-          "en": "“I am his friend,” Tom said. “He knows the car. It was yellow.”",
-          "es": "Wilson miró a Tom. Casi cae, pero Tom lo sostuvo."
-        },
-        {
-          "en": "The policeman looked at Tom.",
-          "es": "Escucha, dijo Tom. Acabo de llegar. El coche amarillo no era mío. No lo he visto."
-        },
-        {
-          "en": "“What color is your car?”",
-          "es": "Solo el hombre y yo oímos a Tom. El policía miró a Tom."
-        },
-        {
-          "en": "“It’s blue.”",
           "es": "¿Qué es eso? preguntó."
         },
         {
-          "en": "“We came from New York,” I said.",
+          "en": "“I am his friend,” Tom said. “He knows the car. It was yellow.”",
           "es": "Soy su amigo, dijo Tom. Conoce el coche. Era amarillo."
         },
         {
-          "en": "Someone behind us said the same, and the policeman left.",
+          "en": "The policeman looked at Tom.",
           "es": "El policía miró a Tom."
         },
         {
-          "en": "“Now, if you’ll give me that name again—”",
+          "en": "“What color is your car?”",
           "es": "¿Qué color es tu coche?"
         },
         {
-          "en": "Tom picked up Wilson and took him to the office. Tom came back.",
+          "en": "“It’s blue.”",
           "es": "Es azul."
         },
         {
-          "en": "“Someone stay with him,” Tom said. Two men went in the room. Tom closed the door and walked away. He whispered to me, “Let’s go.”",
+          "en": "“We came from New York,” I said.",
           "es": "Vinimos de Nueva York, dije."
         },
         {
+          "en": "Someone behind us said the same, and the policeman left.",
+          "es": "Alguien detrás de nosotros dijo lo mismo, y el policía se fue."
+        },
+        {
+          "en": "“Now, if you’ll give me that name again—”",
+          "es": "Ahora, si me das ese nombre de nuevo..."
+        },
+        {
+          "en": "Tom picked up Wilson and took him to the office. Tom came back.",
+          "es": "Tom levantó a Wilson y lo llevó a la oficina. Tom volvió."
+        },
+        {
+          "en": "“Someone stay with him,” Tom said. Two men went in the room. Tom closed the door and walked away. He whispered to me, “Let’s go.”",
+          "es": "Que alguien se quede con él, dijo Tom. Dos hombres entraron en la sala. Tom cerró la puerta y se fue. Me susurró, Vayamos."
+        },
+        {
           "en": "We moved through the crowd. A doctor came with a case, but it was too late.",
-          "es": ""
+          "es": "Nos movimos entre la multitud. Un doctor vino con una maleta, pero era demasiado tarde."
         }
       ]
     },
@@ -1611,51 +1611,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Tom drove slowly, then faster. He cried.",
-          "es": "Alguien detrás de nosotros dijo lo mismo, y el policía se fue."
-        },
-        {
-          "en": "“The coward!” he said. “He did not stop.”",
-          "es": "Ahora, si me das ese nombre de nuevo..."
-        },
-        {
-          "en": "We saw the Buchanan house. Tom stopped the car.",
-          "es": "Tom levantó a Wilson y lo llevó a la oficina. Tom volvió."
-        },
-        {
-          "en": "“Daisy is home,” he said. He looked at me.",
-          "es": "Que alguien se quede con él, dijo Tom. Dos hombres entraron en la sala. Tom cerró la puerta y se fue. Me susurró, Vayamos."
-        },
-        {
-          "en": "“I should take you to West Egg, Nick. We can’t do anything now.”",
-          "es": "Nos movimos entre la multitud. Un doctor vino con una maleta, pero era demasiado tarde."
-        },
-        {
-          "en": "Tom changed. He spoke seriously. We walked to the porch.",
           "es": "Tom condujo lentamente, luego más rápido. Lloró."
         },
         {
-          "en": "“I’ll call a taxi for you. You and Jordan can eat in the kitchen,” he said. “Come in.”",
+          "en": "“The coward!” he said. “He did not stop.”",
           "es": "¡El cobarde! dijo. Él no paró."
         },
         {
-          "en": "“No, thanks. But call a taxi for me. I’ll wait outside.”",
+          "en": "We saw the Buchanan house. Tom stopped the car.",
           "es": "Vimos la casa de los Buchanan. Tom paró el coche."
         },
         {
-          "en": "Jordan touched my arm.",
+          "en": "“Daisy is home,” he said. He looked at me.",
           "es": "Daisy está en casa, dijo. Me miró."
         },
         {
-          "en": "“Come in, Nick?”",
+          "en": "“I should take you to West Egg, Nick. We can’t do anything now.”",
           "es": "Debería llevarte a West Egg, Nick. No podemos hacer nada ahora."
         },
         {
+          "en": "Tom changed. He spoke seriously. We walked to the porch.",
+          "es": "Tom cambió. Habló en serio. Caminamos al porch."
+        },
+        {
+          "en": "“I’ll call a taxi for you. You and Jordan can eat in the kitchen,” he said. “Come in.”",
+          "es": "Te llamaré un taxi. Tú y Jordan pueden comer en la cocina, dijo. Entra."
+        },
+        {
+          "en": "“No, thanks. But call a taxi for me. I’ll wait outside.”",
+          "es": "No, gracias. Pero llámame un taxi. Esperaré afuera."
+        },
+        {
+          "en": "Jordan touched my arm.",
+          "es": "Jordan tocó mi brazo."
+        },
+        {
+          "en": "“Come in, Nick?”",
+          "es": "¿Entras, Nick?"
+        },
+        {
           "en": "“No, thanks.”",
-          "es": ""
+          "es": "No, gracias."
         },
         {
           "en": "I felt sick and wanted to be alone. Jordan stayed a little longer.",
-          "es": ""
+          "es": "Me sentía enfermo y quería estar solo. Jordan se quedó un poco más."
         }
       ]
     },
@@ -1663,51 +1663,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“It’s only nine-thirty,” she said.",
-          "es": "Tom cambió. Habló en serio. Caminamos al porch."
-        },
-        {
-          "en": "I did not want to go in. I was tired of them. Jordan saw this and went inside. I sat with my head in my hands. I heard the phone and the butler calling a taxi. I walked to the gate.",
-          "es": "Te llamaré un taxi. Tú y Jordan pueden comer en la cocina, dijo. Entra."
-        },
-        {
-          "en": "I heard my name. Gatsby came from the bushes. His pink suit was bright in the moonlight.",
-          "es": "No, gracias. Pero llámame un taxi. Esperaré afuera."
-        },
-        {
-          "en": "“What are you doing?” I asked.",
-          "es": "Jordan tocó mi brazo."
-        },
-        {
-          "en": "“Just standing here.”",
-          "es": "¿Entras, Nick?"
-        },
-        {
-          "en": "It seemed strange. I thought he might do something bad.",
-          "es": "No, gracias."
-        },
-        {
-          "en": "“Did you see trouble on the road?” he asked.",
-          "es": "Me sentía enfermo y quería estar solo. Jordan se quedó un poco más."
-        },
-        {
-          "en": "“Yes.”",
           "es": "\"Son solo las nueve y media,\" dijo ella."
         },
         {
-          "en": "He paused.",
+          "en": "I did not want to go in. I was tired of them. Jordan saw this and went inside. I sat with my head in my hands. I heard the phone and the butler calling a taxi. I walked to the gate.",
           "es": "No quería entrar. Estaba cansado de ellos. Jordan vio esto y entró. Me senté con la cabeza en las manos. Oí el teléfono y el criado llamando un taxi. Caminé a la puerta."
         },
         {
-          "en": "“Was she killed?”",
+          "en": "I heard my name. Gatsby came from the bushes. His pink suit was bright in the moonlight.",
           "es": "Oí mi nombre. Gatsby vino de los arbustos. Su traje rosa era brillante en la luz de la luna."
         },
         {
+          "en": "“What are you doing?” I asked.",
+          "es": "\"¿Qué haces?\" pregunté."
+        },
+        {
+          "en": "“Just standing here.”",
+          "es": "Solo estoy aquí de pie."
+        },
+        {
+          "en": "It seemed strange. I thought he might do something bad.",
+          "es": "Parecía extraño. Pensé que podía hacer algo malo."
+        },
+        {
+          "en": "“Did you see trouble on the road?” he asked.",
+          "es": "\"¿Viste un accidente en la calle?\" preguntó."
+        },
+        {
           "en": "“Yes.”",
-          "es": ""
+          "es": "Sí."
+        },
+        {
+          "en": "He paused.",
+          "es": "Él hizo una pausa."
+        },
+        {
+          "en": "“Was she killed?”",
+          "es": "¿Murió ella?"
+        },
+        {
+          "en": "“Yes.”",
+          "es": "Sí."
         },
         {
           "en": "“I thought so. I told Daisy. She took it well.”",
-          "es": ""
+          "es": "Pensé eso. Le dije a Daisy. Ella lo aceptó bien."
         }
       ]
     },
@@ -1715,51 +1715,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "He only cared about Daisy.",
-          "es": "\"¿Qué haces?\" pregunté."
-        },
-        {
-          "en": "“I went to West Egg by a side road,” he said. “I don’t think anyone saw us.”",
-          "es": "Solo estoy aquí de pie."
-        },
-        {
-          "en": "I did not like him and said nothing.",
-          "es": "Parecía extraño. Pensé que podía hacer algo malo."
-        },
-        {
-          "en": "“Who was the woman?” he asked.",
-          "es": "\"¿Viste un accidente en la calle?\" preguntó."
-        },
-        {
-          "en": "“Her name was Wilson. Her husband owns the garage. What happened?”",
-          "es": "Sí."
-        },
-        {
-          "en": "“I tried to turn the wheel—” He stopped, and I understood.",
-          "es": "Él hizo una pausa."
-        },
-        {
-          "en": "“Was Daisy driving?”",
-          "es": "¿Murió ella?"
-        },
-        {
-          "en": "“Yes,” he said. “But I’ll say I was. She was nervous. The woman ran at us. Daisy turned, then turned back. I tried to help, but it was too late.”",
-          "es": "Sí."
-        },
-        {
-          "en": "“It was bad—”",
-          "es": "Pensé eso. Le dije a Daisy. Ella lo aceptó bien."
-        },
-        {
-          "en": "“Don’t tell me,” he said. “Daisy drove fast. I tried to stop her. She fell, and I drove on.”",
           "es": "Solo le importaba Daisy."
         },
         {
+          "en": "“I went to West Egg by a side road,” he said. “I don’t think anyone saw us.”",
+          "es": "Fui a West Egg por un camino pequeño,\" dijo. \"No creo que alguien nos vio."
+        },
+        {
+          "en": "I did not like him and said nothing.",
+          "es": "No me gustaba y no dije nada."
+        },
+        {
+          "en": "“Who was the woman?” he asked.",
+          "es": "\"¿Quién era la mujer?\" preguntó."
+        },
+        {
+          "en": "“Her name was Wilson. Her husband owns the garage. What happened?”",
+          "es": "Se llamaba Wilson. Su marido tiene un garaje. ¿Qué pasó?"
+        },
+        {
+          "en": "“I tried to turn the wheel—” He stopped, and I understood.",
+          "es": "\"Traté de girar el volante—\" Paró, y entendí."
+        },
+        {
+          "en": "“Was Daisy driving?”",
+          "es": "¿Manejaba Daisy?"
+        },
+        {
+          "en": "“Yes,” he said. “But I’ll say I was. She was nervous. The woman ran at us. Daisy turned, then turned back. I tried to help, but it was too late.”",
+          "es": "Sí,\" dijo. \"Pero yo digo que manejé yo. Ella estaba nerviosa. La mujer corrió a nosotros. Daisy giró, luego giró atrás. Traté de ayudar, pero era demasiado tarde."
+        },
+        {
+          "en": "“It was bad—”",
+          "es": "Fue malo—"
+        },
+        {
+          "en": "“Don’t tell me,” he said. “Daisy drove fast. I tried to stop her. She fell, and I drove on.”",
+          "es": "No me digas,\" dijo. \"Daisy manejó rápido. Traté de pararla. Ella cayó, y yo seguí."
+        },
+        {
           "en": "“She’ll be okay tomorrow,” he said. “I’ll wait here. If he bothers her, she will turn the light on and off.”",
-          "es": ""
+          "es": "Ella está bien mañana,\" dijo. \"Espero aquí. Si él la molesta, ella enciende y apaga la luz."
         },
         {
           "en": "“He won’t touch her,” I said. “He’s not thinking about her.”",
-          "es": ""
+          "es": "Él no la toca,\" dije. \"Él no piensa en ella."
         }
       ]
     },
@@ -1767,43 +1767,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“I don’t trust him.”",
-          "es": "Fui a West Egg por un camino pequeño,\" dijo. \"No creo que alguien nos vio."
+          "es": "No confío en él."
         },
         {
           "en": "“How long will you wait?”",
-          "es": "No me gustaba y no dije nada."
+          "es": "¿Cuánto tiempo esperas?"
         },
         {
           "en": "“All night, if needed. Until they sleep.”",
-          "es": "\"¿Quién era la mujer?\" preguntó."
+          "es": "Toda la noche, si es necesario. Hasta que duermen."
         },
         {
           "en": "I thought Tom might find out Daisy was driving. He might think something. I looked at the house. Some lights were on.",
-          "es": "Se llamaba Wilson. Su marido tiene un garaje. ¿Qué pasó?"
+          "es": "Pensé que Tom sabía que Daisy manejaba. Pensé algo. Miré la casa. Algunas luces estaban encendidas."
         },
         {
           "en": "You wait here,\" I said. \"I will see if there is any noise.",
-          "es": "\"Traté de girar el volante—\" Paró, y entendí."
+          "es": "Espera aquí,\" dije. \"Veo si hay ruido.\""
         },
         {
           "en": "I walked back on the grass, went over the gravel, and walked up the steps. The curtains were open, and the room was empty. I went to a small light at the window. The blind was down, but I found a small gap.",
-          "es": "¿Manejaba Daisy?"
+          "es": "Caminé en el pasto, pasé la grava, y subí los escalones. Las cortinas estaban abiertas, y la sala estaba vacía. Fui a una luz pequeña en la ventana. La persiana estaba abajo, pero encontré un espacio pequeño."
         },
         {
           "en": "Daisy and Tom sat at the table. There was chicken and two bottles of ale. He talked to her and his hand was on hers. Sometimes she looked at him and nodded.",
-          "es": "Sí,\" dijo. \"Pero yo digo que manejé yo. Ella estaba nerviosa. La mujer corrió a nosotros. Daisy giró, luego giró atrás. Traté de ayudar, pero era demasiado tarde."
+          "es": "Daisy y Tom se sentaron en la mesa. Había pollo y dos botellas de cerveza. Él le hablaba y su mano estaba en la suya. A veces ella lo miraba y asentía."
         },
         {
           "en": "They were not happy, but not sad. They looked close, and it seemed like they planned something together.",
-          "es": "Fue malo—"
+          "es": "No estaban felices, pero no tristes. Se veían cercanos, y parecía que planeaban algo juntos."
         },
         {
           "en": "I went back to the porch. I heard my taxi on the road. Gatsby waited where I left him.",
-          "es": "No me digas,\" dijo. \"Daisy manejó rápido. Traté de pararla. Ella cayó, y yo seguí."
+          "es": "Volví al pórtico. Oí mi taxi en la calle. Gatsby esperaba donde lo dejé."
         },
         {
           "en": "\"Is it quiet up there?\" he asked.",
-          "es": "Ella está bien mañana,\" dijo. \"Espero aquí. Si él la molesta, ella enciende y apaga la luz."
+          "es": "\"¿Es tranquilo arriba?\" preguntó."
         }
       ]
     },
@@ -1811,43 +1811,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Yes, it is quiet.\" I stopped. \"You should go home and sleep.",
-          "es": "Él no la toca,\" dije. \"Él no piensa en ella."
+          "es": "Sí, es tranquilo.\" Paré. \"Debes ir a casa y dormir."
         },
         {
           "en": "He shook his head.",
-          "es": "No confío en él."
+          "es": "Él movió la cabeza."
         },
         {
           "en": "I want to wait here until Daisy goes to bed. Good night, old sport.",
-          "es": "¿Cuánto tiempo esperas?"
+          "es": "Quiero esperar aquí hasta que Daisy se acuesta. Buenas noches, viejo amigo."
         },
         {
           "en": "He put his hands in his pockets and looked at the house. I walked away and left him there in the moonlight, watching.",
-          "es": "Toda la noche, si es necesario. Hasta que duermen."
+          "es": "Él puso las manos en los bolsillos y miró la casa. Caminé lejos y lo dejé allí en la luz de la luna, mirando."
         },
         {
           "en": "",
-          "es": "Pensé que Tom sabía que Daisy manejaba. Pensé algo. Miré la casa. Algunas luces estaban encendidas."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Espera aquí,\" dije. \"Veo si hay ruido.\""
+          "es": ""
         },
         {
           "en": "",
-          "es": "Caminé en el pasto, pasé la grava, y subí los escalones. Las cortinas estaban abiertas, y la sala estaba vacía. Fui a una luz pequeña en la ventana. La persiana estaba abajo, pero encontré un espacio pequeño."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Daisy y Tom se sentaron en la mesa. Había pollo y dos botellas de cerveza. Él le hablaba y su mano estaba en la suya. A veces ella lo miraba y asentía."
+          "es": ""
         },
         {
           "en": "",
-          "es": "No estaban felices, pero no tristes. Se veían cercanos, y parecía que planeaban algo juntos."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Volví al pórtico. Oí mi taxi en la calle. Gatsby esperaba donde lo dejé."
+          "es": ""
         }
       ]
     },
@@ -1855,23 +1855,23 @@ export const chapterContent = {
       "lines": [
         {
           "en": "",
-          "es": "\"¿Es tranquilo arriba?\" preguntó."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Sí, es tranquilo.\" Paré. \"Debes ir a casa y dormir."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Él movió la cabeza."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Quiero esperar aquí hasta que Daisy se acuesta. Buenas noches, viejo amigo."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Él puso las manos en los bolsillos y miró la casa. Caminé lejos y lo dejé allí en la luz de la luna, mirando."
+          "es": ""
         }
       ]
     }

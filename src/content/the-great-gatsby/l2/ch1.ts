@@ -135,7 +135,7 @@ export const chapterContent = {
         },
         {
           "en": "She laughed again, like she said something very funny, and held my hand. She looked at me like I was the person she most wanted to see. She whispered that the other girl's name was Baker. People said Daisy whispered to make people listen closely, but it was charming.",
-          "es": ""
+          "es": "Rió de nuevo, como si hubiera dicho algo muy divertido, y sostuvo mi mano. Me miró como si fuera la persona que más quería ver. Susurró que el nombre de la otra chica era Baker. La gente decía que Daisy susurraba para que la gente escuchara atentamente, pero era encantador."
         }
       ]
     },
@@ -143,47 +143,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Miss Baker nodded at me and then leaned back again, like she was balancing something. I almost said sorry again. I am always impressed by people who seem very sure of themselves.",
-          "es": "Rió de nuevo, como si hubiera dicho algo muy divertido, y sostuvo mi mano. Me miró como si fuera la persona que más quería ver. Susurró que el nombre de la otra chica era Baker. La gente decía que Daisy susurraba para que la gente escuchara atentamente, pero era encantador."
-        },
-        {
-          "en": "I looked at my cousin Daisy, who started asking me questions. Her voice was low and exciting. Her face was sad but beautiful with bright eyes and a bright mouth. Her voice was full of excitement, and people who loved her could never forget it.",
           "es": "La señorita Baker me hizo un gesto con la cabeza y luego se recostó de nuevo, como si estuviera equilibrando algo. Casi digo perdón de nuevo. Siempre estoy impresionado por las personas que parecen muy seguras de sí mismas."
         },
         {
-          "en": "I told her I stopped in Chicago on my way East. Many people sent their love with me.",
+          "en": "I looked at my cousin Daisy, who started asking me questions. Her voice was low and exciting. Her face was sad but beautiful with bright eyes and a bright mouth. Her voice was full of excitement, and people who loved her could never forget it.",
           "es": "Miré a mi prima Daisy, quien comenzó a hacerme preguntas. Su voz era baja y emocionante. Su cara era triste pero hermosa con ojos brillantes y una boca brillante. Su voz estaba llena de emoción, y las personas que la amaban nunca podían olvidarla."
         },
         {
-          "en": "“Do they miss me?” she asked happily.",
+          "en": "I told her I stopped in Chicago on my way East. Many people sent their love with me.",
           "es": "Le dije que me detuve en Chicago de camino al Este. Muchas personas me enviaron su amor."
         },
         {
-          "en": "“Yes, the whole town is sad. All the cars have a black wheel for you, and there is a sad sound at night.”",
+          "en": "“Do they miss me?” she asked happily.",
           "es": "\"¿Me extrañan?\" preguntó felizmente."
         },
         {
-          "en": "“How wonderful! Let’s go back, Tom. Tomorrow!” Then she said, “You should see the baby.”",
+          "en": "“Yes, the whole town is sad. All the cars have a black wheel for you, and there is a sad sound at night.”",
           "es": "Sí, todo el pueblo está triste. Todos los autos tienen una rueda negra por ti, y hay un sonido triste por la noche."
         },
         {
-          "en": "“I’d like to.”",
+          "en": "“How wonderful! Let’s go back, Tom. Tomorrow!” Then she said, “You should see the baby.”",
           "es": "¡Qué maravilloso! Volvamos, Tom. ¡Mañana!\" Luego dijo, \"Deberías ver al bebé."
         },
         {
-          "en": "“She’s asleep. She’s three years old. Have you seen her?”",
+          "en": "“I’d like to.”",
           "es": "Me gustaría."
         },
         {
-          "en": "“Never.”",
+          "en": "“She’s asleep. She’s three years old. Have you seen her?”",
           "es": "Está dormida. Tiene tres años. ¿La has visto?"
         },
         {
-          "en": "“Well, you should see her. She’s—”",
+          "en": "“Never.”",
           "es": "Nunca."
         },
         {
+          "en": "“Well, you should see her. She’s—”",
+          "es": "Bueno, deberías verla. Ella es—"
+        },
+        {
           "en": "Tom Buchanan walked around the room and then put his hand on my shoulder.",
-          "es": ""
+          "es": "Tom Buchanan caminó alrededor de la habitación y luego puso su mano en mi hombro."
         }
       ]
     },
@@ -191,51 +191,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What do you do, Nick?”",
-          "es": "Bueno, deberías verla. Ella es—"
-        },
-        {
-          "en": "“I work with bonds.”",
-          "es": "Tom Buchanan caminó alrededor de la habitación y luego puso su mano en mi hombro."
-        },
-        {
-          "en": "“With who?”",
           "es": "¿Qué haces, Nick?"
         },
         {
-          "en": "I told him.",
+          "en": "“I work with bonds.”",
           "es": "Trabajo con bonos."
         },
         {
-          "en": "“Never heard of them,” he said.",
+          "en": "“With who?”",
           "es": "¿Con quién?"
         },
         {
-          "en": "This made me a bit upset.",
+          "en": "I told him.",
           "es": "Le dije."
         },
         {
-          "en": "“You will,” I said. “You will if you stay here.”",
+          "en": "“Never heard of them,” he said.",
           "es": "\"Nunca oí hablar de ellos,\" dijo."
         },
         {
-          "en": "“Oh, I’ll stay here,” he said, looking at Daisy and then at me. “I’d be a fool to live anywhere else.”",
+          "en": "This made me a bit upset.",
           "es": "Esto me hizo enojar un poco."
         },
         {
-          "en": "Miss Baker suddenly said, “Absolutely!” I was surprised because it was the first thing she said. She yawned and stood up.",
+          "en": "“You will,” I said. “You will if you stay here.”",
           "es": "Lo harás,\" dije. \"Lo harás si te quedas aquí."
         },
         {
-          "en": "“I’m stiff,” she said. “I’ve been lying on that couch forever.”",
+          "en": "“Oh, I’ll stay here,” he said, looking at Daisy and then at me. “I’d be a fool to live anywhere else.”",
           "es": "Oh, me quedaré aquí,\" dijo, mirando a Daisy y luego a mí. \"Sería un tonto vivir en cualquier otro lugar."
         },
         {
+          "en": "Miss Baker suddenly said, “Absolutely!” I was surprised because it was the first thing she said. She yawned and stood up.",
+          "es": "La señorita Baker de repente dijo, \"¡Absolutamente!\" Me sorprendió porque fue la primera cosa que dijo. Bostezó y se levantó."
+        },
+        {
+          "en": "“I’m stiff,” she said. “I’ve been lying on that couch forever.”",
+          "es": "Estoy rígida,\" dijo. \"He estado acostada en ese sofá por siempre."
+        },
+        {
           "en": "“Don’t blame me,” Daisy said. “I tried to take you to New York all afternoon.”",
-          "es": ""
+          "es": "No me culpes,\" dijo Daisy. \"Intenté llevarte a Nueva York toda la tarde."
         },
         {
           "en": "“No, thanks,” said Miss Baker to the drinks. “I’m training.”",
-          "es": ""
+          "es": "No, gracias,\" dijo la señorita Baker a las bebidas. \"Estoy entrenando."
         }
       ]
     },
@@ -243,47 +243,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Her host looked surprised.",
-          "es": "La señorita Baker de repente dijo, \"¡Absolutamente!\" Me sorprendió porque fue la primera cosa que dijo. Bostezó y se levantó."
-        },
-        {
-          "en": "“You are!” He drank his drink. “How do you ever get anything done?”",
-          "es": "Estoy rígida,\" dijo. \"He estado acostada en ese sofá por siempre."
-        },
-        {
-          "en": "I looked at Miss Baker, wondering what she did. I liked looking at her. She was slim, with a straight posture. Her eyes were grey and looked at me with polite curiosity. I thought I had seen her before.",
-          "es": "No me culpes,\" dijo Daisy. \"Intenté llevarte a Nueva York toda la tarde."
-        },
-        {
-          "en": "“You live in West Egg,” she said. “I know someone there.”",
-          "es": "No, gracias,\" dijo la señorita Baker a las bebidas. \"Estoy entrenando."
-        },
-        {
-          "en": "“I don’t know anyone—”",
           "es": "Su anfitrión parecía sorprendido."
         },
         {
-          "en": "“You must know Gatsby.”",
+          "en": "“You are!” He drank his drink. “How do you ever get anything done?”",
           "es": "¿Lo estás!\" Bebió su bebida. \"¿Cómo logras hacer algo?"
         },
         {
-          "en": "“Gatsby?” Daisy asked. “What Gatsby?”",
+          "en": "I looked at Miss Baker, wondering what she did. I liked looking at her. She was slim, with a straight posture. Her eyes were grey and looked at me with polite curiosity. I thought I had seen her before.",
           "es": "Miré a la señorita Baker, preguntándome qué hacía. Me gustaba mirarla. Era delgada, con una postura recta. Sus ojos eran grises y me miraban con curiosidad educada. Pensé que la había visto antes."
         },
         {
-          "en": "Before I could say he was my neighbor, dinner was announced. Tom took my arm and led me out of the room.",
+          "en": "“You live in West Egg,” she said. “I know someone there.”",
           "es": "Vives en West Egg,\" dijo. \"Conozco a alguien allá."
         },
         {
-          "en": "The two women walked ahead of us to a porch with candles on the table. The sunset was beautiful.",
+          "en": "“I don’t know anyone—”",
           "es": "No conozco a nadie—"
         },
         {
-          "en": "“Why candles?” Daisy asked, frowning. She put them out. “In two weeks, it’ll be the longest day of the year.” She looked at us. “Do you watch for the longest day and then miss it? I always do.”",
+          "en": "“You must know Gatsby.”",
           "es": "Debes conocer a Gatsby."
         },
         {
+          "en": "“Gatsby?” Daisy asked. “What Gatsby?”",
+          "es": "¿Gatsby?\" preguntó Daisy. \"¿Qué Gatsby?"
+        },
+        {
+          "en": "Before I could say he was my neighbor, dinner was announced. Tom took my arm and led me out of the room.",
+          "es": "Antes de que pudiera decir que era mi vecino, se anunció la cena. Tom tomó mi brazo y me llevó fuera de la habitación."
+        },
+        {
+          "en": "The two women walked ahead of us to a porch with candles on the table. The sunset was beautiful.",
+          "es": "Las dos mujeres caminaron adelante de nosotros hacia un porche con velas en la mesa. La puesta de sol fue hermosa."
+        },
+        {
+          "en": "“Why candles?” Daisy asked, frowning. She put them out. “In two weeks, it’ll be the longest day of the year.” She looked at us. “Do you watch for the longest day and then miss it? I always do.”",
+          "es": "¿Por qué velas?\" preguntó Daisy, frunciendo el ceño. Las apagó. \"En dos semanas, será el día más largo del año.\" Nos miró. \"¿Esperas el día más largo y luego lo extrañas? Siempre lo hago."
+        },
+        {
           "en": "“We should plan something,” Miss Baker said, sitting down.",
-          "es": ""
+          "es": "\"Deberíamos planear algo,\" dijo la señorita Baker, sentándose."
         }
       ]
     },
@@ -291,43 +291,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Okay,” said Daisy. “What should we plan?” She looked at me: “What do people plan?”",
-          "es": "¿Gatsby?\" preguntó Daisy. \"¿Qué Gatsby?"
-        },
-        {
-          "en": "Before I could answer, she looked at her finger.",
-          "es": "Antes de que pudiera decir que era mi vecino, se anunció la cena. Tom tomó mi brazo y me llevó fuera de la habitación."
-        },
-        {
-          "en": "“Look!” she said. “I hurt it.”",
-          "es": "Las dos mujeres caminaron adelante de nosotros hacia un porche con velas en la mesa. La puesta de sol fue hermosa."
-        },
-        {
-          "en": "We all looked—it was bruised.",
-          "es": "¿Por qué velas?\" preguntó Daisy, frunciendo el ceño. Las apagó. \"En dos semanas, será el día más largo del año.\" Nos miró. \"¿Esperas el día más largo y luego lo extrañas? Siempre lo hago."
-        },
-        {
-          "en": "“You did it, Tom,” she said. “I know you didn’t mean to, but you did. That’s what I get for marrying a big man.”",
-          "es": "\"Deberíamos planear algo,\" dijo la señorita Baker, sentándose."
-        },
-        {
-          "en": "“I hate that word ‘big,’” Tom said.",
           "es": "Está bien,\" dijo Daisy. \"¿Qué deberíamos planear?\" Me miró: \"¿Qué planean las personas?"
         },
         {
-          "en": "“Big,” Daisy said again.",
+          "en": "Before I could answer, she looked at her finger.",
           "es": "Antes de que pudiera responder, miró su dedo."
         },
         {
-          "en": "Sometimes she and Miss Baker talked at once, but it was never just chatter. They were here with us, but they knew dinner would end soon. It was different from the West, where evenings were rushed.",
+          "en": "“Look!” she said. “I hurt it.”",
           "es": "¡Mira!\" dijo. \"Me lastimé."
         },
         {
-          "en": "“You make me feel uncivilized, Daisy,” I said after my second glass of wine. “Can’t you talk about crops or something?”",
+          "en": "We all looked—it was bruised.",
           "es": "Todos miramos—estaba magullado."
         },
         {
-          "en": "I didn’t mean anything by it, but it was taken seriously.",
+          "en": "“You did it, Tom,” she said. “I know you didn’t mean to, but you did. That’s what I get for marrying a big man.”",
           "es": "Lo hiciste, Tom,\" dijo. \"Sé que no quisiste, pero lo hiciste. Esto es lo que obtengo por casarme con un hombre grande."
+        },
+        {
+          "en": "“I hate that word ‘big,’” Tom said.",
+          "es": "\"Odio esa palabra 'grande,'\" dijo Tom."
+        },
+        {
+          "en": "“Big,” Daisy said again.",
+          "es": "\"Grande,\" dijo Daisy de nuevo."
+        },
+        {
+          "en": "Sometimes she and Miss Baker talked at once, but it was never just chatter. They were here with us, but they knew dinner would end soon. It was different from the West, where evenings were rushed.",
+          "es": "A veces ella y la señorita Baker hablaban a la vez, pero nunca era solo charla. Estaban aquí con nosotros, pero sabían que la cena terminaría pronto. Fue diferente del Oeste, donde las tardes eran apresuradas."
+        },
+        {
+          "en": "“You make me feel uncivilized, Daisy,” I said after my second glass of wine. “Can’t you talk about crops or something?”",
+          "es": "Me haces sentir incivilizado, Daisy,\" dije después de mi segunda copa de vino. \"¿No puedes hablar sobre cosechas o algo?"
+        },
+        {
+          "en": "I didn’t mean anything by it, but it was taken seriously.",
+          "es": "No quería decir nada con eso, pero fue tomado en serio."
         }
       ]
     },
@@ -335,51 +335,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Civilization’s going to pieces,” Tom said loudly. “I’ve become a pessimist. Have you read The Rise of the Coloured Empires by Goddard?”",
-          "es": "\"Odio esa palabra 'grande,'\" dijo Tom."
-        },
-        {
-          "en": "“No,” I said, surprised.",
-          "es": "\"Grande,\" dijo Daisy de nuevo."
-        },
-        {
-          "en": "“It’s a fine book. Everyone should read it. It says if we don’t watch out, the white race will be submerged. It’s scientific.”",
-          "es": "A veces ella y la señorita Baker hablaban a la vez, pero nunca era solo charla. Estaban aquí con nosotros, pero sabían que la cena terminaría pronto. Fue diferente del Oeste, donde las tardes eran apresuradas."
-        },
-        {
-          "en": "“Tom’s getting deep,” said Daisy, looking sad. “He reads books with long words. What was that word we—”",
-          "es": "Me haces sentir incivilizado, Daisy,\" dije después de mi segunda copa de vino. \"¿No puedes hablar sobre cosechas o algo?"
-        },
-        {
-          "en": "“These books are scientific,” Tom insisted. “We must watch out, or other races will control things.”",
-          "es": "No quería decir nada con eso, pero fue tomado en serio."
-        },
-        {
-          "en": "“We’ve got to beat them down,” Daisy whispered, looking at the sun.",
           "es": "La civilización se está desmoronando,\" dijo Tom en voz alta. \"Me he convertido en un pesimista. ¿Has leído The Rise of the Coloured Empires de Goddard?"
         },
         {
-          "en": "“You should live in California—” Miss Baker started, but Tom interrupted her.",
+          "en": "“No,” I said, surprised.",
           "es": "\"No,\" dije, sorprendido."
         },
         {
-          "en": "“We’re Nordics. I am, you are, and you are,” he said, nodding at Daisy. “We’ve made civilization—science, art, all that. Do you see?”",
+          "en": "“It’s a fine book. Everyone should read it. It says if we don’t watch out, the white race will be submerged. It’s scientific.”",
           "es": "Es un buen libro. Todos deberían leerlo. Dice que si no tenemos cuidado, la raza blanca será sumergida. Es científico."
         },
         {
-          "en": "He seemed very focused, but it wasn’t enough for him. Then the phone rang, and the butler left. Daisy leaned towards me.",
+          "en": "“Tom’s getting deep,” said Daisy, looking sad. “He reads books with long words. What was that word we—”",
           "es": "Tom se está volviendo profundo,\" dijo Daisy, mirando triste. \"Lee libros con palabras largas. ¿Cuál fue esa palabra que—"
         },
         {
-          "en": "“I’ll tell you a family secret,” she said. “It’s about the butler’s nose. Do you want to hear?”",
+          "en": "“These books are scientific,” Tom insisted. “We must watch out, or other races will control things.”",
           "es": "Estos libros son científicos,\" insistió Tom. \"Debemos tener cuidado, o otras razas controlarán las cosas."
         },
         {
+          "en": "“We’ve got to beat them down,” Daisy whispered, looking at the sun.",
+          "es": "\"Tenemos que vencerlos,\" susurró Daisy, mirando el sol."
+        },
+        {
+          "en": "“You should live in California—” Miss Baker started, but Tom interrupted her.",
+          "es": "\"Deberías vivir en California—\" comenzó la señorita Baker, pero Tom la interrumpió."
+        },
+        {
+          "en": "“We’re Nordics. I am, you are, and you are,” he said, nodding at Daisy. “We’ve made civilization—science, art, all that. Do you see?”",
+          "es": "Somos nórdicos. Yo soy, tú eres, y tú eres,\" dijo, asintiendo hacia Daisy. \"Hemos hecho la civilización—ciencia, arte, todo eso. ¿Entiendes?"
+        },
+        {
+          "en": "He seemed very focused, but it wasn’t enough for him. Then the phone rang, and the butler left. Daisy leaned towards me.",
+          "es": "Parecía muy enfocado, pero no era suficiente para él. Luego sonó el teléfono, y el mayordomo se fue. Daisy se inclinó hacia mí."
+        },
+        {
+          "en": "“I’ll tell you a family secret,” she said. “It’s about the butler’s nose. Do you want to hear?”",
+          "es": "Te diré un secreto de familia,\" dijo. \"Es sobre la nariz del mayordomo. ¿Quieres escuchar?"
+        },
+        {
           "en": "“That’s why I came tonight.”",
-          "es": ""
+          "es": "Por eso vine esta noche."
         },
         {
           "en": "“He wasn’t always a butler; he used to polish silver for people in New York. He had to polish so much that it affected his nose—”",
-          "es": ""
+          "es": "No siempre fue mayordomo; solía pulir plata para personas en Nueva York. Tuvo que pulir tanto que afectó su nariz—"
         }
       ]
     },
@@ -387,43 +387,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Things got worse,” Miss Baker said.",
-          "es": "\"Tenemos que vencerlos,\" susurró Daisy, mirando el sol."
-        },
-        {
-          "en": "“Yes. Things got worse, and he had to stop.”",
-          "es": "\"Deberías vivir en California—\" comenzó la señorita Baker, pero Tom la interrumpió."
-        },
-        {
-          "en": "The last sunlight shone on her face; her voice made me listen closely. Then the light faded, like children leaving a street at night.",
-          "es": "Somos nórdicos. Yo soy, tú eres, y tú eres,\" dijo, asintiendo hacia Daisy. \"Hemos hecho la civilización—ciencia, arte, todo eso. ¿Entiendes?"
-        },
-        {
-          "en": "The butler came back and said something to Tom, who frowned and went inside. Daisy leaned forward again, her voice happy.",
-          "es": "Parecía muy enfocado, pero no era suficiente para él. Luego sonó el teléfono, y el mayordomo se fue. Daisy se inclinó hacia mí."
-        },
-        {
-          "en": "“I love having you at my table, Nick. You remind me of a rose, a real rose. Don’t you?” She asked Miss Baker: “A real rose?”",
-          "es": "Te diré un secreto de familia,\" dijo. \"Es sobre la nariz del mayordomo. ¿Quieres escuchar?"
-        },
-        {
-          "en": "This wasn’t true. I am not like a rose. She was just talking, but warmth came from her words. Then she threw her napkin on the table and went into the house.",
-          "es": "Por eso vine esta noche."
-        },
-        {
-          "en": "Miss Baker and I exchanged a look. I was about to speak when she said “Sh!” We heard a voice in the next room, and Miss Baker listened. The voice was soft, then excited, then quiet again.",
-          "es": "No siempre fue mayordomo; solía pulir plata para personas en Nueva York. Tuvo que pulir tanto que afectó su nariz—"
-        },
-        {
-          "en": "“This Mr. Gatsby you mentioned is my neighbor—” I started.",
           "es": "\"Las cosas empeoraron,\" dijo la señorita Baker."
         },
         {
-          "en": "“Don’t talk. I want to hear what happens.”",
+          "en": "“Yes. Things got worse, and he had to stop.”",
           "es": "Sí. Las cosas empeoraron, y tuvo que parar."
         },
         {
-          "en": "“Is something happening?” I asked.",
+          "en": "The last sunlight shone on her face; her voice made me listen closely. Then the light faded, like children leaving a street at night.",
           "es": "La última luz del sol brilló en su cara; su voz me hizo escuchar atentamente. Luego la luz se desvaneció, como niños dejando una calle por la noche."
+        },
+        {
+          "en": "The butler came back and said something to Tom, who frowned and went inside. Daisy leaned forward again, her voice happy.",
+          "es": "El mayordomo regresó y dijo algo a Tom, quien frunció el ceño y entró. Daisy se inclinó hacia adelante de nuevo, su voz feliz."
+        },
+        {
+          "en": "“I love having you at my table, Nick. You remind me of a rose, a real rose. Don’t you?” She asked Miss Baker: “A real rose?”",
+          "es": "Me encanta tenerte en mi mesa, Nick. Me recuerdas a una rosa, una rosa real. ¿No crees?\" Le preguntó a la señorita Baker: \"¿Una rosa real?"
+        },
+        {
+          "en": "This wasn’t true. I am not like a rose. She was just talking, but warmth came from her words. Then she threw her napkin on the table and went into the house.",
+          "es": "Esto no era verdad. No soy como una rosa. Solo estaba hablando, pero calidez vino de sus palabras. Luego tiró su servilleta en la mesa y entró en la casa."
+        },
+        {
+          "en": "Miss Baker and I exchanged a look. I was about to speak when she said “Sh!” We heard a voice in the next room, and Miss Baker listened. The voice was soft, then excited, then quiet again.",
+          "es": "La señorita Baker y yo intercambiamos una mirada. Estaba a punto de hablar cuando dijo \"¡Sh!\" Escuchamos una voz en la siguiente habitación, y la señorita Baker escuchó. La voz era suave, luego emocionada, luego tranquila de nuevo."
+        },
+        {
+          "en": "“This Mr. Gatsby you mentioned is my neighbor—” I started.",
+          "es": "\"Este Sr. Gatsby que mencionaste es mi vecino—\" comencé."
+        },
+        {
+          "en": "“Don’t talk. I want to hear what happens.”",
+          "es": "No hables. Quiero escuchar lo que sucede."
+        },
+        {
+          "en": "“Is something happening?” I asked.",
+          "es": "\"¿Está pasando algo?\" pregunté."
         }
       ]
     },
@@ -431,43 +431,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“You don’t know?” Miss Baker was surprised. “I thought everyone knew.”",
-          "es": "El mayordomo regresó y dijo algo a Tom, quien frunció el ceño y entró. Daisy se inclinó hacia adelante de nuevo, su voz feliz."
-        },
-        {
-          "en": "“I don’t.”",
-          "es": "Me encanta tenerte en mi mesa, Nick. Me recuerdas a una rosa, una rosa real. ¿No crees?\" Le preguntó a la señorita Baker: \"¿Una rosa real?"
-        },
-        {
-          "en": "“Well,” she said. “Tom has a woman in New York.”",
-          "es": "Esto no era verdad. No soy como una rosa. Solo estaba hablando, pero calidez vino de sus palabras. Luego tiró su servilleta en la mesa y entró en la casa."
-        },
-        {
-          "en": "“A woman?” I repeated.",
-          "es": "La señorita Baker y yo intercambiamos una mirada. Estaba a punto de hablar cuando dijo \"¡Sh!\" Escuchamos una voz en la siguiente habitación, y la señorita Baker escuchó. La voz era suave, luego emocionada, luego tranquila de nuevo."
-        },
-        {
-          "en": "Miss Baker nodded.",
-          "es": "\"Este Sr. Gatsby que mencionaste es mi vecino—\" comencé."
-        },
-        {
-          "en": "“She shouldn’t call him at dinner,” she said. “Don’t you think?”",
-          "es": "No hables. Quiero escuchar lo que sucede."
-        },
-        {
-          "en": "Before I understood, Tom and Daisy returned to the table.",
-          "es": "\"¿Está pasando algo?\" pregunté."
-        },
-        {
-          "en": "\"It couldn’t be helped!\" Daisy said with a tense smile.",
           "es": "¿No sabes?\" La señorita Baker parecía sorprendida. \"Pensé que todos lo sabían."
         },
         {
-          "en": "She sat down, looked at Miss Baker, then at me, and said, \"I looked outside for a minute, and it's very romantic. There’s a bird on the lawn. I think it came on a ship from far away. It’s singing. Isn’t it romantic, Tom?\"",
+          "en": "“I don’t.”",
           "es": "No lo sé."
         },
         {
-          "en": "Very romantic,\" he said, then told me sadly, \"If it’s light after dinner, I want to show you the stables.",
+          "en": "“Well,” she said. “Tom has a woman in New York.”",
           "es": "Bueno,\" dijo. \"Tom tiene una mujer en Nueva York."
+        },
+        {
+          "en": "“A woman?” I repeated.",
+          "es": "\"¿Una mujer?\" repetí."
+        },
+        {
+          "en": "Miss Baker nodded.",
+          "es": "La señorita Baker asintió."
+        },
+        {
+          "en": "“She shouldn’t call him at dinner,” she said. “Don’t you think?”",
+          "es": "No debería llamarlo durante la cena,\" dijo. \"¿No crees?"
+        },
+        {
+          "en": "Before I understood, Tom and Daisy returned to the table.",
+          "es": "Antes de que entendiera, Tom y Daisy regresaron a la mesa."
+        },
+        {
+          "en": "\"It couldn’t be helped!\" Daisy said with a tense smile.",
+          "es": "\"¡No se podía evitar!\" dijo Daisy con una sonrisa tensa."
+        },
+        {
+          "en": "She sat down, looked at Miss Baker, then at me, and said, \"I looked outside for a minute, and it's very romantic. There’s a bird on the lawn. I think it came on a ship from far away. It’s singing. Isn’t it romantic, Tom?\"",
+          "es": "Se sentó, miró a la señorita Baker, luego a mí, y dijo, \"Miré afuera durante un minuto, y es muy romántico. Hay un pájaro en el jardín. Creo que vino en un barco desde muy lejos. Está cantando. ¿No es romántico, Tom?\""
+        },
+        {
+          "en": "Very romantic,\" he said, then told me sadly, \"If it’s light after dinner, I want to show you the stables.",
+          "es": "Muy romántico,\" dijo, luego me dijo tristemente, \"Si está luz después de la cena, quiero mostrarte los establos."
         }
       ]
     },
@@ -475,43 +475,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "The phone rang loudly, and Daisy shook her head at Tom. The talk about the stables stopped. I remember the candles were lit again, but it felt pointless. I wanted to look at everyone, but I didn’t want them to see me. I couldn’t tell what Daisy and Tom were thinking. Even Miss Baker, who seemed very calm, couldn’t ignore the phone ringing. Some people might find this interesting, but I thought of calling the police.",
-          "es": "\"¿Una mujer?\" repetí."
-        },
-        {
-          "en": "We didn’t talk about the horses again. Tom and Miss Baker walked back to the library, leaving some space between them. I followed Daisy around the verandas to the porch. We sat down on a wicker settee in the dark.",
-          "es": "La señorita Baker asintió."
-        },
-        {
-          "en": "Daisy held her face in her hands, feeling its shape. Her eyes looked into the dark. I saw she was upset, so I asked about her little girl to calm her.",
-          "es": "No debería llamarlo durante la cena,\" dijo. \"¿No crees?"
-        },
-        {
-          "en": "We don’t know each other well, Nick,\" she said suddenly. \"Even if we are cousins. You didn’t come to my wedding.",
-          "es": "Antes de que entendiera, Tom y Daisy regresaron a la mesa."
-        },
-        {
-          "en": "I wasn’t back from the war.",
-          "es": "\"¡No se podía evitar!\" dijo Daisy con una sonrisa tensa."
-        },
-        {
-          "en": "That’s true.\" She paused. \"I’ve had a bad time, Nick, and now I don’t trust things.",
-          "es": "Se sentó, miró a la señorita Baker, luego a mí, y dijo, \"Miré afuera durante un minuto, y es muy romántico. Hay un pájaro en el jardín. Creo que vino en un barco desde muy lejos. Está cantando. ¿No es romántico, Tom?\""
-        },
-        {
-          "en": "She seemed to have reasons. I waited, but she didn’t say more. So I asked again about her daughter.",
-          "es": "Muy romántico,\" dijo, luego me dijo tristemente, \"Si está luz después de la cena, quiero mostrarte los establos."
-        },
-        {
-          "en": "I suppose she talks, and eats, and everything.",
           "es": "El teléfono sonó fuerte, y Daisy le hizo un gesto a Tom. La conversación sobre los establos se detuvo. Recuerdo que las velas fueron encendidas de nuevo, pero se sentía sin propósito. Quería mirar a todos, pero no quería que me vieran. No podía decir qué estaban pensando Daisy y Tom. Incluso la señorita Baker, que parecía muy tranquila, no podía ignorar el teléfono sonando. Algunas personas podrían encontrar esto interesante, pero pensé en llamar a la policía."
         },
         {
-          "en": "Oh, yes.\" She looked at me without focus. \"Listen, Nick; let me tell you what I said when she was born. Want to hear?",
+          "en": "We didn’t talk about the horses again. Tom and Miss Baker walked back to the library, leaving some space between them. I followed Daisy around the verandas to the porch. We sat down on a wicker settee in the dark.",
           "es": "No volvimos a hablar sobre los caballos. Tom y la señorita Baker caminaron hacia la biblioteca, dejando algo de espacio entre ellos. Seguí a Daisy alrededor de las verandas hacia el porche. Nos sentamos en una silla de mimbre en la oscuridad."
         },
         {
-          "en": "Very much.",
+          "en": "Daisy held her face in her hands, feeling its shape. Her eyes looked into the dark. I saw she was upset, so I asked about her little girl to calm her.",
           "es": "Daisy sostuvo su cara en sus manos, sintiendo su forma. Sus ojos miraban en la oscuridad. Vi que estaba molesta, así que pregunté sobre su niña pequeña para calmarla."
+        },
+        {
+          "en": "We don’t know each other well, Nick,\" she said suddenly. \"Even if we are cousins. You didn’t come to my wedding.",
+          "es": "No nos conocemos bien, Nick,\" dijo de repente. \"Aunque seamos primos. No viniste a mi boda."
+        },
+        {
+          "en": "I wasn’t back from the war.",
+          "es": "No regresé de la guerra."
+        },
+        {
+          "en": "That’s true.\" She paused. \"I’ve had a bad time, Nick, and now I don’t trust things.",
+          "es": "Es verdad.\" Hizo una pausa. \"He tenido un mal tiempo, Nick, y ahora no confío en las cosas."
+        },
+        {
+          "en": "She seemed to have reasons. I waited, but she didn’t say more. So I asked again about her daughter.",
+          "es": "Parecía tener razones. Esperé, pero no dijo más. Así que pregunté de nuevo sobre su hija."
+        },
+        {
+          "en": "I suppose she talks, and eats, and everything.",
+          "es": "Supongo que habla, come, y todo eso."
+        },
+        {
+          "en": "Oh, yes.\" She looked at me without focus. \"Listen, Nick; let me tell you what I said when she was born. Want to hear?",
+          "es": "Oh, sí.\" Me miró sin enfoque. \"Escucha, Nick; déjame decirte lo que dije cuando nació. ¿Quieres escuchar?"
+        },
+        {
+          "en": "Very much.",
+          "es": "Mucho."
         }
       ]
     },
@@ -519,43 +519,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "It’ll show you how I feel about things. She was an hour old, and Tom was not there. I woke up and asked the nurse if it was a boy or a girl. She said it was a girl, and I cried. ‘I’m glad it’s a girl,’ I said. ‘I hope she’ll be a fool. That’s the best thing a girl can be in this world, a beautiful little fool.’",
-          "es": "No nos conocemos bien, Nick,\" dijo de repente. \"Aunque seamos primos. No viniste a mi boda."
-        },
-        {
-          "en": "You see, I think everything’s terrible,\" she said seriously. \"Everybody thinks so—the smart people. I know. I’ve been everywhere and seen everything.\" Her eyes flashed like Tom’s, and she laughed. \"Sophisticated—God, I’m sophisticated!",
-          "es": "No regresé de la guerra."
-        },
-        {
-          "en": "When her voice stopped, I felt she wasn’t sincere. It made me uneasy, like the evening was a trick to get me to feel something. I waited, and she looked at me with a smile, like she and Tom were part of a secret club.",
-          "es": "Es verdad.\" Hizo una pausa. \"He tenido un mal tiempo, Nick, y ahora no confío en las cosas."
-        },
-        {
-          "en": "Inside, the room was bright. Tom and Miss Baker sat on the couch. She read to him from a magazine. Her voice was soft and calm. The light shone on his boots and her hair as she turned a page.",
-          "es": "Parecía tener razones. Esperé, pero no dijo más. Así que pregunté de nuevo sobre su hija."
-        },
-        {
-          "en": "When we came in, she held up her hand to stop us.",
-          "es": "Supongo que habla, come, y todo eso."
-        },
-        {
-          "en": "To be continued,\" she said, putting the magazine down, \"in our next issue.",
-          "es": "Oh, sí.\" Me miró sin enfoque. \"Escucha, Nick; déjame decirte lo que dije cuando nació. ¿Quieres escuchar?"
-        },
-        {
-          "en": "She moved restlessly and stood up.",
-          "es": "Mucho."
-        },
-        {
-          "en": "Ten o’clock,\" she said, looking at the ceiling. \"Time for this good girl to go to bed.",
           "es": "Te mostrará cómo me siento sobre las cosas. Tenía una hora de vida, y Tom no estaba allí. Me desperté y le pregunté a la enfermera si era un niño o una niña. Dijo que era una niña, y lloré. 'Estoy feliz de que sea una niña,' dije. 'Espero que sea una tonta. Esa es la mejor cosa que una niña puede ser en este mundo, una hermosa tonta pequeña.'"
         },
         {
-          "en": "Jordan’s playing in a tournament tomorrow,\" Daisy explained, \"at Westchester.",
+          "en": "You see, I think everything’s terrible,\" she said seriously. \"Everybody thinks so—the smart people. I know. I’ve been everywhere and seen everything.\" Her eyes flashed like Tom’s, and she laughed. \"Sophisticated—God, I’m sophisticated!",
           "es": "Ves, pienso que todo es terrible,\" dijo seriamente. \"Todos lo piensan—las personas inteligentes. Lo sé. He estado en todas partes y he visto todo.\" Sus ojos brillaron como los de Tom, y rió. \"Sofisticada—¡Dios, soy sofisticada!"
         },
         {
-          "en": "Oh—you’re Jordan Baker.",
+          "en": "When her voice stopped, I felt she wasn’t sincere. It made me uneasy, like the evening was a trick to get me to feel something. I waited, and she looked at me with a smile, like she and Tom were part of a secret club.",
           "es": "Cuando su voz se detuvo, sentí que no era sincera. Me hizo sentir incómodo, como si la noche fuera un truco para hacerme sentir algo. Esperé, y ella me miró con una sonrisa, como si ella y Tom fueran parte de un club secreto."
+        },
+        {
+          "en": "Inside, the room was bright. Tom and Miss Baker sat on the couch. She read to him from a magazine. Her voice was soft and calm. The light shone on his boots and her hair as she turned a page.",
+          "es": "Adentro, la habitación era brillante. Tom y la señorita Baker estaban sentados en el sofá. Ella leía para él desde una revista. Su voz era suave y tranquila. La luz brillaba en sus botas y en su cabello mientras ella daba vuelta a una página."
+        },
+        {
+          "en": "When we came in, she held up her hand to stop us.",
+          "es": "Cuando entramos, levantó su mano para detenernos."
+        },
+        {
+          "en": "To be continued,\" she said, putting the magazine down, \"in our next issue.",
+          "es": "Continuará,\" dijo, poniendo la revista hacia abajo, \"en nuestro próximo número."
+        },
+        {
+          "en": "She moved restlessly and stood up.",
+          "es": "Se movió inquietamente y se levantó."
+        },
+        {
+          "en": "Ten o’clock,\" she said, looking at the ceiling. \"Time for this good girl to go to bed.",
+          "es": "Las diez en punto,\" dijo, mirando el techo. \"Hora para que esta buena chica se vaya a la cama."
+        },
+        {
+          "en": "Jordan’s playing in a tournament tomorrow,\" Daisy explained, \"at Westchester.",
+          "es": "Jordan está jugando en un torneo mañana,\" explicó Daisy, \"en Westchester."
+        },
+        {
+          "en": "Oh—you’re Jordan Baker.",
+          "es": "Oh—eres Jordan Baker."
         }
       ]
     },
@@ -563,43 +563,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Now I knew why her face looked familiar. I had seen her in many pictures of sports events. I had heard a story about her, but I forgot it.",
-          "es": "Adentro, la habitación era brillante. Tom y la señorita Baker estaban sentados en el sofá. Ella leía para él desde una revista. Su voz era suave y tranquila. La luz brillaba en sus botas y en su cabello mientras ella daba vuelta a una página."
-        },
-        {
-          "en": "Good night,\" she said softly. \"Wake me at eight, won’t you.",
-          "es": "Cuando entramos, levantó su mano para detenernos."
-        },
-        {
-          "en": "If you’ll get up.",
-          "es": "Continuará,\" dijo, poniendo la revista hacia abajo, \"en nuestro próximo número."
-        },
-        {
-          "en": "I will. Good night, Mr. Carraway. See you soon.",
-          "es": "Se movió inquietamente y se levantó."
-        },
-        {
-          "en": "Of course you will,\" Daisy said. \"I’ll arrange a marriage. Come over often, Nick, and I’ll push you together. You know—lock you in a closet or send you out on a boat—",
-          "es": "Las diez en punto,\" dijo, mirando el techo. \"Hora para que esta buena chica se vaya a la cama."
-        },
-        {
-          "en": "Good night,\" called Miss Baker from the stairs. \"I haven’t heard a word.",
-          "es": "Jordan está jugando en un torneo mañana,\" explicó Daisy, \"en Westchester."
-        },
-        {
-          "en": "She’s a nice girl,\" said Tom after a moment. \"They shouldn’t let her travel like this.",
-          "es": "Oh—eres Jordan Baker."
-        },
-        {
-          "en": "\"Who shouldn’t?\" Daisy asked coldly.",
           "es": "Ahora supe por qué su cara parecía familiar. La había visto en muchas fotos de eventos deportivos. Había escuchado una historia sobre ella, pero la olvidé."
         },
         {
-          "en": "Her family.",
+          "en": "Good night,\" she said softly. \"Wake me at eight, won’t you.",
           "es": "Buenas noches,\" dijo suavemente. \"Despiértame a las ocho, ¿de acuerdo?"
         },
         {
-          "en": "Her family is one very old aunt. Besides, Nick’s going to look after her, right, Nick? She’ll spend many weekends here this summer. I think it’ll be good for her.",
+          "en": "If you’ll get up.",
           "es": "Si te levantarás."
+        },
+        {
+          "en": "I will. Good night, Mr. Carraway. See you soon.",
+          "es": "Lo haré. Buenas noches, Sr. Carraway. Nos vemos pronto."
+        },
+        {
+          "en": "Of course you will,\" Daisy said. \"I’ll arrange a marriage. Come over often, Nick, and I’ll push you together. You know—lock you in a closet or send you out on a boat—",
+          "es": "Por supuesto que sí,\" dijo Daisy. \"Organizaré un matrimonio. Ven seguido, Nick, y te presionaré. Ya sabes—te encierro en un armario o te envío en un bote—"
+        },
+        {
+          "en": "Good night,\" called Miss Baker from the stairs. \"I haven’t heard a word.",
+          "es": "Buenas noches,\" llamó la señorita Baker desde las escaleras. \"No he escuchado una palabra."
+        },
+        {
+          "en": "She’s a nice girl,\" said Tom after a moment. \"They shouldn’t let her travel like this.",
+          "es": "\"Es una chica agradable,\" dijo Tom después de un momento. \"No deberían dejarla viajar así."
+        },
+        {
+          "en": "\"Who shouldn’t?\" Daisy asked coldly.",
+          "es": "\"¿Quién no debería?\" preguntó Daisy fríamente."
+        },
+        {
+          "en": "Her family.",
+          "es": "Su familia."
+        },
+        {
+          "en": "Her family is one very old aunt. Besides, Nick’s going to look after her, right, Nick? She’ll spend many weekends here this summer. I think it’ll be good for her.",
+          "es": "Su familia es una tía muy vieja. Además, Nick va a cuidarla, ¿verdad, Nick? Ella pasará muchos fines de semana aquí este verano. Creo que será bueno para ella."
         }
       ]
     },
@@ -607,91 +607,91 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Daisy and Tom looked at each other in silence.",
-          "es": "Lo haré. Buenas noches, Sr. Carraway. Nos vemos pronto."
-        },
-        {
-          "en": "\"Is she from New York?\" I asked quickly.",
-          "es": "Por supuesto que sí,\" dijo Daisy. \"Organizaré un matrimonio. Ven seguido, Nick, y te presionaré. Ya sabes—te encierro en un armario o te envío en un bote—"
-        },
-        {
-          "en": "From Louisville. We grew up there together. Our beautiful white—",
-          "es": "Buenas noches,\" llamó la señorita Baker desde las escaleras. \"No he escuchado una palabra."
-        },
-        {
-          "en": "\"Did you have a talk with Nick on the veranda?\" Tom asked suddenly.",
-          "es": "\"Es una chica agradable,\" dijo Tom después de un momento. \"No deberían dejarla viajar así."
-        },
-        {
-          "en": "Did I?\" She looked at me. \"I can’t remember, but I think we talked about the Nordic race. Yes, we did. It just came up.",
-          "es": "\"¿Quién no debería?\" preguntó Daisy fríamente."
-        },
-        {
-          "en": "\"Don’t believe everything you hear, Nick,\" Tom advised me.",
-          "es": "Su familia."
-        },
-        {
-          "en": "I said I hadn’t heard anything, and soon I got up to go home. They walked with me to the door, standing in the light. As I started my car, Daisy called: \"Wait!",
-          "es": "Su familia es una tía muy vieja. Además, Nick va a cuidarla, ¿verdad, Nick? Ella pasará muchos fines de semana aquí este verano. Creo que será bueno para ella."
-        },
-        {
-          "en": "I forgot to ask you something important. We heard you were engaged to a girl out West.",
           "es": "Daisy y Tom se miraron en silencio."
         },
         {
-          "en": "That’s right,\" Tom said kindly. \"We heard you were engaged.",
+          "en": "\"Is she from New York?\" I asked quickly.",
           "es": "\"¿Es de Nueva York?\" pregunté rápidamente."
         },
         {
-          "en": "It’s not true. I’m too poor.",
+          "en": "From Louisville. We grew up there together. Our beautiful white—",
           "es": "De Louisville. Crecimos juntas allá. Nuestras hermosas blancas—"
         },
         {
-          "en": "",
+          "en": "\"Did you have a talk with Nick on the veranda?\" Tom asked suddenly.",
           "es": "\"¿Tuviste una conversación con Nick en la veranda?\" preguntó Tom de repente."
+        },
+        {
+          "en": "Did I?\" She looked at me. \"I can’t remember, but I think we talked about the Nordic race. Yes, we did. It just came up.",
+          "es": "\"¿La tuve?\" Me miró. \"No puedo recordar, pero creo que hablamos sobre la raza nórdica. Sí, lo hicimos. Solo surgió."
+        },
+        {
+          "en": "\"Don’t believe everything you hear, Nick,\" Tom advised me.",
+          "es": "\"No creas todo lo que escuchas, Nick,\" me aconsejó Tom."
+        },
+        {
+          "en": "I said I hadn’t heard anything, and soon I got up to go home. They walked with me to the door, standing in the light. As I started my car, Daisy called: \"Wait!",
+          "es": "Dije que no había escuchado nada, y pronto me levanté para ir a casa. Ellos caminaron conmigo hasta la puerta, de pie en la luz. Cuando comencé mi coche, Daisy llamó: \"¡Espera!"
+        },
+        {
+          "en": "I forgot to ask you something important. We heard you were engaged to a girl out West.",
+          "es": "Olvidé preguntarte algo importante. Escuchamos que estabas comprometido con una chica en el Oeste."
+        },
+        {
+          "en": "That’s right,\" Tom said kindly. \"We heard you were engaged.",
+          "es": "Eso es verdad,\" dijo Tom amablemente. \"Escuchamos que estabas comprometido."
+        },
+        {
+          "en": "It’s not true. I’m too poor.",
+          "es": "No es verdad. Soy demasiado pobre."
+        },
+        {
+          "en": "But we heard it,\" Daisy said, surprising me with her smile. \"We heard it from three people, so it must be true.",
+          "es": "Pero lo escuchamos,\" dijo Daisy, sorprendiéndome con su sonrisa. \"Lo escuchamos de tres personas, así que debe ser verdad."
         }
       ]
     },
     "15": {
       "lines": [
         {
-          "en": "But we heard it,\" Daisy said, surprising me with her smile. \"We heard it from three people, so it must be true.",
-          "es": "\"¿La tuve?\" Me miró. \"No puedo recordar, pero creo que hablamos sobre la raza nórdica. Sí, lo hicimos. Solo surgió."
-        },
-        {
           "en": "I knew what they meant, but I wasn’t engaged. The gossip was one reason I came East. You can’t stop seeing an old friend because of rumors, and I didn’t want to be pushed into marriage by them.",
-          "es": "\"No creas todo lo que escuchas, Nick,\" me aconsejó Tom."
-        },
-        {
-          "en": "Their interest touched me and made them seem less rich, but I was confused and a little upset as I drove away. I thought Daisy should leave the house with her child, but she didn’t plan to. As for Tom, the fact he had another woman in New York wasn’t surprising, but that he was upset by a book was. Something made him think about old ideas, like his strong ego wasn’t enough for him anymore.",
-          "es": "Dije que no había escuchado nada, y pronto me levanté para ir a casa. Ellos caminaron conmigo hasta la puerta, de pie en la luz. Cuando comencé mi coche, Daisy llamó: \"¡Espera!"
-        },
-        {
-          "en": "It was already deep summer on the roadhouse roofs and garages, where new red petrol pumps shone in the light. When I reached West Egg, I parked my car and sat on a grass roller in the yard. The wind had stopped, leaving a loud, bright night. I heard wings in the trees and frogs singing. A cat moved in the moonlight, and I saw someone standing near my neighbor’s house. He looked at the stars. His movements and the way he stood made me think it was Mr. Gatsby.",
-          "es": "Olvidé preguntarte algo importante. Escuchamos que estabas comprometido con una chica en el Oeste."
-        },
-        {
-          "en": "I thought about calling to him. Miss Baker mentioned him at dinner, so that could be my introduction. But I didn’t call because he seemed to want to be alone. He stretched his arms toward the dark water, and even from far away, I thought he was trembling. I looked at the sea and saw a green light far away, maybe the end of a dock. When I looked back for Gatsby, he was gone, and I was alone in the dark.",
-          "es": "Eso es verdad,\" dijo Tom amablemente. \"Escuchamos que estabas comprometido."
-        },
-        {
-          "en": "",
-          "es": "No es verdad. Soy demasiado pobre."
-        },
-        {
-          "en": "",
-          "es": "Pero lo escuchamos,\" dijo Daisy, sorprendiéndome con su sonrisa. \"Lo escuchamos de tres personas, así que debe ser verdad."
-        },
-        {
-          "en": "",
           "es": "Sabía lo que querían decir, pero no estaba comprometido. El chisme fue una razón por la que vine al Este. No puedes dejar de ver a un viejo amigo por los rumores, y no quería ser presionado al matrimonio por ellos."
         },
         {
-          "en": "",
+          "en": "Their interest touched me and made them seem less rich, but I was confused and a little upset as I drove away. I thought Daisy should leave the house with her child, but she didn’t plan to. As for Tom, the fact he had another woman in New York wasn’t surprising, but that he was upset by a book was. Something made him think about old ideas, like his strong ego wasn’t enough for him anymore.",
           "es": "Su interés me tocó y los hizo parecer menos ricos, pero estaba confundido y un poco molesto mientras me iba. Pensé que Daisy debería dejar la casa con su hijo, pero no estaba planeando hacerlo. En cuanto a Tom, el hecho de que tuviera otra mujer en Nueva York no fue sorprendente, pero que estuviera molesto por un libro sí. Algo lo hizo pensar en viejas ideas, como si su ego fuerte no fuera suficiente para él ya."
         },
         {
-          "en": "",
+          "en": "It was already deep summer on the roadhouse roofs and garages, where new red petrol pumps shone in the light. When I reached West Egg, I parked my car and sat on a grass roller in the yard. The wind had stopped, leaving a loud, bright night. I heard wings in the trees and frogs singing. A cat moved in the moonlight, and I saw someone standing near my neighbor’s house. He looked at the stars. His movements and the way he stood made me think it was Mr. Gatsby.",
           "es": "Ya era verano profundo en los techos de las tabernas de carreteras y garajes, donde nuevas bombas de gasolina roja brillaban en la luz. Cuando llegué a West Egg, estacioné mi coche y me senté en un rodillo de hierba en el patio. El viento se había detenido, dejando una noche fuerte y brillante. Escuché alas en los árboles y ranas cantando. Un gato se movió en la luz de la luna, y vi a alguien parado cerca de la casa de mi vecino. Miraba las estrellas. Sus movimientos y la forma en que estaba de pie me hicieron pensar que era el Sr. Gatsby."
+        },
+        {
+          "en": "I thought about calling to him. Miss Baker mentioned him at dinner, so that could be my introduction. But I didn’t call because he seemed to want to be alone. He stretched his arms toward the dark water, and even from far away, I thought he was trembling. I looked at the sea and saw a green light far away, maybe the end of a dock. When I looked back for Gatsby, he was gone, and I was alone in the dark.",
+          "es": "Pensé en llamarlo. La señorita Baker lo mencionó en la cena, así que eso podría ser mi presentación. Pero no llamé porque parecía que quería estar solo. Extendió los brazos hacia el agua oscura, e incluso desde lejos, pensé que estaba temblando. Miré el mar y vi una luz verde lejos, quizás el final de un muelle. Cuando miré de nuevo hacia Gatsby, se fue, y estaba solo en la oscuridad."
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
         }
       ]
     },
@@ -699,7 +699,7 @@ export const chapterContent = {
       "lines": [
         {
           "en": "",
-          "es": "Pensé en llamarlo. La señorita Baker lo mencionó en la cena, así que eso podría ser mi presentación. Pero no llamé porque parecía que quería estar solo. Extendió los brazos hacia el agua oscura, e incluso desde lejos, pensé que estaba temblando. Miré el mar y vi una luz verde lejos, quizás el final de un muelle. Cuando miré de nuevo hacia Gatsby, se fue, y estaba solo en la oscuridad."
+          "es": ""
         }
       ]
     }

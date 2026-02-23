@@ -91,7 +91,7 @@ export const chapterContent = {
         },
         {
           "en": "I was surprised and started to answer carefully.",
-          "es": ""
+          "es": "Estaba sorprendido y comencé a responder con cuidado."
         }
       ]
     },
@@ -99,47 +99,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Well, I’m going to tell you about my life,” he interrupted. “I don’t want you to believe the stories you hear.”",
-          "es": "Estaba sorprendido y comencé a responder con cuidado."
-        },
-        {
-          "en": "So he knew about the strange stories people told in his house.",
           "es": "Bueno, te voy a contar sobre mi vida,\" interrumpió. \"No quiero que creas las historias que escuchas."
         },
         {
-          "en": "“I’ll tell you the truth.” He raised his hand. “I am the son of rich people in the Middle West—all dead now. I grew up in America but studied at Oxford because my family always studied there.”",
+          "en": "So he knew about the strange stories people told in his house.",
           "es": "Así que sabía sobre las historias extrañas que la gente contaba en su casa."
         },
         {
-          "en": "He looked at me, and I understood why Jordan Baker thought he was lying. He said “educated at Oxford” quickly, like he didn’t believe it himself. This made me doubt everything he said. I wondered if there was something strange about him.",
+          "en": "“I’ll tell you the truth.” He raised his hand. “I am the son of rich people in the Middle West—all dead now. I grew up in America but studied at Oxford because my family always studied there.”",
           "es": "Te voy a decir la verdad.\" Levantó su mano. \"Soy el hijo de personas ricas en el Medio Oeste—todos muertos ahora. Crecí en América pero estudié en Oxford porque mi familia siempre estudió allí."
         },
         {
-          "en": "“What part of the Middle West?” I asked.",
+          "en": "He looked at me, and I understood why Jordan Baker thought he was lying. He said “educated at Oxford” quickly, like he didn’t believe it himself. This made me doubt everything he said. I wondered if there was something strange about him.",
           "es": "Me miró, y entendí por qué Jordan Baker pensaba que estaba mintiendo. Dijo \"educado en Oxford\" rápidamente, como si no lo creyera él mismo. Esto me hizo dudar de todo lo que dijo. Me preguntaba si había algo extraño en él."
         },
         {
-          "en": "“San Francisco.”",
+          "en": "“What part of the Middle West?” I asked.",
           "es": "\"¿Qué parte del Medio Oeste?\" pregunté."
         },
         {
-          "en": "“I see.”",
+          "en": "“San Francisco.”",
           "es": "San Francisco."
         },
         {
-          "en": "“My family died, and I got a lot of money.”",
+          "en": "“I see.”",
           "es": "Entiendo."
         },
         {
-          "en": "His voice was serious, like he still felt sad about his family. I thought he was joking, but his face was serious.",
+          "en": "“My family died, and I got a lot of money.”",
           "es": "Mi familia murió, y recibí mucho dinero."
         },
         {
-          "en": "“After that, I lived like a young prince in Europe—Paris, Venice, Rome. I collected jewels, hunted big animals, painted a little, and tried to forget something sad.”",
+          "en": "His voice was serious, like he still felt sad about his family. I thought he was joking, but his face was serious.",
           "es": "Su voz era seria, como si todavía sintiera tristeza por su familia. Pensé que estaba bromeando, pero su cara era seria."
         },
         {
+          "en": "“After that, I lived like a young prince in Europe—Paris, Venice, Rome. I collected jewels, hunted big animals, painted a little, and tried to forget something sad.”",
+          "es": "Después, viví como un joven príncipe en Europa—París, Venecia, Roma. Coleccioné joyas, caché animales grandes, pinté un poco, e intenté olvidar algo triste."
+        },
+        {
           "en": "I tried not to laugh. His words were so old-fashioned. They made me think of a character in a story chasing a tiger.",
-          "es": ""
+          "es": "Intenté no reír. Sus palabras eran tan anticuadas. Me hicieron pensar en un personaje en una historia persiguiendo un tigre."
         }
       ]
     },
@@ -147,43 +147,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Then came the war, old sport. It was a relief. I tried hard to die, but I lived. I became a first lieutenant. In the Argonne Forest, my men and I went forward. We stayed two days and nights. When the infantry came, they found German insignia among the dead. I became a major, and every Allied government gave me a medal—even Montenegro!”",
-          "es": "Después, viví como un joven príncipe en Europa—París, Venecia, Roma. Coleccioné joyas, caché animales grandes, pinté un poco, e intenté olvidar algo triste."
-        },
-        {
-          "en": "Little Montenegro! He said the words with a smile. His smile understood Montenegro’s history and struggles. I was fascinated, like reading many magazines quickly.",
-          "es": "Intenté no reír. Sus palabras eran tan anticuadas. Me hicieron pensar en un personaje en una historia persiguiendo un tigre."
-        },
-        {
-          "en": "He reached into his pocket and gave me a medal.",
           "es": "Luego vino la guerra, viejo amigo. Fue un alivio. Intenté mucho morir, pero viví. Me volví teniente primero. En el Bosque de Argonne, mis hombres y yo avanzamos. Estuvimos dos días y noches. Cuando vino la infantería, encontraron insignias alemanas entre los muertos. Me volví mayor, y todo gobierno aliado me dio una medalla—¡incluso Montenegro!"
         },
         {
-          "en": "“That’s the one from Montenegro.”",
+          "en": "Little Montenegro! He said the words with a smile. His smile understood Montenegro’s history and struggles. I was fascinated, like reading many magazines quickly.",
           "es": "¡Pequeño Montenegro! Dijo las palabras con una sonrisa. Su sonrisa entendía la historia y luchas de Montenegro. Estaba fascinado, como leer muchas revistas rápidamente."
         },
         {
-          "en": "I was surprised. It looked real. “Orderi di Danilo,” it said, “Montenegro, Nicolas Rex.”",
+          "en": "He reached into his pocket and gave me a medal.",
           "es": "Metió su mano en el bolsillo y me dio una medalla."
         },
         {
-          "en": "“Turn it.”",
+          "en": "“That’s the one from Montenegro.”",
           "es": "Esa es la de Montenegro."
         },
         {
-          "en": "“Major Jay Gatsby,” I read, “For Valour Extraordinary.”",
+          "en": "I was surprised. It looked real. “Orderi di Danilo,” it said, “Montenegro, Nicolas Rex.”",
           "es": "Estaba sorprendido. Se veía real. \"Orderi di Danilo,\" decía, \"Montenegro, Nicolas Rex.\""
         },
         {
-          "en": "“Here’s another thing I carry. A souvenir from Oxford. It was taken in Trinity Quad—the man on my left is now the Earl of Doncaster.”",
+          "en": "“Turn it.”",
           "es": "Dale la vuelta."
         },
         {
-          "en": "It was a photo of young men in blazers. Gatsby was there, holding a cricket bat.",
+          "en": "“Major Jay Gatsby,” I read, “For Valour Extraordinary.”",
           "es": "Mayor Jay Gatsby,\" leí, \"Por Valor Extraordinario."
         },
         {
-          "en": "Then it was all true. I imagined tigers in his palace and rubies to ease his broken heart.",
+          "en": "“Here’s another thing I carry. A souvenir from Oxford. It was taken in Trinity Quad—the man on my left is now the Earl of Doncaster.”",
           "es": "Aquí hay otra cosa que cargo. Un recuerdo de Oxford. Fue tomada en Trinity Quad—el hombre a mi izquierda es ahora el Conde de Doncaster."
+        },
+        {
+          "en": "It was a photo of young men in blazers. Gatsby was there, holding a cricket bat.",
+          "es": "Era una foto de jóvenes en blazers. Gatsby estaba allí, sosteniendo un bate de cricket."
+        },
+        {
+          "en": "Then it was all true. I imagined tigers in his palace and rubies to ease his broken heart.",
+          "es": "Entonces era todo verdadero. Imaginé tigres en su palacio y rubíes para aliviar su corazón roto."
         }
       ]
     },
@@ -191,43 +191,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“I’m going to ask you something big today,” he said, putting his things away. “I wanted you to know me. I didn’t want you to think I was a nobody. I often feel like a stranger because I move around to forget sad things.” He paused. “You’ll hear about it this afternoon.”",
-          "es": "Era una foto de jóvenes en blazers. Gatsby estaba allí, sosteniendo un bate de cricket."
-        },
-        {
-          "en": "“At lunch?”",
-          "es": "Entonces era todo verdadero. Imaginé tigres en su palacio y rubíes para aliviar su corazón roto."
-        },
-        {
-          "en": "“No, this afternoon. I know you’re taking Miss Baker to tea.”",
           "es": "Voy a pedirte algo grande hoy,\" dijo, guardando sus cosas. \"Quería que me conocieras. No quería que pensaras que era un don nadie. A menudo me siento como un extranjero porque me muevo para olvidar cosas tristes.\" Hizo una pausa. \"Escucharás sobre esto esta tarde."
         },
         {
-          "en": "“Do you love Miss Baker?”",
+          "en": "“At lunch?”",
           "es": "¿En el almuerzo?"
         },
         {
-          "en": "“No, old sport, I don’t. But Miss Baker will talk to you about something.”",
+          "en": "“No, this afternoon. I know you’re taking Miss Baker to tea.”",
           "es": "No, esta tarde. Sé que llevas a la señorita Baker al té."
         },
         {
-          "en": "I didn’t know what “this matter” was, but I was annoyed. I didn’t invite Jordan to talk about Gatsby. I thought it would be something strange and wished I hadn’t gone to his crowded lawn.",
+          "en": "“Do you love Miss Baker?”",
           "es": "¿Amas a la señorita Baker?"
         },
         {
-          "en": "He didn’t say more. As we neared the city, he became more proper. We passed Port Roosevelt, with ships, and then a poor area with old bars. The valley of ashes opened, and I saw Mrs. Wilson at the garage pump as we passed.",
+          "en": "“No, old sport, I don’t. But Miss Baker will talk to you about something.”",
           "es": "No, viejo amigo, no. Pero la señorita Baker te hablará sobre algo."
         },
         {
-          "en": "With fenders like wings, we drove through Astoria. But then I heard a motorcycle. A policeman rode up to us.",
+          "en": "I didn’t know what “this matter” was, but I was annoyed. I didn’t invite Jordan to talk about Gatsby. I thought it would be something strange and wished I hadn’t gone to his crowded lawn.",
           "es": "No sabía qué era \"este asunto,\" pero estaba molesto. No invité a Jordan para hablar sobre Gatsby. Pensé que sería algo extraño y deseé no haber ido a su jardín lleno de gente."
         },
         {
-          "en": "“All right, old sport,” called Gatsby. We slowed down. He took a white card from his wallet and showed it to the policeman.",
+          "en": "He didn’t say more. As we neared the city, he became more proper. We passed Port Roosevelt, with ships, and then a poor area with old bars. The valley of ashes opened, and I saw Mrs. Wilson at the garage pump as we passed.",
           "es": "No dijo más. Mientras nos acercábamos a la ciudad, se volvió más formal. Pasamos Port Roosevelt, con barcos, y luego un área pobre con bares viejos. El valle de cenizas se abrió, y vi a la señora Wilson en la bomba del garaje mientras pasábamos."
         },
         {
-          "en": "Right you are,\" said the policeman. He tipped his cap. \"See you next time, Mr. Gatsby. Excuse me!",
+          "en": "With fenders like wings, we drove through Astoria. But then I heard a motorcycle. A policeman rode up to us.",
           "es": "Con guardafangos como alas, conducimos a través de Astoria. Pero entonces escuché una motocicleta. Un policía nos alcanzó."
+        },
+        {
+          "en": "“All right, old sport,” called Gatsby. We slowed down. He took a white card from his wallet and showed it to the policeman.",
+          "es": "\"Está bien, viejo amigo,\" llamó Gatsby. Nos desaceleramos. Sacó una tarjeta blanca de su billetera y la mostró al policía."
+        },
+        {
+          "en": "Right you are,\" said the policeman. He tipped his cap. \"See you next time, Mr. Gatsby. Excuse me!",
+          "es": "Está bien,\" dijo el policía. Inclinó su gorra. \"Hasta la próxima vez, señor Gatsby. ¡Disculpe!"
         }
       ]
     },
@@ -235,43 +235,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "What was that?\" I asked. \"The picture of Oxford?",
-          "es": "\"Está bien, viejo amigo,\" llamó Gatsby. Nos desaceleramos. Sacó una tarjeta blanca de su billetera y la mostró al policía."
-        },
-        {
-          "en": "I did a favor for the commissioner once. Now, he sends me a Christmas card every year.",
-          "es": "Está bien,\" dijo el policía. Inclinó su gorra. \"Hasta la próxima vez, señor Gatsby. ¡Disculpe!"
-        },
-        {
-          "en": "We drove over the big bridge. The sunlight flickered on the cars. The city rose up across the river. It looked like white sugar lumps. The city seen from the Queensboro Bridge always looked new. It promised mystery and beauty.",
           "es": "¿Qué fue eso?\" pregunté. \"¿La foto de Oxford?"
         },
         {
-          "en": "A hearse passed us with flowers. Two carriages with closed blinds followed. Friends in cheerful carriages came too. They looked at us sadly. I was glad they saw Gatsby's fancy car. As we crossed Blackwell’s Island, a limousine passed us. A white chauffeur drove it. Three stylish black people sat inside. I laughed when their eyes rolled at us.",
+          "en": "I did a favor for the commissioner once. Now, he sends me a Christmas card every year.",
           "es": "Le hice un favor al comisionado una vez. Ahora, me envía una tarjeta de Navidad cada año."
         },
         {
-          "en": "Anything can happen now that we’ve crossed this bridge,\" I thought. \"Anything at all...",
+          "en": "We drove over the big bridge. The sunlight flickered on the cars. The city rose up across the river. It looked like white sugar lumps. The city seen from the Queensboro Bridge always looked new. It promised mystery and beauty.",
           "es": "Conducimos sobre el puente grande. La luz del sol parpadeaba en los coches. La ciudad se levantaba al otro lado del río. Se veía como terrones de azúcar blanco. La ciudad vista desde el Puente Queensboro siempre se veía nueva. Prometía misterio y belleza."
         },
         {
-          "en": "Even Gatsby could happen, without much wonder.",
+          "en": "A hearse passed us with flowers. Two carriages with closed blinds followed. Friends in cheerful carriages came too. They looked at us sadly. I was glad they saw Gatsby's fancy car. As we crossed Blackwell’s Island, a limousine passed us. A white chauffeur drove it. Three stylish black people sat inside. I laughed when their eyes rolled at us.",
           "es": "Un coche fúnebre nos pasó con flores. Dos carruajes con persianas cerradas los siguieron. Amigos en carruajes alegres vinieron también. Nos miraron tristes. Estaba contento de que vieran el coche elegante de Gatsby. Mientras cruzábamos Blackwell's Island, una limosina nos pasó. Un chofer blanco la conducía. Tres personas negras elegantes estaban adentro. Reí cuando sus ojos rodaron hacia nosotros."
         },
         {
-          "en": "It was noon. I met Gatsby for lunch on Forty-second Street. The street was bright. I found Gatsby talking to another man.",
+          "en": "Anything can happen now that we’ve crossed this bridge,\" I thought. \"Anything at all...",
           "es": "Cualquier cosa puede pasar ahora que cruzamos este puente,\" pensé. \"Cualquier cosa en absoluto..."
         },
         {
-          "en": "Mr. Carraway, this is my friend Mr. Wolfshiem.",
+          "en": "Even Gatsby could happen, without much wonder.",
           "es": "Incluso Gatsby podría pasar, sin mucha sorpresa."
         },
         {
-          "en": "A small, flat-nosed man looked at me. He had large hair in his nostrils. After a moment, I saw his small eyes.",
+          "en": "It was noon. I met Gatsby for lunch on Forty-second Street. The street was bright. I found Gatsby talking to another man.",
           "es": "Era mediodía. Encontré a Gatsby para el almuerzo en la Calle Cuarenta y dos. La calle estaba brillante. Encontré a Gatsby hablando con otro hombre."
         },
         {
-          "en": "I took one look at him,\" said Mr. Wolfshiem, shaking my hand. \"And what do you think I did?",
+          "en": "Mr. Carraway, this is my friend Mr. Wolfshiem.",
           "es": "Señor Carraway, este es mi amigo el señor Wolfshiem."
+        },
+        {
+          "en": "A small, flat-nosed man looked at me. He had large hair in his nostrils. After a moment, I saw his small eyes.",
+          "es": "Un hombre pequeño de nariz plana me miró. Tenía cabello grande en sus fosas nasales. Después de un momento, vi sus ojos pequeños."
+        },
+        {
+          "en": "I took one look at him,\" said Mr. Wolfshiem, shaking my hand. \"And what do you think I did?",
+          "es": "Tomé una mirada de ti,\" dijo el señor Wolfshiem, estrechando mi mano. \"¿Y qué crees que hice?"
         }
       ]
     },
@@ -279,43 +279,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "\"What?\" I asked politely.",
-          "es": "Un hombre pequeño de nariz plana me miró. Tenía cabello grande en sus fosas nasales. Después de un momento, vi sus ojos pequeños."
-        },
-        {
-          "en": "But he wasn’t talking to me. He let go of my hand and looked at Gatsby.",
-          "es": "Tomé una mirada de ti,\" dijo el señor Wolfshiem, estrechando mi mano. \"¿Y qué crees que hice?"
-        },
-        {
-          "en": "I gave the money to Katspaugh. I said: ‘Don’t pay him until he shuts his mouth.’ He shut it right then.",
           "es": "\"¿Qué?\" pregunté educadamente."
         },
         {
-          "en": "Gatsby took our arms and led us into the restaurant. Mr. Wolfshiem stopped talking and seemed lost in thought.",
+          "en": "But he wasn’t talking to me. He let go of my hand and looked at Gatsby.",
           "es": "Pero no me hablaba a mí. Soltó mi mano y miró a Gatsby."
         },
         {
-          "en": "\"Highballs?\" asked the head waiter.",
+          "en": "I gave the money to Katspaugh. I said: ‘Don’t pay him until he shuts his mouth.’ He shut it right then.",
           "es": "Le di el dinero a Katspaugh. Le dije: 'No le pagues hasta que cierre la boca.' La cerró justo entonces."
         },
         {
-          "en": "This is a nice restaurant,\" said Mr. Wolfshiem, looking at the ceiling. \"But I like the place across the street better!",
+          "en": "Gatsby took our arms and led us into the restaurant. Mr. Wolfshiem stopped talking and seemed lost in thought.",
           "es": "Gatsby tomó nuestros brazos y nos llevó al restaurante. El señor Wolfshiem paró de hablar y pareció perdido en pensamiento."
         },
         {
-          "en": "Yes, highballs,\" said Gatsby. Then to Mr. Wolfshiem, \"It’s too hot over there.",
+          "en": "\"Highballs?\" asked the head waiter.",
           "es": "\"¿Highballs?\" preguntó el jefe del camarero."
         },
         {
-          "en": "Hot and small—yes,\" said Mr. Wolfshiem, \"but full of memories.",
+          "en": "This is a nice restaurant,\" said Mr. Wolfshiem, looking at the ceiling. \"But I like the place across the street better!",
           "es": "Este es un buen restaurante,\" dijo el señor Wolfshiem, mirando el techo. \"¡Pero me gusta más el lugar al otro lado de la calle!"
         },
         {
-          "en": "\"What place is that?\" I asked.",
+          "en": "Yes, highballs,\" said Gatsby. Then to Mr. Wolfshiem, \"It’s too hot over there.",
           "es": "Sí, highballs,\" dijo Gatsby. Luego al señor Wolfshiem, \"Hace demasiado calor allá."
         },
         {
-          "en": "The old Metropole.",
+          "en": "Hot and small—yes,\" said Mr. Wolfshiem, \"but full of memories.",
           "es": "Calor y pequeño—sí,\" dijo el señor Wolfshiem, \"pero lleno de recuerdos."
+        },
+        {
+          "en": "\"What place is that?\" I asked.",
+          "es": "\"¿Qué lugar es ese?\" pregunté."
+        },
+        {
+          "en": "The old Metropole.",
+          "es": "El viejo Metropole."
         }
       ]
     },
@@ -323,372 +323,356 @@ export const chapterContent = {
       "lines": [
         {
           "en": "\"The old Metropole,\" Mr. Wolfshiem said sadly. \"Filled with faces gone. Friends gone forever. I can’t forget the night they shot Rosy Rosenthal there. Six of us were at the table. Rosy ate and drank a lot. When it was almost morning, a waiter came to him. He had a funny look and said someone wanted to talk to him outside. ‘All right,’ said Rosy and started to get up. I pulled him back into his chair.",
-          "es": "\"¿Qué lugar es ese?\" pregunté."
-        },
-        {
-          "en": "\"‘Let them come in here if they want you, Rosy. Don’t move outside this room.’",
-          "es": "El viejo Metropole."
-        },
-        {
-          "en": "It was four in the morning. If we’d opened the blinds, we’d see daylight.",
           "es": "El viejo Metropole,\" dijo el señor Wolfshiem tristes. \"Lleno de caras desaparecidas. Amigos desaparecidos para siempre. No puedo olvidar la noche que dispararon a Rosy Rosenthal allí. Seis de nosotros estábamos en la mesa. Rosy comía y bebía mucho. Cuando era casi de mañana, un camarero vino a él. Tenía una mirada divertida y dijo que alguien quería hablar con él afuera. 'Está bien,' dijo Rosy y comenzó a levantarse. Lo tiré de vuelta a su silla."
         },
         {
-          "en": "\"Did he go?\" I asked.",
+          "en": "\"‘Let them come in here if they want you, Rosy. Don’t move outside this room.’",
           "es": "Déjalos entrar aquí si te quieren, Rosy. No te muevas de esta habitación."
         },
         {
-          "en": "Sure he went.\" Mr. Wolfshiem’s nose flashed at me. \"He turned at the door and said: ‘Don’t let that waiter take my coffee!’ Then he went outside, and they shot him three times.",
+          "en": "It was four in the morning. If we’d opened the blinds, we’d see daylight.",
           "es": "Eran las cuatro de la mañana. Si abriéramos las persianas, veríamos la luz del día."
         },
         {
-          "en": "\"Four of them were electrocuted,\" I said, remembering.",
+          "en": "\"Did he go?\" I asked.",
           "es": "\"¿Se fue?\" pregunté."
         },
         {
-          "en": "Five, with Becker.\" His nostrils turned to me. \"I hear you’re looking for business.",
+          "en": "Sure he went.\" Mr. Wolfshiem’s nose flashed at me. \"He turned at the door and said: ‘Don’t let that waiter take my coffee!’ Then he went outside, and they shot him three times.",
           "es": "Seguro que se fue.\" La nariz del señor Wolfshiem me brilló. \"Se giró en la puerta y dijo: '¡No dejes que ese camarero lleve mi café!' Luego salió, y le dispararon tres veces."
         },
         {
-          "en": "The two remarks surprised me. Gatsby answered for me:",
+          "en": "\"Four of them were electrocuted,\" I said, remembering.",
           "es": "\"Cuatro de ellos fueron electrocutados,\" dije, recordando."
         },
         {
-          "en": "Oh, no,\" he said. \"This isn’t the man.",
+          "en": "Five, with Becker.\" His nostrils turned to me. \"I hear you’re looking for business.",
           "es": "Cinco, con Becker.\" Sus fosas nasales se giraron hacia mí. \"Escucho que buscas negocio."
         },
         {
-          "en": "\"No?\" Mr. Wolfshiem seemed disappointed.",
+          "en": "The two remarks surprised me. Gatsby answered for me:",
           "es": "Las dos observaciones me sorprendieron. Gatsby respondió por mí:"
         },
         {
-          "en": "",
+          "en": "Oh, no,\" he said. \"This isn’t the man.",
           "es": "Oh, no,\" dijo. \"Este no es el hombre."
+        },
+        {
+          "en": "\"No?\" Mr. Wolfshiem seemed disappointed.",
+          "es": "\"¿No?\" El señor Wolfshiem parecía decepcionado."
+        },
+        {
+          "en": "This is just a friend. We’ll talk about that some other time.",
+          "es": "Este es solo un amigo. Hablaremos sobre eso en otro momento."
         }
       ]
     },
     "9": {
       "lines": [
         {
-          "en": "This is just a friend. We’ll talk about that some other time.",
-          "es": "\"¿No?\" El señor Wolfshiem parecía decepcionado."
-        },
-        {
           "en": "I’m sorry,\" said Mr. Wolfshiem. \"I had the wrong man.",
-          "es": "Este es solo un amigo. Hablaremos sobre eso en otro momento."
-        },
-        {
-          "en": "A dish arrived, and Mr. Wolfshiem began to eat. He looked around the room slowly. I think he would have looked under our table if I wasn’t there.",
           "es": "Lo siento,\" dijo el señor Wolfshiem. \"Tenía al hombre equivocado."
         },
         {
-          "en": "Look here, old sport,\" said Gatsby. \"I’m afraid I made you angry in the car.",
+          "en": "A dish arrived, and Mr. Wolfshiem began to eat. He looked around the room slowly. I think he would have looked under our table if I wasn’t there.",
           "es": "Un plato llegó, y el señor Wolfshiem comenzó a comer. Miró alrededor de la habitación lentamente. Creo que habría mirado debajo de nuestra mesa si yo no estaba allí."
         },
         {
-          "en": "He smiled again, but I didn’t smile back.",
+          "en": "Look here, old sport,\" said Gatsby. \"I’m afraid I made you angry in the car.",
           "es": "Mira aquí, viejo amigo,\" dijo Gatsby. \"Tengo miedo de que te enojé en el coche."
         },
         {
-          "en": "I don’t like mysteries,\" I said. \"Why don’t you tell me what you want? Why does it have to go through Miss Baker?",
+          "en": "He smiled again, but I didn’t smile back.",
           "es": "Sonrió de nuevo, pero no sonreí de vuelta."
         },
         {
-          "en": "Oh, it’s nothing bad,\" he said. \"Miss Baker’s a great sportswoman. She’d never do anything wrong.",
+          "en": "I don’t like mysteries,\" I said. \"Why don’t you tell me what you want? Why does it have to go through Miss Baker?",
           "es": "No me gustan los misterios,\" dije. \"¿Por qué no me dices qué quieres? ¿Por qué tiene que pasar por la señorita Baker?"
         },
         {
-          "en": "Suddenly he looked at his watch, got up, and left the room, leaving me with Mr. Wolfshiem.",
+          "en": "Oh, it’s nothing bad,\" he said. \"Miss Baker’s a great sportswoman. She’d never do anything wrong.",
           "es": "Oh, no es nada malo,\" dijo. \"La señorita Baker es una gran deportista. Nunca haría nada malo."
         },
         {
-          "en": "He has to make a call,\" said Mr. Wolfshiem, watching him. \"Nice fellow, isn’t he? Handsome and a gentleman.",
+          "en": "Suddenly he looked at his watch, got up, and left the room, leaving me with Mr. Wolfshiem.",
           "es": "De repente miró su reloj, se levantó, y dejó la habitación, dejándome con el señor Wolfshiem."
         },
         {
-          "en": "Yes.",
+          "en": "He has to make a call,\" said Mr. Wolfshiem, watching him. \"Nice fellow, isn’t he? Handsome and a gentleman.",
           "es": "Necesita hacer una llamada,\" dijo el señor Wolfshiem, mirándolo. \"Tipo agradable, ¿verdad? Guapo y caballero."
+        },
+        {
+          "en": "Yes.",
+          "es": "Sí."
+        },
+        {
+          "en": "He’s an Oggsford man.",
+          "es": "Es un hombre de Oggsford."
         }
       ]
     },
     "10": {
       "lines": [
         {
-          "en": "He’s an Oggsford man.",
-          "es": "Sí."
-        },
-        {
           "en": "Oh!",
-          "es": "Es un hombre de Oggsford."
-        },
-        {
-          "en": "He went to Oggsford College in England. You know Oggsford?",
           "es": "¡Oh!"
         },
         {
-          "en": "I’ve heard of it.",
+          "en": "He went to Oggsford College in England. You know Oggsford?",
           "es": "Fue a Oggsford College en Inglaterra. ¿Conoces Oggsford?"
         },
         {
-          "en": "It’s one of the most famous colleges.",
+          "en": "I’ve heard of it.",
           "es": "He escuchado hablar de ello."
         },
         {
-          "en": "\"Have you known Gatsby long?\" I asked.",
+          "en": "It’s one of the most famous colleges.",
           "es": "Es uno de los colegios más famosos."
         },
         {
-          "en": "Several years,\" he said happily. \"I met him after the war. I knew he was a fine man after talking to him for an hour. I thought, ‘He’s the kind of man to introduce to family.’\" He paused. \"I see you’re looking at my cuff buttons.",
+          "en": "\"Have you known Gatsby long?\" I asked.",
           "es": "\"¿Conoces a Gatsby hace mucho?\" pregunté."
         },
         {
-          "en": "I wasn’t looking, but I did now. They were made of ivory.",
+          "en": "Several years,\" he said happily. \"I met him after the war. I knew he was a fine man after talking to him for an hour. I thought, ‘He’s the kind of man to introduce to family.’\" He paused. \"I see you’re looking at my cuff buttons.",
           "es": "Varios años,\" dijo felizmente. \"Lo conocí después de la guerra. Sabía que era un buen hombre después de hablar con él una hora. Pensé, 'Es el tipo de hombre para presentar a la familia.'\" Hizo una pausa. \"Veo que miras mis botones de puño."
         },
         {
-          "en": "\"Finest human molars,\" he said.",
+          "en": "I wasn’t looking, but I did now. They were made of ivory.",
           "es": "No estaba mirando, pero ahora lo hice. Estaban hechos de marfil."
         },
         {
-          "en": "Well!\" I looked at them. \"That’s interesting.",
+          "en": "\"Finest human molars,\" he said.",
           "es": "\"Los molares humanos más finos,\" dijo."
+        },
+        {
+          "en": "Well!\" I looked at them. \"That’s interesting.",
+          "es": "¡Bueno!\" Los miré. \"Eso es interesante."
+        },
+        {
+          "en": "Yeah.\" He pushed his sleeves up. \"Yeah, Gatsby’s careful about women. He never looks at a friend’s wife.",
+          "es": "Sí.\" Subió sus mangas. \"Sí, Gatsby es cuidadoso con las mujeres. Nunca mira la esposa de un amigo."
         }
       ]
     },
     "11": {
       "lines": [
         {
-          "en": "Yeah.\" He pushed his sleeves up. \"Yeah, Gatsby’s careful about women. He never looks at a friend’s wife.",
-          "es": "¡Bueno!\" Los miré. \"Eso es interesante."
-        },
-        {
           "en": "When Gatsby came back, Mr. Wolfshiem drank his coffee and stood up.",
-          "es": "Sí.\" Subió sus mangas. \"Sí, Gatsby es cuidadoso con las mujeres. Nunca mira la esposa de un amigo."
-        },
-        {
-          "en": "I enjoyed my lunch,\" he said. \"I’m going to leave before I stay too long.",
           "es": "Cuando Gatsby regresó, el señor Wolfshiem bebió su café y se levantó."
         },
         {
-          "en": "\"Don’t hurry, Meyer,\" said Gatsby, not excited. Mr. Wolfshiem raised his hand.",
+          "en": "I enjoyed my lunch,\" he said. \"I’m going to leave before I stay too long.",
           "es": "Disfruté mi almuerzo,\" dijo. \"Voy a irme antes de quedarme demasiado."
         },
         {
-          "en": "You’re polite, but I’m from another generation,\" he said. \"You talk about sports and young ladies. I’m fifty, and I won’t stay longer.",
+          "en": "\"Don’t hurry, Meyer,\" said Gatsby, not excited. Mr. Wolfshiem raised his hand.",
           "es": "\"No te apures, Meyer,\" dijo Gatsby, no entusiasmado. El señor Wolfshiem levantó su mano."
         },
         {
-          "en": "As he shook hands and left, his nose trembled. I wondered if I upset him.",
+          "en": "You’re polite, but I’m from another generation,\" he said. \"You talk about sports and young ladies. I’m fifty, and I won’t stay longer.",
           "es": "Eres educado, pero soy de otra generación,\" dijo. \"Hablas sobre deportes y jóvenes damas. Tengo cincuenta años, y no me quedaré más."
         },
         {
-          "en": "He gets sentimental sometimes,\" explained Gatsby. \"He’s a character in New York—a Broadway guy.",
+          "en": "As he shook hands and left, his nose trembled. I wondered if I upset him.",
           "es": "Mientras estrechaba las manos y se iba, su nariz temblaba. Me preguntaba si lo molestaba."
         },
         {
-          "en": "Who is he, an actor?",
+          "en": "He gets sentimental sometimes,\" explained Gatsby. \"He’s a character in New York—a Broadway guy.",
           "es": "Se vuelve sentimental a veces,\" explicó Gatsby. \"Es un personaje en Nueva York—un tipo de Broadway."
         },
         {
-          "en": "No.",
+          "en": "Who is he, an actor?",
           "es": "¿Quién es, un actor?"
         },
         {
-          "en": "A dentist?",
+          "en": "No.",
           "es": "No."
+        },
+        {
+          "en": "A dentist?",
+          "es": "¿Un dentista?"
+        },
+        {
+          "en": "Meyer Wolfshiem? No, he’s a gambler.\" Gatsby paused, then said, \"He fixed the World’s Series in 1919.",
+          "es": "¿Meyer Wolfshiem? No, es un jugador.\" Gatsby hizo una pausa, luego dijo, \"Arregló la Serie Mundial en 1919."
         }
       ]
     },
     "12": {
       "lines": [
         {
-          "en": "Meyer Wolfshiem? No, he’s a gambler.\" Gatsby paused, then said, \"He fixed the World’s Series in 1919.",
-          "es": "¿Un dentista?"
-        },
-        {
           "en": "\"Fixed the World’s Series?\" I repeated.",
-          "es": "¿Meyer Wolfshiem? No, es un jugador.\" Gatsby hizo una pausa, luego dijo, \"Arregló la Serie Mundial en 1919."
-        },
-        {
-          "en": "The idea surprised me. I knew the World’s Series was fixed in 1919. But I thought it just happened. I never thought one man could do it.",
           "es": "\"¿Arregló la Serie Mundial?\" repetí."
         },
         {
-          "en": "\"How did he do that?\" I asked.",
+          "en": "The idea surprised me. I knew the World’s Series was fixed in 1919. But I thought it just happened. I never thought one man could do it.",
           "es": "La idea me sorprendió. Sabía que la Serie Mundial fue arreglada en 1919. Pero pensé que solo sucedió. Nunca pensé que un hombre pudiera hacerlo."
         },
         {
-          "en": "He saw the chance.",
+          "en": "\"How did he do that?\" I asked.",
           "es": "\"¿Cómo lo hizo?\" pregunté."
         },
         {
-          "en": "Why isn’t he in jail?",
+          "en": "He saw the chance.",
           "es": "Vio la oportunidad."
         },
         {
-          "en": "They can’t get him, old sport. He’s smart.",
+          "en": "Why isn’t he in jail?",
           "es": "¿Por qué no está en la cárcel?"
         },
         {
-          "en": "I paid the bill. As the waiter brought my change, I saw Tom Buchanan across the room.",
+          "en": "They can’t get him, old sport. He’s smart.",
           "es": "No pueden atraparlo, viejo amigo. Es inteligente."
         },
         {
-          "en": "Come with me,\" I said. \"I need to say hello to someone.",
+          "en": "I paid the bill. As the waiter brought my change, I saw Tom Buchanan across the room.",
           "es": "Pagué la factura. Mientras el camarero traía mi cambio, vi a Tom Buchanan al otro lado de la habitación."
         },
         {
-          "en": "When he saw us, Tom stood up and walked over.",
+          "en": "Come with me,\" I said. \"I need to say hello to someone.",
           "es": "Ven conmigo,\" dije. \"Necesito saludar a alguien."
+        },
+        {
+          "en": "When he saw us, Tom stood up and walked over.",
+          "es": "Cuando nos vio, Tom se levantó y caminó hacia nosotros."
+        },
+        {
+          "en": "Where’ve you been?\" he asked. \"Daisy’s mad because you haven’t called.",
+          "es": "¿Dónde estuviste?\" preguntó. \"Daisy está molesta porque no llamaste."
         }
       ]
     },
     "13": {
       "lines": [
         {
-          "en": "Where’ve you been?\" he asked. \"Daisy’s mad because you haven’t called.",
-          "es": "Cuando nos vio, Tom se levantó y caminó hacia nosotros."
-        },
-        {
           "en": "This is Mr. Gatsby, Mr. Buchanan.",
-          "es": "¿Dónde estuviste?\" preguntó. \"Daisy está molesta porque no llamaste."
-        },
-        {
-          "en": "They shook hands quickly. Gatsby looked embarrassed.",
           "es": "Este es el señor Gatsby, señor Buchanan."
         },
         {
-          "en": "How’ve you been?\" Tom asked me. \"Why did you come up here to eat?",
+          "en": "They shook hands quickly. Gatsby looked embarrassed.",
           "es": "Se estrecharon las manos rápidamente. Gatsby se veía avergonzado."
         },
         {
-          "en": "I had lunch with Mr. Gatsby.",
+          "en": "How’ve you been?\" Tom asked me. \"Why did you come up here to eat?",
           "es": "¿Cómo estuviste?\" preguntó Tom. \"¿Por qué subiste aquí a comer?"
         },
         {
-          "en": "I turned to Gatsby, but he was gone.",
+          "en": "I had lunch with Mr. Gatsby.",
           "es": "Almorcé con el señor Gatsby."
         },
         {
-          "en": "One day in October 1917—",
+          "en": "I turned to Gatsby, but he was gone.",
           "es": "Me giré hacia Gatsby, pero se fue."
         },
         {
-          "en": "said Jordan Baker that afternoon, sitting up straight in the tea-garden at the Plaza Hotel—",
+          "en": "One day in October 1917—",
           "es": "Un día en octubre de 1917—"
         },
         {
-          "en": "I was walking from one place to another. I liked the lawns because my shoes had rubber soles. I wore a new plaid skirt. The wind blew it, and the flags in front of the houses moved too.",
+          "en": "said Jordan Baker that afternoon, sitting up straight in the tea-garden at the Plaza Hotel—",
           "es": "dijo Jordan Baker esa tarde, sentándose recta en el jardín de té del Hotel Plaza—"
         },
         {
-          "en": "The biggest flag and lawn belonged to Daisy Fay’s house. She was eighteen, two years older than me. She was very popular. She wore white and had a white car. The phone rang all day with officers calling her. They wanted to see her that night. \"For an hour!\"",
+          "en": "I was walking from one place to another. I liked the lawns because my shoes had rubber soles. I wore a new plaid skirt. The wind blew it, and the flags in front of the houses moved too.",
           "es": "Caminaba de un lugar a otro. Me gustaban los jardines porque mis zapatos tenían suelas de goma. Usaba una nueva falda a cuadros. El viento la sopló, y las banderas frente a las casas se movieron también."
+        },
+        {
+          "en": "The biggest flag and lawn belonged to Daisy Fay’s house. She was eighteen, two years older than me. She was very popular. She wore white and had a white car. The phone rang all day with officers calling her. They wanted to see her that night. \"For an hour!\"",
+          "es": "El jardín y bandera más grande pertenecían a la casa de Daisy Fay. Tenía dieciocho años, dos años mayor que yo. Era muy popular. Llevaba blanco y tenía un coche blanco. El teléfono sonaba todo el día con oficiales llamándola. Querían verla esa noche. '¡Por una hora!'"
+        },
+        {
+          "en": "Her car was by the curb when I passed her house. She sat with a lieutenant I didn’t know. They were so focused they didn’t see me until I was close.",
+          "es": "Su coche estaba junto a la acera cuando pasé su casa. Estaba sentada con un teniente que no conocía. Estaban tan enfocados que no me vieron hasta que estuve cerca."
         }
       ]
     },
     "14": {
       "lines": [
         {
-          "en": "Her car was by the curb when I passed her house. She sat with a lieutenant I didn’t know. They were so focused they didn’t see me until I was close.",
-          "es": "El jardín y bandera más grande pertenecían a la casa de Daisy Fay. Tenía dieciocho años, dos años mayor que yo. Era muy popular. Llevaba blanco y tenía un coche blanco. El teléfono sonaba todo el día con oficiales llamándola. Querían verla esa noche. '¡Por una hora!'"
-        },
-        {
           "en": "Hello, Jordan,\" she called. \"Come here.",
-          "es": "Su coche estaba junto a la acera cuando pasé su casa. Estaba sentada con un teniente que no conocía. Estaban tan enfocados que no me vieron hasta que estuve cerca."
-        },
-        {
-          "en": "I was happy she wanted to talk to me. I admired her. She asked if I was going to the Red Cross. I was. She asked me to tell them she couldn’t come. The officer looked at Daisy in a way every girl wants. It seemed romantic to me. His name was Jay Gatsby. I didn’t see him again for four years. Even after meeting him on Long Island, I didn’t know it was the same man.",
           "es": "Hola, Jordan,' llamó. 'Ven aquí."
         },
         {
-          "en": "That was 1917. By the next year, I had some boyfriends and played in tournaments. I didn’t see Daisy often. She was with an older crowd. Rumors said she tried to go to New York to say goodbye to a soldier. Her family stopped her. She didn’t talk to them for weeks. After that, she didn’t see soldiers. She saw young men who couldn’t join the army.",
+          "en": "I was happy she wanted to talk to me. I admired her. She asked if I was going to the Red Cross. I was. She asked me to tell them she couldn’t come. The officer looked at Daisy in a way every girl wants. It seemed romantic to me. His name was Jay Gatsby. I didn’t see him again for four years. Even after meeting him on Long Island, I didn’t know it was the same man.",
           "es": "Estaba feliz de que quisiera hablar conmigo. La admiraba. Preguntó si iba a la Cruz Roja. Lo hice. Me pidió que les dijera que no podía venir. El oficial miraba a Daisy de una manera que toda chica quiere. Me parecía romántico. Su nombre era Jay Gatsby. No lo volví a ver durante cuatro años. Incluso después de conocerlo en Long Island, no sabía que era el mismo hombre."
         },
         {
-          "en": "By the next autumn, she was happy again. She had a debut after the armistice. In February, she was engaged to a man from New Orleans. In June, she married Tom Buchanan from Chicago. It was a big wedding. He brought a hundred people and rented a hotel floor. He gave her pearls worth three hundred and fifty thousand dollars before the wedding.",
+          "en": "That was 1917. By the next year, I had some boyfriends and played in tournaments. I didn’t see Daisy often. She was with an older crowd. Rumors said she tried to go to New York to say goodbye to a soldier. Her family stopped her. She didn’t talk to them for weeks. After that, she didn’t see soldiers. She saw young men who couldn’t join the army.",
           "es": "Eso fue 1917. Al año siguiente, tuve algunos novios y jugué en torneos. No veía a Daisy a menudo. Estaba con una multitud mayor. Los rumores decían que intentó ir a Nueva York para despedirse de un soldado. Su familia la detuvo. No les hablaba durante semanas. Después, no veía soldados. Veía jóvenes que no podían unirse al ejército."
         },
         {
-          "en": "I was a bridesmaid. I went into her room thirty minutes before the dinner. She was on her bed, looking lovely in her flowered dress, but she was very drunk. She had a bottle of wine in one hand and a letter in the other.",
+          "en": "By the next autumn, she was happy again. She had a debut after the armistice. In February, she was engaged to a man from New Orleans. In June, she married Tom Buchanan from Chicago. It was a big wedding. He brought a hundred people and rented a hotel floor. He gave her pearls worth three hundred and fifty thousand dollars before the wedding.",
           "es": "Al otoño siguiente, estaba feliz de nuevo. Tuvo un debut después del armisticio. En febrero, estaba comprometida con un hombre de Nueva Orleans. En junio, se casó con Tom Buchanan de Chicago. Fue una gran boda. Trajo cien personas e hizo una reserva del piso de un hotel. Le dio perlas por valor de trescientos cincuenta mil dólares antes de la boda."
         },
         {
-          "en": "Congratulate me,\" she said softly. \"I never drank before, but I like it.",
+          "en": "I was a bridesmaid. I went into her room thirty minutes before the dinner. She was on her bed, looking lovely in her flowered dress, but she was very drunk. She had a bottle of wine in one hand and a letter in the other.",
           "es": "Fui dama de honor. Entré en su habitación treinta minutos antes de la cena. Estaba en su cama, viéndose bonita en su vestido de flores, pero estaba muy borracha. Tenía una botella de vino en una mano y una carta en la otra."
         },
         {
-          "en": "What’s wrong, Daisy?",
+          "en": "Congratulate me,\" she said softly. \"I never drank before, but I like it.",
           "es": "Felicítame,' dijo suavemente. 'Nunca bebí antes, pero me gusta."
         },
         {
-          "en": "I was scared. I had never seen a girl like that before.",
+          "en": "What’s wrong, Daisy?",
           "es": "¿Qué está mal, Daisy?"
         },
         {
-          "en": "Here, take these.\" She reached into a basket on the bed and pulled out a pearl necklace. \"Take them downstairs and give them back. Tell them Daisy changed her mind. Say, 'Daisy changed her mind!'",
+          "en": "I was scared. I had never seen a girl like that before.",
           "es": "Estaba asustada. Nunca había visto a una chica así antes."
         },
         {
+          "en": "Here, take these.\" She reached into a basket on the bed and pulled out a pearl necklace. \"Take them downstairs and give them back. Tell them Daisy changed her mind. Say, 'Daisy changed her mind!'",
+          "es": "Aquí, toma estos.' Metió su mano en una canasta en la cama y sacó un collar de perlas. 'Llévalos abajo y devuélvelos. Diles que Daisy cambió de idea. Di, '¡Daisy cambió de idea!"
+        },
+        {
           "en": "She started crying a lot. I ran out and found her mother’s maid. We locked the door and put her in a cold bath. She held on to the letter. She took it in the tub and squeezed it. She let me put it in the soap dish when it started falling apart.",
-          "es": ""
+          "es": "Comenzó a llorar mucho. Corrí y encontré la doncella de su madre. Cerramos la puerta y la metimos en un baño frío. Se aferraba a la carta. La llevó en la tina y la exprimió. Me dejó ponerla en el jabonera cuando comenzó a desmoronarse."
+        },
+        {
+          "en": "She didn’t say anything else. We gave her something to drink and put ice on her head. We helped her back into her dress. Thirty minutes later, we left the room. The pearls were around her neck again, and everything was fine. The next day at five, she married Tom Buchanan. They went on a three-month trip to the South Seas.",
+          "es": "No dijo nada más. Le dimos algo para beber y pusimos hielo en su cabeza. La ayudamos de vuelta a su vestido. Treinta minutos después, dejamos la habitación. Las perlas estaban alrededor de su cuello de nuevo, y todo estaba bien. Al día siguiente a las cinco, se casó con Tom Buchanan. Fueron en un viaje de tres meses a los Mares del Sur."
         }
       ]
     },
     "15": {
       "lines": [
         {
-          "en": "She didn’t say anything else. We gave her something to drink and put ice on her head. We helped her back into her dress. Thirty minutes later, we left the room. The pearls were around her neck again, and everything was fine. The next day at five, she married Tom Buchanan. They went on a three-month trip to the South Seas.",
-          "es": "Aquí, toma estos.' Metió su mano en una canasta en la cama y sacó un collar de perlas. 'Llévalos abajo y devuélvelos. Diles que Daisy cambió de idea. Di, '¡Daisy cambió de idea!"
-        },
-        {
           "en": "I saw them in Santa Barbara when they came back. I thought I never saw a girl so in love with her husband. If he left the room, she looked around and asked, \"Where’s Tom?\" She looked lost until he came back. She sat on the sand with his head in her lap, touching his face. It was sweet and funny to see them. That was in August. A week after I left, Tom had a car accident. A girl with him got hurt. She was a maid from the hotel.",
-          "es": "Comenzó a llorar mucho. Corrí y encontré la doncella de su madre. Cerramos la puerta y la metimos en un baño frío. Se aferraba a la carta. La llevó en la tina y la exprimió. Me dejó ponerla en el jabonera cuando comenzó a desmoronarse."
-        },
-        {
-          "en": "The next April, Daisy had her baby girl. They went to France for a year. I saw them in Cannes and then in Deauville. Later, they came back to Chicago. Daisy was popular there. They had many young, rich, and wild friends. Daisy had a good reputation. Maybe because she did not drink. It helped her stay calm and avoid problems. Maybe Daisy never had an affair, but her voice was special...",
-          "es": "No dijo nada más. Le dimos algo para beber y pusimos hielo en su cabeza. La ayudamos de vuelta a su vestido. Treinta minutos después, dejamos la habitación. Las perlas estaban alrededor de su cuello de nuevo, y todo estaba bien. Al día siguiente a las cinco, se casó con Tom Buchanan. Fueron en un viaje de tres meses a los Mares del Sur."
-        },
-        {
-          "en": "About six weeks ago, she heard Gatsby’s name again. It was when I asked you if you knew Gatsby in West Egg. After you left, she came to my room and woke me up. She asked, \"What Gatsby?\" I described him while half asleep. She said in a strange voice it was the man she knew. Then I realized Gatsby was the officer she once knew.",
           "es": "Los vi en Santa Bárbara cuando regresaron. Pensé que nunca vi a una chica tan enamorada de su esposo. Si dejaba la habitación, miraba alrededor y preguntaba, '¿Dónde está Tom?' Se veía perdida hasta que él regresaba. Se sentaba en la arena con su cabeza en su falda, tocando su cara. Fue dulce y divertido verlos. Eso fue en agosto. Una semana después de irme, Tom tuvo un accidente automovilístico. Una chica con él se lastimó. Era una doncella del hotel."
         },
         {
-          "en": "When Jordan Baker finished telling this story, we left the Plaza. We were in a carriage going through Central Park. The sun went down behind the tall apartments. Children’s voices rose in the warm evening:",
+          "en": "The next April, Daisy had her baby girl. They went to France for a year. I saw them in Cannes and then in Deauville. Later, they came back to Chicago. Daisy was popular there. They had many young, rich, and wild friends. Daisy had a good reputation. Maybe because she did not drink. It helped her stay calm and avoid problems. Maybe Daisy never had an affair, but her voice was special...",
           "es": "En abril siguiente, Daisy tuvo su bebé niña. Fueron a Francia por un año. Los vi en Cannes y luego en Deauville. Más tarde, regresaron a Chicago. Daisy era popular allí. Tenían muchos amigos jóvenes, ricos y salvajes. Daisy tenía una buena reputación. Tal vez porque no bebía. Ayudaba a que permaneciera tranquila y evitara problemas. Tal vez Daisy nunca tuvo un romance, pero su voz era especial..."
         },
         {
-          "en": "\"I’m the Sheik of Araby.",
+          "en": "About six weeks ago, she heard Gatsby’s name again. It was when I asked you if you knew Gatsby in West Egg. After you left, she came to my room and woke me up. She asked, \"What Gatsby?\" I described him while half asleep. She said in a strange voice it was the man she knew. Then I realized Gatsby was the officer she once knew.",
           "es": "Hace aproximadamente seis semanas, escuchó el nombre de Gatsby de nuevo. Fue cuando te pregunté si conocías a Gatsby en West Egg. Después de que te fuiste, ella vino a mi habitación y me despertó. Preguntó, '¿Qué Gatsby?' Lo describí mientras estaba medio dormida. Dijo con una voz extraña que era el hombre que conocía. Entonces me di cuenta de que Gatsby era el oficial que una vez conoció."
         },
         {
-          "en": "Your love belongs to me.",
+          "en": "When Jordan Baker finished telling this story, we left the Plaza. We were in a carriage going through Central Park. The sun went down behind the tall apartments. Children’s voices rose in the warm evening:",
           "es": "Cuando Jordan Baker terminó de contar esta historia, dejamos el Plaza. Estábamos en un carruaje yendo a través de Central Park. El sol se puso detrás de los apartamentos altos. Las voces de los niños subieron en la noche cálida:"
         },
         {
-          "en": "At night when you’re asleep",
+          "en": "\"I’m the Sheik of Araby.",
           "es": "'Soy el Jeque de Arabia."
         },
         {
-          "en": "Into your tent I’ll creep—\"",
+          "en": "Your love belongs to me.",
           "es": "Tu amor me pertenece."
         },
         {
-          "en": "\"It was a strange coincidence,\" I said.",
+          "en": "At night when you’re asleep",
           "es": "Por la noche cuando duermes"
         },
         {
-          "en": "",
+          "en": "Into your tent I’ll creep—\"",
           "es": "En tu tienda me arrastraré—'"
         },
         {
-          "en": "",
+          "en": "\"It was a strange coincidence,\" I said.",
           "es": "'Fue una coincidencia extraña,' dije."
-        }
-      ]
-    },
-    "16": {
-      "lines": [
+        },
         {
           "en": "But it wasn’t a coincidence at all.",
           "es": "Pero no fue una coincidencia en absoluto."
@@ -700,7 +684,11 @@ export const chapterContent = {
         {
           "en": "Gatsby bought that house so Daisy would be across the bay.",
           "es": "Gatsby compró esa casa para que Daisy estuviera al otro lado de la bahía."
-        },
+        }
+      ]
+    },
+    "16": {
+      "lines": [
         {
           "en": "He didn’t just want the stars that night. He became real to me, full of purpose.",
           "es": "No solo quería las estrellas esa noche. Se volvió real para mí, lleno de propósito."
@@ -728,11 +716,7 @@ export const chapterContent = {
         {
           "en": "Why didn’t he ask you to set up a meeting?",
           "es": "¿Por qué no te pidió que organizaras un encuentro?"
-        }
-      ]
-    },
-    "17": {
-      "lines": [
+        },
         {
           "en": "He wants her to see his house,\" she explained. \"And your house is right next door.",
           "es": "Quiere que ella vea su casa,' explicó. 'Y tu casa está justo al lado."
@@ -744,7 +728,11 @@ export const chapterContent = {
         {
           "en": "\"He hoped she would come to one of his parties,\" Jordan said, \"but she never did. Then he asked people if they knew her, and I was the first. That night he asked me at his dance, and he was so careful about it. I suggested a lunch in New York. He didn’t like that:",
           "es": "'Esperaba que ella viniera a una de sus fiestas,' dijo Jordan, 'pero nunca lo hizo. Luego preguntó a la gente si la conocían, y yo fui la primera. Esa noche me preguntó en su baile, y fue tan cuidadoso. Sugerí un almuerzo en Nueva York. No le gustó eso:"
-        },
+        }
+      ]
+    },
+    "17": {
+      "lines": [
         {
           "en": "‘I don’t want to do anything out of the way!’ he kept saying. ‘I want to see her right next door.’",
           "es": "¡No quiero hacer nada fuera de lo normal!' seguía diciendo. 'Quiero verla justo al lado."
@@ -772,6 +760,18 @@ export const chapterContent = {
         {
           "en": "We passed dark trees, and then the light of Fifty-Ninth Street shone into the park. Unlike Gatsby and Tom Buchanan, I had no girl whose face floated in my mind. So I held the girl beside me closer. She smiled a little, so I brought her closer to me.",
           "es": "Pasamos árboles oscuros, y luego la luz de la Calle Cincuenta y nueve brilló en el parque. A diferencia de Gatsby y Tom Buchanan, yo no tenía una chica cuya cara flotara en mi mente. Así que sostuve a la chica al lado mío más cerca. Sonrió un poco, así que la llevé más cerca de mí."
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
         }
       ]
     }

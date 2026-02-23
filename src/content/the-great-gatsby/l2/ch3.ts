@@ -135,7 +135,7 @@ export const chapterContent = {
         },
         {
           "en": "We all felt a thrill. The three Mr. Mumbles listened eagerly.",
-          "es": ""
+          "es": "Todos sentimos un escalofrío. Los tres Sres. Murmullos escucharon con entusiasmo."
         }
       ]
     },
@@ -143,43 +143,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“I don’t think it’s that,” Lucille said skeptically. “I heard he was a German spy during the war.”",
-          "es": "Todos sentimos un escalofrío. Los tres Sres. Murmullos escucharon con entusiasmo."
-        },
-        {
-          "en": "One man nodded to confirm.",
           "es": "No creo que sea eso,\" dijo Lucille con escepticismo. \"Escuché que era un espía alemán durante la guerra."
         },
         {
-          "en": "“I heard that from a man who knew him in Germany,” he said confidently.",
+          "en": "One man nodded to confirm.",
           "es": "Un hombre asintió para confirmar."
         },
         {
-          "en": "“Oh, no,” said the first girl, “it can’t be that. He was in the American army during the war.” As we believed her, she leaned forward. “Look at him when he thinks no one is watching. I bet he killed a man.”",
+          "en": "“I heard that from a man who knew him in Germany,” he said confidently.",
           "es": "\"Escuché eso de un hombre que lo conocía en Alemania,\" dijo con confianza."
         },
         {
-          "en": "She narrowed her eyes and shivered. Lucille shivered too. We all looked around for Gatsby. People whispered about him because he was mysterious.",
+          "en": "“Oh, no,” said the first girl, “it can’t be that. He was in the American army during the war.” As we believed her, she leaned forward. “Look at him when he thinks no one is watching. I bet he killed a man.”",
           "es": "Oh, no,\" dijo la primera chica, \"no puede ser eso. Estaba en el ejército americano durante la guerra.\" Cuando la creímos, se inclinó hacia adelante. \"Míralo cuando piensa que nadie lo ve. Apuesto a que mató a un hombre."
         },
         {
-          "en": "The first supper was now served, and Jordan asked me to join her group. They were at a table on the other side of the garden. There were three married couples and Jordan’s date, a young man who thought he would win her over. Instead of wandering, this group stayed together and acted noble. They were from East Egg and looked down on West Egg’s wild party.",
+          "en": "She narrowed her eyes and shivered. Lucille shivered too. We all looked around for Gatsby. People whispered about him because he was mysterious.",
           "es": "Ella estrechó los ojos y se estremeció. Lucille también se estremeció. Todos miramos alrededor buscando a Gatsby. La gente susurraba sobre él porque era misterioso."
         },
         {
-          "en": "“Let’s go,” whispered Jordan after a boring half-hour. “This is too polite for me.”",
+          "en": "The first supper was now served, and Jordan asked me to join her group. They were at a table on the other side of the garden. There were three married couples and Jordan’s date, a young man who thought he would win her over. Instead of wandering, this group stayed together and acted noble. They were from East Egg and looked down on West Egg’s wild party.",
           "es": "La primera cena se servía ahora, y Jordan me pidió que me uniera a su grupo. Estaban en una mesa en el otro lado del jardín. Había tres parejas casadas y la cita de Jordan, un joven que pensaba que la ganaría. En lugar de vagar, este grupo se mantenía junto y actuaba de manera noble. Eran de East Egg y miraban por encima de la fiesta salvaje de West Egg."
         },
         {
-          "en": "We got up, and she said we would find Gatsby. I hadn’t met him, and it made me uneasy. The young man nodded sadly.",
+          "en": "“Let’s go,” whispered Jordan after a boring half-hour. “This is too polite for me.”",
           "es": "Vámonos,\" susurró Jordan después de una media hora aburrida. \"Esto es demasiado educado para mí."
         },
         {
-          "en": "The bar was crowded, but Gatsby wasn’t there. We couldn’t find him from the steps, and he wasn’t on the veranda. We tried an important-looking door and entered a big library with carved wood from England.",
+          "en": "We got up, and she said we would find Gatsby. I hadn’t met him, and it made me uneasy. The young man nodded sadly.",
           "es": "Nos levantamos, y dijo que encontraríamos a Gatsby. No lo había conocido, y me hacía sentir incómodo. El joven asintió tristemente."
         },
         {
-          "en": "A stout, middle-aged man with big glasses sat at a table. He was a bit drunk and stared at the books. When we entered, he turned excitedly to look at Jordan.",
+          "en": "The bar was crowded, but Gatsby wasn’t there. We couldn’t find him from the steps, and he wasn’t on the veranda. We tried an important-looking door and entered a big library with carved wood from England.",
           "es": "El bar estaba abarrotado, pero Gatsby no estaba allí. No lo encontramos desde los escalones, y no estaba en la veranda. Intentamos una puerta de aspecto importante y entramos en una gran biblioteca con madera tallada de Inglaterra."
+        },
+        {
+          "en": "A stout, middle-aged man with big glasses sat at a table. He was a bit drunk and stared at the books. When we entered, he turned excitedly to look at Jordan.",
+          "es": "Un hombre fornido, de mediana edad, con gafas grandes, estaba sentado en una mesa. Estaba un poco borracho y miraba los libros. Cuando entramos, se volvió emocionado para mirar a Jordan."
         }
       ]
     },
@@ -187,43 +187,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What do you think?” he asked suddenly.",
-          "es": "Un hombre fornido, de mediana edad, con gafas grandes, estaba sentado en una mesa. Estaba un poco borracho y miraba los libros. Cuando entramos, se volvió emocionado para mirar a Jordan."
-        },
-        {
-          "en": "“About what?”",
           "es": "\"¿Qué piensas?\" preguntó de repente."
         },
         {
-          "en": "He pointed to the bookshelves.",
+          "en": "“About what?”",
           "es": "¿Sobre qué?"
         },
         {
-          "en": "“About that. You don’t need to check. I checked. They’re real.”",
+          "en": "He pointed to the bookshelves.",
           "es": "Señaló los estantes."
         },
         {
-          "en": "“The books?”",
+          "en": "“About that. You don’t need to check. I checked. They’re real.”",
           "es": "Sobre eso. No necesitas revisar. Revisé. Son reales."
         },
         {
-          "en": "He nodded.",
+          "en": "“The books?”",
           "es": "¿Los libros?"
         },
         {
-          "en": "“Absolutely real—pages and all. I thought they’d be fake. But they’re real. Pages and—Here! Let me show you.”",
+          "en": "He nodded.",
           "es": "Asintió."
         },
         {
-          "en": "Assuming we didn’t believe him, he grabbed a book and showed us.",
+          "en": "“Absolutely real—pages and all. I thought they’d be fake. But they’re real. Pages and—Here! Let me show you.”",
           "es": "Absolutamente reales—páginas y todo. Pensé que serían falsos. Pero son reales. Páginas y—¡Aquí! Déjame mostrarte."
         },
         {
-          "en": "“See!” he said proudly. “It’s a real book. It fooled me. This guy’s like a theater director. It’s amazing. What detail! What realism! He knew when to stop—didn’t cut the pages. But what do you want? What do you expect?”",
+          "en": "Assuming we didn’t believe him, he grabbed a book and showed us.",
           "es": "Asumiendo que no lo creíamos, agarró un libro y nos lo mostró."
         },
         {
-          "en": "He took the book from me and put it back quickly. He muttered that if one book was moved, the whole library might fall.",
+          "en": "“See!” he said proudly. “It’s a real book. It fooled me. This guy’s like a theater director. It’s amazing. What detail! What realism! He knew when to stop—didn’t cut the pages. But what do you want? What do you expect?”",
           "es": "¡Mira!\" dijo con orgullo. \"Es un libro real. Me engañó. Este tipo es como un director de teatro. ¡Es sorprendente! ¡Qué detalle! ¡Qué realismo! Sabía cuándo parar—no cortó las páginas. Pero ¿qué quieres? ¿Qué esperas?"
+        },
+        {
+          "en": "He took the book from me and put it back quickly. He muttered that if one book was moved, the whole library might fall.",
+          "es": "Tomó el libro de mí y lo devolvió rápidamente. Murmuró que si se movía un libro, toda la biblioteca podría caer."
         }
       ]
     },
@@ -231,43 +231,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“Who brought you?” he asked. “Or did you just come? I was brought. Most people were brought.”",
-          "es": "Tomó el libro de mí y lo devolvió rápidamente. Murmuró que si se movía un libro, toda la biblioteca podría caer."
-        },
-        {
-          "en": "Jordan looked at him, smiling, without answering.",
           "es": "¿Quién te trajo?\" preguntó. \"¿O simplemente viniste? Me trajeron. La mayoría de la gente fue traída."
         },
         {
-          "en": "“I came with a woman named Roosevelt,” he continued. “Mrs. Claud Roosevelt. Do you know her? I met her last night. I’ve been drunk for a week, and I thought sitting in a library might sober me up.”",
+          "en": "Jordan looked at him, smiling, without answering.",
           "es": "Jordan lo miró, sonriendo, sin responder."
         },
         {
-          "en": "“Has it?”",
+          "en": "“I came with a woman named Roosevelt,” he continued. “Mrs. Claud Roosevelt. Do you know her? I met her last night. I’ve been drunk for a week, and I thought sitting in a library might sober me up.”",
           "es": "Vine con una mujer llamada Roosevelt,\" continuó. \"Sra. Claud Roosevelt. ¿La conoces? La conocí anoche. He estado borracho durante una semana, y pensé que sentarme en una biblioteca podría desintoxicarme."
         },
         {
-          "en": "“A little, I think. I can’t tell yet. I’ve only been here an hour. Did I tell you about the books? They’re real. They’re—”",
+          "en": "“Has it?”",
           "es": "¿Ha funcionado?"
         },
         {
-          "en": "You told us.",
+          "en": "“A little, I think. I can’t tell yet. I’ve only been here an hour. Did I tell you about the books? They’re real. They’re—”",
           "es": "Un poco, creo. No puedo decir todavía. Solo he estado aquí una hora. ¿Te hablé de los libros? Son reales. Son—"
         },
         {
-          "en": "We shook hands with him and went outside.",
+          "en": "You told us.",
           "es": "Ya nos lo dijiste."
         },
         {
-          "en": "People were dancing in the garden. Old men danced with young girls, and some couples danced together. There were also many girls dancing alone. By midnight, everyone was very happy. A famous singer sang in Italian, and another sang jazz. People did funny things in the garden, and laughter filled the air. Two girls dressed as babies performed, and champagne was served in big glasses. The moon was high, and the sea looked silver under the moonlight.",
+          "en": "We shook hands with him and went outside.",
           "es": "Le estrechamos la mano y salimos."
         },
         {
-          "en": "I was still with Jordan Baker. We sat at a table with a man my age and a loud girl who laughed a lot. I was having fun. I drank two glasses of champagne, and everything seemed more exciting and important.",
+          "en": "People were dancing in the garden. Old men danced with young girls, and some couples danced together. There were also many girls dancing alone. By midnight, everyone was very happy. A famous singer sang in Italian, and another sang jazz. People did funny things in the garden, and laughter filled the air. Two girls dressed as babies performed, and champagne was served in big glasses. The moon was high, and the sea looked silver under the moonlight.",
           "es": "La gente bailaba en el jardín. Hombres viejos bailaban con chicas jóvenes, y algunas parejas bailaban juntas. También había muchas chicas bailando solas. A la medianoche, todos estaban muy felices. Un cantante famoso cantaba en italiano, y otro cantaba jazz. La gente hacía cosas divertidas en el jardín, y la risa llenaba el aire. Dos chicas vestidas como bebés actuaban, y se servía champán en vasos grandes. La luna estaba alta, y el mar se veía plateado bajo la luz de la luna."
         },
         {
-          "en": "During a quiet moment, the man smiled at me.",
+          "en": "I was still with Jordan Baker. We sat at a table with a man my age and a loud girl who laughed a lot. I was having fun. I drank two glasses of champagne, and everything seemed more exciting and important.",
           "es": "Todavía estaba con Jordan Baker. Nos sentamos en una mesa con un hombre de mi edad y una chica ruidosa que reía mucho. Me estaba divirtiendo. Bebí dos vasos de champán, y todo parecía más emocionante e importante."
+        },
+        {
+          "en": "During a quiet moment, the man smiled at me.",
+          "es": "Durante un momento tranquilo, el hombre me sonrió."
         }
       ]
     },
@@ -275,43 +275,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Your face looks familiar,\" he said. \"Were you in the First Division during the war?",
-          "es": "Durante un momento tranquilo, el hombre me sonrió."
-        },
-        {
-          "en": "Yes, I was in the Twenty-eighth Infantry.",
           "es": "Tu cara se ve familiar,\" dijo. \"¿Estuviste en la Primera División durante la guerra?"
         },
         {
-          "en": "I was in the Sixteenth until June 1918. I knew I saw you before.",
+          "en": "Yes, I was in the Twenty-eighth Infantry.",
           "es": "Sí, estuve en la Vigésima Octava Infantería."
         },
         {
-          "en": "We talked about small villages in France. He lived nearby and said he just bought a hydroplane. He was going to try it in the morning.",
+          "en": "I was in the Sixteenth until June 1918. I knew I saw you before.",
           "es": "Estuve en la Decimosexta hasta junio de 1918. Sé que te vi antes."
         },
         {
-          "en": "Want to come with me, old sport? Just near the shore.",
+          "en": "We talked about small villages in France. He lived nearby and said he just bought a hydroplane. He was going to try it in the morning.",
           "es": "Hablamos sobre pueblos pequeños en Francia. Él vivía cerca y dijo que acababa de comprar un hidroavión. Iba a intentarlo por la mañana."
         },
         {
-          "en": "What time?",
+          "en": "Want to come with me, old sport? Just near the shore.",
           "es": "¿Quieres venir conmigo, viejo deportista? Solo cerca de la orilla."
         },
         {
-          "en": "Any time that suits you.",
+          "en": "What time?",
           "es": "¿A qué hora?"
         },
         {
-          "en": "I almost asked his name when Jordan smiled at me.",
+          "en": "Any time that suits you.",
           "es": "A cualquier hora que te convenga."
         },
         {
-          "en": "\"Having fun now?\" she asked.",
+          "en": "I almost asked his name when Jordan smiled at me.",
           "es": "Casi le pregunto su nombre cuando Jordan me sonrió."
         },
         {
-          "en": "Much better.\" I turned to the man. \"This is a special party for me. I haven't even seen the host. I live over there,\" I pointed, \"and Gatsby sent his driver with an invitation.",
+          "en": "\"Having fun now?\" she asked.",
           "es": "\"¿Te estás divirtiendo ahora?\" preguntó."
+        },
+        {
+          "en": "Much better.\" I turned to the man. \"This is a special party for me. I haven't even seen the host. I live over there,\" I pointed, \"and Gatsby sent his driver with an invitation.",
+          "es": "Mucho mejor.\" Me volví hacia el hombre. \"Esta es una fiesta especial para mí. Ni siquiera he visto al anfitrión. Vivo por allá,\" señalé, \"y Gatsby envió a su chofer con una invitación."
         }
       ]
     },
@@ -319,43 +319,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "He looked at me like he didn't understand.",
-          "es": "Mucho mejor.\" Me volví hacia el hombre. \"Esta es una fiesta especial para mí. Ni siquiera he visto al anfitrión. Vivo por allá,\" señalé, \"y Gatsby envió a su chofer con una invitación."
-        },
-        {
-          "en": "\"I'm Gatsby,\" he said suddenly.",
           "es": "Me miró como si no entendiera."
         },
         {
-          "en": "What!\" I said. \"Oh, I'm sorry.",
+          "en": "\"I'm Gatsby,\" he said suddenly.",
           "es": "\"Soy Gatsby,\" dijo de repente."
         },
         {
-          "en": "I thought you knew, old sport. I'm not a very good host.",
+          "en": "What!\" I said. \"Oh, I'm sorry.",
           "es": "¡¿Qué!\" dije. \"Oh, lo siento."
         },
         {
-          "en": "He smiled at me. It was a special smile that made me feel good. It made me feel understood and important. But then it was gone, and I saw a young man who spoke very carefully.",
+          "en": "I thought you knew, old sport. I'm not a very good host.",
           "es": "Pensé que sabías, viejo deportista. No soy un anfitrión muy bueno."
         },
         {
-          "en": "Just then, a butler came to tell Gatsby that Chicago was calling him. He bowed to us and left.",
+          "en": "He smiled at me. It was a special smile that made me feel good. It made me feel understood and important. But then it was gone, and I saw a young man who spoke very carefully.",
           "es": "Me sonrió. Era una sonrisa especial que me hacía sentir bien. Me hacía sentir comprendido e importante. Pero luego desapareció, y vi a un joven que hablaba muy cuidadosamente."
         },
         {
-          "en": "If you need anything, just ask, old sport,\" he said. \"Excuse me. I'll come back later.",
+          "en": "Just then, a butler came to tell Gatsby that Chicago was calling him. He bowed to us and left.",
           "es": "Justo entonces, un mayordomo llegó para decirle a Gatsby que Chicago lo llamaba. Nos hizo una reverencia y se fue."
         },
         {
-          "en": "When he left, I turned to Jordan. I was surprised. I thought Gatsby would be older and bigger.",
+          "en": "If you need anything, just ask, old sport,\" he said. \"Excuse me. I'll come back later.",
           "es": "Si necesitas algo, solo pide, viejo deportista,\" dijo. \"Disculpa. Volveré más tarde."
         },
         {
-          "en": "Who is he?\" I asked. \"Do you know?",
+          "en": "When he left, I turned to Jordan. I was surprised. I thought Gatsby would be older and bigger.",
           "es": "Cuando se fue, me volví hacia Jordan. Estaba sorprendido. Pensé que Gatsby sería mayor y más grande."
         },
         {
-          "en": "He's just a man named Gatsby.",
+          "en": "Who is he?\" I asked. \"Do you know?",
           "es": "¿Quién es?\" pregunté. \"¿Lo sabes?"
+        },
+        {
+          "en": "He's just a man named Gatsby.",
+          "es": "Es solo un hombre llamado Gatsby."
         }
       ]
     },
@@ -363,43 +363,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Where is he from? What does he do?",
-          "es": "Es solo un hombre llamado Gatsby."
-        },
-        {
-          "en": "Now you’re curious,\" she said with a small smile. \"He told me he went to Oxford.",
           "es": "¿De dónde es? ¿Qué hace?"
         },
         {
-          "en": "I started to imagine his past, but then she said something else.",
+          "en": "Now you’re curious,\" she said with a small smile. \"He told me he went to Oxford.",
           "es": "Ahora tienes curiosidad,\" dijo con una pequeña sonrisa. \"Me dijo que fue a Oxford."
         },
         {
-          "en": "But I don't believe it.",
+          "en": "I started to imagine his past, but then she said something else.",
           "es": "Empecé a imaginar su pasado, pero luego dijo algo más."
         },
         {
-          "en": "Why not?",
+          "en": "But I don't believe it.",
           "es": "Pero no lo creo."
         },
         {
-          "en": "I don't know,\" she said. \"I just don't think he went there.",
+          "en": "Why not?",
           "es": "¿Por qué no?"
         },
         {
-          "en": "Her tone reminded me of another girl who said, \"I think he killed a man.\" It made me curious. I would have believed he came from somewhere like Louisiana or New York. But young men didn't just appear and buy big houses on Long Island.",
+          "en": "I don't know,\" she said. \"I just don't think he went there.",
           "es": "No sé,\" dijo. \"Solo no creo que haya ido allá."
         },
         {
-          "en": "Anyway, he gives big parties,\" said Jordan, changing the topic. \"I like big parties. They're so private. At small parties, there is no privacy.",
+          "en": "Her tone reminded me of another girl who said, \"I think he killed a man.\" It made me curious. I would have believed he came from somewhere like Louisiana or New York. But young men didn't just appear and buy big houses on Long Island.",
           "es": "Su tono me recordó a otra chica que dijo, \"Creo que mató a un hombre.\" Me hizo sentir curiosidad. Habría creído que vino de algún lugar como Luisiana o Nueva York. Pero los jóvenes no simplemente aparecen y compran casas grandes en Long Island."
         },
         {
-          "en": "A drum boomed, and the orchestra leader spoke loudly.",
+          "en": "Anyway, he gives big parties,\" said Jordan, changing the topic. \"I like big parties. They're so private. At small parties, there is no privacy.",
           "es": "De todas formas, él da grandes fiestas,\" dijo Jordan, cambiando de tema. \"Me encantan las fiestas grandes. Son muy privadas. En las fiestas pequeñas, no hay privacidad.\""
         },
         {
-          "en": "\"Ladies and gentlemen,\" he said. \"Mr. Gatsby asked us to play Mr. Vladmir Tostoff’s new work. It was a big hit at Carnegie Hall last May. If you read the papers, you know it was a sensation.\" He smiled, and everyone laughed.",
+          "en": "A drum boomed, and the orchestra leader spoke loudly.",
           "es": "Un tambor sonó fuerte, y el líder de la orquesta habló en voz alta."
+        },
+        {
+          "en": "\"Ladies and gentlemen,\" he said. \"Mr. Gatsby asked us to play Mr. Vladmir Tostoff’s new work. It was a big hit at Carnegie Hall last May. If you read the papers, you know it was a sensation.\" He smiled, and everyone laughed.",
+          "es": "\"Señoras y caballeros,\" dijo. \"El Sr. Gatsby nos pidió que toquemos la nueva obra del Sr. Vladimir Tostoff. Fue un gran éxito en Carnegie Hall el pasado mayo. Si lee los periódicos, sabe que fue una sensación.\" Sonrió, y todos rieron."
         }
       ]
     },
@@ -407,43 +407,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "The piece is called 'Vladmir Tostoff’s Jazz History of the World!'",
-          "es": "\"Señoras y caballeros,\" dijo. \"El Sr. Gatsby nos pidió que toquemos la nueva obra del Sr. Vladimir Tostoff. Fue un gran éxito en Carnegie Hall el pasado mayo. Si lee los periódicos, sabe que fue una sensación.\" Sonrió, y todos rieron."
-        },
-        {
-          "en": "I didn't understand the music because I was watching Gatsby. He stood alone, looking at people with happy eyes. He did not drink, and he seemed different from the guests. When the music ended, girls leaned on men's shoulders and played around. But no one leaned on Gatsby, and no group included him.",
           "es": "La pieza se llama '¡La Historia del Jazz Mundial de Vladimir Tostoff!'"
         },
         {
-          "en": "I beg your pardon.",
+          "en": "I didn't understand the music because I was watching Gatsby. He stood alone, looking at people with happy eyes. He did not drink, and he seemed different from the guests. When the music ended, girls leaned on men's shoulders and played around. But no one leaned on Gatsby, and no group included him.",
           "es": "No entendí la música porque estaba mirando a Gatsby. Estaba solo, mirando a la gente con ojos felices. No bebía, y parecía diferente de los invitados. Cuando la música terminó, las chicas se apoyaban en los hombros de los hombres y jugaban. Pero nadie se apoyaba en Gatsby, y ningún grupo lo incluía."
         },
         {
-          "en": "Gatsby’s butler was beside us.",
+          "en": "I beg your pardon.",
           "es": "Disculpa."
         },
         {
-          "en": "Miss Baker?\" he asked. \"Mr. Gatsby wants to talk to you alone.",
+          "en": "Gatsby’s butler was beside us.",
           "es": "El mayordomo de Gatsby estaba a nuestro lado."
         },
         {
-          "en": "\"With me?\" she said, surprised.",
+          "en": "Miss Baker?\" he asked. \"Mr. Gatsby wants to talk to you alone.",
           "es": "¿Srta. Baker?\" preguntó. \"El Sr. Gatsby quiere hablar contigo a solas."
         },
         {
-          "en": "Yes, madame.",
+          "en": "\"With me?\" she said, surprised.",
           "es": "\"¿Conmigo?\" dijo, sorprendida."
         },
         {
-          "en": "She got up slowly, looking surprised, and followed the butler. She moved like she was on a golf course, with a spring in her step.",
+          "en": "Yes, madame.",
           "es": "Sí, señora."
         },
         {
-          "en": "I was alone, and it was almost two. I heard interesting sounds from a room with many windows. I avoided Jordan’s friend, who was talking to two chorus girls, and went inside.",
+          "en": "She got up slowly, looking surprised, and followed the butler. She moved like she was on a golf course, with a spring in her step.",
           "es": "Se levantó lentamente, luciendo sorprendida, y siguió al mayordomo. Se movía como si estuviera en un campo de golf, con un resorte en su paso."
         },
         {
-          "en": "The room was full of people. A girl in yellow played the piano, and a tall red-haired girl sang. She drank a lot of champagne and thought everything was sad. She sang and cried. Her tears mixed with her makeup, making black lines on her face. Someone joked she should sing the notes on her face. She laughed, then fell asleep in a chair.",
+          "en": "I was alone, and it was almost two. I heard interesting sounds from a room with many windows. I avoided Jordan’s friend, who was talking to two chorus girls, and went inside.",
           "es": "Estaba solo, y eran casi las dos. Escuché sonidos interesantes de una habitación con muchas ventanas. Evité al amigo de Jordan, que hablaba con dos chicas de coro, y entré."
+        },
+        {
+          "en": "The room was full of people. A girl in yellow played the piano, and a tall red-haired girl sang. She drank a lot of champagne and thought everything was sad. She sang and cried. Her tears mixed with her makeup, making black lines on her face. Someone joked she should sing the notes on her face. She laughed, then fell asleep in a chair.",
+          "es": "La habitación estaba llena de gente. Una chica en amarillo tocaba el piano, y una chica alta pelirroja cantaba. Bebía mucho champán y pensaba que todo era triste. Cantaba y lloraba. Sus lágrimas se mezclaban con su maquillaje, haciendo líneas negras en su cara. Alguien bromeó que debería cantar las notas en su cara. Rió, luego se durmió en una silla."
         }
       ]
     },
@@ -451,43 +451,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "\"She fought with a man who says he’s her husband,\" a girl next to me explained.",
-          "es": "La habitación estaba llena de gente. Una chica en amarillo tocaba el piano, y una chica alta pelirroja cantaba. Bebía mucho champán y pensaba que todo era triste. Cantaba y lloraba. Sus lágrimas se mezclaban con su maquillaje, haciendo líneas negras en su cara. Alguien bromeó que debería cantar las notas en su cara. Rió, luego se durmió en una silla."
-        },
-        {
-          "en": "I looked around. Many women were arguing with men who were said to be their husbands. Even Jordan’s group was fighting. One man talked intensely to an actress, and his wife tried to laugh but then got angry. She appeared suddenly by his side and whispered, \"You promised!\"",
           "es": "\"Peleó con un hombre que dice que es su esposo,\" explicó una chica a mi lado."
         },
         {
-          "en": "Not only the men didn't want to go home. Two sober men and their angry wives were in the hall. The wives talked loudly to each other.",
+          "en": "I looked around. Many women were arguing with men who were said to be their husbands. Even Jordan’s group was fighting. One man talked intensely to an actress, and his wife tried to laugh but then got angry. She appeared suddenly by his side and whispered, \"You promised!\"",
           "es": "Miré alrededor. Muchas mujeres estaban discutiendo con hombres que se decía que eran sus esposos. Incluso el grupo de Jordan estaba peleando. Un hombre hablaba intensamente con una actriz, y su esposa trataba de reír pero luego se enojó. Apareció de repente a su lado y susurró, \"¡Prometiste!\""
         },
         {
-          "en": "When I’m having fun, he wants to leave.",
+          "en": "Not only the men didn't want to go home. Two sober men and their angry wives were in the hall. The wives talked loudly to each other.",
           "es": "No solo los hombres no querían irse a casa. Dos hombres sobrios y sus esposas enojadas estaban en el pasillo. Las esposas hablaban en voz alta la una a la otra."
         },
         {
-          "en": "So selfish!",
+          "en": "When I’m having fun, he wants to leave.",
           "es": "Cuando me estoy divirtiendo, él quiere irse."
         },
         {
-          "en": "We always leave first.",
+          "en": "So selfish!",
           "es": "¡Tan egoísta!"
         },
         {
-          "en": "So do we.",
+          "en": "We always leave first.",
           "es": "Siempre nos vamos primero."
         },
         {
-          "en": "But we’re almost last tonight,\" said a man. \"The orchestra left half an hour ago.",
+          "en": "So do we.",
           "es": "Nosotros también."
         },
         {
-          "en": "Despite the wives agreeing it was unbelievable, the fight ended quickly. The men carried their wives out, kicking.",
+          "en": "But we’re almost last tonight,\" said a man. \"The orchestra left half an hour ago.",
           "es": "Pero casi somos los últimos esta noche,\" dijo un hombre. \"La orquesta se fue hace media hora."
         },
         {
-          "en": "While I waited for my hat, Jordan and Gatsby came out of the library. He was saying something to her, but when people came to say goodbye, he became formal.",
+          "en": "Despite the wives agreeing it was unbelievable, the fight ended quickly. The men carried their wives out, kicking.",
           "es": "A pesar de que las esposas estaban de acuerdo en que era increíble, la pelea terminó rápidamente. Los hombres llevaban a sus esposas, pataleando."
+        },
+        {
+          "en": "While I waited for my hat, Jordan and Gatsby came out of the library. He was saying something to her, but when people came to say goodbye, he became formal.",
+          "es": "Mientras esperaba mi sombrero, Jordan y Gatsby salieron de la biblioteca. Él le estaba diciendo algo, pero cuando las personas vinieron a despedirse, se volvió formal."
         }
       ]
     },
@@ -495,43 +495,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Jordan’s group called her from the porch, but she stayed to shake hands.",
-          "es": "Mientras esperaba mi sombrero, Jordan y Gatsby salieron de la biblioteca. Él le estaba diciendo algo, pero cuando las personas vinieron a despedirse, se volvió formal."
-        },
-        {
-          "en": "I heard something amazing,\" she whispered. \"How long were we inside?",
           "es": "El grupo de Jordan la llamó desde el porche, pero ella se quedó para estrechar manos."
         },
         {
-          "en": "About an hour.",
+          "en": "I heard something amazing,\" she whispered. \"How long were we inside?",
           "es": "Escuché algo sorprendente,\" susurró. \"¿Cuánto tiempo estuvimos adentro?"
         },
         {
-          "en": "\"It was amazing,\" she repeated. \"But I promised not to tell. I’m teasing you.\" She yawned. \"Come see me... Phone book... Under Mrs. Sigourney Howard... My aunt...\" She waved and joined her group.",
+          "en": "About an hour.",
           "es": "Alrededor de una hora."
         },
         {
-          "en": "I felt a bit guilty for staying late, so I joined Gatsby’s last guests. I wanted to say I looked for him earlier and apologize for not knowing him in the garden.",
+          "en": "\"It was amazing,\" she repeated. \"But I promised not to tell. I’m teasing you.\" She yawned. \"Come see me... Phone book... Under Mrs. Sigourney Howard... My aunt...\" She waved and joined her group.",
           "es": "\"Fue sorprendente,\" repitió. \"Pero prometí no decir. Te estoy molestando.\" Bostezó. \"Ven a visitarme... Directorio telefónico... Bajo la Sra. Sigourney Howard... Mi tía...\" Agitó la mano y se unió a su grupo."
         },
         {
-          "en": "Don’t worry,\" he said happily. \"Forget it, old sport.\" He touched my shoulder. \"And don’t forget we’re going on the hydroplane tomorrow at nine.",
+          "en": "I felt a bit guilty for staying late, so I joined Gatsby’s last guests. I wanted to say I looked for him earlier and apologize for not knowing him in the garden.",
           "es": "Me sentí un poco culpable por quedarme tarde, así que me uní a los últimos invitados de Gatsby. Quería decir que lo busqué antes y disculparme por no conocerlo en el jardín."
         },
         {
-          "en": "Then the butler said:",
+          "en": "Don’t worry,\" he said happily. \"Forget it, old sport.\" He touched my shoulder. \"And don’t forget we’re going on the hydroplane tomorrow at nine.",
           "es": "No te preocupes,\" dijo felizmente. \"Olvídalo, viejo deportista.\" Tocó mi hombro. \"Y no olvides que vamos en el hidroavión mañana a las nueve."
         },
         {
-          "en": "Philadelphia is on the phone, sir.",
+          "en": "Then the butler said:",
           "es": "Luego el mayordomo dijo:"
         },
         {
-          "en": "Okay, in a minute. Tell them I’ll come... Good night.",
+          "en": "Philadelphia is on the phone, sir.",
           "es": "Filadelfia está al teléfono, señor."
         },
         {
-          "en": "Good night.",
+          "en": "Okay, in a minute. Tell them I’ll come... Good night.",
           "es": "Está bien, en un minuto. Diles que voy... Buenas noches."
+        },
+        {
+          "en": "Good night.",
+          "es": "Buenas noches."
         }
       ]
     },
@@ -539,51 +539,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Good night.\" He smiled, and I felt happy to be one of the last to leave. \"Good night, old sport... Good night.",
-          "es": "Buenas noches."
-        },
-        {
-          "en": "As I walked down the steps, I saw the night wasn't over. Nearby, headlights lit up a strange scene. A new car was in a ditch, missing a wheel. Many drivers looked at the wheel. Their cars blocked the road, making noise, and adding to the chaos.",
           "es": "Buenas noches.\" Sonrió, y me sentí feliz de ser uno de los últimos en irme. \"Buenas noches, viejo deportista... Buenas noches."
         },
         {
-          "en": "A man in a long coat got off the broken car. He stood in the road and looked at the car and the tyre. He looked at the people watching with a friendly, confused look.",
+          "en": "As I walked down the steps, I saw the night wasn't over. Nearby, headlights lit up a strange scene. A new car was in a ditch, missing a wheel. Many drivers looked at the wheel. Their cars blocked the road, making noise, and adding to the chaos.",
           "es": "Mientras bajaba los escalones, vi que la noche no había terminado. Cerca, las luces frontales iluminaban una escena extraña. Un coche nuevo estaba en una zanja, sin una rueda. Muchos conductores miraban la rueda. Sus coches bloqueaban el camino, haciendo ruido, y añadiendo al caos."
         },
         {
-          "en": "“See!” he said. “It went into the ditch.”",
+          "en": "A man in a long coat got off the broken car. He stood in the road and looked at the car and the tyre. He looked at the people watching with a friendly, confused look.",
           "es": "Un hombre en un abrigo largo bajó del coche roto. Se paró en el camino y miró el coche y la llanta. Miró a las personas que observaban con una mirada amable y confundida."
         },
         {
-          "en": "He was very surprised about this. I first noticed his wonder, then I saw who he was. He was the man from Gatsby’s library.",
+          "en": "“See!” he said. “It went into the ditch.”",
           "es": "¡Mira!\" dijo. \"Entró en la zanja."
         },
         {
-          "en": "“How did it happen?”",
+          "en": "He was very surprised about this. I first noticed his wonder, then I saw who he was. He was the man from Gatsby’s library.",
           "es": "Estaba muy sorprendido por esto. Primero noté su asombro, luego vi quién era. Era el hombre de la biblioteca de Gatsby."
         },
         {
-          "en": "He shrugged.",
+          "en": "“How did it happen?”",
           "es": "¿Cómo pasó?"
         },
         {
-          "en": "“I know nothing about cars,” he said clearly.",
+          "en": "He shrugged.",
           "es": "Se encogió de hombros."
         },
         {
-          "en": "“But how did it happen? Did you hit the wall?”",
+          "en": "“I know nothing about cars,” he said clearly.",
           "es": "\"No sé nada de coches,\" dijo claramente."
         },
         {
-          "en": "“Don’t ask me,” said Owl Eyes. “I know little about driving. It happened, and that’s all I know.”",
+          "en": "“But how did it happen? Did you hit the wall?”",
           "es": "¿Pero cómo pasó? ¿Golpeaste la pared?"
         },
         {
+          "en": "“Don’t ask me,” said Owl Eyes. “I know little about driving. It happened, and that’s all I know.”",
+          "es": "No me preguntes,\" dijo Owl Eyes. \"Sé poco sobre conducir. Pasó, y eso es todo lo que sé."
+        },
+        {
           "en": "“Well, if you are a bad driver, you shouldn’t drive at night.”",
-          "es": ""
+          "es": "Bueno, si eres un mal conductor, no deberías conducir de noche."
         },
         {
           "en": "“But I wasn’t even trying,” he said, upset. “I wasn’t even trying.”",
-          "es": ""
+          "es": "Pero ni siquiera estaba intentando,\" dijo, molesto. \"Ni siquiera estaba intentando."
         }
       ]
     },
@@ -591,43 +591,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "The people around became very quiet.",
-          "es": "No me preguntes,\" dijo Owl Eyes. \"Sé poco sobre conducir. Pasó, y eso es todo lo que sé."
-        },
-        {
-          "en": "“Do you want to hurt yourself?”",
-          "es": "Bueno, si eres un mal conductor, no deberías conducir de noche."
-        },
-        {
-          "en": "“You’re lucky it was just a wheel! A bad driver and not even trying!”",
-          "es": "Pero ni siquiera estaba intentando,\" dijo, molesto. \"Ni siquiera estaba intentando."
-        },
-        {
-          "en": "“You don’t understand,” said the man. “I wasn’t driving. There’s another man in the car.”",
           "es": "La gente alrededor se puso muy callada."
         },
         {
-          "en": "Everyone was shocked. They said “Ah-h-h!” as the car door slowly opened. The crowd stepped back, and when the door was open, there was a quiet pause. Then, slowly, a pale man came out of the car. He touched the ground with a big dancing shoe.",
+          "en": "“Do you want to hurt yourself?”",
           "es": "¿Quieres lastimarte?"
         },
         {
-          "en": "The bright car lights blinded him, and the loud horns confused him. He stood swaying before he saw the man in the coat.",
+          "en": "“You’re lucky it was just a wheel! A bad driver and not even trying!”",
           "es": "¡Tienes suerte de que fuera solo una rueda! ¡Un mal conductor y ni siquiera intentando!"
         },
         {
-          "en": "“What’s wrong?” he asked calmly. “Did we run out of gas?”",
+          "en": "“You don’t understand,” said the man. “I wasn’t driving. There’s another man in the car.”",
           "es": "No entiendes,\" dijo el hombre. \"No estaba conduciendo. Hay otro hombre en el coche."
         },
         {
-          "en": "“Look!”",
+          "en": "Everyone was shocked. They said “Ah-h-h!” as the car door slowly opened. The crowd stepped back, and when the door was open, there was a quiet pause. Then, slowly, a pale man came out of the car. He touched the ground with a big dancing shoe.",
           "es": "Todos estaban en shock. Dijeron \"¡Ah-h-h!\" cuando la puerta del coche se abrió lentamente. La multitud retrocedió, y cuando la puerta estaba abierta, hubo una pausa silenciosa. Luego, lentamente, un hombre pálido salió del coche. Tocó el suelo con un zapato de baile grande."
         },
         {
-          "en": "Many fingers pointed at the broken wheel. He looked at it, then looked up like he thought it fell from the sky.",
+          "en": "The bright car lights blinded him, and the loud horns confused him. He stood swaying before he saw the man in the coat.",
           "es": "Las luces brillantes del coche lo cegaron, y las bocinas altas lo confundieron. Se quedó balanceándose antes de ver al hombre en el abrigo."
         },
         {
-          "en": "“It came off,” someone said.",
+          "en": "“What’s wrong?” he asked calmly. “Did we run out of gas?”",
           "es": "¿Qué pasa?\" preguntó tranquilamente. \"¿Nos quedamos sin gasolina?"
+        },
+        {
+          "en": "“Look!”",
+          "es": "¡Mira!"
+        },
+        {
+          "en": "Many fingers pointed at the broken wheel. He looked at it, then looked up like he thought it fell from the sky.",
+          "es": "Muchos dedos señalaban la rueda rota. La miró, luego miró hacia arriba como si pensara que había caído del cielo."
+        },
+        {
+          "en": "“It came off,” someone said.",
+          "es": "\"Se cayó,\" dijo alguien."
         }
       ]
     },
@@ -635,43 +635,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "He nodded.",
-          "es": "¡Mira!"
-        },
-        {
-          "en": "“At first I didn’t notice we stopped.”",
-          "es": "Muchos dedos señalaban la rueda rota. La miró, luego miró hacia arriba como si pensara que había caído del cielo."
-        },
-        {
-          "en": "There was a pause. Then he took a deep breath and stood tall. He said:",
-          "es": "\"Se cayó,\" dijo alguien."
-        },
-        {
-          "en": "“Can you tell me where a gas station is?”",
           "es": "Asintió."
         },
         {
-          "en": "Many men, some better off than him, explained the wheel and car were not connected anymore.",
+          "en": "“At first I didn’t notice we stopped.”",
           "es": "Al principio no noté que nos detuvimos."
         },
         {
-          "en": "“Back out,” he suggested. “Put it in reverse.”",
+          "en": "There was a pause. Then he took a deep breath and stood tall. He said:",
           "es": "Hubo una pausa. Luego respiró profundo y se puso de pie. Dijo:"
         },
         {
-          "en": "“But the wheel’s off!”",
+          "en": "“Can you tell me where a gas station is?”",
           "es": "¿Puedes decirme dónde está una gasolinera?"
         },
         {
-          "en": "He paused.",
+          "en": "Many men, some better off than him, explained the wheel and car were not connected anymore.",
           "es": "Muchos hombres, algunos en mejor situación que él, le explicaron que la rueda y el coche ya no estaban conectados."
         },
         {
-          "en": "“No harm in trying,” he said.",
+          "en": "“Back out,” he suggested. “Put it in reverse.”",
           "es": "Atrás,\" sugirió. \"Ponlo en reversa."
         },
         {
-          "en": "The car horns were very loud, so I walked across the lawn to go home. I looked back once. The moon was shining over Gatsby’s house, making the night beautiful again. It was quiet, and Gatsby stood alone on the porch, waving goodbye.",
+          "en": "“But the wheel’s off!”",
           "es": "¡Pero la rueda está rota!"
+        },
+        {
+          "en": "He paused.",
+          "es": "Hizo una pausa."
+        },
+        {
+          "en": "“No harm in trying,” he said.",
+          "es": "\"No hay daño en intentar,\" dijo."
+        },
+        {
+          "en": "The car horns were very loud, so I walked across the lawn to go home. I looked back once. The moon was shining over Gatsby’s house, making the night beautiful again. It was quiet, and Gatsby stood alone on the porch, waving goodbye.",
+          "es": "Las bocinas del coche eran muy altas, así que caminé por el jardín para irme a casa. Miré hacia atrás una vez. La luna brillaba sobre la casa de Gatsby, haciendo la noche hermosa nuevamente. Estaba tranquilo, y Gatsby estaba solo en el porche, agitando la mano despidiéndose."
         }
       ]
     },
@@ -679,51 +679,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Reading what I wrote, I see it seems like these nights were all that mattered to me. But they were just small events in a busy summer. My personal life was more important.",
-          "es": "Hizo una pausa."
-        },
-        {
-          "en": "Most of the time I worked. In the morning, the sun was behind me as I walked to the Probity Trust in New York. I knew the other workers by their first names. We ate lunch in crowded restaurants. I had a short romance with a girl from Jersey City, but her brother didn’t like me. When she went on vacation, we ended it quietly.",
-          "es": "\"No hay daño en intentar,\" dijo."
-        },
-        {
-          "en": "I usually had dinner at the Yale Club. It was the saddest part of my day. Then I went to the library to study investments for an hour. There were often noisy people around, but they didn’t come into the library, so it was a good place to work. After that, if the night was nice, I walked down Madison Avenue and over to the Pennsylvania Station.",
-          "es": "Las bocinas del coche eran muy altas, así que caminé por el jardín para irme a casa. Miré hacia atrás una vez. La luna brillaba sobre la casa de Gatsby, haciendo la noche hermosa nuevamente. Estaba tranquilo, y Gatsby estaba solo en el porche, agitando la mano despidiéndose."
-        },
-        {
-          "en": "I began to like New York. It felt exciting at night. I liked the busy streets with people and cars. I walked up Fifth Avenue and imagined stories about the people I saw. Sometimes I followed them in my mind to their homes, and they smiled at me before going inside. At twilight, I felt lonely sometimes. I saw other young workers alone, waiting to eat dinner by themselves.",
           "es": "Leyendo lo que escribí, veo que parece que estas noches eran todo lo que me importaba. Pero eran solo eventos pequeños en un verano ocupado. Mi vida personal era más importante."
         },
         {
-          "en": "At eight o’clock, the streets were full of taxis going to the theatre. I felt sad. People leaned together in the taxis, talking and laughing. I imagined I was with them, feeling their excitement. I wished them well.",
+          "en": "Most of the time I worked. In the morning, the sun was behind me as I walked to the Probity Trust in New York. I knew the other workers by their first names. We ate lunch in crowded restaurants. I had a short romance with a girl from Jersey City, but her brother didn’t like me. When she went on vacation, we ended it quietly.",
           "es": "La mayoría del tiempo trabajaba. Por la mañana, el sol estaba detrás de mí mientras caminaba a Probity Trust en Nueva York. Conocía a los otros trabajadores por sus nombres de pila. Comíamos almuerzo en restaurantes abarrotados. Tuve un romance breve con una chica de Jersey City, pero su hermano no me gustaba. Cuando se fue de vacaciones, terminamos tranquilamente."
         },
         {
-          "en": "I didn’t see Jordan Baker for a while, but I found her again in midsummer. I was happy to go places with her because she was a famous golf player. Then I felt curious about her. She seemed bored and proud, but I thought she hid something. Once, at a party, she left a car in the rain with the top down and lied about it. I remembered a story about her cheating in a golf tournament. It almost became a scandal, but it didn’t.",
+          "en": "I usually had dinner at the Yale Club. It was the saddest part of my day. Then I went to the library to study investments for an hour. There were often noisy people around, but they didn’t come into the library, so it was a good place to work. After that, if the night was nice, I walked down Madison Avenue and over to the Pennsylvania Station.",
           "es": "Usualmente cenaba en el Yale Club. Era la parte más triste de mi día. Luego iba a la biblioteca a estudiar inversiones durante una hora. A menudo había personas ruidosas alrededor, pero no entraban en la biblioteca, así que era un buen lugar para trabajar. Después de eso, si la noche era bonita, caminaba por Madison Avenue y hacia la Estación de Pensilvania."
         },
         {
-          "en": "Jordan avoided smart men. I saw it was because she felt safer with people who couldn’t see through her. She was dishonest. She didn’t like being at a disadvantage, so she learned to lie to keep her cool smile and meet her needs.",
+          "en": "I began to like New York. It felt exciting at night. I liked the busy streets with people and cars. I walked up Fifth Avenue and imagined stories about the people I saw. Sometimes I followed them in my mind to their homes, and they smiled at me before going inside. At twilight, I felt lonely sometimes. I saw other young workers alone, waiting to eat dinner by themselves.",
           "es": "Empecé a gustarme Nueva York. Se sentía emocionante por la noche. Me gustaban las calles ocupadas con personas y coches. Caminé por la Quinta Avenida e imaginé historias sobre las personas que veía. A veces las seguía en mi mente hacia sus casas, y me sonreían antes de entrar. Al atardecer, a veces me sentía solo. Vi a otros jóvenes trabajadores solos, esperando cenar por sí solos."
         },
         {
-          "en": "It didn’t matter to me. Dishonesty in a woman is not something I blame deeply. I felt sorry, then I forgot. At the same party, we talked about driving. She drove close to some workers and hit a button on a man’s coat.",
+          "en": "At eight o’clock, the streets were full of taxis going to the theatre. I felt sad. People leaned together in the taxis, talking and laughing. I imagined I was with them, feeling their excitement. I wished them well.",
           "es": "A las ocho en punto, las calles estaban llenas de taxis yendo al teatro. Me sentí triste. La gente se apoyaba juntos en los taxis, hablando y riendo. Imaginé que estaba con ellos, sintiendo su emoción. Les deseaba lo mejor."
         },
         {
-          "en": "“You’re a bad driver,” I said. “You should be more careful or not drive.”",
+          "en": "I didn’t see Jordan Baker for a while, but I found her again in midsummer. I was happy to go places with her because she was a famous golf player. Then I felt curious about her. She seemed bored and proud, but I thought she hid something. Once, at a party, she left a car in the rain with the top down and lied about it. I remembered a story about her cheating in a golf tournament. It almost became a scandal, but it didn’t.",
           "es": "No vi a Jordan Baker por un tiempo, pero la encontré de nuevo a mediados de verano. Estaba feliz de ir a lugares con ella porque era una jugadora de golf famosa. Luego sentí curiosidad sobre ella. Parecía aburrida y orgullosa, pero pensé que escondía algo. Una vez, en una fiesta, dejó un coche en la lluvia con la capota abierta y mintió al respecto. Recordé una historia sobre ella haciendo trampa en un torneo de golf. Casi se convirtió en un escándalo, pero no sucedió."
         },
         {
-          "en": "“I am careful.”",
+          "en": "Jordan avoided smart men. I saw it was because she felt safer with people who couldn’t see through her. She was dishonest. She didn’t like being at a disadvantage, so she learned to lie to keep her cool smile and meet her needs.",
           "es": "Jordan evitaba a hombres inteligentes. Vi que era porque se sentía más segura con personas que no podían verla completamente. Era deshonesta. No le gustaba estar en desventaja, así que aprendió a mentir para mantener su sonrisa fresca y cumplir sus necesidades."
         },
         {
+          "en": "It didn’t matter to me. Dishonesty in a woman is not something I blame deeply. I felt sorry, then I forgot. At the same party, we talked about driving. She drove close to some workers and hit a button on a man’s coat.",
+          "es": "No me importaba. La deshonestidad en una mujer no es algo que culpe profundamente. Me sentí mal, luego olvidé. En la misma fiesta, hablamos sobre conducir. Ella condujo cerca de algunos trabajadores y presionó un botón en el abrigo de un hombre."
+        },
+        {
+          "en": "“You’re a bad driver,” I said. “You should be more careful or not drive.”",
+          "es": "Eres una mala conductora,\" dije. \"Deberías tener más cuidado o no conducir."
+        },
+        {
+          "en": "“I am careful.”",
+          "es": "Soy cuidadosa."
+        },
+        {
           "en": "“No, you’re not.”",
-          "es": ""
+          "es": "No, no lo eres."
         },
         {
           "en": "“Well, other people are,” she said lightly.",
-          "es": ""
+          "es": "\"Bueno, otras personas sí,\" dijo ligeramente."
         }
       ]
     },
@@ -731,43 +731,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What’s that got to do with it?”",
-          "es": "No me importaba. La deshonestidad en una mujer no es algo que culpe profundamente. Me sentí mal, luego olvidé. En la misma fiesta, hablamos sobre conducir. Ella condujo cerca de algunos trabajadores y presionó un botón en el abrigo de un hombre."
-        },
-        {
-          "en": "“They’ll stay out of my way,” she said. “It takes two to make an accident.”",
-          "es": "Eres una mala conductora,\" dije. \"Deberías tener más cuidado o no conducir."
-        },
-        {
-          "en": "“What if you met someone as careless as you?”",
-          "es": "Soy cuidadosa."
-        },
-        {
-          "en": "“I hope I never will,” she said. “I hate careless people. That’s why I like you.”",
-          "es": "No, no lo eres."
-        },
-        {
-          "en": "Her eyes looked straight ahead, but she changed our relationship. For a moment, I thought I loved her. But I am slow to act and have rules that stop me. I knew I needed to end things back home first. I wrote letters every week, signing them “Love, Nick,” but I thought of a girl who played tennis. I needed to end that before I was free.",
-          "es": "\"Bueno, otras personas sí,\" dijo ligeramente."
-        },
-        {
-          "en": "Everyone thinks they have at least one good quality, and this is mine: I am one of the few honest people I know.",
           "es": "¿Qué tiene eso que ver?"
         },
         {
-          "en": "",
+          "en": "“They’ll stay out of my way,” she said. “It takes two to make an accident.”",
           "es": "Se mantendrán fuera de mi camino,\" dijo. \"Se necesitan dos para hacer un accidente."
         },
         {
-          "en": "",
+          "en": "“What if you met someone as careless as you?”",
           "es": "¿Qué si encontraras a alguien tan descuidado como tú?"
         },
         {
-          "en": "",
+          "en": "“I hope I never will,” she said. “I hate careless people. That’s why I like you.”",
           "es": "Espero no hacerlo nunca,\" dijo. \"Odio a la gente descuidada. Por eso me gustas tú."
         },
         {
-          "en": "",
+          "en": "Her eyes looked straight ahead, but she changed our relationship. For a moment, I thought I loved her. But I am slow to act and have rules that stop me. I knew I needed to end things back home first. I wrote letters every week, signing them “Love, Nick,” but I thought of a girl who played tennis. I needed to end that before I was free.",
           "es": "Sus ojos miraban hacia adelante, pero cambió nuestra relación. Por un momento, pensé que la amaba. Pero soy lento para actuar y tengo reglas que me detienen. Sabía que necesitaba terminar las cosas en casa primero. Escribía cartas cada semana, firmándolas \"Con amor, Nick,\" pero pensaba en una chica que jugaba tenis. Necesitaba terminar eso antes de ser libre."
+        },
+        {
+          "en": "Everyone thinks they have at least one good quality, and this is mine: I am one of the few honest people I know.",
+          "es": "Todos piensan que tienen al menos una buena cualidad, y la mía es esta: soy una de las pocas personas honradas que conozco."
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
+        },
+        {
+          "en": "",
+          "es": ""
         }
       ]
     },
@@ -775,7 +775,7 @@ export const chapterContent = {
       "lines": [
         {
           "en": "",
-          "es": "Todos piensan que tienen al menos una buena cualidad, y la mía es esta: soy una de las pocas personas honradas que conozco."
+          "es": ""
         }
       ]
     }

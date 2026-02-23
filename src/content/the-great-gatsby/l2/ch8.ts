@@ -267,7 +267,7 @@ export const chapterContent = {
         },
         {
           "en": "We talked like this for a while, then we stopped talking. I don't know who hung up first, but I didn't care. I couldn't talk to her over tea that day if I never talked to her again.",
-          "es": ""
+          "es": "Hablamos así durante un rato, luego dejamos de hablar. No sé quién colgó primero, pero no me importó. No podía hablar con ella en el té ese día si nunca volvía a hablar con ella."
         }
       ]
     },
@@ -275,43 +275,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "I called Gatsby's house a few minutes later, but the line was busy. I tried four times; finally, the operator told me the line was open for a long-distance call from Detroit. I looked at my timetable and circled the three-fifty train. Then I leaned back and tried to think. It was just noon.",
-          "es": "Hablamos así durante un rato, luego dejamos de hablar. No sé quién colgó primero, pero no me importó. No podía hablar con ella en el té ese día si nunca volvía a hablar con ella."
-        },
-        {
-          "en": "When I passed the ash-heaps on the train that morning, I went to the other side of the car. I thought there would be a curious crowd there all day, with boys looking for dark spots in the dust, and a man telling the story over and over until it wasn't real anymore. Myrtle Wilson's sad story would be forgotten. Now I want to go back and tell what happened at the garage after we left the night before.",
           "es": "Llamé a la casa de Gatsby unos minutos después, pero la línea estaba ocupada. Intenté cuatro veces; finalmente, la operadora me dijo que la línea estaba abierta para una llamada de larga distancia desde Detroit. Miré mi horario de trenes y marqué el tren de las tres y cincuenta. Luego me recosté e intenté pensar. Era solo mediodía."
         },
         {
-          "en": "They had trouble finding the sister, Catherine. She must have drunk too much because she was confused when she arrived. She didn't know the ambulance had gone to Flushing. When they told her, she fainted. Someone took her in their car and followed her sister's body.",
+          "en": "When I passed the ash-heaps on the train that morning, I went to the other side of the car. I thought there would be a curious crowd there all day, with boys looking for dark spots in the dust, and a man telling the story over and over until it wasn't real anymore. Myrtle Wilson's sad story would be forgotten. Now I want to go back and tell what happened at the garage after we left the night before.",
           "es": "Cuando pasé los basureros en el tren esa mañana, fui al otro lado del auto. Pensé que habría una multitud curiosa allí todo el día, con niños buscando manchas oscuras en el polvo, y un hombre contando la historia una y otra vez hasta que ya no fuera real. La triste historia de Myrtle Wilson sería olvidada. Ahora quiero volver y contar lo que pasó en el garaje después de que nos fuimos la noche anterior."
         },
         {
-          "en": "Until late at night, people came to the garage. George Wilson rocked back and forth inside. The office door was open, and everyone looked in. Finally, someone said it was a shame and closed the door. Michaelis and some men were with him; first, four or five, then two or three. Later, Michaelis asked the last man to wait fifteen minutes while he went to make coffee. After that, he stayed with Wilson until morning.",
+          "en": "They had trouble finding the sister, Catherine. She must have drunk too much because she was confused when she arrived. She didn't know the ambulance had gone to Flushing. When they told her, she fainted. Someone took her in their car and followed her sister's body.",
           "es": "Tuvieron problemas para encontrar a la hermana, Catherine. Debe haber bebido demasiado porque estaba confundida cuando llegó. No sabía que la ambulancia había ido a Flushing. Cuando se lo dijeron, se desmayó. Alguien la metió en su auto y siguió el cuerpo de su hermana."
         },
         {
-          "en": "Around three o'clock, Wilson's talking changed. He was quieter and talked about the yellow car. He said he could find out who owned it. Then he said his wife came home bruised a few months ago.",
+          "en": "Until late at night, people came to the garage. George Wilson rocked back and forth inside. The office door was open, and everyone looked in. Finally, someone said it was a shame and closed the door. Michaelis and some men were with him; first, four or five, then two or three. Later, Michaelis asked the last man to wait fifteen minutes while he went to make coffee. After that, he stayed with Wilson until morning.",
           "es": "Hasta tarde en la noche, las personas llegaban al garaje. George Wilson se mecía adelante y atrás adentro. La puerta de la oficina estaba abierta, y todos miraban adentro. Finalmente, alguien dijo que era una vergüenza y cerró la puerta. Michaelis y algunos hombres estaban con él; primero, cuatro o cinco, luego dos o tres. Más tarde, Michaelis pidió al último hombre que esperara quince minutos mientras iba a hacer café. Después de eso, se quedó con Wilson hasta la mañana."
         },
         {
-          "en": "But when he heard himself, he cried, \"Oh, my God!\" Michaelis tried to distract him.",
+          "en": "Around three o'clock, Wilson's talking changed. He was quieter and talked about the yellow car. He said he could find out who owned it. Then he said his wife came home bruised a few months ago.",
           "es": "Alrededor de las tres, la conversación de Wilson cambió. Estaba más tranquilo y hablaba sobre el auto amarillo. Dijo que podía averiguar quién era dueño. Luego dijo que su esposa llegó a casa magullada hace unos meses."
         },
         {
-          "en": "How long have you been married, George? Come on, try to sit still and answer. How long?",
+          "en": "But when he heard himself, he cried, \"Oh, my God!\" Michaelis tried to distract him.",
           "es": "Pero cuando se escuchó a sí mismo, lloró: \"¡Oh, Dios mío!\" Michaelis intentó distraerlo."
         },
         {
-          "en": "Twelve years.",
+          "en": "How long have you been married, George? Come on, try to sit still and answer. How long?",
           "es": "¿Cuánto tiempo llevas casado, George? Vamos, intenta estar tranquilo y responder. ¿Cuánto tiempo?"
         },
         {
-          "en": "Do you have children? Come on, George, sit still—I asked you a question. Do you have children?",
+          "en": "Twelve years.",
           "es": "Doce años."
         },
         {
-          "en": "The beetles hit the light, and when Michaelis heard a car outside, it sounded like the car that didn't stop. He didn't like going into the garage because the workbench was stained. He moved around the office, knowing every object before morning. Sometimes he sat with Wilson to calm him.",
+          "en": "Do you have children? Come on, George, sit still—I asked you a question. Do you have children?",
           "es": "¿Tienes hijos? Vamos, George, estate tranquilo, te hice una pregunta. ¿Tienes hijos?"
+        },
+        {
+          "en": "The beetles hit the light, and when Michaelis heard a car outside, it sounded like the car that didn't stop. He didn't like going into the garage because the workbench was stained. He moved around the office, knowing every object before morning. Sometimes he sat with Wilson to calm him.",
+          "es": "Los escarabajos golpearon la luz, y cuando Michaelis escuchó un auto afuera, sonaba como el auto que no se detuvo. No le gustaba entrar en el garaje porque el banco de trabajo estaba manchado. Se movió alrededor de la oficina, conociendo cada objeto antes del amanecer. A veces se sentaba con Wilson para calmarlo."
         }
       ]
     },
@@ -319,43 +319,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Do you go to church, George? Maybe I could call one, and a priest could come and talk to you.",
-          "es": "Los escarabajos golpearon la luz, y cuando Michaelis escuchó un auto afuera, sonaba como el auto que no se detuvo. No le gustaba entrar en el garaje porque el banco de trabajo estaba manchado. Se movió alrededor de la oficina, conociendo cada objeto antes del amanecer. A veces se sentaba con Wilson para calmarlo."
-        },
-        {
-          "en": "I don't belong to any.",
           "es": "¿Vas a la iglesia, George? Tal vez podría llamar a uno, y un sacerdote podría venir y hablar contigo."
         },
         {
-          "en": "You should have a church, George, for times like this. Didn't you get married in a church? Listen, George, listen to me. Didn't you?",
+          "en": "I don't belong to any.",
           "es": "No pertenezco a ninguna."
         },
         {
-          "en": "That was a long time ago.",
+          "en": "You should have a church, George, for times like this. Didn't you get married in a church? Listen, George, listen to me. Didn't you?",
           "es": "Deberías tener una iglesia, George, para momentos como este. ¿No te casaron en una iglesia? Escúchame, George, escúchame. ¿No es así?"
         },
         {
-          "en": "Answering broke his rocking rhythm. He was silent for a moment. Then the same confused look came back to his eyes.",
+          "en": "That was a long time ago.",
           "es": "Eso fue hace mucho tiempo."
         },
         {
-          "en": "\"Look in the drawer there,\" he said, pointing.",
+          "en": "Answering broke his rocking rhythm. He was silent for a moment. Then the same confused look came back to his eyes.",
           "es": "Responder rompió su ritmo de balanceo. Estuvo en silencio por un momento. Luego la misma mirada confusa volvió a sus ojos."
         },
         {
-          "en": "Which drawer?",
+          "en": "\"Look in the drawer there,\" he said, pointing.",
           "es": "—Mira en el cajón allá —dijo, señalando."
         },
         {
-          "en": "That one.",
+          "en": "Which drawer?",
           "es": "¿Qué cajón?"
         },
         {
-          "en": "Michaelis opened the drawer. There was only a small dog-leash, made of leather and silver. It was new.",
+          "en": "That one.",
           "es": "Ese."
         },
         {
-          "en": "\"This?\" he asked, holding it up.",
+          "en": "Michaelis opened the drawer. There was only a small dog-leash, made of leather and silver. It was new.",
           "es": "Michaelis abrió el cajón. Solo había una correa pequeña para perro, hecha de cuero y plata. Era nueva."
+        },
+        {
+          "en": "\"This?\" he asked, holding it up.",
+          "es": "—¿Esto? —preguntó, sosteniéndola."
         }
       ]
     },
@@ -363,43 +363,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Wilson stared and nodded.",
-          "es": "—¿Esto? —preguntó, sosteniéndola."
-        },
-        {
-          "en": "I found it yesterday. She tried to tell me, but I knew it was strange.",
           "es": "Wilson miró fijamente y asintió."
         },
         {
-          "en": "You mean your wife bought it?",
+          "en": "I found it yesterday. She tried to tell me, but I knew it was strange.",
           "es": "La encontré ayer. Ella intentó decirme, pero sabía que era extraño."
         },
         {
-          "en": "She had it wrapped in paper on her table.",
+          "en": "You mean your wife bought it?",
           "es": "¿Quieres decir que tu esposa la compró?"
         },
         {
-          "en": "Michaelis didn't see anything strange and told Wilson why his wife might have bought it. But Wilson probably heard these reasons from Myrtle before, because he whispered, \"Oh, my God!\" again.",
+          "en": "She had it wrapped in paper on her table.",
           "es": "La tenía envuelta en papel en su mesa."
         },
         {
-          "en": "\"Then he killed her,\" said Wilson suddenly.",
+          "en": "Michaelis didn't see anything strange and told Wilson why his wife might have bought it. But Wilson probably heard these reasons from Myrtle before, because he whispered, \"Oh, my God!\" again.",
           "es": "Michaelis no vio nada extraño y le dijo a Wilson por qué su esposa podría haberla comprado. Pero Wilson probablemente escuchó estas razones de Myrtle antes, porque susurró: \"¡Oh, Dios mío!\" de nuevo."
         },
         {
-          "en": "Who did?",
+          "en": "\"Then he killed her,\" said Wilson suddenly.",
           "es": "—Entonces él la mató —dijo Wilson de repente."
         },
         {
-          "en": "I have a way of finding out.",
+          "en": "Who did?",
           "es": "¿Quién?"
         },
         {
-          "en": "You're upset, George,\" said his friend. \"This is hard for you, and you don't know what you're saying. You should sit quietly till morning.",
+          "en": "I have a way of finding out.",
           "es": "Tengo una forma de averiguarlo."
         },
         {
-          "en": "He murdered her.",
+          "en": "You're upset, George,\" said his friend. \"This is hard for you, and you don't know what you're saying. You should sit quietly till morning.",
           "es": "Estás molesto, George —dijo su amigo—. Esto es difícil para ti, y no sabes lo que estás diciendo. Deberías estar tranquilo hasta la mañana."
+        },
+        {
+          "en": "He murdered her.",
+          "es": "Él la asesinó."
         }
       ]
     },
@@ -407,43 +407,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "It was an accident, George.",
-          "es": "Él la asesinó."
-        },
-        {
-          "en": "Wilson shook his head. His eyes narrowed, and his mouth showed a small smile.",
           "es": "Fue un accidente, George."
         },
         {
-          "en": "I know,\" he said. \"I'm trusting, and I don't think badly of anyone, but when I know something, I know it. It was the man in that car. She ran to speak to him, and he didn't stop.",
+          "en": "Wilson shook his head. His eyes narrowed, and his mouth showed a small smile.",
           "es": "Wilson sacudió la cabeza. Sus ojos se estrecharon, y su boca mostró una pequeña sonrisa."
         },
         {
-          "en": "Michaelis had seen this too, but he didn't think it was important. He thought Mrs. Wilson was running from her husband, not trying to stop a car.",
+          "en": "I know,\" he said. \"I'm trusting, and I don't think badly of anyone, but when I know something, I know it. It was the man in that car. She ran to speak to him, and he didn't stop.",
           "es": "Lo sé —dijo—. Soy confiado, y no pienso mal de nadie, pero cuando sé algo, lo sé. Fue el hombre en ese auto. Ella corría para hablar con él, y él no se detuvo."
         },
         {
-          "en": "How could she have been like that?",
+          "en": "Michaelis had seen this too, but he didn't think it was important. He thought Mrs. Wilson was running from her husband, not trying to stop a car.",
           "es": "Michaelis también había visto esto, pero no pensó que fuera importante. Pensó que la Sra. Wilson corría de su esposo, no intentando detener un auto."
         },
         {
-          "en": "She's a deep one,\" said Wilson, as if that answered everything. \"Ah-h-h—",
+          "en": "How could she have been like that?",
           "es": "¿Cómo podría haber sido así?"
         },
         {
-          "en": "He began to rock again, and Michaelis twisted the leash in his hand.",
+          "en": "She's a deep one,\" said Wilson, as if that answered everything. \"Ah-h-h—",
           "es": "Ella es profunda —dijo Wilson, como si eso lo explicara todo—. Ahhhh..."
         },
         {
-          "en": "Maybe you have a friend I could call, George?",
+          "en": "He began to rock again, and Michaelis twisted the leash in his hand.",
           "es": "Comenzó a mecerse de nuevo, y Michaelis torció la correa en su mano."
         },
         {
-          "en": "This was a hope—he was almost sure Wilson had no friend. There wasn't enough of him for his wife. Michaelis was glad when he saw the room change, a blue light by the window. He knew dawn was near. At five o'clock, it was blue enough to turn off the light.",
+          "en": "Maybe you have a friend I could call, George?",
           "es": "¿Tal vez tengas un amigo al que pueda llamar, George?"
         },
         {
-          "en": "Wilson's eyes looked at the ash-heaps, where small grey clouds moved in the dawn wind.",
+          "en": "This was a hope—he was almost sure Wilson had no friend. There wasn't enough of him for his wife. Michaelis was glad when he saw the room change, a blue light by the window. He knew dawn was near. At five o'clock, it was blue enough to turn off the light.",
           "es": "Esto fue una esperanza: estaba casi seguro de que Wilson no tenía amigos. No había suficiente de él para su esposa. Michaelis estaba feliz cuando vio que la habitación cambió, una luz azul por la ventana. Sabía que el amanecer estaba cerca. A las cinco, era lo suficientemente azul como para apagar la luz."
+        },
+        {
+          "en": "Wilson's eyes looked at the ash-heaps, where small grey clouds moved in the dawn wind.",
+          "es": "Los ojos de Wilson miraron los basureros, donde pequeñas nubes grises se movían en el viento del amanecer."
         }
       ]
     },
@@ -451,43 +451,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "I spoke to her,\" he said after a long silence. \"I told her she might fool me but not God. I took her to the window\"—he got up and went to the window—\"and I said, 'God knows what you did. You can't fool God!'",
-          "es": "Los ojos de Wilson miraron los basureros, donde pequeñas nubes grises se movían en el viento del amanecer."
-        },
-        {
-          "en": "Michaelis saw he was looking at Doctor T. J. Eckleburg's eyes, pale and large, in the morning light.",
           "es": "Le hablé —dijo después de un largo silencio—. Le dije que podría engañarme pero no a Dios. La llevé a la ventana —se levantó y fue a la ventana—, y dije: \"¡Dios sabe lo que hiciste. ¡No puedes engañar a Dios!\""
         },
         {
-          "en": "\"God sees everything,\" Wilson said again.",
+          "en": "Michaelis saw he was looking at Doctor T. J. Eckleburg's eyes, pale and large, in the morning light.",
           "es": "Michaelis vio que estaba mirando los ojos del Doctor T. J. Eckleburg, pálidos y grandes, en la luz de la mañana."
         },
         {
-          "en": "\"That's an advertisement,\" Michaelis told him. He turned from the window and looked back into the room. But Wilson stood there a long time, his face close to the window, nodding.",
+          "en": "\"God sees everything,\" Wilson said again.",
           "es": "—Dios lo ve todo —dijo Wilson de nuevo."
         },
         {
-          "en": "By six o'clock, Michaelis was tired and happy to hear a car stop outside. It was one of the men from the night before. He made breakfast for three, and he and the other man ate together. Wilson was quieter now, and Michaelis went home to sleep. When he woke up four hours later and went back to the garage, Wilson was gone.",
+          "en": "\"That's an advertisement,\" Michaelis told him. He turned from the window and looked back into the room. But Wilson stood there a long time, his face close to the window, nodding.",
           "es": "—Eso es un anuncio —le dijo Michaelis—. Se dio vuelta de la ventana y miró hacia atrás en la habitación. Pero Wilson se quedó allí mucho tiempo, su cara cerca de la ventana, asintiendo."
         },
         {
-          "en": "His steps were followed to Port Roosevelt and then to Gad's Hill. He bought a sandwich he didn't eat and a cup of coffee. He must have been tired and walked slowly because he reached Gad's Hill at noon. So far, his time was clear—boys saw a man acting strangely, and drivers saw him staring from the road. Then he disappeared for three hours. The police thought he went from garage to garage, asking about a yellow car. But no garage man saw him, and maybe he had another way to find out. By two-thirty, he was in West Egg, asking for Gatsby's house. By then, he knew Gatsby's name.",
+          "en": "By six o'clock, Michaelis was tired and happy to hear a car stop outside. It was one of the men from the night before. He made breakfast for three, and he and the other man ate together. Wilson was quieter now, and Michaelis went home to sleep. When he woke up four hours later and went back to the garage, Wilson was gone.",
           "es": "A las seis, Michaelis estaba cansado y feliz de escuchar un auto detenerse afuera. Era uno de los hombres de la noche anterior. Preparó desayuno para tres, y él y el otro hombre comieron juntos. Wilson era más tranquilo ahora, y Michaelis se fue a casa a dormir. Cuando se despertó cuatro horas después y volvió al garaje, Wilson se había ido."
         },
         {
-          "en": "At two o'clock, Gatsby put on his swimwear and told the butler to bring any phone messages to him at the pool. He stopped at the garage for a mattress that guests liked in the summer, and the chauffeur helped him pump it up. He said the car wasn't to be used, which was strange because it needed repair.",
+          "en": "His steps were followed to Port Roosevelt and then to Gad's Hill. He bought a sandwich he didn't eat and a cup of coffee. He must have been tired and walked slowly because he reached Gad's Hill at noon. So far, his time was clear—boys saw a man acting strangely, and drivers saw him staring from the road. Then he disappeared for three hours. The police thought he went from garage to garage, asking about a yellow car. But no garage man saw him, and maybe he had another way to find out. By two-thirty, he was in West Egg, asking for Gatsby's house. By then, he knew Gatsby's name.",
           "es": "Sus pasos fueron seguidos a Port Roosevelt y luego a Gad's Hill. Compró un sándwich que no comió y una taza de café. Debe haber estado cansado y caminó lentamente porque llegó a Gad's Hill al mediodía. Hasta ese momento, su tiempo era claro: los niños vieron a un hombre actuando de manera extraña, y los conductores lo vieron mirando desde la carretera. Luego desapareció durante tres horas. La policía pensó que fue de garaje en garaje, preguntando sobre un auto amarillo. Pero ningún gerente de garaje lo vio, y tal vez tenía otra forma de averiguarlo. A las dos y media, estaba en West Egg, pidiendo la casa de Gatsby. Para entonces, conocía el nombre de Gatsby."
         },
         {
-          "en": "Gatsby carried the mattress to the pool. He stopped once and moved it, and the chauffeur asked if he needed help, but Gatsby shook his head and disappeared among the yellowing trees.",
+          "en": "At two o'clock, Gatsby put on his swimwear and told the butler to bring any phone messages to him at the pool. He stopped at the garage for a mattress that guests liked in the summer, and the chauffeur helped him pump it up. He said the car wasn't to be used, which was strange because it needed repair.",
           "es": "A las dos, Gatsby se puso su traje de baño y le dijo al mayordomo que le trajeara cualquier mensaje telefónico en la piscina. Se detuvo en el garaje para obtener un colchón que a los invitados les gustaba en el verano, y el chofer lo ayudó a inflarlo. Dijo que el auto no debía usarse, lo cual era extraño porque necesitaba reparación."
         },
         {
-          "en": "No telephone message came, but the butler stayed awake. He waited until four o'clock, long after anyone could take a message. I think Gatsby did not believe it would come, and maybe he did not care anymore. If that was true, he must have felt he lost his warm world. He paid a high price for dreaming too long. He looked at the strange sky and scary leaves. He felt cold and saw how strange a rose was and how bright the sun was on the new grass. It was a new world, not real, where ghosts with dreams moved around like the shadowy figure coming to him through the trees.",
+          "en": "Gatsby carried the mattress to the pool. He stopped once and moved it, and the chauffeur asked if he needed help, but Gatsby shook his head and disappeared among the yellowing trees.",
           "es": "Gatsby llevó el colchón a la piscina. Se detuvo una vez y lo movió, y el chofer preguntó si necesitaba ayuda, pero Gatsby sacudió la cabeza y desapareció entre los árboles amarillentos."
         },
         {
-          "en": "The chauffeur, who worked for Wolfshiem, heard the shots. Later, he said he did not think much about them. I drove from the station to Gatsby’s house. When I ran up the steps, it alarmed everyone. But then they knew, I am sure. Without saying much, four of us—the chauffeur, butler, gardener, and I—hurried to the pool.",
+          "en": "No telephone message came, but the butler stayed awake. He waited until four o'clock, long after anyone could take a message. I think Gatsby did not believe it would come, and maybe he did not care anymore. If that was true, he must have felt he lost his warm world. He paid a high price for dreaming too long. He looked at the strange sky and scary leaves. He felt cold and saw how strange a rose was and how bright the sun was on the new grass. It was a new world, not real, where ghosts with dreams moved around like the shadowy figure coming to him through the trees.",
           "es": "No llegó ningún mensaje telefónico, pero el mayordomo se mantuvo despierto. Esperó hasta las cuatro, mucho después de que alguien pudiera tomar un mensaje. Creo que Gatsby no creía que vendría, y tal vez ya no le importaba. Si eso era cierto, debe haber sentido que perdió su mundo cálido. Pagó un precio alto por soñar demasiado tiempo. Miró el cielo extraño y las hojas aterradoras. Sintió frío y vio lo extraño que era una rosa y lo brillante que era el sol en el pasto nuevo. Era un mundo nuevo, no real, donde fantasmas con sueños se movían como la figura sombría que venía hacia él a través de los árboles."
+        },
+        {
+          "en": "The chauffeur, who worked for Wolfshiem, heard the shots. Later, he said he did not think much about them. I drove from the station to Gatsby’s house. When I ran up the steps, it alarmed everyone. But then they knew, I am sure. Without saying much, four of us—the chauffeur, butler, gardener, and I—hurried to the pool.",
+          "es": "El chofer, que trabajaba para Wolfshiem, escuchó los disparos. Más tarde, dijo que no pensó mucho en ellos. Conduje desde la estación a la casa de Gatsby. Cuando subí corriendo los escalones, asustó a todos. Pero luego lo supieron, estoy seguro. Sin hablar mucho, cuatro de nosotros: el chofer, mayordomo, jardinero y yo, nos apresuramos a la piscina."
         }
       ]
     },
@@ -495,15 +495,15 @@ export const chapterContent = {
       "lines": [
         {
           "en": "The water moved a little as fresh water flowed to the drain. Small ripples, like tiny waves, moved the mattress down the pool. A small wind disturbed its path. Leaves touched it and made it turn slowly, drawing a thin red circle in the water.",
-          "es": "El chofer, que trabajaba para Wolfshiem, escuchó los disparos. Más tarde, dijo que no pensó mucho en ellos. Conduje desde la estación a la casa de Gatsby. Cuando subí corriendo los escalones, asustó a todos. Pero luego lo supieron, estoy seguro. Sin hablar mucho, cuatro de nosotros: el chofer, mayordomo, jardinero y yo, nos apresuramos a la piscina."
-        },
-        {
-          "en": "After we started with Gatsby toward the house, the gardener saw Wilson’s body in the grass. Then everything was over.",
           "es": "El agua se movía un poco mientras agua fresca fluía hacia el drenaje. Pequeñas ondas, como diminutas olas, movían el colchón por la piscina. Un pequeño viento perturbó su camino. Las hojas la tocaban y la hacían girar lentamente, trazando un círculo rojo delgado en el agua."
         },
         {
-          "en": "",
+          "en": "After we started with Gatsby toward the house, the gardener saw Wilson’s body in the grass. Then everything was over.",
           "es": "Después de comenzar con Gatsby hacia la casa, el jardinero vio el cuerpo de Wilson en el pasto. Entonces todo terminó."
+        },
+        {
+          "en": "",
+          "es": ""
         }
       ]
     }

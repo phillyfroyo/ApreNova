@@ -1411,7 +1411,7 @@ export const chapterContent = {
         },
         {
           "en": "I noticed a hollow, wailing sound coming from the garage. As we got out of the coupé and walked toward the door, it became clear it was someone gasping, “Oh, my God!” repeatedly.",
-          "es": ""
+          "es": "Noté un sonido hueco y lamentador proveniente del garaje. Cuando salimos del cupé y caminamos hacia la puerta, quedó claro que era alguien que jadeaba, \"¡Oh, Dios mío!\" repetidamente."
         }
       ]
     },
@@ -1419,51 +1419,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“There’s serious trouble here,” Tom said excitedly.",
-          "es": "Noté un sonido hueco y lamentador proveniente del garaje. Cuando salimos del cupé y caminamos hacia la puerta, quedó claro que era alguien que jadeaba, \"¡Oh, Dios mío!\" repetidamente."
-        },
-        {
-          "en": "He stood on tiptoe and peered over the heads into the garage, which was lit by a yellow light in a swinging metal basket. He made a harsh sound in his throat and forcefully pushed his way through.",
           "es": "\"Hay un problema grave aquí,\" dijo Tom emocionado."
         },
         {
-          "en": "The circle closed again with murmurs of protest; it took a moment before I could see anything. Then new arrivals disrupted the line, and Jordan and I were suddenly pushed inside.",
+          "en": "He stood on tiptoe and peered over the heads into the garage, which was lit by a yellow light in a swinging metal basket. He made a harsh sound in his throat and forcefully pushed his way through.",
           "es": "Se paró de puntillas y miró por encima de las cabezas hacia el garaje, que estaba iluminado por una luz amarilla en una canasta de metal oscilante. Emitió un sonido áspero en la garganta e impulsivamente se abrió paso."
         },
         {
-          "en": "Myrtle Wilson’s body, wrapped in blankets as if she were cold on the hot night, lay on a worktable by the wall. Tom, with his back to us, bent over it, motionless. Beside him stood a motorcycle policeman, taking down names with much sweat and correction in a little book. At first, I couldn't locate the source of the high, groaning words echoing in the garage, but then I saw Wilson, swaying on the threshold of his office, holding the doorposts with both hands. A man spoke to him in a low voice, trying occasionally to touch his shoulder, but Wilson neither heard nor saw. His eyes moved slowly from the swinging light to the table by the wall and back again, as he continuously cried out:",
+          "en": "The circle closed again with murmurs of protest; it took a moment before I could see anything. Then new arrivals disrupted the line, and Jordan and I were suddenly pushed inside.",
           "es": "El círculo se cerró nuevamente con murmullos de protesta; pasó un momento antes de que pudiera ver algo. Luego los nuevos llegados interrumpieron la fila, y Jordan y yo fuimos de repente empujados adentro."
         },
         {
-          "en": "“Oh, my Ga-od! Oh, my Ga-od! Oh, Ga-od! Oh, my Ga-od!”",
+          "en": "Myrtle Wilson’s body, wrapped in blankets as if she were cold on the hot night, lay on a worktable by the wall. Tom, with his back to us, bent over it, motionless. Beside him stood a motorcycle policeman, taking down names with much sweat and correction in a little book. At first, I couldn't locate the source of the high, groaning words echoing in the garage, but then I saw Wilson, swaying on the threshold of his office, holding the doorposts with both hands. A man spoke to him in a low voice, trying occasionally to touch his shoulder, but Wilson neither heard nor saw. His eyes moved slowly from the swinging light to the table by the wall and back again, as he continuously cried out:",
           "es": "El cuerpo de Myrtle Wilson, envuelto en mantas como si tuviera frío en la noche caliente, yacía en una mesa de trabajo junto a la pared. Tom, con la espalda hacia nosotros, se inclinó sobre él, inmóvil. Junto a él estaba un policía en motocicleta, anotando nombres con mucho sudor y correcciones en un pequeño libro. Al principio, no podía localizar la fuente de las palabras altas y gemidas que resonaban en el garaje, pero luego vi a Wilson, balanceándose en el umbral de su oficina, sosteniendo los marcos de la puerta con ambas manos. Un hombre le hablaba en voz baja, intentando ocasionalmente tocar su hombro, pero Wilson ni oía ni veía. Sus ojos se movían lentamente de la luz oscilante a la mesa junto a la pared y de regreso nuevamente, mientras continuamente gritaba:"
         },
         {
-          "en": "Tom suddenly lifted his head and, after staring around the garage with glazed eyes, mumbled something incoherent to the policeman.",
+          "en": "“Oh, my Ga-od! Oh, my Ga-od! Oh, Ga-od! Oh, my Ga-od!”",
           "es": "\"¡Oh, mi Dios! ¡Oh, mi Dios! ¡Oh, Dios! ¡Oh, mi Dios!"
         },
         {
-          "en": "“M-a-v—” the policeman said, “—o—”",
+          "en": "Tom suddenly lifted his head and, after staring around the garage with glazed eyes, mumbled something incoherent to the policeman.",
           "es": "Tom de repente levantó la cabeza y, después de mirar alrededor del garaje con los ojos vidriosos, murmuró algo incoherente al policía."
         },
         {
-          "en": "“No, r—” corrected the man, “M-a-v-r-o—”",
+          "en": "“M-a-v—” the policeman said, “—o—”",
           "es": "M-a-v—\" dijo el policía, \"—o—"
         },
         {
-          "en": "“Listen to me!” Tom muttered fiercely.",
+          "en": "“No, r—” corrected the man, “M-a-v-r-o—”",
           "es": "No, r—\" corrigió el hombre, \"M-a-v-r-o—"
         },
         {
-          "en": "“r—” the policeman said, “o—”",
+          "en": "“Listen to me!” Tom muttered fiercely.",
           "es": "\"¡Escúchame!\" murmuró Tom ferozmente."
         },
         {
+          "en": "“r—” the policeman said, “o—”",
+          "es": "r—\" dijo el policía, \"o—"
+        },
+        {
           "en": "“g—”",
-          "es": ""
+          "es": "g—"
         },
         {
           "en": "“g—” He looked up as Tom’s broad hand fell sharply on his shoulder. “What do you want, fella?”",
-          "es": ""
+          "es": "g—\" Miró hacia arriba cuando la mano ancha de Tom cayó bruscamente sobre su hombro. \"¿Qué quieres, colega?"
         }
       ]
     },
@@ -1471,43 +1471,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What happened? That’s what I want to know.”",
-          "es": "r—\" dijo el policía, \"o—"
-        },
-        {
-          "en": "“Auto hit her. Instantly killed.”",
-          "es": "g—"
-        },
-        {
-          "en": "“Instantly killed,” Tom repeated, staring.",
-          "es": "g—\" Miró hacia arriba cuando la mano ancha de Tom cayó bruscamente sobre su hombro. \"¿Qué quieres, colega?"
-        },
-        {
-          "en": "“She ran into the road. The son-of-a-bitch didn’t even stop his car.”",
           "es": "\"¿Qué sucedió? Eso es lo que quiero saber."
         },
         {
-          "en": "“There were two cars,” Michaelis said, “one coming, one going, see?”",
+          "en": "“Auto hit her. Instantly killed.”",
           "es": "\"Un auto la golpeó. Muerta instantáneamente."
         },
         {
-          "en": "“Going where?” the policeman asked keenly.",
+          "en": "“Instantly killed,” Tom repeated, staring.",
           "es": "\"Muerta instantáneamente,\" repitió Tom, mirando fijamente."
         },
         {
-          "en": "“One going each way. Well, she”—his hand rose toward the blankets but stopped halfway—“she ran out there, and the one coming from New York hit her, going thirty or forty miles an hour.”",
+          "en": "“She ran into the road. The son-of-a-bitch didn’t even stop his car.”",
           "es": "\"Corrió hacia la carretera. El hijo de puta ni siquiera detuvo su auto."
         },
         {
-          "en": "“What’s the name of this place?” demanded the officer.",
+          "en": "“There were two cars,” Michaelis said, “one coming, one going, see?”",
           "es": "\"Había dos autos,\" dijo Michaelis, \"uno viniendo, uno yendo, ¿ves?"
         },
         {
-          "en": "“It doesn’t have a name.”",
+          "en": "“Going where?” the policeman asked keenly.",
           "es": "\"¿Yendo adónde?\" preguntó el policía agudamente."
         },
         {
-          "en": "A well-dressed, pale Black man stepped forward.",
+          "en": "“One going each way. Well, she”—his hand rose toward the blankets but stopped halfway—“she ran out there, and the one coming from New York hit her, going thirty or forty miles an hour.”",
           "es": "\"Uno yendo en cada dirección. Bueno, ella\"—su mano se levantó hacia las mantas pero se detuvo a mitad de camino—\"corrió hacia allá, y el que venía de Nueva York la golpeó, a treinta o cuarenta millas por hora."
+        },
+        {
+          "en": "“What’s the name of this place?” demanded the officer.",
+          "es": "\"¿Cuál es el nombre de este lugar?\" exigió el oficial."
+        },
+        {
+          "en": "“It doesn’t have a name.”",
+          "es": "\"No tiene nombre."
+        },
+        {
+          "en": "A well-dressed, pale Black man stepped forward.",
+          "es": "Un hombre negro bien vestido y pálido se adelantó."
         }
       ]
     },
@@ -1515,47 +1515,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“It was a yellow car,” he said, “a big, new yellow car.”",
-          "es": "\"¿Cuál es el nombre de este lugar?\" exigió el oficial."
-        },
-        {
-          "en": "“Did you see the accident?” asked the policeman.",
-          "es": "\"No tiene nombre."
-        },
-        {
-          "en": "“No, but the car passed me down the road, going faster than forty. Going fifty, sixty.”",
-          "es": "Un hombre negro bien vestido y pálido se adelantó."
-        },
-        {
-          "en": "“Come here and give me your name. Be careful now. I want to get his name.”",
           "es": "\"Era un auto amarillo,\" dijo, \"un auto amarillo grande y nuevo."
         },
         {
-          "en": "Some of this conversation must have reached Wilson, swaying in the office door, because suddenly a new theme broke through his cries:",
+          "en": "“Did you see the accident?” asked the policeman.",
           "es": "\"¿Viste el accidente?\" preguntó el policía."
         },
         {
-          "en": "“You don’t have to tell me what kind of car it was! I know what kind of car it was!”",
+          "en": "“No, but the car passed me down the road, going faster than forty. Going fifty, sixty.”",
           "es": "\"No, pero el auto pasó cerca de mí en la carretera, yendo más rápido que cuarenta. Yendo a cincuenta, sesenta."
         },
         {
-          "en": "Watching Tom, I saw the muscles in his shoulder tighten under his coat. He quickly walked over to Wilson and grabbed him firmly by the upper arms.",
+          "en": "“Come here and give me your name. Be careful now. I want to get his name.”",
           "es": "\"Ven aquí y dame tu nombre. Ten cuidado ahora. Quiero obtener su nombre."
         },
         {
-          "en": "“You’ve got to pull yourself together,” he said with a soothing roughness.",
+          "en": "Some of this conversation must have reached Wilson, swaying in the office door, because suddenly a new theme broke through his cries:",
           "es": "Parte de esta conversación debe haber llegado a Wilson, balanceándose en la puerta de la oficina, porque de repente un nuevo tema se abrió paso a través de sus gritos:"
         },
         {
-          "en": "Wilson's eyes fell on Tom; he rose on his tiptoes and would have collapsed if Tom hadn’t held him up.",
+          "en": "“You don’t have to tell me what kind of car it was! I know what kind of car it was!”",
           "es": "\"¡No tienes que decirme qué tipo de auto era! ¡Sé qué tipo de auto era!"
         },
         {
-          "en": "“Listen,” Tom said, shaking him a little. “I just got here from New York. I was bringing you that coupé we talked about. That yellow car I was driving this afternoon wasn’t mine—do you hear? I haven’t seen it all afternoon.”",
+          "en": "Watching Tom, I saw the muscles in his shoulder tighten under his coat. He quickly walked over to Wilson and grabbed him firmly by the upper arms.",
           "es": "Mirando a Tom, vi los músculos de su hombro tensarse bajo su abrigo. Rápidamente se acercó a Wilson y lo agarró firmemente por la parte superior de los brazos."
         },
         {
+          "en": "“You’ve got to pull yourself together,” he said with a soothing roughness.",
+          "es": "\"Tienes que recomponerte,\" dijo con una brusquedad tranquilizadora."
+        },
+        {
+          "en": "Wilson's eyes fell on Tom; he rose on his tiptoes and would have collapsed if Tom hadn’t held him up.",
+          "es": "Los ojos de Wilson se enfocaron en Tom; se levantó de puntillas y se habría derrumbado si Tom no lo sostuviera."
+        },
+        {
+          "en": "“Listen,” Tom said, shaking him a little. “I just got here from New York. I was bringing you that coupé we talked about. That yellow car I was driving this afternoon wasn’t mine—do you hear? I haven’t seen it all afternoon.”",
+          "es": "\"Escúchame,\" dijo Tom, sacudiéndolo un poco. \"Acabo de llegar de Nueva York. Te traía ese cupé del que hablamos. Ese auto amarillo que estaba manejando esta tarde no era mío—¿me oyes? No lo he visto en toda la tarde."
+        },
+        {
           "en": "Only the Black man and I were close enough to hear what he said, but the policeman caught something in the tone and looked over with suspicious eyes.",
-          "es": ""
+          "es": "Solo el hombre negro y yo estábamos lo suficientemente cerca para escuchar lo que dijo, pero el policía capturó algo en el tono y miró con ojos sospechosos."
         }
       ]
     },
@@ -1563,47 +1563,47 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“What’s all that?” he demanded.",
-          "es": "\"Tienes que recomponerte,\" dijo con una brusquedad tranquilizadora."
-        },
-        {
-          "en": "“I’m a friend of his.” Tom turned his head but kept his hands on Wilson. “He says he knows the car that did it… It was a yellow car.”",
-          "es": "Los ojos de Wilson se enfocaron en Tom; se levantó de puntillas y se habría derrumbado si Tom no lo sostuviera."
-        },
-        {
-          "en": "Some instinct made the policeman look suspiciously at Tom.",
-          "es": "\"Escúchame,\" dijo Tom, sacudiéndolo un poco. \"Acabo de llegar de Nueva York. Te traía ese cupé del que hablamos. Ese auto amarillo que estaba manejando esta tarde no era mío—¿me oyes? No lo he visto en toda la tarde."
-        },
-        {
-          "en": "“And what color is your car?”",
-          "es": "Solo el hombre negro y yo estábamos lo suficientemente cerca para escuchar lo que dijo, pero el policía capturó algo en el tono y miró con ojos sospechosos."
-        },
-        {
-          "en": "“It’s a blue car, a coupé.”",
           "es": "\"¿Qué es todo eso?\" exigió."
         },
         {
-          "en": "“We’ve come straight from New York,” I said.",
+          "en": "“I’m a friend of his.” Tom turned his head but kept his hands on Wilson. “He says he knows the car that did it… It was a yellow car.”",
           "es": "\"Soy un amigo suyo.\" Tom volvió la cabeza pero mantuvo las manos en Wilson. \"Dice que conoce el auto que lo hizo… Era un auto amarillo."
         },
         {
-          "en": "Someone driving a little behind us confirmed this, and the policeman turned away.",
+          "en": "Some instinct made the policeman look suspiciously at Tom.",
           "es": "Algún instinto hizo que el policía mirara a Tom sospechosamente."
         },
         {
-          "en": "“Now, if you’ll give me that name again correctly—”",
+          "en": "“And what color is your car?”",
           "es": "\"¿Y de qué color es tu auto?"
         },
         {
-          "en": "Picking up Wilson like a doll, Tom carried him into the office, set him in a chair, and returned.",
+          "en": "“It’s a blue car, a coupé.”",
           "es": "\"Es un auto azul, un cupé."
         },
         {
-          "en": "“If someone will stay with him,” he snapped authoritatively. He watched as the two men closest glanced at each other and reluctantly entered the room. Tom shut the door on them and stepped down, avoiding the table with his eyes. As he passed me, he whispered: “Let’s get out.”",
+          "en": "“We’ve come straight from New York,” I said.",
           "es": "\"Venimos directamente de Nueva York,\" dije."
         },
         {
+          "en": "Someone driving a little behind us confirmed this, and the policeman turned away.",
+          "es": "Alguien que conducía un poco detrás de nosotros confirmó esto, y el policía se alejó."
+        },
+        {
+          "en": "“Now, if you’ll give me that name again correctly—”",
+          "es": "Ahora, si me das ese nombre nuevamente correctamente—"
+        },
+        {
+          "en": "Picking up Wilson like a doll, Tom carried him into the office, set him in a chair, and returned.",
+          "es": "Levantando a Wilson como una muñeca, Tom lo llevó a la oficina, lo sentó en una silla y regresó."
+        },
+        {
+          "en": "“If someone will stay with him,” he snapped authoritatively. He watched as the two men closest glanced at each other and reluctantly entered the room. Tom shut the door on them and stepped down, avoiding the table with his eyes. As he passed me, he whispered: “Let’s get out.”",
+          "es": "\"Si alguien se queda con él,\" ordenó con autoridad. Observó cómo los dos hombres más cercanos se miraban entre sí y entraban de mala gana a la habitación. Tom cerró la puerta sobre ellos y bajó, evitando mirar la mesa. Mientras pasaba, susurró: \"Vámonos."
+        },
+        {
           "en": "Self-consciously, with Tom leading the way, we pushed through the gathering crowd, passing a hurried doctor, carrying a case, who had been summoned in vain hope half an hour ago.",
-          "es": ""
+          "es": "Con cierta consciencia de nosotros mismos, con Tom liderando el camino, nos abrimos paso a través de la multitud reunida, pasando a un doctor que se apresuraba, llevando un maletín, que había sido llamado en la esperanza frustrada hace media hora."
         }
       ]
     },
@@ -1611,51 +1611,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "Tom drove slowly until we were past the bend—then he pressed the pedal hard, and the coupé sped through the night. Soon, I heard a low, husky sob and saw tears streaming down his face.",
-          "es": "Alguien que conducía un poco detrás de nosotros confirmó esto, y el policía se alejó."
-        },
-        {
-          "en": "“The God damned coward!” he whimpered. “He didn’t even stop his car.”",
-          "es": "Ahora, si me das ese nombre nuevamente correctamente—"
-        },
-        {
-          "en": "The Buchanans’ house appeared suddenly through the dark, rustling trees. Tom stopped by the porch and looked up at the second floor, where two windows glowed with light among the vines.",
-          "es": "Levantando a Wilson como una muñeca, Tom lo llevó a la oficina, lo sentó en una silla y regresó."
-        },
-        {
-          "en": "“Daisy’s home,” he said. As we got out of the car, he glanced at me and frowned slightly.",
-          "es": "\"Si alguien se queda con él,\" ordenó con autoridad. Observó cómo los dos hombres más cercanos se miraban entre sí y entraban de mala gana a la habitación. Tom cerró la puerta sobre ellos y bajó, evitando mirar la mesa. Mientras pasaba, susurró: \"Vámonos."
-        },
-        {
-          "en": "“I should have dropped you in West Egg, Nick. There’s nothing we can do tonight.”",
-          "es": "Con cierta consciencia de nosotros mismos, con Tom liderando el camino, nos abrimos paso a través de la multitud reunida, pasando a un doctor que se apresuraba, llevando un maletín, que había sido llamado en la esperanza frustrada hace media hora."
-        },
-        {
-          "en": "He had changed, speaking gravely and decisively. As we walked across the moonlit gravel to the porch, he summed up the situation in a few brisk phrases.",
           "es": "Tom condujo lentamente hasta que pasamos la curva—luego presionó el pedal fuertemente, y el cupé se aceleró a través de la noche. Pronto, escuché un sollozo bajo y ronco y vi lágrimas corriendo por su rostro."
         },
         {
-          "en": "“I’ll call a taxi to take you home. While you wait, you and Jordan should go to the kitchen and have some supper—if you want.” He opened the door. “Come in.”",
+          "en": "“The God damned coward!” he whimpered. “He didn’t even stop his car.”",
           "es": "\"¡El maldito cobarde!\" sollozó. \"Ni siquiera detuvo su auto."
         },
         {
-          "en": "“No, thanks. But I’d appreciate it if you’d order me the taxi. I’ll wait outside.”",
+          "en": "The Buchanans’ house appeared suddenly through the dark, rustling trees. Tom stopped by the porch and looked up at the second floor, where two windows glowed with light among the vines.",
           "es": "La casa de los Buchanan apareció de repente a través de los árboles oscuros y susurrantes. Tom se detuvo junto al porche y miró hacia el segundo piso, donde dos ventanas brillaban con luz entre las enredaderas."
         },
         {
-          "en": "Jordan touched my arm.",
+          "en": "“Daisy’s home,” he said. As we got out of the car, he glanced at me and frowned slightly.",
           "es": "\"Daisy está en casa,\" dijo. Cuando salimos del auto, me miró y frunció ligeramente el ceño."
         },
         {
-          "en": "“Won’t you come in, Nick?”",
+          "en": "“I should have dropped you in West Egg, Nick. There’s nothing we can do tonight.”",
           "es": "\"Debería haberte dejado en West Egg, Nick. No hay nada que podamos hacer esta noche."
         },
         {
+          "en": "He had changed, speaking gravely and decisively. As we walked across the moonlit gravel to the porch, he summed up the situation in a few brisk phrases.",
+          "es": "Había cambiado, hablando gravemente y decisivamente. Mientras caminábamos por la grava iluminada por la luna hacia el porche, resumió la situación en algunas frases breves y rápidas."
+        },
+        {
+          "en": "“I’ll call a taxi to take you home. While you wait, you and Jordan should go to the kitchen and have some supper—if you want.” He opened the door. “Come in.”",
+          "es": "\"Llamaré un taxi para llevarte a casa. Mientras esperas, tú y Jordan deberían ir a la cocina y comer algo—si quieren.\" Abrió la puerta. \"Entra."
+        },
+        {
+          "en": "“No, thanks. But I’d appreciate it if you’d order me the taxi. I’ll wait outside.”",
+          "es": "\"No, gracias. Pero te agradecería si ordenaras un taxi para mí. Esperaré afuera."
+        },
+        {
+          "en": "Jordan touched my arm.",
+          "es": "Jordan tocó mi brazo."
+        },
+        {
+          "en": "“Won’t you come in, Nick?”",
+          "es": "\"¿No entrarás, Nick?"
+        },
+        {
           "en": "“No, thanks.”",
-          "es": ""
+          "es": "\"No, gracias."
         },
         {
           "en": "I felt a bit sick and wanted to be alone. But Jordan lingered a moment longer.",
-          "es": ""
+          "es": "Me sentía un poco mal y quería estar solo. Pero Jordan se demoró un momento más."
         }
       ]
     },
@@ -1663,51 +1663,51 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“It’s only half-past nine,” she said.",
-          "es": "Había cambiado, hablando gravemente y decisivamente. Mientras caminábamos por la grava iluminada por la luna hacia el porche, resumió la situación en algunas frases breves y rápidas."
-        },
-        {
-          "en": "I refused to go in; I’d had enough of them for one day, and suddenly that included Jordan too. She must have noticed something in my expression because she turned abruptly and ran up the porch steps inside. I sat for a few minutes with my head in my hands until I heard the phone picked up inside and the butler calling a taxi. Then I walked slowly down the drive, planning to wait by the gate.",
-          "es": "\"Llamaré un taxi para llevarte a casa. Mientras esperas, tú y Jordan deberían ir a la cocina y comer algo—si quieren.\" Abrió la puerta. \"Entra."
-        },
-        {
-          "en": "I hadn’t gone twenty yards when I heard my name, and Gatsby stepped from between two bushes onto the path. I must have felt strange by then, because all I could think about was the glow of his pink suit in the moonlight.",
-          "es": "\"No, gracias. Pero te agradecería si ordenaras un taxi para mí. Esperaré afuera."
-        },
-        {
-          "en": "“What are you doing?” I asked.",
-          "es": "Jordan tocó mi brazo."
-        },
-        {
-          "en": "“Just standing here, old sport.”",
-          "es": "\"¿No entrarás, Nick?"
-        },
-        {
-          "en": "Somehow, that seemed like a despicable thing to do. For all I knew, he was about to rob the house; I wouldn’t have been surprised to see sinister faces, like “Wolfshiem’s people,” behind him in the dark bushes.",
-          "es": "\"No, gracias."
-        },
-        {
-          "en": "“Did you see any trouble on the road?” he asked after a moment.",
-          "es": "Me sentía un poco mal y quería estar solo. Pero Jordan se demoró un momento más."
-        },
-        {
-          "en": "“Yes.”",
           "es": "\"Son solo las nueve y media,\" dijo."
         },
         {
-          "en": "He hesitated.",
+          "en": "I refused to go in; I’d had enough of them for one day, and suddenly that included Jordan too. She must have noticed something in my expression because she turned abruptly and ran up the porch steps inside. I sat for a few minutes with my head in my hands until I heard the phone picked up inside and the butler calling a taxi. Then I walked slowly down the drive, planning to wait by the gate.",
           "es": "Me negué a entrar; había tenido suficiente de ellos por un día, y de repente eso incluía a Jordan también. Ella debe haber notado algo en mi expresión porque se volvió abruptamente y corrió por los escalones del porche adentro. Me senté durante unos minutos con la cabeza en las manos hasta que escuché el teléfono levantarse adentro y el mayordomo llamar un taxi. Luego caminé lentamente por el camino, planeando esperar junto a la puerta."
         },
         {
-          "en": "“Was she killed?”",
+          "en": "I hadn’t gone twenty yards when I heard my name, and Gatsby stepped from between two bushes onto the path. I must have felt strange by then, because all I could think about was the glow of his pink suit in the moonlight.",
           "es": "No había avanzado veinte metros cuando escuché mi nombre, y Gatsby salió de entre dos arbustos hacia el camino. Debo haber estado extraño para entonces, porque todo lo que podía pensar era en el brillo de su traje rosa a la luz de la luna."
         },
         {
+          "en": "“What are you doing?” I asked.",
+          "es": "\"¿Qué estás haciendo?\" pregunté."
+        },
+        {
+          "en": "“Just standing here, old sport.”",
+          "es": "\"Solo parado aquí, viejo amigo."
+        },
+        {
+          "en": "Somehow, that seemed like a despicable thing to do. For all I knew, he was about to rob the house; I wouldn’t have been surprised to see sinister faces, like “Wolfshiem’s people,” behind him in the dark bushes.",
+          "es": "De alguna manera, eso parecía algo despreciable. Por todo lo que sabía, estaba a punto de robar la casa; no habría quedado sorprendido al ver caras siniestras, como \"la gente de Wolfshiem,\" detrás de él en los arbustos oscuros."
+        },
+        {
+          "en": "“Did you see any trouble on the road?” he asked after a moment.",
+          "es": "\"¿Viste algún problema en la carretera?\" preguntó después de un momento."
+        },
+        {
           "en": "“Yes.”",
-          "es": ""
+          "es": "\"Sí."
+        },
+        {
+          "en": "He hesitated.",
+          "es": "Vaciló."
+        },
+        {
+          "en": "“Was she killed?”",
+          "es": "\"¿Fue asesinada?"
+        },
+        {
+          "en": "“Yes.”",
+          "es": "\"Sí."
         },
         {
           "en": "“I thought so; I told Daisy I thought so. It’s better that the shock comes all at once. She handled it well.”",
-          "es": ""
+          "es": "\"Pensé que sí; le dije a Daisy que pensé que sí. Es mejor que el golpe venga de una vez. Lo manejó bien."
         }
       ]
     },
@@ -1715,43 +1715,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "He spoke as if Daisy’s reaction was all that mattered.",
-          "es": "\"¿Qué estás haciendo?\" pregunté."
+          "es": "Habló como si la reacción de Daisy era todo lo que importaba."
         },
         {
           "en": "“I got to West Egg by a side road,” he continued, “and left the car in my garage. I don’t think anyone saw us, but of course, I can’t be sure.”",
-          "es": "\"Solo parado aquí, viejo amigo."
+          "es": "\"Llegué a West Egg por un camino lateral,\" continuó, \"y dejé el auto en mi garaje. No creo que nadie nos haya visto, pero por supuesto, no puedo estar seguro."
         },
         {
           "en": "I disliked him so much by then that I didn’t feel the need to tell him he was wrong.",
-          "es": "De alguna manera, eso parecía algo despreciable. Por todo lo que sabía, estaba a punto de robar la casa; no habría quedado sorprendido al ver caras siniestras, como \"la gente de Wolfshiem,\" detrás de él en los arbustos oscuros."
+          "es": "Lo desagradaba tanto para entonces que no sentía la necesidad de decirle que estaba equivocado."
         },
         {
           "en": "“Who was the woman?” he asked.",
-          "es": "\"¿Viste algún problema en la carretera?\" preguntó después de un momento."
+          "es": "\"¿Quién era la mujer?\" preguntó."
         },
         {
           "en": "“Her name was Wilson. Her husband owns the garage. How did it happen?”",
-          "es": "\"Sí."
+          "es": "\"Su nombre era Wilson. Su marido es el dueño del garaje. ¿Cómo sucedió?"
         },
         {
           "en": "“Well, I tried to turn the wheel—” He stopped, and suddenly I guessed the truth.",
-          "es": "Vaciló."
+          "es": "\"Bueno, intenté girar el volante—\" Se detuvo, y de repente adiviné la verdad."
         },
         {
           "en": "“Was Daisy driving?”",
-          "es": "\"¿Fue asesinada?"
+          "es": "\"¿Estaba Daisy conduciendo?"
         },
         {
           "en": "“Yes,” he said after a moment, “but of course I’ll say I was. You see, when we left New York, she was very nervous and thought driving would calm her—and this woman rushed out at us just as we were passing another car. It all happened in a minute, but it seemed she wanted to speak to us, thought we were someone she knew. Well, first Daisy turned away from the woman toward the other car, then lost her nerve and turned back. The second my hand touched the wheel, I felt the impact—it must have killed her instantly.”",
-          "es": "\"Sí."
+          "es": "\"Sí,\" dijo después de un momento, \"pero por supuesto diré que fui yo. Ves, cuando salimos de Nueva York, estaba muy nerviosa y pensó que conducir la calmaría—y esta mujer se lanzó hacia nosotros justo cuando estábamos pasando otro auto. Todo sucedió en un minuto, pero parecía que quería hablarnos, pensó que éramos alguien que conocía. Bueno, primero Daisy se alejó de la mujer hacia el otro auto, luego perdió el coraje y se volvió. El segundo en que mi mano tocó el volante, sentí el impacto—debe haberla matado instantáneamente."
         },
         {
           "en": "“It ripped her open—”",
-          "es": "\"Pensé que sí; le dije a Daisy que pensé que sí. Es mejor que el golpe venga de una vez. Lo manejó bien."
+          "es": "La rasgó—"
         },
         {
           "en": "“Don’t tell me, old sport.” He winced. “Anyway—Daisy stepped on it. I tried to make her stop, but she couldn’t, so I pulled the emergency brake. Then she fell into my lap and I drove on.",
-          "es": "Habló como si la reacción de Daisy era todo lo que importaba."
+          "es": "\"No me lo digas, viejo amigo.\" Se estremeció. \"De todas formas—Daisy pisó el acelerador. Intenté hacerla parar, pero no podía, así que tiré del freno de emergencia. Luego ella cayó en mi regazo y continué."
         }
       ]
     },
@@ -1759,43 +1759,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "“She’ll be fine tomorrow,” he said soon after. “I’m just going to wait here and see if he tries to bother her about the unpleasantness this afternoon. She’s locked herself in her room, and if he tries anything, she’ll turn the light off and on again.”",
-          "es": "\"Llegué a West Egg por un camino lateral,\" continuó, \"y dejé el auto en mi garaje. No creo que nadie nos haya visto, pero por supuesto, no puedo estar seguro."
+          "es": "\"Estará bien mañana,\" dijo poco después. \"Solo voy a esperar aquí y ver si intenta molestarla sobre lo desagradable de esta tarde. Se ha encerrado en su habitación, y si intenta algo, apagará y encenderá la luz nuevamente."
         },
         {
           "en": "“He won’t touch her,” I said. “He’s not thinking about her.”",
-          "es": "Lo desagradaba tanto para entonces que no sentía la necesidad de decirle que estaba equivocado."
+          "es": "\"No la tocará,\" dije. \"No está pensando en ella."
         },
         {
           "en": "“I don’t trust him, old sport.”",
-          "es": "\"¿Quién era la mujer?\" preguntó."
+          "es": "\"No confío en él, viejo amigo."
         },
         {
           "en": "“How long will you wait?”",
-          "es": "\"Su nombre era Wilson. Su marido es el dueño del garaje. ¿Cómo sucedió?"
+          "es": "\"¿Cuánto tiempo espiarás?"
         },
         {
           "en": "“All night, if necessary. At least until they all go to bed.”",
-          "es": "\"Bueno, intenté girar el volante—\" Se detuvo, y de repente adiviné la verdad."
+          "es": "\"Toda la noche, si es necesario. Al menos hasta que todos se acuesten."
         },
         {
           "en": "A new thought occurred to me. Suppose Tom found out Daisy had been driving. He might see a connection—he might think anything. I looked at the house; there were a few bright windows downstairs and the pink glow from Daisy’s room on the ground floor.",
-          "es": "\"¿Estaba Daisy conduciendo?"
+          "es": "Un nuevo pensamiento se me ocurrió. Supongamos que Tom descubre que Daisy estaba conduciendo. Podría ver una conexión—podría pensar cualquier cosa. Miré la casa; había algunas ventanas brillantes abajo y el brillo rosa de la habitación de Daisy en la planta baja."
         },
         {
           "en": "You wait here,\" I said. \"I'll check if there's any sign of trouble.",
-          "es": "\"Sí,\" dijo después de un momento, \"pero por supuesto diré que fui yo. Ves, cuando salimos de Nueva York, estaba muy nerviosa y pensó que conducir la calmaría—y esta mujer se lanzó hacia nosotros justo cuando estábamos pasando otro auto. Todo sucedió en un minuto, pero parecía que quería hablarnos, pensó que éramos alguien que conocía. Bueno, primero Daisy se alejó de la mujer hacia el otro auto, luego perdió el coraje y se volvió. El segundo en que mi mano tocó el volante, sentí el impacto—debe haberla matado instantáneamente."
+          "es": "\"Espera aquí,\" dije. \"Verificaré si hay algún signo de problema."
         },
         {
           "en": "I walked back along the edge of the lawn, moved quietly over the gravel, and tiptoed up the veranda steps. The drawing-room curtains were open, revealing an empty room. Crossing the porch where we had dined that June night three months ago, I reached a small rectangle of light, which I guessed was the pantry window. The blind was down, but I found a small gap at the sill.",
-          "es": "La rasgó—"
+          "es": "Caminé de regreso por el borde del césped, me moví silenciosamente sobre la grava, y subí de puntillas los escalones de la veranda. Las cortinas de la sala estaban abiertas, revelando una habitación vacía. Cruzando el porche donde habíamos cenado esa noche de junio hace tres meses, llegué a un pequeño rectángulo de luz, que supuse era la ventana de la despensa. La persiana estaba baja, pero encontré un pequeño hueco en el alféizar."
         },
         {
           "en": "Daisy and Tom were sitting across from each other at the kitchen table, with a plate of cold fried chicken between them and two bottles of ale. He was talking earnestly to her, and in his seriousness, his hand had covered hers. Occasionally, she looked up at him and nodded in agreement.",
-          "es": "\"No me lo digas, viejo amigo.\" Se estremeció. \"De todas formas—Daisy pisó el acelerador. Intenté hacerla parar, pero no podía, así que tiré del freno de emergencia. Luego ella cayó en mi regazo y continué."
+          "es": "Daisy y Tom estaban sentados uno frente al otro en la mesa de la cocina, con un plato de pollo frito frío entre ellos y dos botellas de cerveza. Él estaba hablando seriamente con ella, y en su seriedad, su mano había cubierto la suya. Ocasionalmente, ella lo miraba y asentía en acuerdo."
         },
         {
           "en": "They didn’t seem happy, and neither had touched the chicken or the ale—yet they weren’t unhappy either. There was a clear sense of natural intimacy about the scene, and anyone would have thought they were plotting together.",
-          "es": "\"Estará bien mañana,\" dijo poco después. \"Solo voy a esperar aquí y ver si intenta molestarla sobre lo desagradable de esta tarde. Se ha encerrado en su habitación, y si intenta algo, apagará y encenderá la luz nuevamente."
+          "es": "No parecían felices, y ninguno había tocado el pollo o la cerveza—pero tampoco eran infelices. Había un sentido claro de intimidad natural sobre la escena, y cualquiera habría pensado que estaban conspirando juntos."
         }
       ]
     },
@@ -1803,43 +1803,43 @@ export const chapterContent = {
       "lines": [
         {
           "en": "As I tiptoed away from the porch, I heard my taxi feeling its way along the dark road toward the house. Gatsby was waiting where I had left him in the driveway.",
-          "es": "\"No la tocará,\" dije. \"No está pensando en ella."
+          "es": "Mientras me alejaba de puntillas del porche, escuché mi taxi abriéndose camino en la carretera oscura hacia la casa. Gatsby estaba esperando donde lo había dejado en el camino de entrada."
         },
         {
           "en": "\"Is it all quiet up there?\" he asked anxiously.",
-          "es": "\"No confío en él, viejo amigo."
+          "es": "\"¿Está todo tranquilo allá arriba?\" preguntó ansiosamente."
         },
         {
           "en": "Yes, it's all quiet.\" I hesitated. \"You should come home and get some sleep.",
-          "es": "\"¿Cuánto tiempo espiarás?"
+          "es": "\"Sí, está todo tranquilo.\" Vacilé. \"Deberías irte a casa y dormir un poco."
         },
         {
           "en": "He shook his head.",
-          "es": "\"Toda la noche, si es necesario. Al menos hasta que todos se acuesten."
+          "es": "Negó con la cabeza."
         },
         {
           "en": "I want to wait here until Daisy goes to bed. Good night, old sport.",
-          "es": "Un nuevo pensamiento se me ocurrió. Supongamos que Tom descubre que Daisy estaba conduciendo. Podría ver una conexión—podría pensar cualquier cosa. Miré la casa; había algunas ventanas brillantes abajo y el brillo rosa de la habitación de Daisy en la planta baja."
+          "es": "\"Quiero esperar aquí hasta que Daisy se vaya a la cama. Buenas noches, viejo amigo."
         },
         {
           "en": "He put his hands in his coat pockets and turned back eagerly to watch the house, as if my presence disturbed the sacredness of his vigil. So I walked away and left him standing there in the moonlight—watching over nothing.",
-          "es": "\"Espera aquí,\" dije. \"Verificaré si hay algún signo de problema."
+          "es": "Se metió las manos en los bolsillos del abrigo y se volvió nuevamente, ansioso por observar la casa, como si mi presencia perturbara la sacralidad de su vigilia. Así que me alejé y lo dejé parado allí a la luz de la luna—vigilando la nada."
         },
         {
           "en": "",
-          "es": "Caminé de regreso por el borde del césped, me moví silenciosamente sobre la grava, y subí de puntillas los escalones de la veranda. Las cortinas de la sala estaban abiertas, revelando una habitación vacía. Cruzando el porche donde habíamos cenado esa noche de junio hace tres meses, llegué a un pequeño rectángulo de luz, que supuse era la ventana de la despensa. La persiana estaba baja, pero encontré un pequeño hueco en el alféizar."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Daisy y Tom estaban sentados uno frente al otro en la mesa de la cocina, con un plato de pollo frito frío entre ellos y dos botellas de cerveza. Él estaba hablando seriamente con ella, y en su seriedad, su mano había cubierto la suya. Ocasionalmente, ella lo miraba y asentía en acuerdo."
+          "es": ""
         },
         {
           "en": "",
-          "es": "No parecían felices, y ninguno había tocado el pollo o la cerveza—pero tampoco eran infelices. Había un sentido claro de intimidad natural sobre la escena, y cualquiera habría pensado que estaban conspirando juntos."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Mientras me alejaba de puntillas del porche, escuché mi taxi abriéndose camino en la carretera oscura hacia la casa. Gatsby estaba esperando donde lo había dejado en el camino de entrada."
+          "es": ""
         }
       ]
     },
@@ -1847,23 +1847,23 @@ export const chapterContent = {
       "lines": [
         {
           "en": "",
-          "es": "\"¿Está todo tranquilo allá arriba?\" preguntó ansiosamente."
+          "es": ""
         },
         {
           "en": "",
-          "es": "\"Sí, está todo tranquilo.\" Vacilé. \"Deberías irte a casa y dormir un poco."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Negó con la cabeza."
+          "es": ""
         },
         {
           "en": "",
-          "es": "\"Quiero esperar aquí hasta que Daisy se vaya a la cama. Buenas noches, viejo amigo."
+          "es": ""
         },
         {
           "en": "",
-          "es": "Se metió las manos en los bolsillos del abrigo y se volvió nuevamente, ansioso por observar la casa, como si mi presencia perturbara la sacralidad de su vigilia. Así que me alejé y lo dejé parado allí a la luz de la luna—vigilando la nada."
+          "es": ""
         }
       ]
     }
