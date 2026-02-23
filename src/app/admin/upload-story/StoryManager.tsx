@@ -1778,62 +1778,21 @@ export default function StoryManager() {
                           const hasIssues = levelsWithAlignmentIssues.has(level);
                           const numLevel = toNumericLevel(level);
 
-                          // Parse chapters for line count comparison
-                          const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
+                          // Use server-provided alignment data (same data ComparisonModal uses)
+                          const chapterIssues = rawData?.chapterAlignmentIssues || {};
+                          const totalAlignmentIssues = Object.values(chapterIssues)
+                            .reduce((sum, ch) => sum + ch.contentVsBlankIssues.length, 0);
 
-                          const parseChapters = (lines: string[]) => {
-                            type ChapterInfo = { number: number; title: string; startLine: number };
-                            const chapters: { number: number; title: string; startLine: number; totalLines: number; contentLines: number }[] = [];
-                            let currentChapter: ChapterInfo | null = null;
-
-                            lines.forEach((line, idx) => {
-                              const match = line.match(chapterPattern);
-                              if (match) {
-                                if (currentChapter) {
-                                  const slice = lines.slice(currentChapter.startLine + 1, idx);
-                                  chapters.push({
-                                    number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine,
-                                    totalLines: slice.length,
-                                    contentLines: slice.filter(l => l.trim()).length,
-                                  });
-                                }
-                                currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
-                              }
-                            });
-
-                            if (currentChapter) {
-                              const chap = currentChapter as ChapterInfo;
-                              const slice = lines.slice(chap.startLine + 1);
-                              chapters.push({
-                                number: chap.number, title: chap.title, startLine: chap.startLine,
-                                totalLines: slice.length,
-                                contentLines: slice.filter(l => l.trim()).length,
-                              });
+                          // Extract chapter list from source text for display labels
+                          const chapterDividerPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/gim;
+                          const chapters: { number: number; title: string }[] = [];
+                          if (hasData) {
+                            let m;
+                            while ((m = chapterDividerPattern.exec(rawData.sourceText)) !== null) {
+                              chapters.push({ number: parseInt(m[2], 10), title: m[3] || "" });
                             }
-
-                            return chapters;
-                          };
-
-                          const sourceTextLines = (rawData?.sourceText || "").split("\n");
-                          const translatedTextLines = (rawData?.translatedText || "").split("\n");
-                          const sourceChapters = hasData ? parseChapters(sourceTextLines) : [];
-                          const translatedChapters = hasData ? parseChapters(translatedTextLines) : [];
-                          const hasChapters = sourceChapters.length > 1 || translatedChapters.length > 1;
-
-                          const srcTotal = hasChapters ? sourceChapters.reduce((s, c) => s + c.totalLines, 0) : sourceTextLines.length;
-                          const transTotal = hasChapters ? translatedChapters.reduce((s, c) => s + c.totalLines, 0) : translatedTextLines.length;
-                          const totalMatch = srcTotal === transTotal;
-
-                          const srcContent = hasChapters ? sourceChapters.reduce((s, c) => s + c.contentLines, 0) : sourceTextLines.filter(l => l.trim()).length;
-                          const transContent = hasChapters ? translatedChapters.reduce((s, c) => s + c.contentLines, 0) : translatedTextLines.filter(l => l.trim()).length;
-                          const contentMatch = srcContent === transContent;
-
-                          const totalMismatched = hasChapters ? sourceChapters
-                            .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.totalLines !== sc.totalLines : true; })
-                            .map(sc => `Ch ${sc.number}`) : [];
-                          const contentMismatched = hasChapters ? sourceChapters
-                            .filter(sc => { const tc = translatedChapters.find(c => c.number === sc.number); return tc ? tc.contentLines !== sc.contentLines : true; })
-                            .map(sc => `Ch ${sc.number}`) : [];
+                          }
+                          const hasMultipleChapters = chapters.length > 1;
 
                           // Content warnings
                           const sourceWarnings = hasData ? scanContentWarnings(rawData.sourceText, numLevel) : [];
@@ -1842,23 +1801,6 @@ export default function StoryManager() {
                           const totalWarnings = sourceWarnings.length + translationWarnings.length + qualityWarnings.length;
 
                           const isBreakdownExpanded = expandedLineBreakdown === level;
-
-                          const LineRow = ({ label, src, trans, match, mismatched }: { label: string; src: number; trans: number; match: boolean; mismatched: string[] }) => (
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-500 text-xs w-20">{label}:</span>
-                              <span className={`text-sm font-medium ${match ? 'text-green-600' : 'text-amber-600'}`}>
-                                {src} <span className="text-gray-400 mx-0.5">{"→"}</span> {trans}
-                                {match ? (
-                                  <span className="text-green-500 ml-1">&#10003;</span>
-                                ) : (
-                                  <span className="text-amber-500 ml-1">
-                                    ({trans - src > 0 ? '+' : ''}{trans - src})
-                                    {mismatched.length > 0 && <span className="text-xs ml-1">{mismatched.join(', ')}</span>}
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          );
 
                           const borderColor = !hasData ? "border-gray-200" : hasIssues || totalWarnings > 0 ? "border-amber-300" : "border-green-300";
 
@@ -1892,63 +1834,68 @@ export default function StoryManager() {
                                 )}
                               </div>
 
-                              {/* Line count comparison */}
+                              {/* Alignment status (uses server-provided chapterAlignmentIssues — same data as ComparisonModal) */}
                               {hasData && rawData.translatedText && (
                                 <div className="mt-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      {hasChapters && (
-                                        <button
-                                          onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
-                                          className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                          title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
-                                        >
-                                          <svg
-                                            className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  <div className="flex items-center gap-2">
+                                    {totalAlignmentIssues === 0 ? (
+                                      <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+                                        <span className="text-green-500">&#10003;</span>
+                                        Alignment OK
+                                        {hasMultipleChapters && <span className="text-gray-400 font-normal text-xs">({chapters.length} chapters)</span>}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="text-sm text-amber-600 font-medium flex items-center gap-1.5">
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                           </svg>
-                                        </button>
-                                      )}
-                                      <div className="flex flex-col gap-0.5">
-                                        <LineRow label="total lines" src={srcTotal} trans={transTotal} match={totalMatch} mismatched={totalMismatched} />
-                                        <LineRow label="content lines" src={srcContent} trans={transContent} match={contentMatch} mismatched={contentMismatched} />
-                                      </div>
-                                    </div>
+                                          {totalAlignmentIssues} alignment issue{totalAlignmentIssues > 1 ? "s" : ""}
+                                        </span>
+                                        {hasMultipleChapters && (
+                                          <button
+                                            onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
+                                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                            title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
+                                          >
+                                            <svg
+                                              className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
                                   </div>
 
                                   {/* Per-chapter breakdown */}
-                                  {isBreakdownExpanded && hasChapters && (
+                                  {isBreakdownExpanded && hasMultipleChapters && (
                                     <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
-                                      {sourceChapters.map((srcChapter) => {
-                                        const tc = translatedChapters.find(c => c.number === srcChapter.number);
-                                        const totalOk = tc ? tc.totalLines === srcChapter.totalLines : false;
-                                        const contentOk = tc ? tc.contentLines === srcChapter.contentLines : false;
-                                        const chapterOk = totalOk && contentOk;
+                                      {chapters.map((ch) => {
+                                        const chIssues = chapterIssues[ch.number];
+                                        const issueCount = chIssues?.contentVsBlankIssues.length || 0;
+                                        const chapterOk = !chIssues?.hasIssues;
 
                                         return (
                                           <div
-                                            key={srcChapter.number}
+                                            key={ch.number}
                                             className={`flex items-center justify-between px-2 py-1 rounded ${chapterOk ? 'bg-green-50' : 'bg-amber-50'}`}
                                           >
                                             <span className="text-gray-700 font-medium">
-                                              Ch. {srcChapter.number}
-                                              {srcChapter.title && <span className="font-normal text-gray-500 ml-1">({srcChapter.title.slice(0, 20)}{srcChapter.title.length > 20 ? '...' : ''})</span>}
+                                              Ch. {ch.number}
+                                              {ch.title && <span className="font-normal text-gray-500 ml-1">({ch.title.slice(0, 20)}{ch.title.length > 20 ? '...' : ''})</span>}
                                             </span>
-                                            <div className="flex gap-3 text-xs">
-                                              <span className={totalOk ? 'text-green-600' : 'text-amber-600'}>
-                                                {srcChapter.totalLines}{tc ? ` → ${tc.totalLines}` : ''}
-                                                {!totalOk && tc && <span className="ml-0.5 opacity-75">({(tc.totalLines - srcChapter.totalLines) > 0 ? '+' : ''}{tc.totalLines - srcChapter.totalLines})</span>}
-                                              </span>
-                                              <span className="text-gray-300">|</span>
-                                              <span className={contentOk ? 'text-green-600' : 'text-amber-600'}>
-                                                {srcChapter.contentLines}{tc ? ` → ${tc.contentLines}` : ''}
-                                                {!contentOk && tc && <span className="ml-0.5 opacity-75">({(tc.contentLines - srcChapter.contentLines) > 0 ? '+' : ''}{tc.contentLines - srcChapter.contentLines})</span>}
-                                              </span>
-                                            </div>
+                                            <span className={chapterOk ? 'text-green-600' : 'text-amber-600'}>
+                                              {chapterOk ? (
+                                                <span>&#10003;</span>
+                                              ) : (
+                                                <span>{issueCount} issue{issueCount > 1 ? 's' : ''}</span>
+                                              )}
+                                            </span>
                                           </div>
                                         );
                                       })}
