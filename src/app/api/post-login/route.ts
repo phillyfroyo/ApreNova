@@ -29,14 +29,26 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Check if user has a quizLevel set - if not, redirect to home for quiz
+  // Check if a quizLevel was passed from onboarding (e.g. Google OAuth after completing onboarding)
+  const quizLevelParam = req.nextUrl.searchParams.get('quizLevel');
+
+  // Check if user has a quizLevel set in DB
   const userWithLevel = await prisma.user.findUnique({
     where: { email: token.email },
     select: { quizLevel: true },
   });
 
   if (!userWithLevel?.quizLevel) {
-    // New user without level - send to root for onboarding step 1
+    if (quizLevelParam) {
+      // User completed onboarding before signing up — save the level to DB
+      await prisma.user.update({
+        where: { email: token.email },
+        data: { quizLevel: quizLevelParam },
+      });
+      // Go to stories since onboarding is complete
+      return NextResponse.redirect(new URL(`/${lang}/stories`, req.url));
+    }
+    // New user without level — send to root for onboarding step 1
     return NextResponse.redirect(new URL('/', req.url));
   }
 

@@ -8,16 +8,23 @@ import {
   generateChapterIndexTS,
   generateMetadataEntry,
   generateUITranslationEntry,
-  buildContentStructure,
   parseChapters,
-  paginateLines,
+  buildContentStructure,
   type StoryMetadataInput,
   type StoryChapter,
 } from "@/lib/admin/story-generator";
 import { writeAllStoryFiles, writeChapterFile, writeChapterIndexFile } from "@/lib/admin/file-writer";
 import { cleanText } from "@/lib/admin/text-utils";
+import { detectStanzas } from "@/lib/admin/text-preprocessor";
 import { SPLIT_CHAPTER_THRESHOLD } from "@/app/admin/upload-story/config/constants";
-import type { StoryType, StoryTag, StoryOrigin } from "@/types/story";
+import type { StoryType, StoryTag, StoryOrigin, ContentStructureType } from "@/types/story";
+import {
+  paginateAnthologyPoems,
+  buildContentStructureWithMetadata,
+  type StoryLine as SharedStoryLine,
+  type ProcessedChapterDataWithMetadata,
+} from "@/lib/story-processing/text-processing";
+import { toCEFR, type CEFRCode } from "@/lib/cefr";
 
 /**
  * Generate a random 4-digit number for unique filenames
@@ -36,6 +43,7 @@ interface SaveStoryRequest {
   slug: string;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook?: { en: string; es: string };
   levels: LevelContent[];
   linesPerPage?: number;
   thumbnailBase64?: string; // Base64 encoded image data
@@ -45,6 +53,10 @@ interface SaveStoryRequest {
   origin: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+  // Structure type for anthology-aware pagination
+  structureType?: ContentStructureType;
+  // Original level - the CEFR level of the unmodified source text
+  originalLevel?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -54,6 +66,7 @@ export async function POST(req: NextRequest) {
       slug,
       title,
       description,
+      hook,
       levels,
       linesPerPage = 10,
       thumbnailBase64,
@@ -62,6 +75,8 @@ export async function POST(req: NextRequest) {
       origin,
       tags,
       targetAudience,
+      structureType,
+      originalLevel,
     } = body;
 
     if (!slug || !title || !description || !levels || levels.length === 0) {
@@ -86,12 +101,10 @@ export async function POST(req: NextRequest) {
 
     for (const levelData of levels) {
       // Clean the text before parsing
-      const cleanedEn = cleanText(levelData.en);
-      const cleanedEs = cleanText(levelData.es);
-
-      // Parse chapters from the cleaned text
-      const enChapters = parseChapters(cleanedEn);
-      const esChapters = parseChapters(cleanedEs);
+      // Preserve whitespace for anthology/epic content (stanza breaks matter)
+      const preserveWhitespace = structureType === "anthology" || structureType === "epic";
+      const cleanedEn = cleanText(levelData.en, { preserveWhitespace });
+      const cleanedEs = cleanText(levelData.es, { preserveWhitespace });
 
       // Validate line counts match
       const enLineCount = cleanedEn.split("\n").filter(l => l.trim()).length;
@@ -100,66 +113,89 @@ export async function POST(req: NextRequest) {
         warnings.push(`Level ${levelData.level}: EN has ${enLineCount} lines, ES has ${esLineCount} lines. Lines may be misaligned.`);
       }
 
-      // Build the content structure
-      const contentStructure = buildContentStructure(
-        slug,
-        levelData.level,
-        {
-          en: enChapters.map(ch => {
-            // Custom pagination with provided linesPerPage
-            const pages = paginateLines(ch, linesPerPage);
-            return pages.flat();
-          }),
-          es: esChapters.map(ch => {
-            const pages = paginateLines(ch, linesPerPage);
-            return pages.flat();
-          }),
+      // ========== ANTHOLOGY PIPELINE ==========
+      // Two-level structure: Sections (collections) contain Poems (pages)
+      if (structureType === "anthology") {
+        const enLines = cleanedEn.split("\n");
+        const esLines = cleanedEs.split("\n");
+
+        // First: Detect section/collection boundaries (e.g., "I. LIFE.", "II. LOVE.")
+        const { detectSectionBoundaries } = await import("@/lib/story-processing/text-processing");
+        const sections = detectSectionBoundaries(enLines);
+        console.log(`[save-story] Anthology Level ${levelData.level}: Detected ${sections.length} sections/collections`);
+
+        // Build chapter data for each section
+        const chapterMarkerPattern = /^---\s*(Chapter|Capítulo)\s+\d+.*---$/i;
+        const chapterData: ProcessedChapterDataWithMetadata[] = sections.map((section, sectionIdx) => {
+          // Get section lines from both languages, stripping any chapter markers
+          const sectionEnLines = section.lines.filter(l => !chapterMarkerPattern.test(l.trim()));
+          const sectionEsLines = esLines.slice(section.startLine, section.endLine)
+            .filter(l => !chapterMarkerPattern.test(l.trim()));
+
+          // Detect stanzas on all section lines — paginateAnthologyPoems handles poem detection downstream
+          const stanzaMarked = detectStanzas(sectionEnLines);
+          const lineMetadata = new Map<number, { stanzaNumber?: number; isStanzaBreak?: boolean }>();
+          const sourceLines = stanzaMarked.map((m, idx) => {
+            lineMetadata.set(idx, { stanzaNumber: m.stanzaNumber, isStanzaBreak: m.isStanzaBreak });
+            return m.text;
+          });
+          const translatedLines = detectStanzas(sectionEsLines).map(m => m.text);
+
+          return {
+            sourceLines,
+            translatedLines,
+            lineMetadata,
+            metadata: {
+              number: sectionIdx + 1,
+              title: `${section.number}. ${section.title}`,
+            },
+          };
+        });
+
+        // Use shared buildContentStructureWithMetadata for proper anthology pagination
+        const content = buildContentStructureWithMetadata(
+          slug,
+          levelData.level,
+          sections.length > 1, // hasChapters (sections)
+          chapterData,
+          "en", // sourceLanguage
+          { structureType: "anthology" }
+        );
+
+        const maxChapters = Object.keys(content.chapters).length;
+        const useSplitFormat = maxChapters >= SPLIT_CHAPTER_THRESHOLD;
+
+        if (useSplitFormat) {
+          levelFiles.push({
+            level: levelData.level,
+            content: "",
+            splitFormat: true,
+            // Cast chapters to expected format - structure is compatible at runtime
+            chapters: content.chapters as Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }>,
+            chapterCount: maxChapters,
+            hasChapters: content.hasChapters,
+          });
+        } else {
+          // Cast content to GeneratedStoryContent format for TS file generation
+          const tsContent = generateContentFileTS(content as unknown as import("@/lib/admin/story-generator").GeneratedStoryContent);
+          levelFiles.push({ level: levelData.level, content: tsContent, splitFormat: false });
         }
-      );
-
-      // Actually, let's rebuild this properly - we want to paginate within the structure
-      const hasChapters = enChapters.length > 1 || esChapters.length > 1;
-      const chapters: Record<number, { pages: Record<number, { lines: Array<{ en: string; es: string }> }> }> = {};
-
-      // Use the max of both to handle potential mismatches
-      const maxChapters = Math.max(enChapters.length, esChapters.length);
-
-      for (let chIdx = 0; chIdx < maxChapters; chIdx++) {
-        // Safely get chapter content, defaulting to empty array if missing
-        const enChapter = enChapters[chIdx] || [];
-        const esChapter = esChapters[chIdx] || [];
-
-        const enPages = paginateLines(enChapter, linesPerPage);
-        const esPages = paginateLines(esChapter, linesPerPage);
-        const pages: Record<number, { lines: Array<{ en: string; es: string }> }> = {};
-
-        const maxPages = Math.max(enPages.length, esPages.length);
-
-        for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-          const enLines = enPages[pIdx] || [];
-          const esLines = esPages[pIdx] || [];
-          const maxLines = Math.max(enLines.length, esLines.length);
-
-          const lines: Array<{ en: string; es: string }> = [];
-          for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-            lines.push({
-              en: enLines[lIdx] || "",
-              es: esLines[lIdx] || "",
-            });
-          }
-
-          pages[pIdx + 1] = { lines };
-        }
-
-        chapters[chIdx + 1] = { pages };
+        continue; // Skip prose pipeline
       }
 
-      const finalContent = {
-        storySlug: slug,
-        level: levelData.level,
-        hasChapters,
-        chapters,
-      };
+      // ========== PROSE PIPELINE (default) ==========
+      // Parse chapters from the cleaned text
+      const enChapters = parseChapters(cleanedEn);
+      const esChapters = parseChapters(cleanedEs);
+
+      // Use shared buildContentStructure for prose content
+      const finalContent = buildContentStructure(
+        slug,
+        levelData.level,
+        { en: enChapters, es: esChapters }
+      );
+
+      const maxChapters = Object.keys(finalContent.chapters).length;
 
       // Determine whether to use split format based on chapter count
       const useSplitFormat = maxChapters >= SPLIT_CHAPTER_THRESHOLD;
@@ -172,7 +208,7 @@ export async function POST(req: NextRequest) {
           splitFormat: true,
           chapters: finalContent.chapters,
           chapterCount: maxChapters,
-          hasChapters,
+          hasChapters: finalContent.hasChapters,
         });
       } else {
         // Single file format
@@ -230,17 +266,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate metadata entries with the correct image path
+    // Convert level codes to CEFR format (e.g., "l2" -> "A2", "l5" -> "C1")
+    const cefrLevels = levels.map((l) => toCEFR(l.level));
+
     const metadata: StoryMetadataInput = {
       slug,
       title,
       description,
+      hook: hook || undefined,
       image: thumbnailImagePath || undefined, // Use the saved thumbnail path
-      levels: levels.map((l) => l.level),
+      levels: cefrLevels,
       isPremiumOnly: false,
       storyType: storyType || "short-story",
       origin: origin || { isOriginal: true },
       tags: tags || [],
       targetAudience: targetAudience || "all",
+      // Content structure type for navigation labels (Collection/Poem vs Chapter/Page)
+      structureType: structureType && structureType !== "prose" ? structureType : undefined,
+      // Original level - convert to CEFR if provided
+      originalLevel: originalLevel ? toCEFR(originalLevel) : undefined,
     };
 
     const metadataEntry = generateMetadataEntry(metadata);
@@ -276,7 +320,8 @@ export async function POST(req: NextRequest) {
         slug,
         levelData.level,
         levelData.hasChapters || false,
-        levelData.chapterCount
+        levelData.chapterCount,
+        structureType  // Pass structureType for anthology/epic navigation labels
       );
       const indexResult = await writeChapterIndexFile(slug, levelData.level, indexContent);
       splitFileResults.push(indexResult);

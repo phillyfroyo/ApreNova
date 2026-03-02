@@ -30,19 +30,34 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     accentColor: "bg-blue-600",
     hoverAccentColor: "hover:bg-blue-300",
     fontFamily: "font-sans",
-  },
-  "my-day": {
-    backgroundGradient: "linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%)",
-    textColor: "text-gray-900",
-    accentColor: "bg-orange-600",
-    hoverAccentColor: "hover:bg-orange-300",
-    fontFamily: "font-serif",
-  },
-  "sandbox-story": {
+  },"sandbox-story": {
     backgroundGradient: "linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%)",
     textColor: "text-gray-900",
     accentColor: "bg-indigo-600",
     hoverAccentColor: "hover:bg-indigo-300",
+    fontFamily: "font-sans",
+  },
+"my-day-3": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },
+
+  "poems-by-emily-dickinson-complete": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },
+
+  "the-great-gatsby": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },
 };

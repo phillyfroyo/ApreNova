@@ -1,6 +1,7 @@
 // src/app/api/admin/parse-attribution/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { logOpenAICost } from "@/lib/cost-tracker";
 import type { FormAttribution } from "@/lib/admin/attribution-helpers";
 
 const openai = new OpenAI({
@@ -88,6 +89,9 @@ Important guidelines:
       temperature: 0.1,
       max_tokens: 4000, // Increased to handle full summaries
     });
+
+    // Log cost (fire-and-forget)
+    logOpenAICost("parse-attribution", "gpt-4o", response.usage);
 
     const content = response.choices[0]?.message?.content;
 

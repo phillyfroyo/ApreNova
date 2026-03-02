@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { StoryData } from "../../types";
 import { STORY_TYPE_LABELS, STORY_TAG_LABELS } from "@/lib/stories";
 import { formToAttribution } from "@/lib/admin/attribution-helpers";
+import { fromNumericLevel } from "@/lib/cefr";
 
 interface SaveResult {
   success: boolean;
@@ -31,7 +32,7 @@ export function Step7Preview({
 }: Step7PreviewProps) {
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   // Only include levels that are fully generated and translated (not omitted)
-  const completedLevels = [1, 2, 3, 4, 5].filter(
+  const completedLevels = [1, 2, 3, 4, 5, 6].filter(
     (l) =>
       storyData.levelContent[l]?.status === "done" &&
       storyData.levelContent[l]?.mode !== "omit" &&
@@ -64,6 +65,11 @@ export function Step7Preview({
         ? { isOriginal: true as const }
         : { isOriginal: false as const, attribution: formToAttribution(storyData.attribution!) };
 
+      // Resolve effective structure type - use detected type when "auto" is selected
+      const effectiveStructureType = storyData.structureType === "auto"
+        ? storyData.parsedResult?.stats?.structureType
+        : storyData.structureType;
+
       const response = await fetch("/api/admin/save-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,6 +77,7 @@ export function Step7Preview({
           slug: storyData.slug,
           title: storyData.title,
           description: storyData.description,
+          hook: storyData.hook || undefined,
           levels,
           linesPerPage: storyData.linesPerPage,
           thumbnailBase64: storyData.thumbnailPreview || undefined,
@@ -80,6 +87,8 @@ export function Step7Preview({
           origin,
           tags: storyData.tags,
           targetAudience: storyData.targetAudience,
+          // Structure type for pagination - use detected type when "auto"
+          structureType: effectiveStructureType,
         }),
       });
 
@@ -276,7 +285,7 @@ export function Step7Preview({
                 <div className="flex flex-wrap gap-2 mt-1">
                   {completedLevels.map((level) => (
                     <code key={level} className="bg-green-100 px-2 py-1 rounded text-xs">
-                      /en/stories/{storyData.slug}/l{level}/1/1
+                      /en/stories/{storyData.slug}/{fromNumericLevel(level)}/1/1
                     </code>
                   ))}
                 </div>

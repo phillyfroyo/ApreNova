@@ -18,7 +18,7 @@ export default function UserStatsCard() {
   const lang = useTypedLang();
 
   useEffect(() => {
-    fetch('/api/user-stats')
+    fetch('/api/user-stats', { credentials: 'include' })
       .then((res) => res.json())
       .then(setStats)
       .catch((err) => console.error('Failed to load stats', err))

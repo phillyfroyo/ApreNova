@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 
 type DropdownVariant = "default" | "glass" | "blue" | "rounded" | "bold" | "auth";
 
-type DropdownOption = { label: string; value: string };
+type DropdownOption = { label: string; value: string; disabled?: boolean };
 
 type DropdownProps = {
   label?: string;
@@ -71,14 +71,20 @@ export default function Dropdown({
 
     {open && (
       <div className="absolute top-full left-0 mt-1 w-full bg-white/95 backdrop-blur-md text-black border border-white/10 rounded-xl shadow-md z-50 max-h-60 overflow-y-auto">
-        {options.map(({ label, value }) => (
+        {options.map(({ label, value, disabled }) => (
           <div
             key={value}
             onClick={() => {
-              onSelect(value);
-              handleOpenChange(false);
+              if (!disabled) {
+                onSelect(value);
+                handleOpenChange(false);
+              }
             }}
-            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+            className={`px-4 py-2 ${
+              disabled
+                ? "text-gray-400 cursor-default"
+                : "hover:bg-gray-100 cursor-pointer"
+            }`}
           >
             {label}
           </div>

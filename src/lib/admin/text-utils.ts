@@ -1,7 +1,19 @@
 // src/lib/admin/text-utils.ts
 // Consolidated text processing utilities for the admin upload pipeline
+//
+// NOTE: Core utilities (splitIntoSubChunks, file validation) are now in
+// the shared library at @/lib/story-processing/processing-config.ts
+// We re-export them here for backward compatibility.
 
-import { MAX_CHUNK_CHARS } from "@/app/admin/upload-story/config/constants";
+// Import directly from processing-config to avoid circular dependency with client.ts
+// (client.ts → text-processing.ts → text-utils.ts → client.ts)
+import {
+  MAX_CHUNK_CHARS,
+  splitIntoSubChunks as sharedSplitIntoSubChunks,
+  isAcceptedFile as sharedIsAcceptedFile,
+  detectFileType as sharedDetectFileType,
+  SUPPORTED_FILE_TYPES as SHARED_SUPPORTED_FILE_TYPES,
+} from "@/lib/story-processing/processing-config";
 
 // ============================================
 // Types
@@ -20,14 +32,51 @@ export interface HTMLExtractionResult {
 }
 
 // ============================================
+// Blank Line Utilities
+// ============================================
+
+/**
+ * Collapse runs of 2+ consecutive blank lines to a single blank line,
+ * and trim leading/trailing blank lines.
+ *
+ * Use this instead of `.filter(l => l.trim())` to preserve single blank
+ * lines as paragraph breaks (StoryLine { en: "", es: "" }).
+ */
+export function collapseConsecutiveBlanks(lines: string[]): string[] {
+  const result: string[] = [];
+  let lastWasBlank = false;
+  for (const line of lines) {
+    if (!line.trim()) {
+      if (!lastWasBlank) result.push(line);
+      lastWasBlank = true;
+    } else {
+      result.push(line);
+      lastWasBlank = false;
+    }
+  }
+  while (result.length > 0 && !result[0].trim()) result.shift();
+  while (result.length > 0 && !result[result.length - 1].trim()) result.pop();
+  return result;
+}
+
+// ============================================
 // Text Cleaning
 // ============================================
+
+export interface CleanTextOptions {
+  /** Preserve whitespace typology for poetry (don't collapse newlines or strip indentation) */
+  preserveWhitespace?: boolean;
+}
 
 /**
  * Clean text by removing AI artifacts, markdown formatting, and normalizing.
  * This is the single source of truth for text cleaning across the pipeline.
+ *
+ * @param text The text to clean
+ * @param options.preserveWhitespace If true, preserve all whitespace (for poetry)
  */
-export function cleanText(text: string): string {
+export function cleanText(text: string, options: CleanTextOptions = {}): string {
+  const { preserveWhitespace = false } = options;
   let cleaned = text
     // Remove code fences (```language or just ```)
     .replace(/^```[\w]*\n?/gm, "")
@@ -47,37 +96,79 @@ export function cleanText(text: string): string {
     .replace(/_(.*?)_/g, "$1")
     // Remove markdown headers
     .replace(/^#{1,6}\s+/gm, "")
-    // Normalize whitespace
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n");
+    // Normalize line endings
+    .replace(/\r\n/g, "\n");
+
+  // Whitespace handling depends on preserveWhitespace option
+  if (preserveWhitespace) {
+    // For poetry: preserve all whitespace (vertical and horizontal)
+    // Only remove truly excessive blank lines (10+)
+    cleaned = cleaned.replace(/\n{11,}/g, "\n\n\n\n\n\n\n\n\n\n");
+  } else {
+    // For prose: normalize whitespace
+    // Collapse all runs of 2+ blank lines to a single blank line (paragraph break).
+    // Blank lines are preserved through the pipeline as StoryLine { en: "", es: "" }.
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  }
 
   // Process line by line to remove quote wrapping
   cleaned = cleaned
     .split("\n")
     .map(line => {
-      let l = line.trim();
-      // Remove surrounding double quotes (straight and curly)
-      if ((l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith('"') && l.endsWith('"')) ||
-          (l.startsWith("'") && l.endsWith("'")) ||
-          (l.startsWith("'") && l.endsWith("'"))) {
-        l = l.slice(1, -1);
+      // For poetry, preserve leading whitespace (indentation)
+      const trimmedLine = preserveWhitespace ? line.trimEnd() : line.trim();
+      let l = trimmedLine;
+
+      // Remove surrounding double quotes (straight and curly) from the trimmed content
+      const contentToCheck = l.trim();
+      if ((contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
+          (contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
+          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'")) ||
+          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'"))) {
+        // Only unwrap if it's the whole line content
+        if (contentToCheck === l.trim()) {
+          const leadingSpace = preserveWhitespace ? l.match(/^\s*/)?.[0] || '' : '';
+          l = leadingSpace + contentToCheck.slice(1, -1);
+        }
       }
       // Handle lines that are just quotes
-      if (l === '""' || l === "''" || l === '""' || l === "''") {
-        return "";
+      if (l.trim() === '""' || l.trim() === "''" || l.trim() === '""' || l.trim() === "''") {
+        return preserveWhitespace ? "" : "";
       }
       return l;
     })
     .filter(line => line.length > 0 || line === "")
     .join("\n");
 
-  // Final trim and remove any remaining quote-only lines
-  return cleaned
+  // Final cleanup - remove any remaining quote-only lines
+  cleaned = cleaned
     .split("\n")
     .filter(line => !/^["'"'""'']+$/.test(line.trim()))
-    .join("\n")
-    .trim();
+    .join("\n");
+
+  // Only trim outer whitespace when NOT preserving whitespace
+  // (preserveWhitespace mode needs leading/trailing blank lines intact for alignment)
+  return preserveWhitespace ? cleaned : cleaned.trim();
+}
+
+/**
+ * Trim leading blank lines from text so first line is content.
+ * Preserves all other whitespace (for poetry).
+ * Used to ensure each poem starts with actual content, not whitespace gaps.
+ */
+export function trimLeadingBlankLines(text: string): string {
+  const lines = text.split('\n');
+  let firstContentIndex = 0;
+
+  // Find first non-empty line
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().length > 0) {
+      firstContentIndex = i;
+      break;
+    }
+  }
+
+  return lines.slice(firstContentIndex).join('\n');
 }
 
 // ============================================
@@ -87,6 +178,10 @@ export function cleanText(text: string): string {
 /**
  * Parse text into chapters based on common chapter markers.
  * Handles both English and Spanish chapter formats.
+ *
+ * IMPORTANT: This is a fallback parser. The primary parser is in text-preprocessor.ts.
+ * This function discards front matter (text before first chapter marker) unless
+ * it looks like substantial content (e.g., a prologue without a marker).
  */
 export function parseChaptersFromText(text: string): string[] {
   // Split on common chapter patterns
@@ -95,23 +190,46 @@ export function parseChaptersFromText(text: string): string[] {
 
   if (!matches || matches.length <= 1) {
     // No chapter markers or only one - treat as single chapter
+    // Preserve internal whitespace but trim leading/trailing for consistency
     return [text.trim()];
   }
 
   // Split by chapter markers
+  // parts[0] = text BEFORE first chapter marker (front matter)
+  // parts[1] = content after first marker, before second marker
+  // parts[2] = content after second marker, etc.
   const parts = text.split(chapterRegex);
   const chapters: string[] = [];
 
-  // First part might be front matter or first chapter
-  if (parts[0]?.trim()) {
-    chapters.push(parts[0].trim());
+  // FIX: Don't automatically include parts[0] as a chapter
+  // parts[0] is typically front matter (title, author, copyright, table of contents)
+  // Only include it if it looks like substantial prose content (rare case: prologue without marker)
+  const frontMatter = parts[0]?.trim() || '';
+  if (frontMatter) {
+    // Heuristic: front matter that looks like actual chapter content
+    // - Has substantial length (>500 chars)
+    // - Has multiple lines of prose (>5 lines with >50 chars each)
+    const proseLines = frontMatter.split('\n').filter(l => l.trim().length > 50);
+    const looksLikeChapterContent = frontMatter.length > 500 && proseLines.length > 5;
+
+    if (looksLikeChapterContent) {
+      // Rare case: content exists before first chapter marker (e.g., unmarked prologue)
+      chapters.push(frontMatter);
+    }
+    // Otherwise: discard front matter (typical case - title, TOC, etc.)
   }
 
-  // Add remaining chapters with their headers
+  // Add chapters WITHOUT their headers
+  // The chapter markers are used for splitting but should not be in content
+  // (headers are metadata, not content - they would get translated incorrectly)
+  // IMPORTANT: Preserve leading/trailing blank lines for proper line alignment
   for (let i = 1; i < parts.length; i++) {
-    if (parts[i]?.trim()) {
-      const header = matches[i - 1]?.trim() || '';
-      chapters.push((header + '\n\n' + parts[i]).trim());
+    const chapterContent = parts[i] || '';
+    // Only skip completely empty chapters, but preserve whitespace in non-empty ones
+    if (chapterContent.trim()) {
+      // Trim only trailing whitespace to normalize chapter endings,
+      // but preserve leading whitespace (blank lines at start of chapter)
+      chapters.push(chapterContent.replace(/\s+$/, ''));
     }
   }
 
@@ -122,64 +240,66 @@ export function parseChaptersFromText(text: string): string[] {
  * Split text into sub-chunks for API calls, respecting paragraph and sentence boundaries.
  * @param text The text to split
  * @param maxChars Maximum characters per chunk (defaults to MAX_CHUNK_CHARS)
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function splitIntoSubChunks(text: string, maxChars: number = MAX_CHUNK_CHARS): string[] {
-  if (text.length <= maxChars) return [text];
-
-  const paragraphs = text.split(/\n\n+/);
-  const chunks: string[] = [];
-  let currentChunk = "";
-
-  for (const para of paragraphs) {
-    if (currentChunk.length + para.length + 2 > maxChars) {
-      if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = para;
-    } else {
-      currentChunk += (currentChunk ? "\n\n" : "") + para;
-    }
-  }
-
-  if (currentChunk) chunks.push(currentChunk.trim());
-
-  // If any chunk is still too large, split by sentences
-  const result: string[] = [];
-  for (const chunk of chunks) {
-    if (chunk.length <= maxChars) {
-      result.push(chunk);
-    } else {
-      // Split by sentence
-      const sentences = chunk.split(/(?<=[.!?])\s+/);
-      let sentenceChunk = "";
-      for (const sentence of sentences) {
-        if (sentenceChunk.length + sentence.length + 1 > maxChars) {
-          if (sentenceChunk) result.push(sentenceChunk.trim());
-          sentenceChunk = sentence;
-        } else {
-          sentenceChunk += (sentenceChunk ? " " : "") + sentence;
-        }
-      }
-      if (sentenceChunk) result.push(sentenceChunk.trim());
-    }
-  }
-
-  return result;
+  return sharedSplitIntoSubChunks(text, maxChars);
 }
 
 // ============================================
 // HTML Processing (Client-side only)
 // ============================================
 
+export interface HTMLExtractionOptions {
+  /** Preserve whitespace typology for poetry (don't collapse newlines) */
+  preserveWhitespace?: boolean;
+}
+
 /**
  * Extract text from HTML, also extracting sidenotes and footnotes.
  * NOTE: This function uses DOM APIs and only works in browser context.
+ *
+ * @param html The HTML to extract text from
+ * @param options.preserveWhitespace If true, preserve all whitespace (for poetry)
  */
-export function extractTextFromHTML(html: string): HTMLExtractionResult {
+export function extractTextFromHTML(html: string, options: HTMLExtractionOptions = {}): HTMLExtractionResult {
+  const { preserveWhitespace = false } = options;
   // Create a temporary DOM parser
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
   // Remove script and style elements
   doc.querySelectorAll("script, style, noscript").forEach(el => el.remove());
+
+  // Remove Table of Contents tables (Gutenberg pattern: tables with many internal links)
+  // These tables contain TOC entries that would otherwise be extracted as content
+  doc.querySelectorAll("table").forEach(table => {
+    const internalLinks = table.querySelectorAll("a.pginternal, a[href^='#']");
+    const rows = table.querySelectorAll("tr");
+    // If table has many internal links (>10) relative to rows, it's likely a TOC
+    if (internalLinks.length > 10 && internalLinks.length >= rows.length * 0.5) {
+      console.log(`[extractTextFromHTML] Removing TOC table: ${internalLinks.length} links in ${rows.length} rows`);
+      table.remove();
+    }
+  });
+
+  // Also remove elements explicitly marked as TOC
+  doc.querySelectorAll('[id*="contents" i], [id*="toc" i], [class*="toc" i]').forEach(el => {
+    // Don't remove if it's just a link/anchor
+    if (el.tagName.toLowerCase() !== 'a') {
+      console.log(`[extractTextFromHTML] Removing TOC element: <${el.tagName.toLowerCase()}> id="${el.id}"`);
+      el.remove();
+    }
+  });
+
+  // Remove "Contents" heading that precedes TOC (now orphaned after table removal)
+  doc.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(heading => {
+    const text = heading.textContent?.trim().toLowerCase() || "";
+    if (text === "contents" || text === "table of contents") {
+      console.log(`[extractTextFromHTML] Removing Contents heading: "${heading.textContent?.trim()}"`);
+      heading.remove();
+    }
+  });
 
   const annotations: ExtractedAnnotation[] = [];
   let annotationIndex = 0;
@@ -266,9 +386,28 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
   });
 
   // Process nodes to extract text while preserving structure
-  const processNode = (node: Node): string => {
+  // IMPORTANT: For poems, stanza breaks are detected by EMPTY lines (double newlines).
+  // In HTML poetry, each verse line is often in its own <p> tag, but they're part of
+  // the same stanza. A stanza break is indicated by:
+  // - Empty <p> tags
+  // - <p> tags containing only whitespace/&nbsp;
+  // - Multiple consecutive <br> tags
+  //
+  // Strategy:
+  // - Content <p> tags → single newline (line within stanza)
+  // - Empty <p> tags → double newline (stanza break marker)
+  // - <br> → single newline
+  // - Multiple <br> in sequence → detected later as stanza break
+  const processNode = (node: Node, parentIsBlock: boolean = false): string => {
     if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent || "";
+      const text = node.textContent || "";
+      // CRITICAL: Ignore whitespace-only text nodes between block elements
+      // HTML like "</p>\n\n<p>" has text nodes with just newlines between the tags
+      // These should NOT be preserved as they create unwanted blank lines
+      if (parentIsBlock && /^\s*$/.test(text)) {
+        return "";
+      }
+      return text;
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -276,20 +415,78 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
       const tagName = el.tagName.toLowerCase();
 
       // Block elements that should have line breaks
-      const blockElements = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "br", "tr", "blockquote", "pre"];
+      const lineBreakElements = ["h1", "h2", "h3", "h4", "h5", "h6", "li", "tr"];
+      const isLineBreak = lineBreakElements.includes(tagName);
+
+      // Paragraph-like elements need special handling
+      const paragraphElements = ["p", "div", "blockquote"];
+      const isParagraph = paragraphElements.includes(tagName);
+
+      // PRE tags need special handling - preserve internal whitespace/newlines
+      const isPreformatted = tagName === "pre";
+
+      // Block elements where whitespace text nodes should be ignored
+      const blockElements = ["body", "div", "section", "article", "main", "header", "footer", ...paragraphElements, ...lineBreakElements];
       const isBlock = blockElements.includes(tagName);
 
       let content = "";
       el.childNodes.forEach(child => {
-        content += processNode(child);
+        content += processNode(child, isBlock && !isPreformatted);
       });
 
       if (tagName === "br") {
         return "\n";
       }
 
-      if (isBlock && content.trim()) {
-        return "\n" + content.trim() + "\n";
+      // For PRE tags, preserve all internal whitespace including newlines
+      // This is critical for Gutenberg poetry where poems are in <pre> tags
+      // Use markers to protect newlines from being collapsed in post-processing
+      if (isPreformatted) {
+        // Clean up the content but preserve internal structure
+        const lines = content.split('\n');
+        const nonEmptyLines = lines.filter(l => l.trim().length > 0);
+        if (nonEmptyLines.length === 0) {
+          return "\n"; // Empty pre tag
+        }
+        // Use a marker to protect PRE newlines from collapse
+        // These will be restored after the whitespace normalization
+        const PRE_NEWLINE = "\x00PRENL\x00";
+        const PRE_START = "\x00PRESTART\x00";  // Marker for start of PRE block
+        const protectedContent = content.trim().replace(/\n/g, PRE_NEWLINE);
+        // Use PRE_START marker to ensure a line break before PRE content
+        // This prevents H2 title from merging with first line of poem
+        return PRE_START + protectedContent + "\n\n";
+      }
+
+      // For paragraph elements, check if they have actual content
+      // Note: content might just be "\n" from <br> tags - that's not real content
+      const trimmedContent = content.replace(/\n/g, '').trim();
+
+      if (isParagraph) {
+        if (!trimmedContent) {
+          // Empty paragraph (or paragraph with only <br> tags)
+          // In Gutenberg HTML, single empty <p><br/></p> is used for visual spacing between lines
+          // A real stanza break has TWO or more consecutive empty paragraphs
+          // So: single empty = \n, multiple consecutive empties = \n\n (stanza break after collapse)
+          return "\n";
+        }
+        // Content paragraph = single line (NOT stanza break)
+        // This preserves poetry where each line is in its own <p>
+        return trimmedContent + "\n";
+      }
+
+      // Headers need DOUBLE line breaks before and after for chapter detection
+      // This ensures "BOOK I. INSCRIPTIONS" appears on its own line, separated from content
+      // Use a marker to protect the header boundary from collapse
+      const isHeader = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tagName);
+      if (isHeader && trimmedContent) {
+        const HEADER_BREAK = "\x00HEADBRK\x00";
+        return HEADER_BREAK + trimmedContent + HEADER_BREAK;
+      }
+
+      // List items and table rows get single newlines
+      if (isLineBreak && !isHeader && trimmedContent) {
+        return "\n" + trimmedContent + "\n";
       }
 
       return content;
@@ -298,15 +495,93 @@ export function extractTextFromHTML(html: string): HTMLExtractionResult {
     return "";
   };
 
-  let text = processNode(doc.body);
+  let text = processNode(doc.body, true);  // body is a block element
 
-  // Clean up excessive whitespace while preserving paragraph breaks
-  text = text
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n /g, "\n")
-    .replace(/ \n/g, "\n")
-    .trim();
+  // DEBUG: Log raw extraction to diagnose content issues
+  const rawLines = text.split('\n');
+  const preTagCount = (html.match(/<pre[\s>]/gi) || []).length;
+  console.log(`[extractTextFromHTML] DEBUG - Raw extraction stats:`);
+  console.log(`  - Total lines extracted: ${rawLines.length}`);
+  console.log(`  - PRE tags in source HTML: ${preTagCount}`);
+  console.log(`  - First 30 non-blank lines:`);
+  rawLines.filter(l => l.trim()).slice(0, 30).forEach((l, i) => {
+    console.log(`    ${i}: ${l.slice(0, 80)}${l.length > 80 ? '...' : ''}`);
+  });
+  // Check if we have actual poem content (lines starting with spaces - indented verse)
+  const indentedLines = rawLines.filter(l => /^\s{2,}\S/.test(l));
+  console.log(`  - Indented lines (verse content): ${indentedLines.length}`);
+  if (indentedLines.length > 0) {
+    console.log(`  - Sample indented lines:`);
+    indentedLines.slice(0, 5).forEach((l, i) => {
+      console.log(`    ${i}: "${l.slice(0, 60)}..."`);
+    });
+  }
+
+  // DEBUG: Log consecutive blank line runs in extracted text
+  if (preserveWhitespace) {
+    const lines = text.split('\n').slice(0, 50);
+    const consecutiveBlankRuns: number[] = [];
+    let currentRun = 0;
+    for (const line of lines) {
+      if (line.trim() === '') {
+        currentRun++;
+      } else {
+        if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+        currentRun = 0;
+      }
+    }
+    if (currentRun > 0) consecutiveBlankRuns.push(currentRun);
+    console.log(`[extractTextFromHTML] DEBUG - Consecutive blank runs in first 50 lines: [${consecutiveBlankRuns.join(', ')}]`);
+    console.log(`[extractTextFromHTML] First 20 lines sample:`);
+    lines.slice(0, 20).forEach((l, i) => {
+      const display = l.trim() === '' ? '(blank)' : l.slice(0, 50);
+      console.log(`  ${i}: ${display}`);
+    });
+  }
+
+  // Clean up whitespace - behavior depends on preserveWhitespace option
+  if (preserveWhitespace) {
+    // For poetry: preserve ALL whitespace exactly
+    // Only do minimal cleanup (remove trailing spaces, excessive blank lines 10+)
+    text = text
+      .replace(/[ \t]+$/gm, "")          // Remove trailing horizontal whitespace from lines
+      .replace(/\n{11,}/g, "\n\n\n\n\n\n\n\n\n\n")  // Only collapse 10+ blank lines
+      .trim();
+  } else {
+    // For prose: normalize whitespace while preserving meaningful spacing
+    //
+    // After processNode:
+    // - Content paragraph: "text\n"
+    // - Empty paragraph: "\n"
+    //
+    // Preserve hierarchical spacing:
+    // - 1 blank line (\n\n) = stanza break
+    // - 2 blank lines (\n\n\n) = poem separation
+    // - 3+ blank lines (\n\n\n\n+) = section/collection separation
+    //
+    // Strategy: Use placeholders to preserve different spacing levels during collapsing
+    const SECTION_BREAK_MARKER = "\x00SECTION\x00";  // 4+ blank lines → section break
+    const POEM_BREAK_MARKER = "\x00POEM\x00";        // 3 blank lines → poem break
+    const STANZA_BREAK_MARKER = "\x00STANZA\x00";    // 2 blank lines → stanza break
+    const PRE_NEWLINE_MARKER = "\x00PRENL\x00";
+    const PRE_START_MARKER = "\x00PRESTART\x00";
+    const HEADER_BREAK_MARKER = "\x00HEADBRK\x00";
+    text = text
+      .replace(/[ \t]+/g, " ")             // Collapse horizontal whitespace
+      .replace(/\n /g, "\n")               // Remove space after newline
+      .replace(/ \n/g, "\n")               // Remove space before newline
+      .replace(/\n{5,}/g, SECTION_BREAK_MARKER)  // 5+ newlines (4+ blank lines) = section break
+      .replace(/\n{4}/g, POEM_BREAK_MARKER)      // 4 newlines (3 blank lines) = poem break
+      .replace(/\n{3}/g, STANZA_BREAK_MARKER)    // 3 newlines (2 blank lines) = stanza break
+      .replace(/\n+/g, "\n")               // Collapse remaining newlines to 1
+      .replace(new RegExp(SECTION_BREAK_MARKER, 'g'), "\n\n\n\n")  // Restore section breaks (3 blank lines)
+      .replace(new RegExp(POEM_BREAK_MARKER, 'g'), "\n\n\n")       // Restore poem breaks (2 blank lines)
+      .replace(new RegExp(STANZA_BREAK_MARKER, 'g'), "\n\n")       // Restore stanza breaks (1 blank line)
+      .replace(new RegExp(HEADER_BREAK_MARKER, 'g'), "\n\n")       // Headers get blank line before/after
+      .replace(new RegExp(PRE_START_MARKER, 'g'), "\n\n")          // PRE start = blank line before content
+      .replace(new RegExp(PRE_NEWLINE_MARKER, 'g'), "\n")          // Restore PRE tag newlines
+      .trim();
+  }
 
   return { text, annotations };
 }
@@ -326,45 +601,24 @@ export function stripRTF(text: string): string {
 
 // ============================================
 // File Validation
+// Re-exports from shared library for backward compatibility
 // ============================================
 
 /** Supported file types for story upload */
-export const SUPPORTED_FILE_TYPES = [
-  { ext: ".txt", mime: "text/plain", label: "Plain Text" },
-  { ext: ".html", mime: "text/html", label: "HTML" },
-  { ext: ".htm", mime: "text/html", label: "HTML" },
-  { ext: ".md", mime: "text/markdown", label: "Markdown" },
-  { ext: ".rtf", mime: "application/rtf", label: "Rich Text" },
-] as const;
+export const SUPPORTED_FILE_TYPES = SHARED_SUPPORTED_FILE_TYPES;
 
 /**
  * Check if a file is an accepted type for story upload.
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function isAcceptedFile(file: File): boolean {
-  const fileName = file.name.toLowerCase();
-  return SUPPORTED_FILE_TYPES.some(
-    type => fileName.endsWith(type.ext) || file.type === type.mime
-  );
+  return sharedIsAcceptedFile(file);
 }
 
 /**
  * Detect file type from filename or MIME type.
+ * @deprecated Use the shared version from @/lib/story-processing directly
  */
 export function detectFileType(file: File): "text" | "html" | "rtf" | "markdown" | "unknown" {
-  const fileName = file.name.toLowerCase();
-
-  if (fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html") {
-    return "html";
-  }
-  if (fileName.endsWith(".rtf") || file.type === "application/rtf") {
-    return "rtf";
-  }
-  if (fileName.endsWith(".md") || file.type === "text/markdown") {
-    return "markdown";
-  }
-  if (fileName.endsWith(".txt") || file.type === "text/plain") {
-    return "text";
-  }
-
-  return "unknown";
+  return sharedDetectFileType(file);
 }

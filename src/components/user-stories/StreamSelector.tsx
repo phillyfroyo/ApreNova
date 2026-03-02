@@ -1,0 +1,252 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useStoryUpload, StreamProgress } from "@/contexts/StoryUploadContext";
+import { toCEFR } from "@/lib/cefr";
+import { t } from "@/lib/t";
+import type { Language } from "@/types/i18n";
+
+interface StreamSelectorProps {
+  streams: StreamProgress[];
+  lng: string;
+  setShowProgressViewer: (show: boolean) => void;
+  /**
+   * When true, shows all complete streams regardless of chapters array
+   * (for preview mode where data is fetched on-demand from the database)
+   */
+  isPreviewMode?: boolean;
+  /**
+   * Optional: source language and detected level for generating better labels
+   */
+  storyData?: {
+    sourceLanguage?: string;
+    detectedLevel?: string;
+  };
+  /** Whether any stream has alignment issues — controls warning styling */
+  hasAlignmentWarning?: boolean;
+}
+
+/**
+ * Shared dropdown component for viewing/previewing completed streams
+ * Used in both FloatingProgressWidget (during upload) and StoryReviewModal (for preview)
+ */
+export function StreamSelector({
+  streams,
+  lng,
+  setShowProgressViewer,
+  isPreviewMode = false,
+  storyData,
+  hasAlignmentWarning = false,
+}: StreamSelectorProps) {
+  const { setSelectedStreamId } = useStoryUpload();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Determine which streams are viewable
+  // In preview mode, include all complete streams (data fetched on-demand)
+  // In live mode, only include streams that have chapters data loaded OR have completed chapters
+  // currentChapter represents COMPLETED chapters, so > 0 means at least 1 chapter is done
+  const visibleStreams = isPreviewMode
+    ? streams.filter((s) => s.status === "complete")
+    : streams.filter(
+        (s) => s.status !== "waiting" || (Array.isArray(s.chapters) && s.chapters.length > 0) || s.currentChapter >= 1
+      );
+
+  // Streams with data that can be viewed
+  // Include streams with:
+  // 1. chapters array populated (legacy/direct data)
+  // 2. currentChapter >= 1 (at least 1 chapter completed - data available in content field)
+  const streamsWithData = isPreviewMode
+    ? streams.filter((s) => s.status === "complete")
+    : streams.filter(
+        (s) => (Array.isArray(s.chapters) && s.chapters.length > 0) || s.currentChapter >= 1
+      );
+
+  // Don't show if no viewable streams
+  if (streamsWithData.length === 0) {
+    return null;
+  }
+
+  const handleStreamClick = (stream: StreamProgress) => {
+    // In preview mode, allow clicking on complete streams (data fetched on-demand)
+    // In live mode, only allow clicking if the stream has completed at least 1 chapter
+    const hasData = isPreviewMode
+      ? stream.status === "complete"
+      : (Array.isArray(stream.chapters) && stream.chapters.length > 0) || stream.currentChapter >= 1;
+
+    if (!hasData) {
+      return; // Can't view streams that don't have data yet
+    }
+    setSelectedStreamId(stream.id);
+    setShowProgressViewer(true);
+    setIsOpen(false);
+  };
+
+  const getStatusIcon = (status: StreamProgress["status"]) => {
+    switch (status) {
+      case "in-progress":
+        return (
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+        );
+      case "complete":
+        return (
+          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        );
+      default:
+        return (
+          <div className="w-2 h-2 rounded-full bg-gray-300" />
+        );
+    }
+  };
+
+  const getStreamTypeIcon = (type: StreamProgress["type"]) => {
+    if (type === "rewriting") {
+      return (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+      </svg>
+    );
+  };
+
+  const typedLng = (lng as Language) || "en";
+
+  const getStreamLabel = (stream: StreamProgress) => {
+    const level = toCEFR(stream.level);
+    if (stream.type === "rewriting") {
+      const fromLevel = stream.fromLevel ? toCEFR(stream.fromLevel) : "?";
+      return t(typedLng, "upload", "rewriteFromTo", { from: fromLevel, to: level });
+    } else {
+      const isOriginal = storyData?.detectedLevel && stream.level === storyData.detectedLevel;
+      if (isOriginal !== undefined) {
+        return isOriginal
+          ? t(typedLng, "upload", "translateOriginal", { level })
+          : t(typedLng, "upload", "translateRewritten", { level });
+      }
+      return stream.label || t(typedLng, "upload", "translateLevel", { level });
+    }
+  };
+
+  // Always show dropdown (even for single stream)
+  return (
+    <div ref={dropdownRef}>
+      <div>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full py-2 px-4 font-medium transition-colors flex items-center gap-2 ${
+            hasAlignmentWarning
+              ? `bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`
+              : `bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 ${isOpen ? "rounded-t-lg border-b-0" : "rounded-lg"}`
+          }`}
+        >
+          {hasAlignmentWarning ? (
+            <svg className="w-4 h-4 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          )}
+          <span className="flex-1 text-left">
+            {isPreviewMode
+              ? t(typedLng, "upload", "previewCompletedStory")
+              : t(typedLng, "upload", "viewProgress")}
+          </span>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+            hasAlignmentWarning ? "bg-amber-200 text-amber-700" : "bg-blue-100 text-blue-600"
+          }`}>
+            {streamsWithData.length}
+          </span>
+          <svg
+            className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Dropdown menu - expands inline to grow the container */}
+        {isOpen && (
+          <div className="border border-t-0 border-gray-200 rounded-b-lg bg-white overflow-hidden">
+            {visibleStreams.map((stream) => {
+              // A stream has viewable data if:
+              // - In preview mode: stream is complete (data fetched on-demand)
+              // - In live mode: has chapters array populated OR has completed at least 1 chapter
+              const hasData = isPreviewMode
+                ? stream.status === "complete"
+                : (Array.isArray(stream.chapters) && stream.chapters.length > 0) || stream.currentChapter >= 1;
+              // Disable clicking if the stream doesn't have any data yet
+              // This includes "waiting" status AND "in-progress" with 0 completed chapters
+              const isDisabled = !isPreviewMode && !hasData;
+
+              return (
+                <button
+                  key={stream.id}
+                  onClick={() => handleStreamClick(stream)}
+                  disabled={isDisabled}
+                  className={`w-full px-3 py-2 flex items-center gap-3 text-left transition-colors ${
+                    isDisabled
+                      ? "bg-gray-50 text-gray-400 cursor-default"
+                      : "hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  <span className={`flex-shrink-0 ${stream.type === "rewriting" ? "text-amber-500" : "text-blue-500"}`}>
+                    {getStreamTypeIcon(stream.type)}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">
+                      {getStreamLabel(stream)}
+                    </span>
+                    {!isPreviewMode && hasData ? (
+                      <span className="block text-xs text-gray-400">
+                        {t(typedLng, "upload", "chaptersCompleted", { completed: stream.currentChapter || stream.chapters?.length || 0, total: stream.totalChapters })}
+                      </span>
+                    ) : stream.status === "waiting" ? (
+                      <span className="block text-xs text-gray-400">
+                        {t(typedLng, "upload", "waitingToStart")}
+                      </span>
+                    ) : stream.status === "in-progress" && !hasData ? (
+                      <span className="block text-xs text-gray-400">
+                        {t(typedLng, "upload", "processingFirstChapter")}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="flex-shrink-0 flex items-center gap-1">
+                    {stream.hasAlignmentIssues && (
+                      <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    )}
+                    {getStatusIcon(stream.status)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

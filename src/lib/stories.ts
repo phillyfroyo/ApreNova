@@ -192,6 +192,10 @@ export function getStoryDescription(lang: Language, slug: string): string {
   return (translations as any)[lang]?.storiesMetadata?.[slug]?.description ?? "";
 }
 
+export function getStoryHook(lang: Language, slug: string): string {
+  return (translations as any)[lang]?.storiesMetadata?.[slug]?.hook ?? "";
+}
+
 export function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -210,8 +214,9 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "aventura",
     image: "/images/aventura-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
+    isArchived: true,
     type: "short-story",
     origin: { isOriginal: true },
     tags: ["adventure","mystery","friendship","suspenseful","heartwarming"],
@@ -220,32 +225,52 @@ export const STORY_METADATA: StoryMetadata[] = [
   {
     slug: "the-last-word",
     image: "/images/the-last-word-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
     type: "short-story",
     origin: { isOriginal: true },
     tags: ["suspenseful","heartwarming","reflective","inspiring"],
-    targetAudience: "adult",
+    targetAudience: "all",
   },
   {
     slug: "diego-unplugged",
     image: "/images/diego-unplugged-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     isPremiumOnly: false,
     type: "short-story",
     origin: { isOriginal: true },
     tags: ["technology","reflective","inspiring","heartwarming"],
     targetAudience: "all",
-  },
-  {
-    slug: "my-day",
-    image: "/images/my-day-thumbnail.png",
-    levels: ["l1", "l2", "l3", "l4", "l5"],
+  },{
+    slug: "my-day-3",
+    image: "/images/my-day-3-thumbnail-7027.png",
+    levels: ["A1", "A2", "B1", "B2", "C1"],
     type: "poem",
     origin: { isOriginal: true },
-    tags: ["family","multicultural"],
     targetAudience: "all",
-  },];
+    structureType: "anthology",
+  },
+  {
+    slug: "poems-by-emily-dickinson-complete",
+    image: "/images/poems-by-emily-dickinson-complete-thumbnail-4653.jpeg",
+    levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
+    type: "poem",
+    origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems by Emily Dickinson", publisher: "Not specified", editor: "Mabel Loomis Todd and T.W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, and her works are in the public domain.", url: "https://www.gutenberg.org/ebooks/12242" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/12242" }, region: "United States", culturalInfluences: ["American"], genres: ["poetry"] } },
+    tags: ["love","death","usa","inspiring"],
+    targetAudience: "all",
+    structureType: "anthology",
+  },
+
+  {
+    slug: "the-great-gatsby",
+    image: "/images/the-great-gatsby-thumbnail-8480.jpeg",
+    levels: ["A1", "A2", "B1", "B2", "C1"],
+    type: "novel",
+    origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." } } },
+    tags: ["romance","love","tragedy","urban"],
+    targetAudience: "all",
+  },
+];
 
 export function getStoryUrl({
   locale,

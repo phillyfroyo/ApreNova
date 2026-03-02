@@ -58,17 +58,31 @@ export class AzureSpeechService {
   }
 
   /**
-   * Generate SSML markup for precise speech control
+   * Generate SSML markup for precise speech control.
+   * For scripts: reads speaker name, pauses, then optionally stage direction (softer), then dialogue.
    */
-  private generateSSML(options: SSMLOptions): string {
-    const { text, voice, rate, pitch = '+0Hz', volume = 'medium' } = options;
-    
+  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string }): string {
+    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection } = options;
+
+    let content = '';
+
+    // Speaker name with emphasis and pause (for scripts)
+    if (speakerName) {
+      content += `<emphasis level="moderate">${this.escapeXML(speakerName)}</emphasis><break time="300ms"/>`;
+    }
+
+    // Stage direction in softer voice (for scripts)
+    if (stageDirection) {
+      content += `<prosody volume="soft" rate="medium">${this.escapeXML(stageDirection)}</prosody><break time="200ms"/>`;
+    }
+
+    // Main text/dialogue with normal prosody settings
+    content += `<prosody rate="${rate}" pitch="${pitch}" volume="${volume}">${this.escapeXML(text)}</prosody>`;
+
     return `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voice.substring(0, 5)}">
         <voice name="${voice}">
-          <prosody rate="${rate}" pitch="${pitch}" volume="${volume}">
-            ${this.escapeXML(text)}
-          </prosody>
+          ${content}
         </voice>
       </speak>
     `.trim();
@@ -107,18 +121,21 @@ export class AzureSpeechService {
   }
 
   /**
-   * Generate speech audio with word-level timing data
+   * Generate speech audio with word-level timing data.
+   * Supports script speaker names and stage directions via SSML.
    */
   public async generateSpeech(request: TTSRequest): Promise<TTSResponse> {
     try {
       const voice = VOICE_CONFIG[request.language][request.speed];
       const rate = SPEED_RATES[request.speed];
 
-      // Generate SSML
+      // Generate SSML with optional speaker name and stage direction
       const ssml = this.generateSSML({
         text: request.text,
         voice,
-        rate
+        rate,
+        speakerName: request.speakerName,
+        stageDirection: request.stageDirection
       });
 
       // Create synthesizer with audio config
@@ -182,18 +199,21 @@ export class AzureSpeechService {
   }
 
   /**
-   * Generate speech and return audio buffer
+   * Generate speech and return audio buffer.
+   * Supports script speaker names and stage directions via SSML.
    */
   public async generateSpeechBuffer(request: TTSRequest): Promise<{ buffer: ArrayBuffer; wordTimings: WordTiming[]; duration: number }> {
     try {
       const voice = VOICE_CONFIG[request.language][request.speed];
       const rate = SPEED_RATES[request.speed];
 
-      // Generate SSML
+      // Generate SSML with optional speaker name and stage direction
       const ssml = this.generateSSML({
         text: request.text,
         voice,
-        rate
+        rate,
+        speakerName: request.speakerName,
+        stageDirection: request.stageDirection
       });
 
       // Create synthesizer without audio output (for buffer generation)

@@ -2,6 +2,128 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## CRITICAL: Commercial-Grade Architecture Standards
+
+**This is a commercial application. Every edit, feature, and restructure must follow industry best practices.**
+
+### Before Writing Code, Always:
+
+1. **Identify the Single Source of Truth** - Before implementing any feature, ask: "Where is the canonical implementation for this logic?" If it exists, use it. If it doesn't, create one in a dedicated module.
+
+2. **Check for Shared Pipelines** - Many features in this app are shared between user and admin portals. Before modifying backend logic, verify which entry points consume it.
+
+3. **Avoid Logic Fragmentation** - Never duplicate transformation logic across files. If the same algorithm runs in multiple places, consolidate it into one module and have others import from there.
+
+4. **Enforce Data Contracts** - Use TypeScript interfaces as contracts between modules. Define canonical types in one place (e.g., `types.ts`) and import everywhere.
+
+5. **Keep Files Under 400 Lines** - Files over 400 lines become hard to debug. When approaching this limit, split into logical sub-modules with clear responsibilities.
+
+6. **Use Barrel Exports** - Create `index.ts` files that export public APIs. This makes refactoring easier and keeps imports clean.
+
+### Anti-Patterns to Avoid:
+
+- **Scattered Detection Logic** - Example: We had stanza detection in 6+ places (text-preprocessor, level-processor, rewriting, text-processing, etc.). Now consolidated in `src/lib/poem-processing/`.
+
+- **Implicit Dependencies** - If Module A transforms data that Module B expects in a certain format, make that contract explicit with shared types.
+
+- **Deep Nesting Without Contracts** - Multi-stage pipelines (parse → detect → rewrite → translate → build) need clear interfaces between each stage.
+
+### Key Shared Modules:
+
+| Module | Purpose | Used By |
+|--------|---------|---------|
+| `src/lib/text-processing/` | **SINGLE SOURCE OF TRUTH** for all text processing | Admin uploads, User uploads, Dev Tools |
+| `src/lib/poem-processing/` | Canonical stanza detection | User pipeline, Admin pipeline, Rewriting |
+| `src/lib/story-processing/` | Detection, translation, rewriting, content building | Both portals |
+| `src/lib/user-stories/` | User upload orchestration | User portal API routes |
+| `src/lib/admin/` | Admin upload orchestration | Admin portal API routes |
+
+### Translation Pipeline Architecture (CRITICAL):
+
+**The admin and user pipelines SHARE translation logic. Do NOT create parallel implementations.**
+
+```
+SHARED (src/lib/story-processing/):
+  translation.ts        → translateChapter()  — chunking + translate + align + clean
+                        → translateText()     — low-level line-numbered translation
+  translation-utils.ts  → alignLeadingBlanks(), addLineNumbers(), parseNumberedLines()
+  processing-config.ts  → splitChapterForTranslation(), TRANSLATION_SUB_CHUNK_CHARS
+
+USER PIPELINE (src/lib/user-stories/level-processor.ts):
+  translateLevelChapters()     → calls translateChapter() from shared module
+  translateChaptersConsumer()  → calls translateChapter() from shared module
+
+ADMIN PIPELINE (src/app/admin/upload-story/hooks/useTranslationPipeline.ts):
+  translateChunk()     → calls /api/admin/translate (HTTP) → translateText()
+  alignLeadingBlanks() → imported from shared translation-utils.ts
+  cleanText()          → imported from shared text-utils.ts
+```
+
+**Rules:**
+- `translateChapter()` is the single source of truth for chapter-level translation
+- User pipeline calls it directly (server-side)
+- Admin pipeline calls `translateText()` via HTTP API, then applies `alignLeadingBlanks()` + `cleanText()` client-side (same steps, same shared functions)
+- NEVER add translation post-processing (alignment, cleaning, blank-line filtering) to pipeline-specific code — put it in the shared module
+- Files in `src/lib/story-processing/` are marked with `⚠️ SHARED MODULE` headers
+
+---
+
+## CRITICAL: Dev Tools Must Use Production Algorithms
+
+**The Admin Dev Tools (SU TP Algorithms testing system) must use 100% the same code as the production upload pipelines.**
+
+### Why This Matters:
+- Dev Tools exist to test and validate the **actual algorithms** that will process user uploads
+- If Dev Tools use different code, testing is meaningless - you're testing code that won't run in production
+- This has caused bugs before: separate `countPoems()` implementations gave different results
+
+### The Rule:
+1. **NEVER write new algorithm functions specifically for Dev Tools**
+2. **ALWAYS import from the unified `src/lib/text-processing/` module**
+3. **If an algorithm doesn't exist for Dev Tools to use, add it to the shared module first**
+
+### Architecture:
+```
+src/lib/text-processing/           ← SINGLE SOURCE OF TRUTH
+├── index.ts                        ← Main entry: processText()
+├── file-extractors/                ← HTML, RTF, TXT, MD extraction
+├── content-processors/             ← Anthology, Prose, Epic, Script processing
+│   └── anthology-processor.ts      ← Re-exports countPoems from shared
+└── shared/
+    ├── poem-detection.ts           ← detectPoemBoundaries(), countPoems()
+    ├── chapter-detection.ts        ← Chapter/section boundary detection
+    ├── whitespace.ts               ← Line break handling
+    └── cleanup.ts                  ← Footnotes, line numbers, etc.
+```
+
+### Consumers (All Use Same Code):
+1. **Admin Upload Pipeline** - `src/app/admin/upload-story/`
+2. **User Upload Pipeline** - `src/components/user-stories/UploadStoryModal.tsx`
+3. **Dev Tools** - `src/app/admin/upload-story/components/dev-tools/`
+
+### Example - Wrong vs Right:
+
+**WRONG** (creates untested code path):
+```typescript
+// In AlgorithmResultViewer.tsx
+function countPoemsForDevTools(text: string) {
+  // Custom implementation just for Dev Tools
+  return text.split('\n').filter(isPoemTitle).length;
+}
+```
+
+**RIGHT** (uses production algorithm):
+```typescript
+// In AlgorithmResultViewer.tsx
+import { countPoems } from "@/lib/text-processing";
+// Uses exact same algorithm as production uploads
+const poemCount = countPoems(chapterText);
+```
+
+---
+
 ## Development Commands
 
 - `npm run dev` - Start development server on http://localhost:3000

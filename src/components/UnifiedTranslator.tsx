@@ -3,12 +3,14 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { t } from '@/lib/t';
 import type { Language } from "@/types/i18n";
 
 
 interface Props {
   sentence: string;
+  staticTranslation?: string; // Pre-existing translation to use when full line is selected (avoids GPT call)
   enabled?: boolean;
   autoTriggerAll?: boolean | number;
   readOnlyMode?: boolean; // 🍌 NEW: disables real GPT fetch
@@ -20,14 +22,20 @@ interface Props {
   // Context for better translations
   sentenceIndex?: number;
   contextSentences?: Array<{ es: string; en: string }>;
+  // Cross-line stanza selection support
+  externalSelection?: { start: number; end: number } | null; // Parent can force a selection range
+  onWordClick?: (wordIndex: number) => void; // Notify parent of word clicks for cross-line coordination
 }
 
 
 
-export default function UnifiedTranslator({ sentence, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences }: Props) {
-  const words = sentence.split(" ");
-  const [startIdx, setStartIdx] = useState<number | null>(null);
-  const [endIdx, setEndIdx] = useState<number | null>(null);
+export default function UnifiedTranslator({ sentence, staticTranslation, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
+  // Extract leading whitespace for poetry indentation
+  const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
+  const contentWithoutLeading = sentence.trimStart();
+  const words = contentWithoutLeading.split(" ");
+  const [internalStartIdx, setInternalStartIdx] = useState<number | null>(null);
+  const [internalEndIdx, setInternalEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
   const [enhancedTranslation, setEnhancedTranslation] = useState<{
@@ -39,21 +47,30 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+  const [authError, setAuthError] = useState(false);
+
+  // Use external selection if provided, otherwise use internal state
+  const startIdx = externalSelection !== undefined ? externalSelection?.start ?? null : internalStartIdx;
+  const endIdx = externalSelection !== undefined ? externalSelection?.end ?? null : internalEndIdx;
+  // Setters that work with internal state (used when no external selection)
+  const setStartIdx = setInternalStartIdx;
+  const setEndIdx = setInternalEndIdx;
+
   // Notify parent of translation state changes
   useEffect(() => {
-    const hasActiveTranslation = translations.length > 0 || loading || error !== "";
+    const hasActiveTranslation = translations.length > 0 || loading || error !== "" || authError;
     onTranslationStateChange?.(hasActiveTranslation);
-  }, [translations.length, loading, error]); // Removed onTranslationStateChange from deps
+  }, [translations.length, loading, error, authError]); // Removed onTranslationStateChange from deps
 
-  // Notify parent of selection changes
+  // Notify parent of selection changes (only for internal selections, not external)
   useEffect(() => {
-    if (startIdx !== null && endIdx !== null) {
-      onSelectionChange?.({ start: startIdx, end: endIdx });
+    if (externalSelection !== undefined) return; // External selection managed by parent
+    if (internalStartIdx !== null && internalEndIdx !== null) {
+      onSelectionChange?.({ start: internalStartIdx, end: internalEndIdx });
     } else {
       onSelectionChange?.(null);
     }
-  }, [startIdx, endIdx]); // Removed onSelectionChange from deps to prevent infinite loop
+  }, [internalStartIdx, internalEndIdx, externalSelection]); // Removed onSelectionChange from deps to prevent infinite loop
 
   // Notify parent of translation data for saving vocabulary
   useEffect(() => {
@@ -65,7 +82,6 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
       onTranslationData?.(null);
     }
   }, [startIdx, endIdx, translations, enhancedTranslation]);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -114,7 +130,7 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   const fetchTranslation = useCallback(
   async (start: number, end: number) => {
     if (readOnlyMode) {
-      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      setTranslations([`🔒 ${t(currentLang, "translator", "lockedFeature")}`]);
       return;
     }
 
@@ -141,6 +157,7 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     try {
       setLoading(true);
       setError("");
+      setAuthError(false);
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -180,9 +197,13 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
           setEnhancedTranslation(null);
         }
       }
-    } catch (err) {
-      console.error(err);
-      setError("⚠️ Failed to fetch translation.");
+    } catch (err: any) {
+      if (err.message === "Authentication required") {
+        setAuthError(true);
+      } else {
+        console.error(err);
+        setError("⚠️ Failed to fetch translation.");
+      }
     } finally {
       setLoading(false);
     }
@@ -195,27 +216,49 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
   
   // Update the ref whenever dependencies change
   triggerManualTranslationRef.current = () => {
-    // If translations are already showing, hide them (toggle off)
-    if (translations.length > 0 || error) {
+    // If translations are already showing or loading, hide them (toggle off)
+    if (translations.length > 0 || loading || error) {
       setTranslations([]);
       setEnhancedTranslation(null);
+      setLoading(false);
       setError("");
       return;
     }
 
     if (readOnlyMode) {
-      setTranslations(["🔒 Premium feature — upgrade to unlock smart GPT translations"]);
+      // Set all states together - React 18 batches into single render
+      setStartIdx(0);
+      setEndIdx(words.length - 1);
+      setTranslations([`🔒 ${t(currentLang, "translator", "lockedFeature")}`]);
       return;
     }
 
+    // Check if full line is being translated (use static translation if available)
+    const isFullLine = (start: number, end: number) => start === 0 && end === words.length - 1;
+
     if (startIdx !== null && endIdx !== null) {
-      // Translate selected words
-      fetchTranslation(startIdx, endIdx);
+      // Words already highlighted
+      if (isFullLine(startIdx, endIdx) && staticTranslation) {
+        // Use static translation for full line
+        setTranslations([staticTranslation]);
+        setEnhancedTranslation(null);
+      } else {
+        // Partial selection - call GPT
+        fetchTranslation(startIdx, endIdx);
+      }
     } else {
-      // Translate entire sentence
+      // No selection - translate full line
       setStartIdx(0);
       setEndIdx(words.length - 1);
-      fetchTranslation(0, words.length - 1);
+      if (staticTranslation) {
+        // Use static translation for full line
+        setTranslations([staticTranslation]);
+        setEnhancedTranslation(null);
+      } else {
+        // No static translation available - call GPT
+        setLoading(true);
+        fetchTranslation(0, words.length - 1);
+      }
     }
   };
 
@@ -231,6 +274,7 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
     setTranslations([]);
     setEnhancedTranslation(null);
     setError("");
+    setAuthError(false);
   }, []);
 
   // Provide manual translation function to parent only once
@@ -249,6 +293,14 @@ export default function UnifiedTranslator({ sentence, enabled = false, autoTrigg
 
   const handleClick = (index: number) => {
   if (!enabled) return;
+
+  // Notify parent of word click for cross-line stanza selection
+  onWordClick?.(index);
+
+  // If using external selection, let parent handle all selection logic
+  if (externalSelection !== undefined) {
+    return;
+  }
 
   // Clear any existing translations when selecting new words
   setTranslations([]);
@@ -339,8 +391,12 @@ const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
       },
     }));
     console.log("🎯 Data from API:", data);
-  } catch (err) {
-    console.error("❌ Failed to fetch example:", err);
+  } catch (err: any) {
+    if (err.message === "Authentication required") {
+      setAuthError(true);
+    } else {
+      console.error("❌ Failed to fetch example:", err);
+    }
   }
 };
 
@@ -379,7 +435,6 @@ useEffect(() => {
       target.closest('[data-audio-control]') ||          // Any audio control element
       target.closest('[data-translation-control]')       // Any translation control element
     ) {
-      console.log('🎯 UnifiedTranslator: Exempting audio/translation control - not closing translation');
       return; // Never close translation for these elements
     }
     
@@ -424,6 +479,10 @@ useEffect(() => {
   <div className="relative" data-translator>
     <div ref={containerRef} className="relative">
       <div ref={sentenceRef} className="flex flex-wrap justify-start gap-1 text-lg text-left w-full">
+      {/* Render leading whitespace for poetry indentation */}
+      {leadingWhitespace && (
+        <span className="whitespace-pre" style={{ userSelect: 'none' }}>{leadingWhitespace}</span>
+      )}
       {words.map((word, i) => (
         <button
           ref={(el) => {
@@ -431,7 +490,7 @@ useEffect(() => {
           }}
           key={i}
           onClick={() => handleClick(i)}
-          className={`px-0.5 -ml-[1.5px] transition whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md ${
+          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md ${
             enabled && isSelected(i)
               ? "bg-white/10 backdrop-blur-sm border-black/10 shadow-md shadow-black/20"
               : "text-black border-transparent"
@@ -443,16 +502,37 @@ useEffect(() => {
     </div>
     </div>
 
-    {enabled && (translations.length > 0 || loading || error) && (
+    {enabled && (translations.length > 0 || loading || error || authError) && (
       <div
   ref={tooltipRef}
   style={sentenceWidth ? { width: sentenceWidth } : undefined}
-  className="absolute left-1/2 -translate-x-1/2 mt-2 bg-white text-black p-4 rounded-xl shadow z-50"
+  className="mt-1 -ml-[15px] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative"
   data-tooltip
 >
-        {error && <div className="text-sm text-red-500">{error}</div>}
+        {/* Close button */}
+        <button
+          onClick={clearSelection}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+          data-translation-control="close"
+        >
+          ✕
+        </button>
 
-        <div className="text-sm text-left">
+        {authError && (
+          <div className="text-sm pr-6">
+            <span className="text-gray-700">{t(currentLang, "translator", "signInRequired")} </span>
+            <Link href={`/${currentLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+              {t(currentLang, "translator", "signIn")}
+            </Link>
+            <span className="text-gray-700"> {t(currentLang, "translator", "or")} </span>
+            <Link href={`/${currentLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+              {t(currentLang, "translator", "createAccount")}
+            </Link>
+          </div>
+        )}
+        {error && !authError && <div className="text-sm text-red-500 pr-6">{error}</div>}
+
+        <div className="text-sm text-left pr-6">
           {loading && (
             <div className="flex items-center gap-2 mb-2">
               <span className="font-semibold">{t(currentLang, "translator", "translating")}…</span>
@@ -466,13 +546,13 @@ useEffect(() => {
               {enhancedTranslation && startIdx === endIdx ? (
                 <>
                   <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
-                  <div className="text-lg font-medium text-gray-900">
+                  <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
                     <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.contextTranslation}
                   </div>
 
                   {enhancedTranslation.isDerivative && enhancedTranslation.rootWord && (
                     <div className="mt-3">
-                      <p className="font-semibold text-sm text-gray-700">Root word:</p>
+                      <p className="font-semibold text-sm text-gray-700">{t(currentLang, "translator", "rootWord")}:</p>
                       <div className="text-sm text-gray-800">
                         <span className="font-medium">{enhancedTranslation.rootWord}</span> = {enhancedTranslation.rootTranslation}
                       </div>
@@ -524,7 +604,7 @@ useEffect(() => {
                 /* Legacy format for phrases and fallback */
                 <>
                   <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
-                  <div className="text-lg font-medium text-gray-900">
+                  <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
                     {translations[0]}
                   </div>
 

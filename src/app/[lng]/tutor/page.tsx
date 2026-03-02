@@ -66,12 +66,17 @@ export default function TutorPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
   };
 
-  // Load conversation history on mount
+  // Load conversation history on mount (or show auth message for unauthenticated users)
   useEffect(() => {
-    if (!session?.user) return;
-
     // Prevent double-loading on React strict mode double-render
     if (hasLoadedHistoryRef.current) return;
+
+    // If not authenticated, show auth message as first assistant response
+    if (!session?.user) {
+      hasLoadedHistoryRef.current = true;
+      setMessages([{ role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      return;
+    }
 
     const loadHistory = async () => {
       try {
@@ -122,6 +127,14 @@ export default function TutorPage() {
     setInput("");
     setIsLoading(true);
 
+    // If not authenticated, show auth message
+    if (!session?.user) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/tutor", {
         method: "POST",
@@ -159,23 +172,16 @@ export default function TutorPage() {
   };
 
   return (
-    <AppLayout lang={typedLang}>
+    <AppLayout lang={typedLang} requireAuth={false} hideBottomNav>
     {/* Full-screen background that extends under sidebar */}
     <div
       className="fixed inset-0 bg-cover bg-center -z-10"
       style={{ backgroundImage: "url('/images/background6.png')" }}
     />
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">
-          {t(typedLang, "stories", "aiTutor")}
-        </h1>
-      </div>
-
+    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-screen">
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end">
           {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-500 mt-20">
               <p className="text-lg mb-2">
@@ -197,6 +203,19 @@ export default function TutorPage() {
               {message.role === "user" ? (
                 <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-600 text-white">
                   <p className="whitespace-pre-wrap">{renderMarkdown(message.content)}</p>
+                </div>
+              ) : message.content === "__AUTH_REQUIRED__" ? (
+                <div className="max-w-[80%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-md">
+                  <p className="text-gray-800">
+                    {t(typedLang, "aiTutor", "signInToUse")}{" "}
+                    <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "aiTutor", "signIn")}
+                    </Link>
+                    {" "}{t(typedLang, "aiTutor", "or")}{" "}
+                    <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "aiTutor", "createAccount")}
+                    </Link>
+                  </p>
                 </div>
               ) : (
                 <div className="max-w-[80%]">
@@ -223,7 +242,7 @@ export default function TutorPage() {
       </div>
 
       {/* Input Container */}
-      <div className="py-4 pl-2 pr-4 sm:pl-4 md:pl-8 lg:pl-16">
+      <div className="py-4 pl-2 pr-4 sm:pl-4 md:pl-8 lg:pl-16 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
@@ -232,14 +251,14 @@ export default function TutorPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t(typedLang, "aiTutor", "placeholder")}
-              className="flex-1 pl-4 pr-[72px] py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto shadow-md"
+              className="flex-1 pl-4 pr-[72px] py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto shadow-md text-base"
               style={{ minHeight: "52px", maxHeight: "200px" }}
               rows={1}
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="absolute right-2 bottom-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-default transition-colors text-sm font-medium"
             >
               {t(typedLang, "aiTutor", "send")}
             </button>

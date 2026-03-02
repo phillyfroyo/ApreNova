@@ -18,9 +18,43 @@ import type { Language } from "@/types/i18n";
 import type { StoryTag, StoryType } from "@/types/story";
 import { t } from "@/lib/t";
 import { getStoryTitle } from "@/lib/stories";
+import { updateNativeLanguage } from '@/lib/updateLanguage'
+import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
+import UserStoryCard from "@/components/user-stories/UserStoryCard"
+import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal"
+import { useStoryUpload } from "@/contexts/StoryUploadContext"
 import { AppLayout } from '@/components/layout';
 
 type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
+
+interface UserStoryLevel {
+  level: string;
+  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+}
+
+interface UserStory {
+  id: string;
+  slug: string;
+  title: string;
+  titleEs?: string | null;
+  titleEn?: string | null;
+  description?: string | null;
+  descriptionEs?: string | null;
+  descriptionEn?: string | null;
+  thumbnailUrl: string | null;
+  sourceLanguage: string;
+  status: "PROCESSING" | "READY" | "FAILED" | "PARTIAL" | "CANCELLED";
+  detectedLevel?: string | null;
+  storyType?: string | null;
+  createdAt?: string;
+  cancelledAt?: string | null;
+  levels: UserStoryLevel[];
+}
+
+// Helper to check if a story has any readable chapters
+function hasReadableChapters(story: UserStory): boolean {
+  return story.levels.some((level) => level.status === "READY");
+}
 
 // All theme tags combined into one list
 const ALL_THEME_TAGS: StoryTag[] = [
@@ -31,7 +65,7 @@ const ALL_THEME_TAGS: StoryTag[] = [
   "latin-america", "spain", "usa", "multicultural"
 ];
 
-// Get unique authors from story metadata
+// Get unique authors from story metadata (excluding archived stories)
 function getUniqueAuthors(): Array<{ id: string; name: string }> {
   const authors: Array<{ id: string; name: string }> = [
     { id: "cuentana", name: "Cuentana Originals" }
@@ -39,6 +73,9 @@ function getUniqueAuthors(): Array<{ id: string; name: string }> {
   const seenAuthors = new Set<string>();
 
   STORY_METADATA.forEach(story => {
+    // Skip archived stories
+    if (story.isArchived) return;
+
     if (!story.origin.isOriginal && 'attribution' in story.origin) {
       const authorName = getAuthorName(story.origin.attribution);
       if (authorName && !seenAuthors.has(authorName)) {
@@ -61,14 +98,18 @@ function isLevel(value: unknown): value is Level {
 function StoriesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useUserSession();
+  const { user, nativeLanguage } = useUserSession();
   const [selectedLevel, setSelectedLevel] = useState<Level>('A1');
   const { lng } = useParams();
   const typedLang = lng as Language;
+  const [showLangPrompt, setShowLangPrompt] = useState(false);
 
   // URL-based story detail modal
   const storyParam = searchParams.get("story");
   const [detailStorySlug, setDetailStorySlug] = useState<string | null>(storyParam);
+
+  // Source filter from URL (for "See all" links)
+  const sourceFilter = searchParams.get("source"); // "cuentana", "gutenberg", or "classics"
 
   // Sync URL param with state
   useEffect(() => {
@@ -78,15 +119,27 @@ function StoriesPageContent() {
   // Open detail modal and update URL
   const openDetailModal = (slug: string) => {
     setDetailStorySlug(slug);
-    // Update URL without full navigation (shallow routing)
-    window.history.pushState({}, "", `/${typedLang}/stories?story=${slug}`);
+    // Update URL without full navigation (shallow routing), preserve source filter
+    const params = new URLSearchParams();
+    params.set("story", slug);
+    if (sourceFilter) params.set("source", sourceFilter);
+    window.history.pushState({}, "", `/${typedLang}/stories?${params.toString()}`);
   };
 
   // Close detail modal and update URL
   const closeDetailModal = () => {
     setDetailStorySlug(null);
-    // Remove query param from URL
-    window.history.pushState({}, "", `/${typedLang}/stories`);
+    // Remove story param from URL, preserve source filter
+    if (sourceFilter) {
+      window.history.pushState({}, "", `/${typedLang}/stories?source=${sourceFilter}`);
+    } else {
+      window.history.pushState({}, "", `/${typedLang}/stories`);
+    }
+  };
+
+  // Clear source filter (back to main stories view)
+  const clearSourceFilter = () => {
+    router.push(`/${typedLang}/stories`);
   };
 
   // Filter state
@@ -95,11 +148,74 @@ function StoriesPageContent() {
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  // User stories state
+  const [userStories, setUserStories] = useState<UserStory[]>([]);
+  const [userStoriesLoading, setUserStoriesLoading] = useState(true);
+  const [selectedUserStory, setSelectedUserStory] = useState<UserStory | null>(null);
+  const { data: session, status: sessionStatus } = useSession();
+  const { lastConfirmedAt, lastCancelledAt } = useStoryUpload();
+
+  // Fetch user stories
+  useEffect(() => {
+    if (sessionStatus === "loading") {
+      // Still checking auth, keep loading state
+      return;
+    }
+
+    if (!session?.user?.id) {
+      setUserStories([]);
+      setUserStoriesLoading(false);
+      return;
+    }
+
+    const fetchUserStories = async () => {
+      try {
+        const res = await fetch("/api/user-stories");
+        if (res.ok) {
+          const data = await res.json();
+          setUserStories(data.stories || []);
+        }
+        setUserStoriesLoading(false);
+      } catch (error) {
+        console.error("Error fetching user stories:", error);
+        setUserStoriesLoading(false);
+      }
+    };
+
+    fetchUserStories();
+
+    // Poll for updates if any story is processing
+    const interval = setInterval(() => {
+      const hasProcessing = userStories.some((s) => s.status === "PROCESSING");
+      if (hasProcessing) {
+        fetchUserStories();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [session?.user?.id, sessionStatus, lastConfirmedAt, lastCancelledAt]);
+
+  const handleUserStoryDelete = (storyId: string) => {
+    setUserStories((prev) => prev.filter((s) => s.id !== storyId));
+  };
+
+  const handleUserStoryUpdate = (updatedStory: UserStory) => {
+    setUserStories((prev) =>
+      prev.map((s) => (s.id === updatedStory.id ? { ...s, ...updatedStory } : s))
+    );
+    setSelectedUserStory(updatedStory);
+  };
+
   // Get authors list
   const authors = getUniqueAuthors();
 
-  // Filter stories by all criteria
-  const filteredStories = STORY_METADATA.filter(story => {
+  // Helper to check if story passes filter criteria
+  const passesFilters = (story: typeof STORY_METADATA[0]) => {
+    // Never show archived stories to users
+    if (story.isArchived) {
+      return false;
+    }
+
     // If no filters, show all
     if (selectedTags.length === 0 && selectedTypes.length === 0 && selectedAuthors.length === 0) {
       return true;
@@ -128,7 +244,23 @@ function StoriesPageContent() {
 
     // AND logic between filter categories
     return matchesTags && matchesType && matchesAuthor;
-  });
+  };
+
+  // Filter stories by all criteria
+  const filteredStories = STORY_METADATA.filter(passesFilters);
+
+  // Separate stories into categories
+  const cuentanaOriginals = filteredStories.filter(story => story.origin.isOriginal);
+  const gutenbergStories = filteredStories.filter(story =>
+    !story.origin.isOriginal &&
+    'attribution' in story.origin &&
+    story.origin.attribution.sourceEdition?.source === 'gutenberg'
+  );
+  // Other external stories (not Gutenberg, not originals)
+  const otherExternalStories = filteredStories.filter(story =>
+    !story.origin.isOriginal &&
+    (!('attribution' in story.origin) || story.origin.attribution.sourceEdition?.source !== 'gutenberg')
+  );
 
   const toggleTag = (tag: StoryTag) => {
     setSelectedTags(prev =>
@@ -185,36 +317,36 @@ useEffect(() => {
         zIndex: -1,
       }}
     />
-    <div style={{
-    padding: "2rem",
-    position: "relative",
-    minHeight: "100vh",
-  }}>
+    <div className="px-2 py-4 sm:p-8 relative min-h-screen">
 
-{/* // TODO: Add "My Stories" section here for user-upload-story branch */}
+{/* Top right controls: Filter, Upload button + My Stories */}
+<div className="absolute top-4 right-4 flex items-center gap-3 z-10">
+  <button
+    onClick={() => setShowFilters(!showFilters)}
+    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+      activeFilterCount > 0
+        ? "bg-purple-600 text-white"
+        : "bg-white/80 text-gray-700 hover:bg-white"
+    }`}
+  >
+    <span>🏷️</span>
+    {activeFilterCount > 0 ? (
+      <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
+    ) : (
+      <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
+    )}
+  </button>
+  <UploadStoryButton />
+  <Link
+    href={`/${typedLang}/my-stories`}
+    className="px-3 py-1.5 bg-white/80 hover:bg-white text-purple-600 rounded-full text-sm font-medium transition-all flex items-center gap-1.5"
+  >
+    <span>📚</span>
+    {typedLang === "es" ? "Mis Historias" : "My Stories"}
+  </Link>
+</div>
 
-<div className="mt-4 mb-4 px-4">
-  <div className="flex items-center justify-between">
-    <h2 className="text-xl font-semibold text-left">
-      {t(typedLang, "stories", "storiesAll")}
-    </h2>
-    <button
-      onClick={() => setShowFilters(!showFilters)}
-      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-        activeFilterCount > 0
-          ? "bg-purple-600 text-white"
-          : "bg-white/80 text-gray-700 hover:bg-white"
-      }`}
-    >
-      <span>🏷️</span>
-      {activeFilterCount > 0 ? (
-        <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
-      ) : (
-        <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
-      )}
-    </button>
-  </div>
-
+<div className="mt-12 mb-4 px-1 sm:px-4">
   {/* Filter Panel */}
   <AnimatePresence>
     {showFilters && (
@@ -341,47 +473,289 @@ useEffect(() => {
   </AnimatePresence>
 </div>
 
+{/* My Stories Section - only show if user has stories and not viewing a source filter */}
+{userStories.length > 0 && !sourceFilter && (
+  <div className="mb-6 px-1 sm:px-4">
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-xl font-semibold flex items-center gap-2">
+        <span>📚</span>
+        {typedLang === "es" ? "Mis Historias" : "My Stories"}
+        <span className="text-sm font-normal text-gray-500">({userStories.length})</span>
+      </h2>
+    </div>
+    <div
+      style={{
+        display: "flex",
+        gap: "1rem",
+        overflowX: "auto",
+        paddingLeft: "0.25rem",
+        paddingRight: "0.25rem",
+        paddingTop: "0.75rem",
+        paddingBottom: "0.75rem",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+      }}
+      className="hide-scrollbar"
+    >
+      {userStories.slice(0, 8).map((story) => (
+        <UserStoryCard
+          key={story.id}
+          id={story.id}
+          title={story.title}
+          thumbnailUrl={story.thumbnailUrl}
+          status={story.status}
+          hasReadableChapters={hasReadableChapters(story)}
+          lang={typedLang}
+          onClick={() => setSelectedUserStory(story)}
+        />
+      ))}
+    </div>
+  </div>
+)}
 
-    <div style={{ position: "relative" }}>
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          gap: "1.5rem",
-          overflowX: "auto",
-          paddingLeft: "1rem",
-          paddingRight: "1rem",
-          paddingTop: "0.75rem",
-          paddingBottom: "0.75rem",
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-        >
-         {filteredStories.length === 0 ? (
-           <div className="w-full text-center py-8 text-gray-500">
-             {typedLang === "es" ? "No hay historias con estos filtros" : "No stories match these filters"}
-           </div>
-         ) : (
-           filteredStories.map((story, i) => {
-             // Find the original index in STORY_METADATA for the modal
-             const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
-             return (
-               <StoryCard
-                 key={story.slug}
-                 index={originalIndex}
-                 title={getStoryTitle(typedLang, story.slug)}
-                 image={story.image}
-                 onClick={() => {
-                   openDetailModal(story.slug);
-                 }}
-               />
-             );
-           })
-         )}
+    {/* Admin Stories - wait until we know user stories status to prevent layout shift */}
+    {!userStoriesLoading ? (
+      <>
+        {/* Show message if no stories match filters */}
+        {filteredStories.length === 0 && !sourceFilter && (
+          <div className="w-full text-center py-8 text-gray-500">
+            {typedLang === "es" ? "No hay historias con estos filtros" : "No stories match these filters"}
+          </div>
+        )}
+
+        {/* Full Grid View when source filter is active */}
+        {sourceFilter ? (
+          <div className="mb-6 px-1 sm:px-4">
+            {/* Header with back button */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={clearSourceFilter}
+                className="text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                {typedLang === "es" ? "Volver" : "Back"}
+              </button>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                {sourceFilter === "cuentana" && (
+                  <>
+                    <span>🎨</span>
+                    {typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals"}
+                  </>
+                )}
+                {sourceFilter === "gutenberg" && (
+                  <>
+                    <span>📖</span>
+                    {typedLang === "es" ? "La Colección Project Gutenberg" : "The Project Gutenberg Collection"}
+                  </>
+                )}
+                {sourceFilter === "classics" && (
+                  <>
+                    <span>📖</span>
+                    {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
+                  </>
+                )}
+                <span className="text-sm font-normal text-gray-500">
+                  ({sourceFilter === "cuentana" ? cuentanaOriginals.length : sourceFilter === "gutenberg" ? gutenbergStories.length : otherExternalStories.length})
+                </span>
+              </h2>
+            </div>
+
+            {/* Grid of all stories in this category */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 px-0 sm:px-2">
+              {(sourceFilter === "cuentana" ? cuentanaOriginals : sourceFilter === "gutenberg" ? gutenbergStories : otherExternalStories).map((story) => {
+                const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                return (
+                  <StoryCard
+                    key={story.slug}
+                    index={originalIndex}
+                    title={getStoryTitle(typedLang, story.slug)}
+                    image={story.image}
+                    onClick={() => openDetailModal(story.slug)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Normal Row View - Cuentana Originals */}
+            {cuentanaOriginals.length > 0 && (
+              <div className="mb-6 px-1 sm:px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>🎨</span>
+                    {typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals"}
+                    <span className="text-sm font-normal text-gray-500">({cuentanaOriginals.length})</span>
+                  </h2>
+                  {cuentanaOriginals.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=cuentana`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {cuentanaOriginals.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Normal Row View - Project Gutenberg Collection */}
+            {gutenbergStories.length > 0 && (
+              <div className="mb-6 px-1 sm:px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>📖</span>
+                    {typedLang === "es" ? "La Colección Project Gutenberg" : "The Project Gutenberg Collection"}
+                    <span className="text-sm font-normal text-gray-500">({gutenbergStories.length})</span>
+                  </h2>
+                  {gutenbergStories.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=gutenberg`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {gutenbergStories.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Normal Row View - Other External Stories */}
+            {otherExternalStories.length > 0 && (
+              <div className="mb-6 px-1 sm:px-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <span>📖</span>
+                    {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
+                    <span className="text-sm font-normal text-gray-500">({otherExternalStories.length})</span>
+                  </h2>
+                  {otherExternalStories.length > 8 && (
+                    <Link
+                      href={`/${typedLang}/stories?source=classics`}
+                      className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      {typedLang === "es" ? "Ver todas" : "See all"}
+                    </Link>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    overflowX: "auto",
+                    paddingLeft: "0.25rem",
+                    paddingRight: "0.25rem",
+                    paddingTop: "0.75rem",
+                    paddingBottom: "0.75rem",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                  className="hide-scrollbar"
+                >
+                  {otherExternalStories.slice(0, 8).map((story) => {
+                    const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
+                    return (
+                      <StoryCard
+                        key={story.slug}
+                        index={originalIndex}
+                        title={getStoryTitle(typedLang, story.slug)}
+                        image={story.image}
+                        onClick={() => openDetailModal(story.slug)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    ) : (
+      // Loading skeleton for admin stories while waiting for user stories status
+      <div className="mb-6 px-1 sm:px-8">
+        {[1, 2, 3].map((row) => (
+          <div
+            key={row}
+            style={{
+              display: "flex",
+              gap: "1rem",
+              paddingTop: row === 1 ? "0.75rem" : "0",
+              paddingBottom: "0.75rem",
+              overflow: "hidden",
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: "160px",
+                  flexShrink: 0,
+                }}
+              >
+                <div className="w-full aspect-[2/3] rounded-xl bg-gray-200/60 animate-pulse" />
+                <div className="h-4 bg-gray-200/60 rounded mt-2 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
-    </div> {/* Close scroll wrapper */}
+    )}
 
       {/* New large story detail modal with URL state */}
       <StoryDetailModal
@@ -389,6 +763,54 @@ useEffect(() => {
         onClose={closeDetailModal}
         user={user}
       />
+
+      {/* User Story Detail Modal */}
+      <UserStoryDetailModal
+        story={selectedUserStory}
+        onClose={() => setSelectedUserStory(null)}
+        onDelete={handleUserStoryDelete}
+        onUpdate={handleUserStoryUpdate}
+        user={user}
+      />
+{showLangPrompt && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl text-center space-y-6 max-w-sm w-full border border-white/50">
+      <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-xl font-bold text-gray-900 mb-1">
+          ¿Cuál es tu lengua materna?
+        </p>
+        <p className="text-gray-500">
+          What is your native language?
+        </p>
+      </div>
+      <div className="space-y-3">
+        <button
+          className="w-full bg-gradient-to-r from-red-500 to-yellow-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
+          onClick={async () => {
+            await updateNativeLanguage('es')
+            setShowLangPrompt(false)
+          }}
+        >
+          Español
+        </button>
+        <button
+          className="w-full bg-gradient-to-r from-blue-600 to-red-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md"
+          onClick={async () => {
+            await updateNativeLanguage('en')
+            router.replace('/en/stories')
+          }}
+        >
+          English
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
     </>
   );
@@ -399,7 +821,7 @@ function StoriesPageWrapper() {
   const lang = (lng as Language) || 'es';
 
   return (
-    <AppLayout lang={lang}>
+    <AppLayout lang={lang} requireAuth={false}>
       <Suspense>
         <StoriesPageContent />
       </Suspense>

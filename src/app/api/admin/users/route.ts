@@ -1,0 +1,291 @@
+// src/app/api/admin/users/route.ts
+// API endpoint for fetching user data with cost breakdowns
+
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// Helper to count words in text
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// Operation category mappings
+const IN_STORY_OPERATIONS = [
+  "translate-word",
+  "translate-phrase",
+  "example-sentence",
+  "tts",
+  "story-tutor",
+];
+
+const TUTOR_OPERATIONS = ["tutor"];
+
+// Human-readable labels for operations
+const OPERATION_LABELS: Record<string, string> = {
+  "translate-word": "Word Translations",
+  "translate-phrase": "Phrase Translations",
+  "example-sentence": "Example Sentences",
+  "tts": "Text-to-Speech",
+  "story-tutor": "Story Tutor",
+  "tutor": "AI Tutor",
+};
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+
+    // If userId is provided, return detailed user info with stories
+    if (userId) {
+      return getUserDetails(userId);
+    }
+
+    // Otherwise, return summary of all users with costs
+    return getUsersSummary();
+  } catch (error) {
+    console.error("Failed to fetch user data:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch user data" },
+      { status: 500 }
+    );
+  }
+}
+
+async function getUsersSummary() {
+  // Get all users who have either stories or API costs
+  const usersWithCosts = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+      UserStory: {
+        select: { id: true },
+      },
+      ApiCost: {
+        select: { costCents: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const users = usersWithCosts.map((user) => {
+    const totalCostCents = user.ApiCost.reduce(
+      (sum, cost) => sum + cost.costCents,
+      0
+    );
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      createdAt: user.createdAt.toISOString(),
+      storyCount: user.UserStory.length,
+      totalCostCents,
+      avgCostPerStory:
+        user.UserStory.length > 0
+          ? Math.round(totalCostCents / user.UserStory.length)
+          : 0,
+    };
+  });
+
+  // Calculate totals
+  const totalUsers = users.length;
+  const totalStories = users.reduce((sum, u) => sum + u.storyCount, 0);
+  const totalCostCents = users.reduce((sum, u) => sum + u.totalCostCents, 0);
+  const avgCostPerUser =
+    totalUsers > 0 ? Math.round(totalCostCents / totalUsers) : 0;
+  const avgCostPerStory =
+    totalStories > 0 ? Math.round(totalCostCents / totalStories) : 0;
+
+  return NextResponse.json({
+    summary: {
+      totalUsers,
+      totalStories,
+      totalCostCents,
+      avgCostPerUser,
+      avgCostPerStory,
+    },
+    users: users
+      .filter((u) => u.storyCount > 0 || u.totalCostCents > 0)
+      .sort((a, b) => b.totalCostCents - a.totalCostCents),
+  });
+}
+
+async function getUserDetails(userId: string) {
+  // Get user info
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Get user's existing stories with word counts
+  const stories = await prisma.userStory.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      title: true,
+      storyType: true,
+      status: true,
+      rawContent: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const storyIdArray = stories.map((s) => s.id);
+
+  // Get costs for existing stories
+  const existingStoryCosts = storyIdArray.length > 0
+    ? await prisma.apiCost.groupBy({
+        by: ["userStoryId"],
+        where: {
+          userStoryId: { in: storyIdArray },
+        },
+        _sum: { costCents: true },
+      })
+    : [];
+
+  // Build cost map for existing stories
+  const storyCostMap = new Map(
+    existingStoryCosts.map((c) => [c.userStoryId, c._sum.costCents || 0])
+  );
+
+  // Get total costs for this user (includes deleted stories, tutor, etc.)
+  const totalUserCosts = await prisma.apiCost.aggregate({
+    where: { userId },
+    _sum: { costCents: true },
+  });
+
+  // Get deleted stories data
+  const deletedStoriesData = await prisma.deletedUserStory.aggregate({
+    where: { userId },
+    _sum: { costCents: true },
+    _count: true,
+  });
+  const deletedStoryCount = deletedStoriesData._count;
+  const deletedStoryCostCents = deletedStoriesData._sum.costCents || 0;
+
+  // Get in-story usage costs grouped by operation
+  const inStoryCosts = await prisma.apiCost.groupBy({
+    by: ["operation"],
+    where: {
+      userId,
+      operation: { in: IN_STORY_OPERATIONS },
+    },
+    _sum: { costCents: true },
+    _count: true,
+  });
+
+  const inStoryBreakdown = inStoryCosts.map((c) => ({
+    operation: c.operation,
+    label: OPERATION_LABELS[c.operation] || c.operation,
+    costCents: c._sum.costCents || 0,
+    count: c._count,
+  }));
+  const inStoryTotalCostCents = inStoryBreakdown.reduce(
+    (sum, b) => sum + b.costCents,
+    0
+  );
+
+  // Get tutor costs grouped by operation
+  const tutorCosts = await prisma.apiCost.groupBy({
+    by: ["operation"],
+    where: {
+      userId,
+      operation: { in: TUTOR_OPERATIONS },
+    },
+    _sum: { costCents: true },
+    _count: true,
+  });
+
+  const tutorBreakdown = tutorCosts.map((c) => ({
+    operation: c.operation,
+    label: OPERATION_LABELS[c.operation] || c.operation,
+    costCents: c._sum.costCents || 0,
+    count: c._count,
+  }));
+  const tutorTotalCostCents = tutorBreakdown.reduce(
+    (sum, b) => sum + b.costCents,
+    0
+  );
+
+  // Get tutor message count
+  const tutorMessageCount = await prisma.tutorMessage.count({
+    where: { userId },
+  });
+
+  // Build story data for existing stories
+  const storyData = stories.map((story) => {
+    const wordCount = countWords(story.rawContent);
+    const costCents = storyCostMap.get(story.id) || 0;
+    return {
+      id: story.id,
+      title: story.title,
+      storyType: story.storyType,
+      status: story.status,
+      wordCount,
+      costCents,
+      costPerThousandWords:
+        wordCount > 0 ? Math.round((costCents / wordCount) * 1000) : 0,
+      createdAt: story.createdAt.toISOString(),
+    };
+  });
+
+  // Calculate totals
+  const totalExistingStories = storyData.length;
+  const totalWords = storyData.reduce((sum, s) => sum + s.wordCount, 0);
+  const existingStoryCostTotal = storyData.reduce((sum, s) => sum + s.costCents, 0);
+  const totalCostCents = totalUserCosts._sum.costCents || 0;
+
+  // Total story cost = existing + deleted
+  const allStoryCostCents = existingStoryCostTotal + deletedStoryCostCents;
+  // Total story count = existing + deleted (for accurate averages)
+  const allStoryCount = totalExistingStories + deletedStoryCount;
+
+  // Other costs = total - story uploads - in-story - tutor (avoids double-counting)
+  const otherCostCents = totalCostCents - allStoryCostCents - inStoryTotalCostCents - tutorTotalCostCents;
+
+  return NextResponse.json({
+    user: {
+      ...user,
+      createdAt: user.createdAt.toISOString(),
+    },
+    summary: {
+      totalStories: totalExistingStories,
+      deletedStoryCount,
+      deletedStoryCostCents,
+      totalWords,
+      totalCostCents,
+      storyCostCents: existingStoryCostTotal,
+      otherCostCents,
+      avgWordsPerStory:
+        totalExistingStories > 0 ? Math.round(totalWords / totalExistingStories) : 0,
+      // Use all story count (existing + deleted) for accurate average
+      avgCostPerStory:
+        allStoryCount > 0
+          ? Math.round(allStoryCostCents / allStoryCount)
+          : 0,
+      avgCostPerThousandWords:
+        totalWords > 0 ? Math.round((existingStoryCostTotal / totalWords) * 1000) : 0,
+    },
+    stories: storyData,
+    inStoryUsage: {
+      totalCostCents: inStoryTotalCostCents,
+      breakdown: inStoryBreakdown,
+    },
+    tutorUsage: {
+      totalCostCents: tutorTotalCostCents,
+      messageCount: tutorMessageCount,
+      breakdown: tutorBreakdown,
+    },
+  });
+}

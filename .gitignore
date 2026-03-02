@@ -52,3 +52,13 @@ src/dev/InfraPage.txt
 # TTS cache files
 /cache/
 /public/cache/
+
+# User-uploaded thumbnails
+/public/images/user-thumbnails/
+.env
+
+# Claude Code local settings (may contain sensitive info from conversations)
+.claude/settings.local.json
+
+# Sentry Config File
+.env.sentry-build-plugin

@@ -4,6 +4,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { X, Loader2 } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
@@ -94,15 +95,13 @@ export default function StoryTutorChat({
 
   // Load conversation history for this story and auto-send initial message if needed
   useEffect(() => {
-    if (!session?.user || !isOpen) {
-      // Reset when chat closes
-      if (!isOpen) {
-        hasAutoSentRef.current = false;
-        isInitialScrollRef.current = false;
-        lastProcessedContextRef.current = "";
-        isProcessingRef.current = false;
-        hasLoadedHistoryRef.current = false;
-      }
+    // Reset when chat closes
+    if (!isOpen) {
+      hasAutoSentRef.current = false;
+      isInitialScrollRef.current = false;
+      lastProcessedContextRef.current = "";
+      isProcessingRef.current = false;
+      hasLoadedHistoryRef.current = false;
       return;
     }
 
@@ -118,18 +117,21 @@ export default function StoryTutorChat({
 
     const loadHistory = async () => {
       try {
-        // Step 1: Use preloaded messages if available, otherwise fetch
-        let loadedMessages: Message[];
+        // Step 1: Use preloaded messages if available, otherwise fetch (only for authenticated users)
+        let loadedMessages: Message[] = [];
 
-        if (preloadedMessages && preloadedMessages.length > 0) {
-          console.log(`✨ Using ${preloadedMessages.length} pre-loaded messages - instant load!`);
-          loadedMessages = preloadedMessages;
-        } else {
-          const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
-          if (!response.ok) throw new Error("Failed to load history");
+        // Only load history for authenticated users
+        if (session?.user) {
+          if (preloadedMessages && preloadedMessages.length > 0) {
+            console.log(`✨ Using ${preloadedMessages.length} pre-loaded messages - instant load!`);
+            loadedMessages = preloadedMessages;
+          } else {
+            const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
+            if (!response.ok) throw new Error("Failed to load history");
 
-          const data = await response.json();
-          loadedMessages = data.messages || [];
+            const data = await response.json();
+            loadedMessages = data.messages || [];
+          }
         }
 
         // Step 2: Check if this is a new context (different from last processed)
@@ -170,6 +172,16 @@ export default function StoryTutorChat({
           // Send the "You selected" message to backend and get GPT response
           setTimeout(async () => {
             setIsLoading(true);
+
+            // If user is not authenticated, show auth message instead of calling API
+            if (!session?.user) {
+              // Brief delay to show loading state
+              await new Promise(resolve => setTimeout(resolve, 500));
+              setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+              setIsLoading(false);
+              isProcessingRef.current = false;
+              return;
+            }
 
             try {
               // Use proactive endpoint if sending to GPT, otherwise just save the message
@@ -260,6 +272,15 @@ export default function StoryTutorChat({
     setMessages(currentMessages);
     setInput("");
 
+    // If user is not authenticated, show auth message
+    if (!session?.user) {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setMessages(prev => [...prev, { role: "assistant", content: "__AUTH_REQUIRED__" }]);
+      setIsLoading(false);
+      return;
+    }
+
     // Create a separate loading state for this specific request
     const requestId = Date.now();
     setIsLoading(true);
@@ -323,7 +344,7 @@ export default function StoryTutorChat({
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white/40 backdrop-blur-md max-h-[calc(100vh-200px)]">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-white/40 backdrop-blur-md min-h-0">
         <div>
           {messages.length === 0 && !isLoading && (
             <div className="text-center text-gray-700 mt-10 bg-white/80 backdrop-blur-sm rounded-xl p-6 mx-auto max-w-md">
@@ -342,6 +363,19 @@ export default function StoryTutorChat({
               {message.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-purple-600/95 backdrop-blur-sm text-white shadow-lg">
                   <p className="whitespace-pre-wrap text-sm">{renderMarkdown(message.content)}</p>
+                </div>
+              ) : message.content === "__AUTH_REQUIRED__" ? (
+                <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">
+                  <p className="text-sm text-gray-800">
+                    {t(typedLang, "storyTutor", "signInToUse")}{" "}
+                    <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "storyTutor", "signIn")}
+                    </Link>
+                    {" "}{t(typedLang, "storyTutor", "or")}{" "}
+                    <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                      {t(typedLang, "storyTutor", "createAccount")}
+                    </Link>
+                  </p>
                 </div>
               ) : (
                 <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">
@@ -367,8 +401,8 @@ export default function StoryTutorChat({
         </div>
       </div>
 
-      {/* Input Container */}
-      <div className="border-t border-purple-300/50 bg-white/80 backdrop-blur-md px-4 py-3">
+      {/* Input Container — pinned to bottom, with safe-area padding for notched devices */}
+      <div className="border-t border-purple-300/50 bg-white/80 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <form onSubmit={handleSubmit}>
           <div className="relative flex items-end" style={{ maxWidth: "calc(100% - 60px)" }}>
             <textarea
@@ -377,14 +411,14 @@ export default function StoryTutorChat({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t(typedLang, "storyTutor", "placeholder")}
-              className="flex-1 px-3 py-2 pr-[72px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto text-sm"
+              className="flex-1 px-3 py-2 pr-[72px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto text-base"
               style={{ minHeight: "44px", maxHeight: "150px" }}
               rows={1}
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-default transition-colors text-sm font-medium"
             >
               {t(typedLang, "storyTutor", "send")}
             </button>

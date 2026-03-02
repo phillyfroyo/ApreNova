@@ -4,10 +4,14 @@ import { STORY_METADATA } from "@/lib/stories";
 import { STORY_THEMES } from "@/components/storyThemes";
 import en from "@/content/ui/en";
 import es from "@/content/ui/es";
+import { getAllAdminStoryCosts } from "@/lib/cost-tracker";
 
 export async function GET() {
   try {
-    // Build enriched story list with titles, descriptions, and tagging
+    // Get all admin story costs in one query
+    const costsBySlug = await getAllAdminStoryCosts();
+
+    // Build enriched story list with titles, descriptions, tagging, and costs
     const stories = STORY_METADATA.map((story) => {
       const enMeta = (en as any).storiesMetadata?.[story.slug];
       const esMeta = (es as any).storiesMetadata?.[story.slug];
@@ -27,11 +31,19 @@ export async function GET() {
           en: enMeta?.description || "",
           es: esMeta?.description || "",
         },
+        hook: {
+          en: enMeta?.hook || "",
+          es: esMeta?.hook || "",
+        },
         // Tagging fields
         type: story.type || "short-story",
         origin: story.origin || { isOriginal: true },
         tags: story.tags || [],
         targetAudience: story.targetAudience || "all",
+        // Archive status
+        isArchived: story.isArchived || false,
+        // Cost tracking
+        totalCostCents: costsBySlug[story.slug] || 0,
       };
     });
 

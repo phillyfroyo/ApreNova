@@ -579,7 +579,7 @@ export default function StoryLayoutExperimental({
         <div className="fixed bottom-4 right-4 z-50">
           <Button 
             variant="muted"
-            className="px-[10px] py-0.1 text-xs rounded-xl opacity-75 cursor-not-allowed"
+            className="px-[10px] py-0.1 text-xs rounded-xl opacity-75 cursor-default"
             disabled
           >
             💬 Feedback

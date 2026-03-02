@@ -10,14 +10,18 @@ import Sidebar from './Sidebar';
 import BottomNavigation from './BottomNavigation';
 import { BookOpen, Crown, Gem, Settings } from 'lucide-react';
 import type { Language } from '@/types/i18n';
+import { t } from '@/lib/t';
+import { toCEFR } from '@/lib/cefr';
 
 interface AppLayoutProps {
   children: React.ReactNode;
   lang: Language;
   hideNavigation?: boolean; // For immersive pages like story reading
+  hideBottomNav?: boolean; // Hide mobile bottom nav (e.g., tutor page with its own input)
+  requireAuth?: boolean; // Whether to require authentication (default: true)
 }
 
-export default function AppLayout({ children, lang, hideNavigation = false }: AppLayoutProps) {
+export default function AppLayout({ children, lang, hideNavigation = false, hideBottomNav = false, requireAuth = true }: AppLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,15 +53,15 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only when requireAuth is true)
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (requireAuth && status === 'unauthenticated') {
       router.push(`/${lang}/auth/login`);
     }
-  }, [status, router, lang]);
+  }, [requireAuth, status, router, lang]);
 
-  // Show loading state while checking auth
-  if (status === 'loading') {
+  // Show loading state while checking auth (only when auth is required)
+  if (requireAuth && status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -70,8 +74,8 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
     );
   }
 
-  // Don't render if not authenticated
-  if (status === 'unauthenticated') {
+  // Don't render if not authenticated (only when auth is required)
+  if (requireAuth && status === 'unauthenticated') {
     return null;
   }
 
@@ -93,6 +97,9 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
             </span>
             <span className="text-purple-800">ana</span>
           </span>
+          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+            beta
+          </span>
         </Link>
 
         {/* User Profile */}
@@ -109,7 +116,7 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
                     <Crown className="w-2.5 h-2.5" />
-                    {session.user.quizLevel || 'L2'}
+                    {toCEFR(session.user.quizLevel)}
                   </span>
                   {session.user.isPremium && (
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-medium">
@@ -156,7 +163,7 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Gem className="w-4 h-4 text-indigo-500" />
-                    {lang === 'es' ? 'Hazte Premium' : 'Go Premium'}
+                    {t(lang, "sidebar", "goPremium")}
                   </Link>
                 )}
               </div>
@@ -175,14 +182,14 @@ export default function AppLayout({ children, lang, hideNavigation = false }: Ap
           ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-56'}
           min-h-screen
           pt-16 md:pt-0
-          pb-20 md:pb-0
+          ${hideBottomNav ? 'pb-0' : 'pb-20 md:pb-0'}
         `}
       >
         {children}
       </main>
 
       {/* Bottom Navigation - Mobile only */}
-      <BottomNavigation lang={lang} />
+      {!hideBottomNav && <BottomNavigation lang={lang} />}
     </div>
   );
 }

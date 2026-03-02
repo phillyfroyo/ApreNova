@@ -102,7 +102,7 @@ export default function StoryLayoutAzureSimple({
                   <button
                     onClick={() => testAzureTTS(sentence.en, 'normal', 'en')}
                     disabled={isGenerating}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-default transition-colors text-sm"
                   >
                     🔊 Normal
                   </button>
@@ -110,7 +110,7 @@ export default function StoryLayoutAzureSimple({
                   <button
                     onClick={() => testAzureTTS(sentence.en, 'slow', 'en')}
                     disabled={isGenerating}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-400 text-white rounded-md hover:bg-blue-500 disabled:opacity-50 disabled:cursor-default transition-colors text-sm"
                   >
                     🐢 Slow
                   </button>
@@ -124,7 +124,7 @@ export default function StoryLayoutAzureSimple({
                   <button
                     onClick={() => testAzureTTS(sentence.es, 'normal', 'es')}
                     disabled={isGenerating}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-default transition-colors text-sm"
                   >
                     🔊 Normal
                   </button>
@@ -132,7 +132,7 @@ export default function StoryLayoutAzureSimple({
                   <button
                     onClick={() => testAzureTTS(sentence.es, 'slow', 'es')}
                     disabled={isGenerating}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-400 text-white rounded-md hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-400 text-white rounded-md hover:bg-green-500 disabled:opacity-50 disabled:cursor-default transition-colors text-sm"
                   >
                     🐢 Slow
                   </button>

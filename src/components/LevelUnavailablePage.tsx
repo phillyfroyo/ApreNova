@@ -2,18 +2,27 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui";
 import { t } from "@/lib/t";
-import { toCEFR } from "@/lib/stories";
 import type { Language } from "@/types/i18n";
+import { getCEFRLabel, type CEFRCode } from "@/lib/cefr";
 
 interface LevelUnavailablePageProps {
   storySlug: string;
   storyTitle: string;
-  availableLevels: string[];
-  requestedLevel: string;
+  availableLevels: string[]; // Now CEFR codes: A1, A2, B1, etc.
+  requestedLevel: string; // CEFR code
   lng: Language;
 }
+
+// CEFR badge colors
+const CEFR_BADGE_COLORS: Record<string, string> = {
+  A1: "bg-green-100 text-green-800 border-green-200",
+  A2: "bg-blue-100 text-blue-800 border-blue-200",
+  B1: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  B2: "bg-orange-100 text-orange-800 border-orange-200",
+  C1: "bg-purple-100 text-purple-800 border-purple-200",
+  C2: "bg-red-100 text-red-800 border-red-200",
+};
 
 export default function LevelUnavailablePage({
   storySlug,
@@ -22,9 +31,6 @@ export default function LevelUnavailablePage({
   requestedLevel,
   lng,
 }: LevelUnavailablePageProps) {
-  // Convert to CEFR for display
-  const requestedCEFR = toCEFR(requestedLevel);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -58,7 +64,7 @@ export default function LevelUnavailablePage({
           <p className="text-sm text-gray-500 mb-2">
             {lng === "es" ? "Nivel solicitado:" : "Requested level:"}{" "}
             <span className="font-semibold text-gray-700">
-              {requestedCEFR}
+              {getCEFRLabel(requestedLevel as CEFRCode, lng)}
             </span>
           </p>
         </div>
@@ -69,25 +75,18 @@ export default function LevelUnavailablePage({
             {t(lng, "story", "selectLevel")}
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            {availableLevels.map((lvl) => {
-              const levelNum = lvl.replace("l", "");
-              const badgeLevel = `level${levelNum}` as
-                | "level1"
-                | "level2"
-                | "level3"
-                | "level4"
-                | "level5";
-              const cefrLevel = toCEFR(lvl);
+            {availableLevels.map((cefrLevel) => {
+              const colorClass = CEFR_BADGE_COLORS[cefrLevel] || "bg-gray-100 text-gray-800 border-gray-200";
 
               return (
                 <Link
-                  key={lvl}
+                  key={cefrLevel}
                   href={`/${lng}/stories/${storySlug}/${cefrLevel}/1/1`}
                   className="transform hover:scale-105 transition-transform"
                 >
-                  <Badge level={badgeLevel}>
-                    {cefrLevel}
-                  </Badge>
+                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${colorClass}`}>
+                    {getCEFRLabel(cefrLevel as CEFRCode, lng)}
+                  </span>
                 </Link>
               );
             })}

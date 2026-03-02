@@ -69,6 +69,9 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("Please sign in to use audio features");
+        }
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -262,11 +265,22 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       // Start playback - check once more that this is still the current request
       if (currentRequestRef.current === requestKey) {
         await audio.play();
-        setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+        // Verify audio element is still current after await (could have been replaced)
+        if (audioRef.current === audio) {
+          setPlaybackState(prev => ({ ...prev, isPlaying: true }));
+        }
       }
 
     } catch (error) {
-      console.error('TTS playback error:', error);
+      // Ignore AbortError — this happens when play() is interrupted by a new stop/play cycle
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      // Only log non-auth errors to console
+      const isAuthError = error instanceof Error && error.message.includes("sign in");
+      if (!isAuthError) {
+        console.error('TTS playback error:', error);
+      }
       // Only update state if this is still the current request
       if (currentRequestRef.current === generateCacheKey(request)) {
         setPlaybackState(prev => ({ ...prev, error: 'Playback failed', isPlaying: false }));
@@ -396,17 +410,22 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     
     // Helper to create requests
     createRequest: useCallback((
-      text: string, 
-      language: 'es-ES' | 'en-US', 
+      text: string,
+      language: 'es-ES' | 'en-US',
       speed: 'normal' | 'slow',
       storySlug?: string,
-      chapterPage?: string
+      chapterPage?: string,
+      // Script support - speaker name and stage direction
+      speakerName?: string,
+      stageDirection?: string
     ): TTSRequest => ({
       text,
       language,
       speed,
       storySlug,
-      chapterPage
+      chapterPage,
+      speakerName,
+      stageDirection
     }), [])
   };
 }

@@ -17,8 +17,11 @@ import {
   Crown,
   ChevronUp,
   Gem,
+  User,
 } from 'lucide-react';
 import type { Language } from '@/types/i18n';
+import { t } from '@/lib/t';
+import { toCEFR } from '@/lib/cefr';
 
 interface SidebarProps {
   lang: Language;
@@ -131,12 +134,17 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
         <Link href={`/${lang}/dashboard`} className="flex items-center gap-2 h-full">
           <BookOpen className="w-6 h-6 text-indigo-600 flex-shrink-0" />
           {!collapsed && (
-            <span className="text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap">
-              <span className="text-indigo-700">
-                {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+            <>
+              <span className="text-xl font-bold font-crimson drop-shadow-sm whitespace-nowrap">
+                <span className="text-indigo-700">
+                  {session?.user ? (lang === 'es' ? 'miCuent' : 'myCuent') : 'Cuent'}
+                </span>
+                <span className="text-purple-800">ana</span>
               </span>
-              <span className="text-purple-800">ana</span>
-            </span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none">
+                beta
+              </span>
+            </>
           )}
         </Link>
       </div>
@@ -174,7 +182,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* User Section */}
-      {session?.user && (
+      {session?.user ? (
         <div ref={userMenuRef} className="relative p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm h-[62px]">
           {/* User Menu Dropdown - appears above the user section */}
           {userMenuOpen && !collapsed && (
@@ -202,7 +210,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                   >
                     <Gem className="w-4 h-4 text-indigo-500" />
-                    {lang === 'es' ? 'Hazte Premium' : 'Go Premium'}
+                    {t(lang, "sidebar", "goPremium")}
                   </Link>
                 )}
               </div>
@@ -237,7 +245,7 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
                     {/* Level badge with crown - orange */}
                     <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
                       <Crown className="w-2.5 h-2.5" />
-                      {session.user.quizLevel || 'A2'}
+                      {toCEFR(session.user.quizLevel)}
                     </span>
                     {/* Premium badge with gem - silver/gray */}
                     {session.user.isPremium && (
@@ -255,6 +263,29 @@ export default function Sidebar({ lang, collapsed, onToggle }: SidebarProps) {
             )}
           </button>
         </div>
+      ) : (
+        /* Unauthenticated User Section */
+        <Link
+          href={`/${lang}/settings`}
+          className="block p-3 border-t border-white/20 bg-white/30 backdrop-blur-sm h-[62px] hover:bg-white/40 transition-colors"
+        >
+          <div className="flex items-center gap-3 p-1">
+            {/* Generic user icon */}
+            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 ring-2 ring-white/50 flex-shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-gray-700 truncate">
+                  {t(lang, 'sidebar', 'guest')}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  {t(lang, 'sidebar', 'notSignedIn')}
+                </p>
+              </div>
+            )}
+          </div>
+        </Link>
       )}
 
       </aside>

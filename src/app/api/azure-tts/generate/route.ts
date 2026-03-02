@@ -3,16 +3,19 @@ import { NextRequest } from 'next/server';
 import { getAzureSpeechService } from '@/lib/azure-speech';
 import { getTTSCacheService } from '@/lib/tts-cache';
 import { getRateLimiter, getClientIdentifier, createRateLimitHeaders } from '@/lib/rate-limiter';
-import { 
-  validateTTSRequest, 
-  validateContentType, 
+import {
+  validateTTSRequest,
+  validateContentType,
   validateRequestSize,
   createValidationErrorResponse,
   createErrorResponse,
   createSuccessResponse,
   ValidationError
 } from '@/lib/validation';
+import { logTTSCost } from '@/lib/cost-tracker';
 import type { TTSRequest, TTSResponse } from '@/types/azure-tts';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 /**
  * POST /api/azure-tts/generate
@@ -20,6 +23,12 @@ import type { TTSRequest, TTSResponse } from '@/types/azure-tts';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for AI API calls
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return createErrorResponse("Authentication required", 401);
+    }
+
     // Validate request headers
     const contentType = request.headers.get('content-type');
     if (!validateContentType(contentType)) {
@@ -94,7 +103,13 @@ export async function POST(request: NextRequest) {
 
     // Generate new TTS audio
     const result = await speechService.generateSpeechBuffer(requestData);
-    
+
+    // Log TTS cost (fire-and-forget) - only for newly generated audio, not cached
+    logTTSCost(requestData.text.length, {
+      userId: session.user.id,
+      metadata: { language: requestData.language, speed: requestData.speed },
+    });
+
     // Save to cache (skip on Vercel)
     let audioUrl = '';
     if (!isVercel) {

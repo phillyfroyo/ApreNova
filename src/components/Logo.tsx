@@ -8,9 +8,10 @@ interface LogoProps {
   size?: string;
   className?: string;
   plain?: boolean; // Force "Cuentana" without my/mi prefix
+  showBeta?: boolean;
 }
 
-export default function Logo({ variant = 'default', size = 'text-[32px]', className = '', plain = false }: LogoProps) {
+export default function Logo({ variant = 'default', size = 'text-[32px]', className = '', plain = false, showBeta = false }: LogoProps) {
   const { data: session } = useSession();
 
   const label =
@@ -67,9 +68,16 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
       : ['myCuent', 'ana'];
 
   return (
-    <h1 className={`font-bold leading-none ${font} ${size} ${className}`}>
-      <span className={`${aprendColor} drop-shadow-aprenova`}>{brand[0]}</span>
-      <span className={`${oColor} drop-shadow-aprenova`}>{brand[1]}</span>
+    <h1 className={`font-bold leading-none ${font} ${size} ${className} ${showBeta ? 'inline-flex items-center gap-2' : ''}`}>
+      <span>
+        <span className={`${aprendColor} drop-shadow-aprenova`}>{brand[0]}</span>
+        <span className={`${oColor} drop-shadow-aprenova`}>{brand[1]}</span>
+      </span>
+      {showBeta && (
+        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none font-sans">
+          beta
+        </span>
+      )}
     </h1>
   );
 }

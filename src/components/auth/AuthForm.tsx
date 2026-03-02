@@ -245,8 +245,21 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         });
 
         if (result?.ok) {
-          // Redirect to root for onboarding step 1 (language selection)
-          window.location.href = '/';
+          // If user completed onboarding before signup, save level and go to stories
+          // Only check sessionStorage (per-tab) — localStorage may have stale values from previous sessions
+          const quizLevel = sessionStorage.getItem('quizLevel');
+          if (quizLevel) {
+            // Save the quiz level to the new user's account
+            await fetch('/api/user-level', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ level: quizLevel }),
+            });
+            window.location.href = `/${lang}/stories`;
+          } else {
+            // No onboarding completed — send to onboarding step 1
+            window.location.href = '/';
+          }
         } else {
           setError(getAuthErrorMessage(AUTH_ERROR_CODES.INTERNAL_ERROR, lang));
           setIsLoading(false);
@@ -264,9 +277,17 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('oauth_lang', lang);
     }
-    signIn('google', {
-      callbackUrl: `${window.location.origin}/api/post-login?lang=${lang}`,
-    });
+    // Include quiz level from onboarding so post-login can save it to DB
+    // Only check sessionStorage (per-tab) — localStorage may have stale values from previous sessions
+    const quizLevel = typeof window !== 'undefined'
+      ? (sessionStorage.getItem('quizLevel') || '')
+      : '';
+    const callbackUrl = new URL(`${window.location.origin}/api/post-login`);
+    callbackUrl.searchParams.set('lang', lang);
+    if (quizLevel) {
+      callbackUrl.searchParams.set('quizLevel', quizLevel);
+    }
+    signIn('google', { callbackUrl: callbackUrl.toString() });
   };
 
   const toggleLoginMode = () => {
@@ -504,7 +525,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-default"
             >
               <Image
                 src="https://www.svgrepo.com/show/475656/google-color.svg"

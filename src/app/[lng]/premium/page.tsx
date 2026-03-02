@@ -20,7 +20,8 @@ export default async function PremiumPage({
   const session = await getServerSession(authOptions);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="min-h-screen p-6" style={{ backgroundImage: "url('/images/background6.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
+      <div className="max-w-3xl mx-auto">
       <h1 className="text-4xl font-extrabold mb-4 text-yellow-700">
     {t(lng, "premium", "title")}
   </h1>
@@ -70,6 +71,7 @@ export default async function PremiumPage({
       <Button variant="button1">← {t(lng, "premium", "returnToStories")}</Button>
     </Link>
   </div>
+    </div>
 </div>
   );
 }

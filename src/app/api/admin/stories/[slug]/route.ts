@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Generate a random 4-digit number for unique filenames
@@ -46,6 +47,7 @@ function serializeAttribution(attr: StoryAttribution): string {
     if (attr.sourceEdition.editor) seParts.push(`editor: "${escapeJsString(attr.sourceEdition.editor)}"`);
     seParts.push(`isPublicDomain: ${attr.sourceEdition.isPublicDomain}`);
     if (attr.sourceEdition.publicDomainNote) seParts.push(`publicDomainNote: "${escapeJsString(attr.sourceEdition.publicDomainNote)}"`);
+    if (attr.sourceEdition.source) seParts.push(`source: "${escapeJsString(attr.sourceEdition.source)}"`);
     if (attr.sourceEdition.url) seParts.push(`url: "${escapeJsString(attr.sourceEdition.url)}"`);
     if (attr.sourceEdition.notes) seParts.push(`notes: "${escapeJsString(attr.sourceEdition.notes)}"`);
     parts.push(`sourceEdition: { ${seParts.join(", ")} }`);
@@ -88,6 +90,7 @@ function serializeAttribution(attr: StoryAttribution): string {
 interface UpdateStoryRequest {
   title?: { en: string; es: string };
   description?: { en: string; es: string };
+  hook?: { en: string; es: string };
   thumbnailBase64?: string;
   backgroundBase64?: string;
   // Delete flags
@@ -108,7 +111,7 @@ export async function PATCH(
   try {
     const { slug } = await params;
     const body: UpdateStoryRequest = await req.json();
-    const { title, description, thumbnailBase64, backgroundBase64, deleteCurrentThumbnail, deleteCurrentBackground } = body;
+    const { title, description, hook, thumbnailBase64, backgroundBase64, deleteCurrentThumbnail, deleteCurrentBackground } = body;
 
     const results: string[] = [];
     const errors: string[] = [];
@@ -186,22 +189,27 @@ export async function PATCH(
       }
     }
 
-    // Update UI translation files if title or description provided
-    if (title || description) {
+    // Update UI translation files if title, description, or hook provided
+    if (title || description || hook) {
+      // Helper to build the entry string for a given language
+      const buildEntry = (lang: "en" | "es") => {
+        const t = escapeJsString(title?.[lang] || "");
+        const h = escapeJsString(hook?.[lang] || "");
+        const d = escapeJsString(description?.[lang] || "");
+        const hookLine = h ? `\n    hook: "${h}",` : "";
+        return `"${slug}": {
+    title: "${t}",${hookLine}
+    description: "${d}",
+  }`;
+      };
+
       // Update English translations
       const enPath = path.join(process.cwd(), "src/content/ui/en.ts");
       const enContent = await fs.readFile(enPath, "utf-8");
-
-      // Check if story exists in en.ts
       const enStoryRegex = new RegExp(`"${slug}":\\s*\\{[^}]*\\}`, "s");
 
       if (enStoryRegex.test(enContent)) {
-        // Update existing entry
-        const newEnEntry = `"${slug}": {
-    title: "${title?.en || ""}",
-    description: "${description?.en || ""}",
-  }`;
-        const updatedEnContent = enContent.replace(enStoryRegex, newEnEntry);
+        const updatedEnContent = enContent.replace(enStoryRegex, buildEntry("en"));
         await fs.writeFile(enPath, updatedEnContent);
         results.push("Updated en.ts");
       } else {
@@ -211,15 +219,10 @@ export async function PATCH(
       // Update Spanish translations
       const esPath = path.join(process.cwd(), "src/content/ui/es.ts");
       const esContent = await fs.readFile(esPath, "utf-8");
-
       const esStoryRegex = new RegExp(`"${slug}":\\s*\\{[^}]*\\}`, "s");
 
       if (esStoryRegex.test(esContent)) {
-        const newEsEntry = `"${slug}": {
-    title: "${title?.es || ""}",
-    description: "${description?.es || ""}",
-  }`;
-        const updatedEsContent = esContent.replace(esStoryRegex, newEsEntry);
+        const updatedEsContent = esContent.replace(esStoryRegex, buildEntry("es"));
         await fs.writeFile(esPath, updatedEsContent);
         results.push("Updated es.ts");
       } else {
@@ -674,6 +677,24 @@ export async function DELETE(
       }
     } catch (themeError) {
       // storyThemes.ts might not have an entry for this story
+    }
+
+    // 8. Delete API cost records associated with this story
+    try {
+      const { count } = await prisma.apiCost.deleteMany({
+        where: {
+          metadata: {
+            path: ["adminStorySlug"],
+            equals: slug,
+          },
+        },
+      });
+      if (count > 0) {
+        results.push(`Deleted ${count} API cost record(s) from database`);
+      }
+    } catch (costError) {
+      console.error("Failed to delete cost records:", costError);
+      errors.push("Failed to delete API cost records from database");
     }
 
     if (results.length === 0) {

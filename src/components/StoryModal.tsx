@@ -11,6 +11,7 @@ import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 import { getStoryTitle, getStoryDescription } from "@/lib/stories";
+import ExpandableDescription from "@/components/ExpandableDescription";
 
 
 
@@ -140,18 +141,13 @@ export default function StoryModal({
               <Button
                 variant="parts"
                 onClick={async () => {
-                  // Check for bookmark first
-                  console.log(`🔍 Checking bookmark for: ${storySlug}`);
+                  // Check for bookmark first — bookmarks are bulk-updated when user changes level
                   const bookmarkResponse = await fetch(`/api/story-bookmark?storySlug=${encodeURIComponent(storySlug)}`);
-                  console.log(`📥 Bookmark response status: ${bookmarkResponse.status}`);
 
                   if (bookmarkResponse.ok) {
                     const data = await bookmarkResponse.json();
-                    console.log(`📚 Bookmark data:`, data);
 
                     if (data.bookmark) {
-                      // Redirect to bookmarked page
-                      console.log(`✅ Found bookmark! Redirecting to: ${data.bookmark.level} ch${data.bookmark.chapter} page${data.bookmark.page}`);
                       const url = getStoryUrl(
                         storySlug,
                         data.bookmark.level,
@@ -161,19 +157,18 @@ export default function StoryModal({
                       );
                       router.push(url);
                       return;
-                    } else {
-                      console.log(`❌ No bookmark found for ${storySlug}`);
                     }
                   }
 
-                  // No bookmark found - use default behavior
+                  // No bookmark — use user's current level
+                  // Prioritize localStorage (updated synchronously) over session (can be stale)
                   const storedLevel =
                     typeof window !== "undefined"
                       ? localStorage.getItem("level")
                       : null;
                   const level =
-                    user?.quizLevel?.toLowerCase?.() ||
                     storedLevel?.toLowerCase?.() ||
+                    user?.quizLevel?.toLowerCase?.() ||
                     "l2";
 
                   const url = getStoryUrl(storySlug, level, 1, 1, typedLang);
@@ -209,9 +204,14 @@ export default function StoryModal({
                   </p>
                 )}
 
-                <p className="my-4 text-sm text-black">
-                {getStoryDescription(typedLang, storySlug)}
-                </p>
+                {getStoryDescription(typedLang, storySlug) && (
+                  <ExpandableDescription
+                    text={getStoryDescription(typedLang, storySlug)}
+                    lang={typedLang}
+                    maxLines={4}
+                    className="my-4 text-black"
+                  />
+                )}
 
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (

@@ -19,31 +19,36 @@ export default function StoryCard({
   onClick,
 }: StoryCardProps) {
   return (
-    <motion.div
-  layoutId={`story-${index}`}
-  onClick={onClick}
-  whileHover={
-  typeof window !== "undefined" &&
-  window.matchMedia("(hover: hover)").matches
-    ? { scale: 1.05 }
-    : undefined // ✅ not false
-}
-  transition={{ duration: 0.2, ease: "easeOut" }}
-  style={{
-    cursor: "pointer",
-    borderRadius: "12px",
-    overflow: "hidden",
-    width: "160px",              // ← Adjust to desired size
-    flexShrink: 0,               // ← Prevent squishing in flex scroll
-    scrollSnapAlign: "start",    // ← Carousel snapping
-  }}
->
+    <div
+      style={{
+        width: "140px",
+        flexShrink: 0,
+        scrollSnapAlign: "start",
+      }}
+    >
+      <motion.div
+        layoutId={`story-${index}`}
+        onClick={onClick}
+        whileHover={
+          typeof window !== "undefined" &&
+          window.matchMedia("(hover: hover)").matches
+            ? { scale: 1.05 }
+            : undefined
+        }
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        style={{
+          cursor: "pointer",
+          borderRadius: "12px",
+          overflow: "hidden",
+          width: "100%",
+        }}
+      >
   <div style={{ position: "relative", width: "100%", aspectRatio: "2/3", borderRadius: "12px", overflow: "hidden" }}>
   <Image
     src={image}
     alt={title}
     fill
-    sizes="160px"
+    sizes="140px"
     style={{ objectFit: "cover", borderRadius: "12px" }}
   />
 </div>
@@ -59,6 +64,8 @@ export default function StoryCard({
       >
         {title}
       </p>
+
 </motion.div>
+    </div>
   );
 }

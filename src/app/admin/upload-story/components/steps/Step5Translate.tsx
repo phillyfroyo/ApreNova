@@ -3,7 +3,9 @@
 import { useState, useCallback } from "react";
 import type { StoryData, ChunkError, TranslationErrorType } from "../../types";
 import { useTranslationPipeline } from "../../hooks/useTranslationPipeline";
-import { ComparisonModal } from "../ComparisonModal";
+import { scanContentWarnings, scanTranslationQuality } from "../../hooks/useRewritePipeline";
+import { ComparisonModal } from "@/components/ComparisonModal";
+import { detectAlignmentIssues, type ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
 
 interface Step5TranslateProps {
   storyData: StoryData;
@@ -32,10 +34,11 @@ export function Step5Translate({
     chunkErrors,
     setChunkErrors,
     copiedFromLevel,
-    truncationRetryStatus,
     translateSingleLevel,
     translateAllLevels,
     cancel,
+    resetTranslation,
+    retranslateChapter,
     isTranslationComplete,
   } = pipeline;
 
@@ -46,39 +49,47 @@ export function Step5Translate({
 
   // Translation comparison modal state
   const [translationComparisonLevel, setTranslationComparisonLevel] = useState<number | null>(null);
-  const [translationModalEditing, setTranslationModalEditing] = useState(false);
-  const [translationModalEditText, setTranslationModalEditText] = useState("");
+  const [isRetranslatingChapter, setIsRetranslatingChapter] = useState(false);
 
   const openTranslationComparison = useCallback((level: number) => {
     const content = storyData.levelContent[level];
     if (content?.translatedText) {
       setTranslationComparisonLevel(level);
-      setTranslationModalEditText(content.translatedText);
-      setTranslationModalEditing(false);
     }
   }, [storyData.levelContent]);
 
   const closeTranslationComparison = useCallback(() => {
     setTranslationComparisonLevel(null);
-    setTranslationModalEditing(false);
   }, []);
 
-  const saveTranslationFromModal = useCallback((editedText: string) => {
-    if (translationComparisonLevel !== null) {
-      const content = storyData.levelContent[translationComparisonLevel];
-      if (content) {
-        updateStoryData({
-          levelContent: {
-            ...storyData.levelContent,
-            [translationComparisonLevel]: {
-              ...content,
-              translatedText: editedText,
-            },
-          },
-        });
-      }
-    }
+  const saveTranslationFromModal = useCallback((edits: { left?: string; right?: string }) => {
+    if (translationComparisonLevel === null) return;
+    const content = storyData.levelContent[translationComparisonLevel];
+    if (!content) return;
+
+    updateStoryData({
+      levelContent: {
+        ...storyData.levelContent,
+        [translationComparisonLevel]: {
+          ...content,
+          ...(edits.left !== undefined && { sourceText: edits.left }),
+          ...(edits.right !== undefined && { translatedText: edits.right }),
+        },
+      },
+    });
   }, [translationComparisonLevel, storyData.levelContent, updateStoryData]);
+
+  const handleRetranslateChapter = useCallback(async (chapterIndex: number, chapterText: string, numChunks: number) => {
+    if (translationComparisonLevel === null) return;
+    setIsRetranslatingChapter(true);
+    try {
+      await retranslateChapter(translationComparisonLevel, chapterIndex, chapterText, numChunks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retranslation failed");
+    } finally {
+      setIsRetranslatingChapter(false);
+    }
+  }, [translationComparisonLevel, retranslateChapter, setError]);
 
   // Error helper functions
   const getErrorIcon = (errorType: TranslationErrorType): string => {
@@ -113,9 +124,10 @@ export function Step5Translate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: chunkError.originalText,
-          sourceLanguage: storyData.sourceLanguage,
-          targetLanguage: storyData.sourceLanguage === "en" ? "es" : "en",
-          targetLevel: level,
+          fromLanguage: storyData.sourceLanguage,
+          level,
+          slug: storyData.slug || undefined,
+          isPoetry: storyData.structureType === "anthology" || storyData.structureType === "epic",
         }),
       });
 
@@ -278,7 +290,7 @@ export function Step5Translate({
     }
   }, [storyData.levelContent, updateStoryData, setChunkErrors]);
 
-  const generatedLevels = [1, 2, 3, 4, 5].filter(
+  const generatedLevels = [1, 2, 3, 4, 5, 6].filter(
     (l) => storyData.levelContent[l]?.status === "done" &&
            storyData.levelContent[l]?.mode !== "omit" &&
            storyData.levelContent[l]?.sourceText?.length > 0
@@ -322,6 +334,26 @@ export function Step5Translate({
           const isTranslating = translatingLevels.has(level);
           const levelErrorList = chunkErrors[level] || [];
           const hasLevelErrors = levelErrorList.length > 0;
+          const translationWarnings = hasTranslation ? scanContentWarnings(content.translatedText, level) : [];
+          const sourceWarnings = content?.sourceText ? scanContentWarnings(content.sourceText, level) : [];
+          const qualityWarnings = (hasTranslation && content?.sourceText)
+            ? scanTranslationQuality(content.sourceText, content.translatedText, level)
+            : [];
+
+          // Detect duplicate chapter markers (corrupted data)
+          const detectDupeChapters = (text: string) => {
+            const nums: number[] = [];
+            for (const m of text.matchAll(/^---\s*(?:Chapter|Capítulo)\s+(\d+)/gim)) {
+              nums.push(parseInt(m[1], 10));
+            }
+            const seen = new Set<number>();
+            const dupes = new Set<number>();
+            for (const n of nums) { if (seen.has(n)) dupes.add(n); seen.add(n); }
+            return dupes.size > 0 ? Array.from(dupes) : null;
+          };
+          const sourceDupes = content?.sourceText ? detectDupeChapters(content.sourceText) : null;
+          const transDupes = hasTranslation ? detectDupeChapters(content.translatedText) : null;
+          const hasDupeChapters = sourceDupes || transDupes;
 
           return (
             <div
@@ -369,37 +401,59 @@ export function Step5Translate({
                       {isTranslating
                         ? levelProgress[level]
                           ? levelProgress[level].subChunk
-                            ? `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd}/${levelProgress[level].total} (part ${levelProgress[level].subChunk!.current}/${levelProgress[level].subChunk!.total})...`
-                            : `Translating chapters ${levelProgress[level].current}-${levelProgress[level].batchEnd} of ${levelProgress[level].total}...`
+                            ? `Translating chapter ${levelProgress[level].current} of ${levelProgress[level].total} (sub-chunk ${levelProgress[level].subChunk.current}/${levelProgress[level].subChunk.total})...`
+                            : `Translating chapter ${levelProgress[level].current} of ${levelProgress[level].total}...`
                           : "Translating..."
                         : hasLevelErrors
                         ? "Translation incomplete - resolve errors below"
                         : hasTranslation
                         ? (() => {
-                            const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
-                            const transLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
-                            const isComplete = transLines >= sourceLines;
-                            return isComplete
-                              ? `${transLines} lines translated ✓`
-                              : `${transLines}/${sourceLines} lines translated (partial)`;
+                            // Use detectAlignmentIssues per chapter (same logic as ComparisonModal)
+                            const chapterDivider = /^---\s*(Chapter|Capítulo)\s*(\d+)/gim;
+                            const srcLines = (content.sourceText || "").split("\n");
+                            const transLines = content.translatedText.split("\n");
+                            const contentLineCount = transLines.filter(l => l.trim()).length;
+
+                            // Split into per-chapter line arrays for alignment detection
+                            const splitChapterLines = (lines: string[]) => {
+                              const dividerPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)/i;
+                              const chapters: { num: number; lines: string[] }[] = [];
+                              let current: string[] = [];
+                              let currentNum = 0;
+                              for (const line of lines) {
+                                const m = line.match(dividerPattern);
+                                if (m) {
+                                  if (current.length > 0 || chapters.length > 0) chapters.push({ num: currentNum, lines: current });
+                                  currentNum = parseInt(m[2], 10);
+                                  current = [];
+                                } else {
+                                  current.push(line);
+                                }
+                              }
+                              if (current.length > 0) chapters.push({ num: currentNum, lines: current });
+                              return chapters;
+                            };
+
+                            const srcChapters = splitChapterLines(srcLines);
+                            const transChapters = splitChapterLines(transLines);
+                            let totalIssues = 0;
+                            const mismatchedChapters: string[] = [];
+                            for (let i = 0; i < srcChapters.length; i++) {
+                              const tc = transChapters[i];
+                              if (!tc) continue;
+                              const result = detectAlignmentIssues(srcChapters[i].lines, tc.lines);
+                              if (result.hasIssues) {
+                                totalIssues += result.contentVsBlankIssues.length;
+                                mismatchedChapters.push(`Ch ${srcChapters[i].num}`);
+                              }
+                            }
+
+                            if (totalIssues === 0) return `${contentLineCount} lines translated ✓`;
+                            const detail = mismatchedChapters.length > 0 ? ` — ${mismatchedChapters.join(', ')}` : '';
+                            return `${totalIssues} alignment issue${totalIssues > 1 ? 's' : ''}${detail}`;
                           })()
                         : "Pending translation"}
                     </div>
-                    {isTranslating && truncationRetryStatus && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        <span>
-                          Truncation detected in Chapter {truncationRetryStatus.chapter + 1} -
-                          Auto-retry {truncationRetryStatus.attempt}/{truncationRetryStatus.maxAttempts}
-                        </span>
-                        <span className="text-amber-500 text-xs opacity-75">
-                          ({truncationRetryStatus.reasons.join(", ")})
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -421,6 +475,22 @@ export function Step5Translate({
                       Resume Translation
                     </button>
                   )}
+                  {hasTranslation && !isTranslating && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Reset Level ${level} translation? This will clear the translated text so you can re-translate.`)) {
+                          resetTranslation(level);
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset
+                    </button>
+                  )}
                   {isTranslating && (
                     <button
                       onClick={cancel}
@@ -432,76 +502,85 @@ export function Step5Translate({
                 </div>
               </div>
 
-              {/* Line count comparison */}
+              {/* Alignment status (uses detectAlignmentIssues per chapter — same logic as ComparisonModal) */}
               {content?.translatedText?.length > 0 && (() => {
-                const sourceLines = content.sourceText?.split("\n").filter((l: string) => l.trim()).length || 0;
-                const translatedLines = content.translatedText.split("\n").filter((l: string) => l.trim()).length;
-                const linesMatch = sourceLines === translatedLines;
                 const isBreakdownExpanded = expandedLineBreakdown === level;
+                const dividerPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
 
-                const chapterPattern = /^---\s*(Chapter|Capítulo)\s*(\d+)(?::\s*(.+?))?\s*---$/i;
-                const sourceTextLines = (content.sourceText || "").split("\n");
-                const translatedTextLines = content.translatedText.split("\n");
-
-                const parseChapters = (lines: string[]) => {
-                  type ChapterInfo = { number: number; title: string; startLine: number };
-                  const chapters: { number: number; title: string; startLine: number; lineCount: number }[] = [];
-                  let currentChapter: ChapterInfo | null = null;
-
-                  lines.forEach((line, idx) => {
-                    const match = line.match(chapterPattern);
-                    if (match) {
-                      if (currentChapter) {
-                        const contentLines = lines.slice(currentChapter.startLine + 1, idx).filter(l => l.trim()).length;
-                        chapters.push({ number: currentChapter.number, title: currentChapter.title, startLine: currentChapter.startLine, lineCount: contentLines });
-                      }
-                      currentChapter = { number: parseInt(match[2], 10), title: match[3] || "", startLine: idx };
+                // Split text into per-chapter line arrays
+                const splitChapterLines = (text: string) => {
+                  const lines = text.split("\n");
+                  const chapters: { num: number; title: string; lines: string[] }[] = [];
+                  let current: string[] = [];
+                  let currentNum = 0;
+                  let currentTitle = "";
+                  for (const line of lines) {
+                    const m = line.match(dividerPattern);
+                    if (m) {
+                      if (current.length > 0 || chapters.length > 0) chapters.push({ num: currentNum, title: currentTitle, lines: current });
+                      currentNum = parseInt(m[2], 10);
+                      currentTitle = m[3] || "";
+                      current = [];
+                    } else {
+                      current.push(line);
                     }
-                  });
-
-                  if (currentChapter) {
-                    const chap = currentChapter as ChapterInfo;
-                    const contentLines = lines.slice(chap.startLine + 1).filter(l => l.trim()).length;
-                    chapters.push({ number: chap.number, title: chap.title, startLine: chap.startLine, lineCount: contentLines });
                   }
-
+                  if (current.length > 0) chapters.push({ num: currentNum, title: currentTitle, lines: current });
                   return chapters;
                 };
 
-                const sourceChapters = parseChapters(sourceTextLines);
-                const translatedChapters = parseChapters(translatedTextLines);
-                const hasChapters = sourceChapters.length > 1 || translatedChapters.length > 1;
+                const srcChapters = splitChapterLines(content.sourceText || "");
+                const transChapters = splitChapterLines(content.translatedText);
+                const hasMultipleChapters = srcChapters.length > 1;
+
+                // Run detectAlignmentIssues per chapter
+                const chapterResults: { num: number; title: string; result: ChapterAlignmentResult }[] = [];
+                let totalAlignmentIssues = 0;
+                for (let i = 0; i < srcChapters.length; i++) {
+                  const tc = transChapters[i];
+                  const result = tc
+                    ? detectAlignmentIssues(srcChapters[i].lines, tc.lines)
+                    : { hasIssues: true, issueCount: 1, lineCountMismatch: null, contentVsBlankIssues: [] };
+                  chapterResults.push({ num: srcChapters[i].num, title: srcChapters[i].title, result });
+                  totalAlignmentIssues += result.contentVsBlankIssues.length;
+                }
 
                 return (
                   <div className="mt-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        {hasChapters && (
-                          <button
-                            onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
-                            className="p-1 hover:bg-gray-200 rounded transition-colors"
-                            title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
-                          >
-                            <svg
-                              className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
+                        {totalAlignmentIssues === 0 ? (
+                          <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+                            <span className="text-green-500">&#10003;</span>
+                            Alignment OK
+                            {hasMultipleChapters && <span className="text-gray-400 font-normal text-xs">({srcChapters.length} chapters)</span>}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-sm text-amber-600 font-medium flex items-center gap-1.5">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              {totalAlignmentIssues} alignment issue{totalAlignmentIssues > 1 ? "s" : ""}
+                            </span>
+                            {hasMultipleChapters && (
+                              <button
+                                onClick={() => setExpandedLineBreakdown(isBreakdownExpanded ? null : level)}
+                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                title={isBreakdownExpanded ? "Hide chapter breakdown" : "Show chapter breakdown"}
+                              >
+                                <svg
+                                  className={`w-4 h-4 text-gray-500 transition-transform ${isBreakdownExpanded ? 'rotate-90' : ''}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            )}
+                          </>
                         )}
-                        <div className={`text-sm font-medium flex items-center gap-2 ${linesMatch ? 'text-green-600' : 'text-amber-600'}`}>
-                          <span>{sourceLines} lines</span>
-                          <span className="text-gray-400">{"<-->"}</span>
-                          <span>{translatedLines} lines</span>
-                          {linesMatch ? (
-                            <span className="text-green-500 ml-1">&#10003;</span>
-                          ) : (
-                            <span className="text-amber-500 ml-1">({translatedLines - sourceLines > 0 ? '+' : ''}{translatedLines - sourceLines})</span>
-                          )}
-                        </div>
                       </div>
                       <button
                         onClick={() => openTranslationComparison(level)}
@@ -513,28 +592,28 @@ export function Step5Translate({
                         View Full Text
                       </button>
                     </div>
-                    {isBreakdownExpanded && hasChapters && (
+
+                    {/* Per-chapter breakdown */}
+                    {isBreakdownExpanded && hasMultipleChapters && (
                       <div className="mt-2 ml-6 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5 max-h-48 overflow-y-auto">
-                        {sourceChapters.map((srcChapter) => {
-                          const transChapter = translatedChapters.find(c => c.number === srcChapter.number);
-                          const srcLines = srcChapter.lineCount;
-                          const transLines = transChapter?.lineCount || 0;
-                          const chapterMatch = srcLines === transLines;
-                          const diff = transLines - srcLines;
+                        {chapterResults.map((ch) => {
+                          const issueCount = ch.result.contentVsBlankIssues.length;
+                          const chapterOk = !ch.result.hasIssues;
 
                           return (
                             <div
-                              key={srcChapter.number}
-                              className={`flex items-center justify-between px-2 py-1 rounded ${chapterMatch ? 'bg-green-50' : 'bg-amber-50'}`}
+                              key={ch.num}
+                              className={`flex items-center justify-between px-2 py-1 rounded ${chapterOk ? 'bg-green-50' : 'bg-amber-50'}`}
                             >
                               <span className="text-gray-700 font-medium">
-                                Ch. {srcChapter.number}
-                                {srcChapter.title && <span className="font-normal text-gray-500 ml-1">({srcChapter.title.slice(0, 20)}{srcChapter.title.length > 20 ? '...' : ''})</span>}
+                                Ch. {ch.num}
+                                {ch.title && <span className="font-normal text-gray-500 ml-1">({ch.title.slice(0, 20)}{ch.title.length > 20 ? '...' : ''})</span>}
                               </span>
-                              <span className={chapterMatch ? 'text-green-600' : 'text-amber-600'}>
-                                {srcLines} <span className="text-gray-400 mx-1">→</span> {transLines}
-                                {!chapterMatch && (
-                                  <span className="ml-1 opacity-75">({diff > 0 ? '+' : ''}{diff})</span>
+                              <span className={chapterOk ? 'text-green-600' : 'text-amber-600'}>
+                                {chapterOk ? (
+                                  <span>&#10003;</span>
+                                ) : (
+                                  <span>{issueCount} issue{issueCount > 1 ? 's' : ''}</span>
                                 )}
                               </span>
                             </div>
@@ -545,6 +624,53 @@ export function Step5Translate({
                   </div>
                 );
               })()}
+
+              {/* Content Warnings */}
+              {(sourceWarnings.length > 0 || translationWarnings.length > 0 || qualityWarnings.length > 0) && (
+                <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    {sourceWarnings.length + translationWarnings.length + qualityWarnings.length} content warning{sourceWarnings.length + translationWarnings.length + qualityWarnings.length > 1 ? "s" : ""} detected
+                  </div>
+                  <ul className="space-y-1">
+                    {sourceWarnings.map((w, i) => (
+                      <li key={`src-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Source</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                    {translationWarnings.map((w, i) => (
+                      <li key={`trans-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Translation</span> Ch {w.chapter}, line {w.line}: <span className="font-medium">{w.type === "error_marker" ? "Error marker" : w.type === "ai_refusal" ? "AI refusal" : "Translation failed"}</span>
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 80)}{w.text.length > 80 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                    {qualityWarnings.map((w, i) => (
+                      <li key={`quality-${i}`} className="text-xs text-amber-600">
+                        <span className="font-medium text-amber-700">Short translation</span> Ch {w.chapter}, line {w.line}
+                        {" — "}<code className="bg-amber-100 px-1 rounded">{w.text.slice(0, 120)}{w.text.length > 120 ? "..." : ""}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Duplicate chapter warning */}
+              {hasDupeChapters && (
+                <div className="mt-3 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+                  <svg className="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div className="text-sm text-red-700">
+                    <span className="font-medium">Corrupted data: duplicate chapters detected.</span>
+                    {sourceDupes && <span> Source Ch {sourceDupes.join(', ')}.</span>}
+                    {transDupes && <span> Translation Ch {transDupes.join(', ')}.</span>}
+                    <span> Reset this level and retranslate.</span>
+                  </div>
+                </div>
+              )}
 
               {/* Failed Chunks UI */}
               {hasLevelErrors && (
@@ -635,7 +761,7 @@ export function Step5Translate({
                               <button
                                 onClick={() => applyManualOverride(level, chunkError)}
                                 disabled={!manualOverrideText[errorKey]?.trim()}
-                                className="mt-2 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="mt-2 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-default"
                               >
                                 Apply Manual Translation
                               </button>
@@ -706,8 +832,10 @@ export function Step5Translate({
           rightTitle={`Translation (${storyData.sourceLanguage === 'en' ? 'ES' : 'EN'})`}
           rightText={storyData.levelContent[translationComparisonLevel]?.translatedText || ""}
           onSave={saveTranslationFromModal}
-          editableSide="right"
+          editableSide="both"
           headerGradient="bg-gradient-to-r from-blue-600 to-indigo-600"
+          onRetranslateChapter={handleRetranslateChapter}
+          isRetranslating={isRetranslatingChapter}
         />
       )}
     </div>

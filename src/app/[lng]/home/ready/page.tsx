@@ -30,7 +30,7 @@ export default function ReadyPage() {
     router.push(`/${typedLang}/stories`);
   };
 
-  const getLevelName = () => t(typedLang, "levels", level) || "Beginner";
+  const getLevelName = () => t(typedLang, "levels", level) || "Foundations";
   const getCefrLabel = () => t(typedLang, "levels", `cefrLabels.${level}`) || "A1";
 
   // If user is already logged in, skip the account creation prompt

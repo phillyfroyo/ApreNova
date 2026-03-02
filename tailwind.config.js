@@ -24,12 +24,12 @@ module.exports = {
         danger: '#EF4444',
 
         badge: {
-          level1: '#b2ebf2', // vibrant aqua-cyan
-          level2: '#c8e6c9', // pleasant spring green
-          level3: '#ffe0b2', // creamy soft orange
-          level4: '#81d4fa', // bright soft blue with a cheerful pop
-          level5: '#ce93d8', // delicate lavender
-          
+          level1: '#b2ebf2', // vibrant aqua-cyan (A1)
+          level2: '#c8e6c9', // pleasant spring green (A2)
+          level3: '#ffe0b2', // creamy soft orange (B1)
+          level4: '#81d4fa', // bright soft blue with a cheerful pop (B2)
+          level5: '#ce93d8', // delicate lavender (C1)
+          level6: '#ef9a9a', // soft coral-red (C2)
         },
       },
       spacing: {

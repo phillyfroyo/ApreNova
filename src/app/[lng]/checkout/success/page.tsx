@@ -29,9 +29,9 @@ export default function CheckoutSuccessPage() {
 
   const content = {
     en: {
-      title: 'Welcome to Premium!',
+      title: 'Welcome to PRO!',
       subtitle: 'Your subscription is now active',
-      description: 'Thank you for upgrading! You now have access to all premium features including unlimited AI tutoring, all story levels, and more.',
+      description: 'Thank you for upgrading! You now have access to all PRO features including unlimited AI tutoring, all story levels, and more.',
       features: [
         'Unlimited AI Tutor conversations',
         'Access to all story difficulty levels',
@@ -42,9 +42,9 @@ export default function CheckoutSuccessPage() {
       processing: 'Activating your subscription...',
     },
     es: {
-      title: '¡Bienvenido a Premium!',
+      title: '¡Bienvenido a PRO!',
       subtitle: 'Tu suscripción ya está activa',
-      description: 'Gracias por actualizar. Ahora tienes acceso a todas las funciones premium, incluyendo tutoría IA ilimitada, todos los niveles de historias y más.',
+      description: 'Gracias por actualizar. Ahora tienes acceso a todas las funciones PRO, incluyendo tutoría IA ilimitada, todos los niveles de historias y más.',
       features: [
         'Conversaciones ilimitadas con el Tutor IA',
         'Acceso a todos los niveles de dificultad',

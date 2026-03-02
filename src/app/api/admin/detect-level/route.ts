@@ -1,15 +1,12 @@
 // src/app/api/admin/detect-level/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-import { generateDetectionPrompt } from "@/lib/admin/cefr-prompts";
+// Admin CEFR level detection API using the shared story-processing library
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { NextRequest, NextResponse } from "next/server";
+import { detectCEFRLevel, type CEFRDetectionResult } from "@/lib/story-processing";
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, language } = await req.json();
+    const { text, language, slug } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -18,47 +15,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Take a sample of the text (first 1500 chars) for analysis
-    const sampleText = text.slice(0, 1500);
-    const prompt = generateDetectionPrompt(sampleText, language || "en");
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a CEFR language level assessment expert. Respond only with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 200,
-    });
-
-    const content = response.choices[0]?.message?.content?.trim();
-
-    if (!content) {
-      return NextResponse.json(
-        { error: "No response from AI" },
-        { status: 500 }
-      );
-    }
-
-    // Parse the JSON response
-    const result = JSON.parse(content);
+    // Use the shared detection function with cost tracking
+    const result: CEFRDetectionResult = await detectCEFRLevel(
+      text,
+      (language || "en") as "en" | "es",
+      { adminStorySlug: slug }
+    );
 
     return NextResponse.json({
       level: result.level,
+      levelString: result.levelString,
+      cefr: result.cefr,
       confidence: result.confidence,
       reasoning: result.reasoning,
     });
   } catch (error) {
     console.error("CEFR detection error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to detect level" },
+      {
+        error: "Failed to detect level",
+        details: errorMessage,
+      },
       { status: 500 }
     );
   }

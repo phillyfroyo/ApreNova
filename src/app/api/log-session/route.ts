@@ -29,8 +29,8 @@ export async function POST(req: Request) {
   // Get the current user session
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    console.warn("⚠️ Session logging attempted without valid user session");
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Anonymous users - silently succeed but don't log
+    return NextResponse.json({ status: 'ok' });
   }
 
   try {

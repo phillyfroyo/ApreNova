@@ -5,13 +5,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Badge, Button } from "@/components/ui";
-import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution, getAuthorName, getAuthorLifespan, getYearPublished, isPublicDomain, getPublicDomainNote, toCEFR } from "@/lib/stories";
+import { Button } from "@/components/ui";
+import { STORY_METADATA, STORY_TYPE_LABELS, STORY_TAG_LABELS, formatAttribution, getAuthorName, getAuthorLifespan, getYearPublished, isPublicDomain, getPublicDomainNote } from "@/lib/stories";
 import { getStoryUrl } from "@/utils/getStoryUrl";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
-import { getStoryTitle, getStoryDescription } from "@/lib/stories";
+import { getStoryTitle, getStoryDescription, getStoryHook } from "@/lib/stories";
 import type { StoryMetadata, StoryAttribution } from "@/types/story";
+import { toCEFR, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
+import ExpandableDescription from "@/components/ExpandableDescription";
+
+// CEFR badge colors
+const CEFR_BADGE_COLORS: Record<string, string> = {
+  A1: "bg-green-100 text-green-800",
+  A2: "bg-blue-100 text-blue-800",
+  B1: "bg-yellow-100 text-yellow-800",
+  B2: "bg-orange-100 text-orange-800",
+  C1: "bg-purple-100 text-purple-800",
+  C2: "bg-red-100 text-red-800",
+};
 
 type StoryDetailModalProps = {
   storySlug: string | null;
@@ -248,7 +260,8 @@ export default function StoryDetailModal({
   const handleReadStory = useCallback(async () => {
     if (!story) return;
 
-    // Check for bookmark first
+    // Check for bookmark first — bookmarks are bulk-updated when user changes level,
+    // so the bookmark level always reflects the user's current level
     const bookmarkResponse = await fetch(
       `/api/story-bookmark?storySlug=${encodeURIComponent(story.slug)}`
     );
@@ -268,13 +281,12 @@ export default function StoryDetailModal({
       }
     }
 
-    // No bookmark - use default level
+    // No bookmark — use user's current level
+    // Prioritize localStorage (updated synchronously on level change) over
+    // session.user.quizLevel (JWT-based, can be stale until next token refresh)
     const storedLevel =
       typeof window !== "undefined" ? localStorage.getItem("level") : null;
-    const level =
-      user?.quizLevel?.toUpperCase?.() ||
-      storedLevel?.toUpperCase?.() ||
-      "A2";
+    const level = toCEFR(storedLevel || user?.quizLevel || "A2");
 
     const url = getStoryUrl(story.slug, level, 1, 1, typedLang);
     router.push(url);
@@ -305,34 +317,25 @@ export default function StoryDetailModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed inset-4 md:inset-8 lg:inset-12 z-[101] flex items-center justify-center pointer-events-none"
+            className="fixed top-6 bottom-2 left-4 right-4 md:inset-8 lg:inset-12 z-[101] flex items-start md:items-center justify-center pt-12 md:pt-0 pointer-events-none"
           >
-            {/* Close button - fixed position outside the scrollable area */}
-            <button
-              onClick={onClose}
-              className="absolute top-0 right-0 md:top-2 md:right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10 pointer-events-auto"
-              aria-label="Close"
-            >
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
             <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-full overflow-y-auto pointer-events-auto md:overflow-hidden md:flex md:flex-row"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[75vh] md:h-[80vh] md:max-h-[600px] overflow-y-auto hide-scrollbar pointer-events-auto md:overflow-hidden md:flex md:flex-row"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Left side - Image */}
               <div className="relative w-full md:w-2/5 md:flex-shrink-0">
-                <div className="aspect-[2/3] md:aspect-auto md:h-full relative">
-                  <Image
-                    src={story.image}
-                    alt={getStoryTitle(typedLang, storySlug)}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 40vw"
-                    className="object-cover"
-                    priority
-                  />
+                <div className="max-h-[60vh] md:max-h-none md:h-full relative overflow-hidden">
+                  <div className="relative w-full aspect-[2/3] md:aspect-auto md:h-full">
+                    <Image
+                      src={story.image}
+                      alt={getStoryTitle(typedLang, storySlug)}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 40vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -340,12 +343,29 @@ export default function StoryDetailModal({
               <div className="flex-1 md:overflow-y-auto p-6 md:p-8">
                 {/* Story Type Badge */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    story.type === "poem" || story.type === "song-lyrics"
+                      ? "bg-purple-100 text-purple-700"
+                      : story.type === "novel" || story.type === "short-story"
+                      ? "bg-blue-100 text-blue-700"
+                      : story.type === "fable" || story.type === "folktale" || story.type === "myth" || story.type === "legend"
+                      ? "bg-amber-100 text-amber-700"
+                      : story.type === "epic"
+                      ? "bg-rose-100 text-rose-700"
+                      : story.type === "movie-script" || story.type === "tv-script"
+                      ? "bg-cyan-100 text-cyan-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
                     {STORY_TYPE_LABELS[story.type]?.[typedLang] || story.type}
                   </span>
                   {story.origin.isOriginal && (
                     <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                       {typedLang === "es" ? "Original de Cuentana" : "Cuentana Original"}
+                    </span>
+                  )}
+                  {!story.origin.isOriginal && attribution?.sourceEdition?.source === "gutenberg" && (
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                      Project Gutenberg
                     </span>
                   )}
                   {story.targetAudience && story.targetAudience !== "all" && (
@@ -375,11 +395,6 @@ export default function StoryDetailModal({
                   </p>
                 )}
 
-                {/* Description */}
-                <p className="text-gray-700 leading-relaxed mb-6">
-                  {getStoryDescription(typedLang, storySlug)}
-                </p>
-
                 {/* Read Button */}
                 <Button
                   variant="parts"
@@ -389,6 +404,13 @@ export default function StoryDetailModal({
                   {t(typedLang, "stories", "readStory")}
                 </Button>
 
+                {/* Hook */}
+                {getStoryHook(typedLang, storySlug) && (
+                  <p className="text-gray-600 text-sm italic mb-6">
+                    {getStoryHook(typedLang, storySlug)}
+                  </p>
+                )}
+
                 {/* Available Levels */}
                 <div className="mb-6">
                   <p className="text-sm font-semibold text-gray-600 mb-2">
@@ -396,20 +418,55 @@ export default function StoryDetailModal({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {story.levels.map((lvl, idx) => {
-                      const badgeLevel = `level${lvl.replace("l", "")}` as
-                        | "level1"
-                        | "level2"
-                        | "level3"
-                        | "level4"
-                        | "level5";
+                      const cefrLevel = toCEFR(lvl);
+                      const colorClass = CEFR_BADGE_COLORS[cefrLevel] || "bg-gray-100 text-gray-800";
                       return (
-                        <Badge key={idx} level={badgeLevel}>
-                          {toCEFR(lvl)}
-                        </Badge>
+                        <button
+                          key={idx}
+                          onClick={async () => {
+                            // Check for bookmark at this level first
+                            const bookmarkResponse = await fetch(
+                              `/api/story-bookmark?storySlug=${encodeURIComponent(story.slug)}`
+                            );
+
+                            if (bookmarkResponse.ok) {
+                              const data = await bookmarkResponse.json();
+                              if (data.bookmark && toCEFR(data.bookmark.level) === cefrLevel) {
+                                // Bookmark exists at this level - resume from bookmark
+                                const url = getStoryUrl(
+                                  story.slug,
+                                  data.bookmark.level,
+                                  data.bookmark.chapter,
+                                  data.bookmark.page,
+                                  typedLang
+                                );
+                                router.push(url);
+                                return;
+                              }
+                            }
+
+                            // No bookmark at this level - start from beginning
+                            const url = getStoryUrl(story.slug, cefrLevel, 1, 1, typedLang);
+                            router.push(url);
+                          }}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass} cursor-pointer hover:scale-105 transition-transform`}
+                          title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
+                        >
+                          {getCEFRLabel(cefrLevel, typedLang)}
+                        </button>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Estimated Read Time (if available) */}
+                {story.estimatedReadTime && (
+                  <div className="text-sm text-gray-500 mb-6">
+                    {typedLang === "es"
+                      ? `Tiempo de lectura: ~${story.estimatedReadTime} min`
+                      : `Reading time: ~${story.estimatedReadTime} min`}
+                  </div>
+                )}
 
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (
@@ -430,18 +487,19 @@ export default function StoryDetailModal({
                   </div>
                 )}
 
+                {/* Description — below the action items */}
+                {getStoryDescription(typedLang, storySlug) && (
+                  <ExpandableDescription
+                    text={getStoryDescription(typedLang, storySlug)}
+                    lang={typedLang}
+                    maxLines={4}
+                    className="text-gray-600 mb-6"
+                  />
+                )}
+
                 {/* Full Attribution Section for non-original works */}
                 {hasAttribution && attribution && (
                   <AttributionSection attribution={attribution} lang={typedLang} />
-                )}
-
-                {/* Estimated Read Time (if available) */}
-                {story.estimatedReadTime && (
-                  <div className="text-sm text-gray-500">
-                    {typedLang === "es"
-                      ? `Tiempo de lectura: ~${story.estimatedReadTime} min`
-                      : `Reading time: ~${story.estimatedReadTime} min`}
-                  </div>
                 )}
               </div>
             </div>

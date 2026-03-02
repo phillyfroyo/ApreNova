@@ -1,5 +1,6 @@
 // src/lib/admin/story-generator.ts
 import type { StoryType, StoryTag, StoryOrigin, StoryAttribution } from "@/types/story";
+import type { CEFRCode } from "@/lib/cefr";
 
 // Re-export text normalization utilities from text-preprocessor
 export { detectLineBreakStyle, normalizeLineBreaks, getLineBreakStyleDescription } from "./text-preprocessor";
@@ -12,7 +13,7 @@ export type { LineBreakStyle } from "./text-preprocessor";
 /**
  * Helper to escape strings for JavaScript code output
  */
-function escapeJsString(str: string): string {
+export function escapeJsString(str: string): string {
   return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
@@ -86,6 +87,9 @@ function serializeAttribution(attr: StoryAttribution): string {
 export interface StoryLine {
   en: string;
   es: string;
+  // Poem support
+  stanzaNumber?: number;
+  isStanzaBreak?: boolean;
 }
 
 export interface StoryPage {
@@ -101,20 +105,26 @@ export interface GeneratedStoryContent {
   level: number;
   hasChapters: boolean;
   chapters: Record<number, StoryChapter>;
+  structureType?: "prose" | "anthology" | "epic" | "script";
 }
 
 export interface StoryMetadataInput {
   slug: string;
   title: { en: string; es: string };
   description: { en: string; es: string };
+  hook?: { en: string; es: string };
   image?: string;
-  levels: number[];
+  levels: CEFRCode[];  // CEFR codes like "A1", "A2", "B1", etc.
   isPremiumOnly?: boolean;
   // Tagging fields
   storyType: StoryType;
   origin: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+  // Content structure type - determines navigation labels
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  // Original level - the CEFR level of the unmodified source text
+  originalLevel?: CEFRCode;
 }
 
 /**
@@ -137,8 +147,8 @@ export function parseChapters(rawText: string): string[][] {
     .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*---/gi, '\n---CHAPTER_BREAK---\n')
     // Handle standalone CHAPTER markers (not wrapped in ---)
     .replace(/^\s*(CHAPTER|Capítulo)\s+\d+\s*[:\-—–]?\s*.*$/gim, '\n---CHAPTER_BREAK---\n')
-    // Handle simple --- dividers (but not our placeholder)
-    .replace(/^---(?!CHAPTER_BREAK)---*\s*$/gm, '\n---CHAPTER_BREAK---\n');
+    // Strip plain --- scene dividers (NOT chapter breaks) so they don't split chapters
+    .replace(/^---(?!CHAPTER_BREAK)---*\s*$/gm, '');
 
   // Step 2: Split by our clean marker
   const chapterTexts = normalized
@@ -260,17 +270,21 @@ export function generateContentFileTS(content: GeneratedStoryContent): string {
     chaptersObj[parseInt(chapterNum)] = { pages: pagesObj };
   }
 
+  // Build content object, including structureType if not prose
+  const contentObj: Record<string, unknown> = {
+    storySlug: content.storySlug,
+    level: content.level,
+    hasChapters: content.hasChapters,
+    chapters: chaptersObj,
+  };
+
+  // Include structureType if not prose (prose is the default)
+  if (content.structureType && content.structureType !== "prose") {
+    contentObj.structureType = content.structureType;
+  }
+
   // Format the content object as TypeScript
-  const contentStr = JSON.stringify(
-    {
-      storySlug: content.storySlug,
-      level: content.level,
-      hasChapters: content.hasChapters,
-      chapters: chaptersObj,
-    },
-    null,
-    2
-  );
+  const contentStr = JSON.stringify(contentObj, null, 2);
 
   // Convert JSON to TypeScript export
   return `export const levelContent = ${contentStr};\n`;
@@ -312,7 +326,8 @@ export function generateChapterIndexTS(
   storySlug: string,
   level: number,
   hasChapters: boolean,
-  chapterCount: number
+  chapterCount: number,
+  structureType?: "prose" | "anthology" | "epic" | "script"
 ): string {
   const imports: string[] = [];
   const exports: string[] = [];
@@ -322,13 +337,18 @@ export function generateChapterIndexTS(
     exports.push(`  ${i}: { pages: ch${i}.pages },`);
   }
 
+  // Include structureType if not prose (prose is the default)
+  const structureTypeLine = structureType && structureType !== "prose"
+    ? `\n  structureType: "${structureType}" as const,`
+    : "";
+
   return `// Auto-generated index file for split chapter format
 ${imports.join("\n")}
 
 export const levelContent = {
   storySlug: "${storySlug}",
   level: ${level},
-  hasChapters: ${hasChapters},
+  hasChapters: ${hasChapters},${structureTypeLine}
   chapters: {
 ${exports.join("\n")}
   },
@@ -351,7 +371,8 @@ export async function loadChapter(chapterNum: number) {
  * Generate the entry to add to STORY_METADATA array
  */
 export function generateMetadataEntry(metadata: StoryMetadataInput): string {
-  const levelsArray = metadata.levels.map((l) => `"l${l}"`).join(", ");
+  // Output CEFR codes directly (e.g., "A1", "A2", "B1")
+  const levelsArray = metadata.levels.map((l) => `"${l}"`).join(", ");
   const tagsArray = metadata.tags && metadata.tags.length > 0
     ? metadata.tags.map((t) => `"${t}"`).join(", ")
     : null;
@@ -380,6 +401,16 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
     entry += `\n    targetAudience: "${metadata.targetAudience}",`;
   }
 
+  // Content structure type for navigation labels (Collection/Poem vs Chapter/Page)
+  if (metadata.structureType && metadata.structureType !== "prose") {
+    entry += `\n    structureType: "${metadata.structureType}",`;
+  }
+
+  // Original level - the CEFR level of the unmodified source text
+  if (metadata.originalLevel) {
+    entry += `\n    originalLevel: "${metadata.originalLevel}",`;
+  }
+
   entry += `\n  },`;
 
   return entry;
@@ -392,9 +423,11 @@ export function generateUITranslationEntry(
   lang: "en" | "es",
   metadata: StoryMetadataInput
 ): string {
+  const hook = metadata.hook?.[lang];
+  const hookLine = hook ? `\n    hook: "${escapeJsString(hook)}",` : "";
   return `  "${metadata.slug}": {
-    title: "${lang === "en" ? metadata.title.en : metadata.title.es}",
-    description: "${lang === "en" ? metadata.description.en : metadata.description.es}",
+    title: "${escapeJsString(lang === "en" ? metadata.title.en : metadata.title.es)}",${hookLine}
+    description: "${escapeJsString(lang === "en" ? metadata.description.en : metadata.description.es)}",
   },`;
 }
 

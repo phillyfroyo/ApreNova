@@ -169,11 +169,13 @@ model User {
   nativeLanguage    String?
   quizLevel         String?
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   isPremium         Boolean             @default(false)
   stripeCustomerId  String?             @unique
   Account           Account[]
+  ApiCost           ApiCost[]
   CompletedStory    CompletedStory[]
+  DeletedUserStory  DeletedUserStory[]
   PageVisit         PageVisit[]
   ReviewLog         ReviewLog[]
   SavedWord         SavedWord[]
@@ -207,11 +209,23 @@ model UserStory {
   sourceLanguage    String
   detectedLevel     String?
   thumbnailUrl      String?
+  storyType         String?
+  targetAudience    String?
+  tags              String[]
+  hook              String?
+  hookEs            String?
+  hookEn            String?
   status            UserStoryStatus     @default(PROCESSING)
+  processingProgress Json?
   visibility        StoryVisibility     @default(PRIVATE)
+  processingMode    String?             // "original_only" | "rewritten_only" | "both"
   rawContent        String
+  rawHtml           String?             // Original HTML (only for .html/.htm uploads)
+  sourceFormat      String?             // "html" | "txt" | "rtf" | "md"
+  cancelledAt       DateTime?           // Set when user cancels upload - pipeline checks this before each chapter
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
+  ApiCost           ApiCost[]
   User              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   UserStoryBookmark UserStoryBookmark[]
   UserStoryLevel    UserStoryLevel[]
@@ -269,4 +283,113 @@ enum UserStoryStatus {
   READY
   FAILED
   PARTIAL
+  CANCELLED
+}
+
+// ============================================================================
+// API COST TRACKING
+// ============================================================================
+
+model ApiCost {
+  id            String    @id @default(cuid())
+
+  // What operation was performed
+  operation     String    // e.g., "detection", "rewriting", "translation", "tutor", "thumbnail"
+
+  // Provider and model info
+  provider      String    // "openai", "anthropic", "azure"
+  model         String    // "gpt-4o", "gpt-4o-mini", "claude-haiku-4-5", "dall-e-3", etc.
+
+  // Token usage (for LLM calls)
+  inputTokens   Int       @default(0)
+  outputTokens  Int       @default(0)
+
+  // Image count (for DALL-E calls)
+  imageCount    Int       @default(0)
+
+  // Calculated cost in USD (stored as cents for precision)
+  costCents     Int       // Cost in cents (e.g., 150 = $1.50)
+
+  // Optional associations
+  userId        String?   // User who triggered the call (null for admin/system)
+  userStoryId   String?   // Associated user story (if applicable)
+
+  // Additional context
+  metadata      Json?     // Extra info like chapter number, level, etc.
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  User          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  UserStory     UserStory? @relation(fields: [userStoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userStoryId])
+  @@index([operation])
+  @@index([createdAt])
+  @@index([provider, model])
+}
+
+// ============================================================================
+// DELETED USER STORY TRACKING
+// Tracks deleted stories so we can maintain accurate cost analytics
+// ============================================================================
+
+model DeletedUserStory {
+  id              String   @id @default(cuid())
+  userId          String
+  originalStoryId String   // The original UserStory.id before deletion
+  costCents       Int      // Total API cost for this story
+  deletedAt       DateTime @default(now())
+
+  User            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// ALGORITHM TEST FILES
+// Used by Dev Tools to test text processing algorithms with persistent test files
+// ============================================================================
+
+model AlgorithmTestFile {
+  id              String   @id @default(cuid())
+
+  // Folder organization
+  fileType        String   // "html" | "txt" | "rtf" | "md"
+  storyType       String   // "anthology" | "prose" | "epic" | "script"
+
+  // File data
+  fileName        String   // Original uploaded filename
+  rawContent      String   @db.Text // Full untruncated content
+  fileSizeBytes   Int
+
+  // Metadata
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  results         AlgorithmTestResult[]
+
+  @@unique([fileType, storyType, fileName])
+  @@index([fileType, storyType])
+}
+
+model AlgorithmTestResult {
+  id              String   @id @default(cuid())
+  fileId          String
+
+  // Processing output
+  result          Json     // The full ProcessingResult
+  processingTimeMs Int?    // How long the algorithm took
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+
+  // Relations
+  file            AlgorithmTestFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId, createdAt])
 }

@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import AdminLogin from "./AdminLogin";
 import StoryUploadForm from "./StoryUploadForm";
 import StoryManager from "./StoryManager";
+import CostsManager from "./CostsManager";
+import UsersManager from "./UsersManager";
+import { SUTPAlgorithms } from "./components/dev-tools";
 
 const ADMIN_SESSION_KEY = "admin_authenticated";
 
-type AdminTab = "upload" | "manage" | "dev";
+type AdminTab = "upload" | "manage" | "costs" | "users" | "premium" | "dev";
 
 // Warm up serverless functions in the background
 function warmupServerless() {
@@ -101,6 +104,36 @@ export default function UploadStoryPage() {
               Manage Stories
             </button>
             <button
+              onClick={() => setActiveTab("costs")}
+              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === "costs"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              API Costs
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === "users"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab("premium")}
+              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === "premium"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Premium
+            </button>
+            <button
               onClick={() => setActiveTab("dev")}
               className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
                 activeTab === "dev"
@@ -119,13 +152,16 @@ export default function UploadStoryPage() {
         <StoryUploadForm onLogout={handleLogout} hideHeader />
       )}
       {activeTab === "manage" && <StoryManager />}
+      {activeTab === "costs" && <CostsManager />}
+      {activeTab === "users" && <UsersManager />}
+      {activeTab === "premium" && <PremiumManager />}
       {activeTab === "dev" && <DevTools />}
     </div>
   );
 }
 
-// Dev Tools Component
-function DevTools() {
+// Premium Manager Component (moved from Dev Tools)
+function PremiumManager() {
   const { data: session, update } = useSession();
   const router = useRouter();
   const [toggling, setToggling] = useState(false);
@@ -144,20 +180,19 @@ function DevTools() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Developer Tools</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          These tools are for development and testing purposes only.
-        </p>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-2xl">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Premium Status Manager</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Toggle premium status for testing purposes.
+          </p>
 
-        {/* Premium Toggle */}
-        <div className="border-t border-gray-100 pt-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-900">Premium Status</h3>
+              <h3 className="font-medium text-gray-900">Current Status</h3>
               <p className="text-sm text-gray-500">
-                Current: {session?.user?.isPremium ? (
+                {session?.user?.isPremium ? (
                   <span className="text-green-600 font-medium">Premium</span>
                 ) : (
                   <span className="text-gray-600">Free</span>
@@ -172,7 +207,7 @@ function DevTools() {
               {toggling ? "Toggling..." : "Toggle Premium"}
             </button>
           </div>
-          <p className="text-xs text-amber-600 mt-2">
+          <p className="text-xs text-amber-600 mt-4">
             Note: This sets isPremium without Stripe. Use actual checkout to test billing portal.
           </p>
         </div>
@@ -180,3 +215,53 @@ function DevTools() {
     </div>
   );
 }
+
+// Dev Tools Component
+function DevTools() {
+  const [devSubTab, setDevSubTab] = useState<"tools" | "su-tp-algorithms">("su-tp-algorithms");
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setDevSubTab("tools")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            devSubTab === "tools"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          General Tools
+        </button>
+        <button
+          onClick={() => setDevSubTab("su-tp-algorithms")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            devSubTab === "su-tp-algorithms"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          SU TP Algorithms
+        </button>
+      </div>
+
+      {devSubTab === "tools" && (
+        <div className="max-w-2xl">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Developer Tools</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              These tools are for development and testing purposes only.
+            </p>
+            <p className="text-sm text-gray-400">
+              Premium toggle has been moved to its own tab.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {devSubTab === "su-tp-algorithms" && <SUTPAlgorithms />}
+    </div>
+  );
+}
+

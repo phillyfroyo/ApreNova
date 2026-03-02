@@ -1,7 +1,13 @@
 // /src/types/story.ts
 
-export type LevelKey = 'l1' | 'l2' | 'l3' | 'l4' | 'l5';
-export type Level = "l1" | "l2" | "l3" | "l4" | "l5";
+import type { CEFRCode } from "@/lib/cefr";
+
+// Re-export CEFRCode for convenience
+export type { CEFRCode };
+
+// Legacy type aliases for backwards compatibility
+export type LevelKey = CEFRCode;
+export type Level = CEFRCode;
 
 // Story type classification
 export type StoryType =
@@ -18,6 +24,13 @@ export type StoryType =
   | "legend"        // Legendary tales
   | "movie-script"  // Movie screenplay
   | "tv-script";    // TV show script
+
+// Content structure type - determines chapter/page hierarchy and navigation labels
+export type ContentStructureType =
+  | "prose"      // Default: chapters and pages (novels, short stories)
+  | "anthology"  // Poetry collections: collections and poems
+  | "epic"       // Narrative poetry: cantos/books and sections
+  | "script";    // Scripts: acts/scenes and dialogue blocks
 
 // Genre/theme tags (curated list for consistency)
 export type StoryTag =
@@ -58,6 +71,10 @@ export type AuthorInfo = {
 // ============================================
 // SOURCE EDITION (the edition being ingested)
 // ============================================
+
+// Known digital library sources
+export type DigitalLibrarySource = "gutenberg" | "wikisource" | "archive-org" | "other";
+
 export type SourceEdition = {
   title?: string;                      // Edition title
   publisher?: string;                  // Publisher name
@@ -66,6 +83,7 @@ export type SourceEdition = {
   isPublicDomain: boolean;             // Is this edition public domain?
   publicDomainNote?: string;           // e.g., "Published before 1929"
   url?: string;                        // URL if from online source (Gutenberg, Wikisource)
+  source?: DigitalLibrarySource;       // Digital library source (gutenberg, wikisource, etc.)
   notes?: string;                      // e.g., "facsimile of 19th-century edition"
 };
 
@@ -92,7 +110,7 @@ export type ProcessingMetadata = {
 
   // Per-level availability
   cefrLevels: {
-    level: LevelKey;
+    level: CEFRCode;
     available: boolean;
     hasAudio?: boolean;
     hasGrammarNotes?: boolean;
@@ -101,7 +119,7 @@ export type ProcessingMetadata = {
   }[];
 
   // Reading time estimates per level (in minutes)
-  readingTimeByLevel?: Record<LevelKey, number>;
+  readingTimeByLevel?: Record<CEFRCode, number>;
 };
 
 // ============================================
@@ -172,8 +190,9 @@ export type StoryDescriptions = {
 export type StoryMetadata = {
   slug: string;
   image: string;
-  levels: LevelKey[];
+  levels: CEFRCode[];
   isPremiumOnly?: boolean;
+  isArchived?: boolean;  // Hidden from users but data preserved
 
   // Title info
   title?: TitleInfo;                   // Extended title info (optional, falls back to translations)
@@ -183,6 +202,14 @@ export type StoryMetadata = {
   origin: StoryOrigin;
   tags?: StoryTag[];
   targetAudience?: "children" | "teen" | "adult" | "all";
+
+  // Content structure - determines navigation labels (Collection/Poem vs Chapter/Page)
+  structureType?: ContentStructureType;
+
+  // Original level - the CEFR level of the source/unmodified text
+  // For public domain works, this is typically the highest level (e.g., C1)
+  // Lower levels are simplified adaptations
+  originalLevel?: CEFRCode;
 
   // Descriptions (optional, falls back to translations)
   descriptions?: StoryDescriptions;

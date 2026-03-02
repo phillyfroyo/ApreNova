@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { StoryType } from "@/types/story";
 import type { StoryData } from "../../types";
 import { FormAttribution, createEmptyFormAttribution } from "@/lib/admin/attribution-helpers";
@@ -40,6 +40,7 @@ export function Step3Metadata({
   const [frontMatterText, setFrontMatterText] = useState("");
   const [isParsingAttribution, setIsParsingAttribution] = useState(false);
   const [parseError, setParseError] = useState("");
+  const [isAttributionParserOpen, setIsAttributionParserOpen] = useState(false);
 
   // Translation state
   const [isTranslating, setIsTranslating] = useState(false);
@@ -51,8 +52,39 @@ export function Step3Metadata({
   const [imageOptions, setImageOptions] = useState<Array<{ url: string; revisedPrompt?: string }>>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<Array<{ url: string; revisedPrompt?: string }>>([]);
 
+  // Bundled metadata options
+  const [bundleOptions, setBundleOptions] = useState<Array<{
+    title: { en: string; es: string };
+    displayTitle: { en: string; es: string };
+    slug: string;
+    hook: { en: string; es: string };
+    description?: { en: string; es: string };
+  }>>([]);
+  const [isGeneratingBundle, setIsGeneratingBundle] = useState(false);
+
   const isGenerating = (type: "title" | "description" | "image" | "background") => generatingTypes.has(type);
-  const isAnyGenerating = generatingTypes.size > 0;
+  const isAnyGenerating = generatingTypes.size > 0 || isGeneratingBundle;
+
+  // Auto-fill frontMatter from preprocessing if available
+  useEffect(() => {
+    if (storyData.parsedResult?.frontMatter && !frontMatterText) {
+      setFrontMatterText(storyData.parsedResult.frontMatter);
+    }
+  }, [storyData.parsedResult?.frontMatter, frontMatterText]);
+
+  // Auto-generate slug from English title
+  useEffect(() => {
+    if (storyData.title.en && !storyData.slug) {
+      const generatedSlug = storyData.title.en
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "") // Remove special chars except spaces and hyphens
+        .replace(/\s+/g, "-")          // Replace spaces with hyphens
+        .replace(/-+/g, "-")           // Collapse multiple hyphens
+        .replace(/^-|-$/g, "")         // Remove leading/trailing hyphens
+        .slice(0, 50);                 // Limit length
+      updateStoryData({ slug: generatedSlug });
+    }
+  }, [storyData.title.en, storyData.slug, updateStoryData]);
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -174,6 +206,59 @@ export function Step3Metadata({
 
     // Fire all requests in parallel
     await Promise.all(types.map(type => generateMetadata(type)));
+  };
+
+  // Generate bundled metadata (title, displayTitle, slug, hook in one call)
+  const generateBundleMetadata = async () => {
+    setIsGeneratingBundle(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/generate-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storyText: storyData.rawText,
+          sourceLanguage: storyData.sourceLanguage,
+          type: "bundle",
+          frontMatter: storyData.parsedResult?.frontMatter,
+          customPrompt: titlePrompt || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate metadata bundle");
+      }
+
+      setBundleOptions(data.options);
+    } catch (err) {
+      setError(`Failed to generate metadata: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsGeneratingBundle(false);
+    }
+  };
+
+  // Select a bundle option and apply all fields
+  const selectBundle = (option: {
+    title: { en: string; es: string };
+    displayTitle: { en: string; es: string };
+    slug: string;
+    hook: { en: string; es: string };
+    description?: { en: string; es: string };
+  }) => {
+    const updates: Partial<StoryData> = {
+      title: option.title,
+      displayTitle: option.displayTitle,
+      slug: option.slug,
+      hook: option.hook,
+    };
+    if (option.description) {
+      updates.description = option.description;
+    }
+    updateStoryData(updates);
+    setBundleOptions([]);
   };
 
   const selectTitle = (option: { en: string; es: string }) => {
@@ -399,18 +484,77 @@ export function Step3Metadata({
       )}
 
       {/* Generate All Button */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 flex items-center justify-between">
-        <div>
-          <h3 className="font-medium text-gray-900">AI Generation</h3>
-          <p className="text-xs text-gray-500">Generate title, description, and images in parallel</p>
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-gray-900">AI Generation</h3>
+            <p className="text-xs text-gray-500">Generate title, hook, slug, display title in one call</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={generateBundleMetadata}
+              disabled={isAnyGenerating || !storyData.rawText}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-default text-sm font-medium"
+            >
+              {isGeneratingBundle ? "Generating..." : "Generate Text Metadata"}
+            </button>
+            <button
+              onClick={generateAll}
+              disabled={isAnyGenerating || !storyData.rawText}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-default text-sm font-medium"
+            >
+              {generatingTypes.size > 0 ? "Generating..." : "Generate Images"}
+            </button>
+          </div>
         </div>
-        <button
-          onClick={generateAll}
-          disabled={isAnyGenerating || !storyData.rawText}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-        >
-          {isAnyGenerating ? "Generating..." : "Generate All with AI"}
-        </button>
+
+        {/* Bundle Options Display */}
+        {bundleOptions.length > 0 && (
+          <div className="bg-white rounded-lg border border-purple-200 p-4 space-y-3">
+            <p className="text-sm font-medium text-purple-700">Select a metadata bundle:</p>
+            {bundleOptions.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => selectBundle(option)}
+                className="w-full text-left p-4 bg-purple-50 rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
+              >
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Title:</span>
+                    <p className="font-medium text-gray-900">{option.title.en}</p>
+                    <p className="text-sm text-gray-500">{option.title.es}</p>
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Display:</span>
+                      <p className="text-gray-700">{option.displayTitle.en} / {option.displayTitle.es}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Slug:</span>
+                      <p className="text-gray-700 font-mono">{option.slug}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Hook:</span>
+                    <p className="text-sm text-gray-700">{option.hook.en}</p>
+                  </div>
+                  {option.description && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-500">Description:</span>
+                      <p className="text-sm text-gray-600">{option.description.en}</p>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+            <button
+              onClick={() => setBundleOptions([])}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Dismiss options
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Thumbnail Section */}
@@ -421,7 +565,7 @@ export function Step3Metadata({
             <button
               onClick={() => generateMetadata("image")}
               disabled={isGenerating("image") || !storyData.rawText}
-              className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-default"
             >
               {isGenerating("image") ? "Generating..." : "Generate with AI"}
             </button>
@@ -750,9 +894,9 @@ export function Step3Metadata({
           <button
             onClick={() => generateMetadata("title")}
             disabled={isGenerating("title") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-default"
           >
-            {isGenerating("title") ? "Generating..." : "Generate with AI"}
+            {isGenerating("title") ? "Generating..." : "Generate"}
           </button>
         </div>
 
@@ -825,7 +969,7 @@ export function Step3Metadata({
                   type="button"
                   onClick={() => translateMetadata("en-to-es", ["title", "hook", "description"])}
                   disabled={isTranslating}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                 >
                   {isTranslating ? (
                     <>
@@ -846,7 +990,7 @@ export function Step3Metadata({
                   type="button"
                   onClick={() => translateMetadata("es-to-en", ["title", "hook", "description"])}
                   disabled={isTranslating}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-default transition-colors"
                 >
                   {isTranslating ? (
                     <>
@@ -946,45 +1090,7 @@ export function Step3Metadata({
 
       {/* Description Section */}
       <div className="space-y-4 border-t pt-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-900">Description</h3>
-          <button
-            onClick={() => generateMetadata("description")}
-            disabled={isGenerating("description") || !storyData.rawText}
-            className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating("description") ? "Generating..." : "Generate Hook with AI"}
-          </button>
-        </div>
-
-        {/* Description AI Prompt Input */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">AI Guidance (optional)</label>
-          <input
-            type="text"
-            value={descriptionPrompt}
-            onChange={(e) => setDescriptionPrompt(e.target.value)}
-            placeholder="e.g., Focus on the emotional journey, keep it mysterious, mention the setting..."
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-          />
-        </div>
-
-        {/* AI Hook Options */}
-        {descriptionOptions.length > 0 && (
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-purple-600 font-medium mb-2">Click to select a hook:</p>
-            {descriptionOptions.map((option, idx) => (
-              <button
-                key={idx}
-                onClick={() => selectDescription(option)}
-                className="w-full text-left p-3 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-colors"
-              >
-                <div className="text-gray-900 text-sm">{option.en}</div>
-                <div className="text-gray-500 text-sm mt-1">{option.es}</div>
-              </button>
-            ))}
-          </div>
-        )}
+        <h3 className="font-medium text-gray-900">Description</h3>
 
         {/* Hook (required) - short teaser for cards */}
         <div className="grid grid-cols-2 gap-4">
@@ -1060,48 +1166,65 @@ export function Step3Metadata({
         <div className="space-y-4 border-t pt-6">
           <h3 className="font-medium text-gray-900">Attribution Information</h3>
 
-          {/* AI Attribution Parser */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-purple-900">AI Attribution Parser</h4>
-                <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info) and let AI extract the metadata</p>
+          {/* Attribution Parser - Collapsible */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsAttributionParserOpen(!isAttributionParserOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${isAttributionParserOpen ? "rotate-90" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">Parse Front Matter</span>
               </div>
-              <button
-                type="button"
-                onClick={parseAttributionWithAI}
-                disabled={isParsingAttribution || !frontMatterText.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isParsingAttribution ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Parsing...
-                  </>
-                ) : (
-                  <>
-                    <span>sparkles</span>
-                    Parse with AI
-                  </>
+              <span className="text-xs text-gray-500">Extract metadata from pasted text</span>
+            </button>
+
+            {isAttributionParserOpen && (
+              <div className="p-4 bg-purple-50 border-t border-purple-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-purple-600">Paste front matter text (title page, copyright, translator info)</p>
+                  <button
+                    type="button"
+                    onClick={parseAttributionWithAI}
+                    disabled={isParsingAttribution || !frontMatterText.trim()}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-default transition-colors"
+                  >
+                    {isParsingAttribution ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Parsing...
+                      </>
+                    ) : (
+                      "Parse"
+                    )}
+                  </button>
+                </div>
+                <textarea
+                  value={frontMatterText}
+                  onChange={(e) => {
+                    setFrontMatterText(e.target.value);
+                    setParseError("");
+                  }}
+                  placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)..."
+                  rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
+                  className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
+                />
+                {parseError && (
+                  <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+                    {parseError}
+                  </div>
                 )}
-              </button>
-            </div>
-            <textarea
-              value={frontMatterText}
-              onChange={(e) => {
-                setFrontMatterText(e.target.value);
-                setParseError("");
-              }}
-              placeholder="Paste the front matter here (e.g., title page, copyright notice, translator credits, publication info)..."
-              rows={frontMatterText ? Math.min(12, frontMatterText.split("\n").length + 2) : 4}
-              className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none bg-white transition-all"
-            />
-            {parseError && (
-              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
-                {parseError}
               </div>
             )}
           </div>
@@ -1284,19 +1407,39 @@ export function Step3Metadata({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Source URL (Gutenberg, Wikisource, etc.)</label>
-                <input
-                  type="text"
-                  value={storyData.attribution.sourceUrl ?? ""}
-                  onChange={(e) =>
-                    updateStoryData({
-                      attribution: { ...storyData.attribution!, sourceUrl: e.target.value || undefined },
-                    })
-                  }
-                  placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Digital Library Source</label>
+                  <select
+                    value={storyData.attribution.source ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, source: (e.target.value || undefined) as "gutenberg" | "wikisource" | "archive-org" | "other" | undefined },
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="">None / Not Applicable</option>
+                    <option value="gutenberg">Project Gutenberg</option>
+                    <option value="wikisource">Wikisource</option>
+                    <option value="archive-org">Internet Archive</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Source URL</label>
+                  <input
+                    type="text"
+                    value={storyData.attribution.sourceUrl ?? ""}
+                    onChange={(e) =>
+                      updateStoryData({
+                        attribution: { ...storyData.attribution!, sourceUrl: e.target.value || undefined },
+                      })
+                    }
+                    placeholder="e.g., https://www.gutenberg.org/ebooks/16328"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Edition Notes</label>

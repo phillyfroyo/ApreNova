@@ -4,11 +4,13 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import SessionWrapper from '@/components/SessionWrapper';
 import SessionTracker from '@/components/SessionTracker';
+import StoryUploadWrapper from '@/components/user-stories/StoryUploadWrapper';
+import AudioPlayerWrapper from '@/components/AudioPlayerWrapper';
 import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
 
 export const metadata = {
   title: 'Cuentana',
-  description: 'Learn smarter, not harder. Learn with stories.',
+  description: 'Learn language through stories.',
 };
 
 const alice = Alice({ subsets: ['latin'], weight: '400' });
@@ -33,8 +35,12 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
         <SessionWrapper>
-          <SessionTracker />
-          {children}
+          <StoryUploadWrapper>
+            <AudioPlayerWrapper>
+              <SessionTracker />
+              {children}
+            </AudioPlayerWrapper>
+          </StoryUploadWrapper>
         </SessionWrapper>
       </body>
     </html>

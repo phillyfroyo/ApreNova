@@ -125,9 +125,11 @@ export async function updateStoriesMetadata(
     if (extractedSlug) {
       // Check if this story already exists in STORY_METADATA
       // Match the entire object entry for this slug
+      // Use [\s\S]*? to match any content (including newlines) non-greedily
+      // until we hit the closing pattern: newline + spaces + },
       const existingEntryPattern = new RegExp(
-        `\\{\\s*\\n\\s*slug:\\s*"${extractedSlug}",[^}]*targetAudience:[^}]*\\},?`,
-        's'
+        `\\{\\s*\\n\\s*slug:\\s*"${extractedSlug}",[\\s\\S]*?\\n\\s*\\},?`,
+        ''
       );
 
       if (existingEntryPattern.test(content)) {
@@ -153,9 +155,10 @@ export async function updateStoriesMetadata(
     }
 
     // Insert the new entry before the closing bracket
+    // Ensure a newline before the entry so it doesn't jam onto the previous entry's line
     content = content.replace(
       arrayEndPattern,
-      `${metadataEntry}\n];\n\nexport function getStoryUrl`
+      `\n${metadataEntry}\n];\n\nexport function getStoryUrl`
     );
 
     await fs.writeFile(filePath, content, "utf-8");
@@ -186,68 +189,83 @@ export async function updateUITranslation(
       return false;
     }
 
+    // Normalize: ensure trailing comma, preserve indentation
+    const trimmedEntry = entry.trim().replace(/,?\s*$/, ',');
+
     // Check if this story already exists
     if (content.includes(`"${slug}":`)) {
       console.log(`[file-writer] Story "${slug}" already exists in ${lang}.ts, updating...`);
-      // Match the existing entry for this slug
+      // Match the existing entry for this slug — handle nested braces
+      // The regex matches from `"slug":` (not including leading whitespace), so
+      // the file's existing indentation before the key is preserved.
       const existingEntryPattern = new RegExp(
         `"${slug}":\\s*\\{[^}]*\\},?`,
         's'
       );
-      // Ensure entry has proper comma at end
-      const cleanEntry = entry.replace(/,?\s*$/, ',');
-      content = content.replace(existingEntryPattern, cleanEntry);
+      content = content.replace(existingEntryPattern, trimmedEntry);
       await fs.writeFile(filePath, content, "utf-8");
       console.log(`[file-writer] Successfully updated "${slug}" in ${lang}.ts`);
       return true;
     }
 
-    // Story doesn't exist, add new entry
-    // Simpler approach: find the closing pattern and insert before it
-    // Pattern: last entry ends with },\n then },\n};\n\nexport
-    const lineEnding = content.includes('\r\n') ? '\r\n' : '\n';
+    // Story doesn't exist, add new entry.
+    // Strategy: find `};\n\nexport default` which closes the outer `const xx = {` object.
+    // Then search backwards from `};` to find the `},` that closes `storiesMetadata: {`.
+    // Insert the new entry between the last story entry and that closing `},`.
 
-    // Find "export default" and work backwards to find where to insert
     const exportIdx = content.indexOf('export default');
     if (exportIdx === -1) {
       console.error(`[file-writer] Could not find 'export default' in ${lang}.ts`);
       return false;
     }
 
-    // Find the storiesMetadata section
-    const metadataIdx = content.indexOf('storiesMetadata:');
-    if (metadataIdx === -1) {
-      console.error(`[file-writer] Could not find 'storiesMetadata:' in ${lang}.ts`);
+    // Find the `};` that closes the outer object (right before `export default`)
+    const beforeExport = content.slice(0, exportIdx);
+    const outerCloseIdx = beforeExport.lastIndexOf('};');
+    if (outerCloseIdx === -1) {
+      console.error(`[file-writer] Could not find outer closing '};\' in ${lang}.ts`);
       return false;
     }
 
-    // Find the closing pattern: },\n}, which marks end of last entry and storiesMetadata close
-    // Search backwards from export for the pattern "  },\n},"
-    const closingSection = content.slice(metadataIdx, exportIdx);
+    // Find the `},` or `}` that closes storiesMetadata (right before the outer `};`)
+    // Walk backwards from outerCloseIdx, skipping whitespace, to find the closing `}`
+    let searchIdx = outerCloseIdx - 1;
+    while (searchIdx >= 0 && /\s/.test(content[searchIdx])) {
+      searchIdx--;
+    }
 
-    // Find last occurrence of "},\n" or "},\r\n" followed by eventual "},"
-    // The structure is: ...entry},\n},\n};\nexport
-    // We want to insert before the second }, (storiesMetadata close)
-    const lastEntryClose = closingSection.lastIndexOf('  },');
+    // We should now be at `,` or `}` — the end of storiesMetadata
+    // If at `,`, step back one more to find the `}`
+    if (content[searchIdx] === ',') {
+      searchIdx--;
+    }
+    // Skip any whitespace between `}` and `,`
+    while (searchIdx >= 0 && /\s/.test(content[searchIdx])) {
+      searchIdx--;
+    }
 
-    if (lastEntryClose === -1) {
-      console.error(`[file-writer] Could not find last entry close in ${lang}.ts storiesMetadata`);
-      console.error(`[file-writer] Closing section:`, JSON.stringify(closingSection.slice(-200)));
+    if (content[searchIdx] !== '}') {
+      console.error(`[file-writer] Expected '}' at position ${searchIdx} in ${lang}.ts, found '${content[searchIdx]}'`);
+      console.error(`[file-writer] Context: ...${JSON.stringify(content.slice(Math.max(0, searchIdx - 50), searchIdx + 10))}...`);
       return false;
     }
 
-    // Insert position is right after the last entry's },
-    const insertPos = metadataIdx + lastEntryClose + 4; // 4 = length of "  },"
-
-    // Find where the line ends after },
-    let lineEndPos = insertPos;
-    while (lineEndPos < content.length && content[lineEndPos] !== '\n') {
-      lineEndPos++;
+    // searchIdx is now at the `}` that closes storiesMetadata.
+    // We need to insert BEFORE this `}`, after the last story entry.
+    // Walk backwards from searchIdx to find the `},` that closes the last story entry.
+    let lastEntryEnd = searchIdx - 1;
+    while (lastEntryEnd >= 0 && /\s/.test(content[lastEntryEnd])) {
+      lastEntryEnd--;
     }
-    lineEndPos++; // Include the \n
 
-    // Insert the new entry
-    content = content.slice(0, lineEndPos) + entry + lineEnding + content.slice(lineEndPos);
+    // lastEntryEnd should be at `,` after the last story entry's `}`
+    // or at `}` if there's no trailing comma. Either way, insert after it.
+    const insertPos = lastEntryEnd + 1;
+
+    // Insert the entry — use original entry which has correct indentation from generateUITranslationEntry
+    // Ensure trailing comma
+    const insertEntry = entry.replace(/,?\s*$/, ',');
+    content = content.slice(0, insertPos) + '\n' + insertEntry + '\n' + content.slice(insertPos);
 
     await fs.writeFile(filePath, content, "utf-8");
     console.log(`[file-writer] Successfully added "${slug}" to ${lang}.ts`);

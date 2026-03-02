@@ -57,7 +57,7 @@ export const levelContent = {
             { en: "The class was not happy. Maya's stomach dropped.", es: "La clase no estaba contenta. A Maya se le hundió el estómago." },
             { en: "\"We'll work on writing, editing, and stage presence over the next few weeks,\"", es: "\"Trabajaremos en escritura, edición y presencia escénica durante las próximas semanas,\"" },
             { en: "Ms. Alvarez continued. \"This is about finding your voice.\"", es: "continuó la Sra. Álvarez. \"Se trata de encontrar su voz.\"" },
-            { en: "Maya stared at her journal. <em>Finding her voice</em>? She could barely <em>use</em> her voice.", es: "Maya miró su diario. ¿<em>Encontrar su voz</em>? Apenas podía <em>usar</em> su voz." },
+            { en: "Maya stared at her journal. Finding her voice? She could barely use her voice.", es: "Maya miró su diario. ¿Encontrar su voz? Apenas podía usar su voz." },
             { en: "That night, she pulled out a blank page and stared at it.", es: "Esa noche, sacó una hoja en blanco y la miró fijamente." },
             { en: "She used to love writing poetry, but she started crying just thinking about presenting again.", es: "Solía amar escribir poesía, pero se puso a llorar solo de pensar en volver a presentarla." }
           ]
@@ -66,9 +66,9 @@ export const levelContent = {
           lines: [
             { en: "Then… after a while, her pen started to move.", es: "Luego… después de un rato, su pluma comenzó a moverse." },
             { en: "She wrote about school. About her life. About the birds and the trees.", es: "Escribió sobre la escuela. Sobre su vida. Sobre los pájaros y los árboles." },
-            { en: "And then… she wrote about <em>her Dad</em>.", es: "Y luego… escribió sobre <em>su papá</em>." },
+            { en: "And then… she wrote about her Dad.", es: "Y luego… escribió sobre su papá." },
             { en: "About sitting with him on Saturday mornings, reading books with silly voices and sound effects.", es: "Sobre sentarse con él los sábados por la mañana, leyendo libros con voces graciosas y efectos de sonido." },
-            { en: "How he would smile and say, <em>\"You have a strong voice, Maya. You just don't know it yet.\"</em>", es: "Cómo él sonreía y decía: <em>\"Tienes una voz fuerte, Maya. Solo que aún no lo sabes.\"</em>" },
+            { en: "How he would smile and say, \"You have a strong voice, Maya. You just don't know it yet.\"", es: "Cómo él sonreía y decía: \"Tienes una voz fuerte, Maya. Solo que aún no lo sabes.\"" },
             { en: "She hadn't written poetry since he passed away two years ago.", es: "No había escrito poesía desde que él falleció hace dos años." }
           ]
         },
@@ -113,7 +113,7 @@ export const levelContent = {
         },
         10: {
           lines: [
-            { en: "Then she closed her eyes. <em>Just like at home</em>, she told herself. <em>Just like reading with Dad.</em>", es: "Entonces cerró los ojos. <em>Como en casa</em>, se dijo. <em>Como cuando leía con papá.</em>" },
+            { en: "Then she closed her eyes. Just like at home, she told herself. Just like reading with Dad.", es: "Entonces cerró los ojos. Como en casa, se dijo. Como cuando leía con papá." },
             { en: "And she began. Her voice was soft, but she didn't stop.", es: "Y comenzó. Su voz era suave, pero no se detuvo." },
             { en: "She spoke about school. She spoke about life. She spoke about her dog.", es: "Habló sobre la escuela. Habló sobre la vida. Habló sobre su perro." },
             { en: "She spoke about the birds and the trees.", es: "Habló sobre los pájaros y los árboles." },
@@ -124,7 +124,7 @@ export const levelContent = {
         11: {
           lines: [
             { en: "She reached the final line:", es: "Llegó a la última línea:" },
-            { en: "<em>\"I used to be scared of the silence. Now, I've filled it with my voice.\"</em>", es: "<em>\"Antes me asustaba el silencio. Ahora lo he llenado con mi voz.\"</em>" },
+            { en: "\"I used to be scared of the silence. Now, I've filled it with my voice.\"", es: "\"Antes me asustaba el silencio. Ahora lo he llenado con mi voz.\"" },
             { en: "For a moment, the room was quiet.", es: "Por un momento, la sala quedó en silencio." },
             { en: "Then — everyone cheered. Loud and long. People rose to their feet.", es: "Entonces — todos aplaudieron. Fuerte y por mucho tiempo. La gente se puso de pie." },
             { en: "She saw a big smile coming from the front row. It was Jo. Maya smiled back.", es: "Vio una gran sonrisa desde la primera fila. Era Jo. Maya le devolvió la sonrisa." },

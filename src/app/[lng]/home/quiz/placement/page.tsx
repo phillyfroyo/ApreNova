@@ -119,7 +119,7 @@ export default function PlacementQuiz() {
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                           : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-gray-50 text-gray-700'
                         }
-                        ${isAnimating ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
+                        ${isAnimating ? 'cursor-default opacity-70' : 'cursor-pointer'}
                       `}
                     >
                       <span className="flex items-center gap-3">
