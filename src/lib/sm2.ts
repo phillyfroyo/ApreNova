@@ -103,12 +103,14 @@ export function calculateSM2(input: SM2Input): SM2Output {
 
     if (grade >= 2) {
       // Success (Good, Easy)
-      // S' = S × (1 + e^(0.5) × (11-D) × S^(-0.2) × (e^(0.2×(1-R)) - 1))
+      // S' = S × (1 + e^(0.5) × (11-D) × S^(-0.2) × (e^(0.2×(1-R)) - 1)) × gradeBonus
       const growthFactor = Math.exp(0.5) *
         (11 - D) *
         Math.pow(S, -0.2) *
         (Math.exp(0.2 * (1 - R)) - 1);
-      newStability = S * (1 + Math.max(growthFactor, 0.1));
+      // Easy gets 2× growth bonus so intervals always differ from Good
+      const gradeBonus = grade === 3 ? 2.0 : 1.0;
+      newStability = S * (1 + Math.max(growthFactor, 0.1) * gradeBonus);
       newRepetitions = repetitions + 1;
     } else {
       // Hard (grade 1) — short reset, not full failure

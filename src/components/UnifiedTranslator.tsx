@@ -1,7 +1,7 @@
 "use client";
 // src\components\UnifiedTranslator.tsx
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -26,11 +26,13 @@ interface Props {
   // Cross-line stanza selection support
   externalSelection?: { start: number; end: number } | null; // Parent can force a selection range
   onWordClick?: (wordIndex: number) => void; // Notify parent of word clicks for cross-line coordination
+  // When parent clears wordSelections, this goes false — triggers immediate internal clear
+  parentHasSelection?: boolean;
 }
 
 
 
-export default function UnifiedTranslator({ sentence, staticTranslation, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
+export default function UnifiedTranslator({ sentence, staticTranslation, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences, externalSelection, onWordClick, parentHasSelection }: Props) {
   const { data: authSession } = useSession();
   // Extract leading whitespace for poetry indentation
   const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
@@ -57,6 +59,17 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   // Setters that work with internal state (used when no external selection)
   const setStartIdx = setInternalStartIdx;
   const setEndIdx = setInternalEndIdx;
+
+  // Clear internal selection when parent signals deselection (syncs with save icon fade)
+  // useLayoutEffect runs BEFORE browser paint, so both transitions start in the same frame
+  const prevParentHasSelection = useRef(parentHasSelection);
+  useLayoutEffect(() => {
+    if (prevParentHasSelection.current && !parentHasSelection) {
+      setInternalStartIdx(null);
+      setInternalEndIdx(null);
+    }
+    prevParentHasSelection.current = parentHasSelection;
+  }, [parentHasSelection]);
 
   // Notify parent of translation state changes
   useEffect(() => {
@@ -410,6 +423,8 @@ const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
 };
 
   const isSelected = (i: number) => {
+    // When parent signals no selection, immediately show deselected (syncs with save icon fade)
+    if (parentHasSelection === false) return false;
     if (startIdx === null || endIdx === null) return false;
     return i >= startIdx && i <= endIdx;
   };
@@ -502,7 +517,7 @@ useEffect(() => {
           }}
           key={i}
           onClick={() => handleClick(i)}
-          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md transition-all duration-200 ${
+          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md transition-all duration-200 ease-in-out ${
             enabled && isSelected(i)
               ? "bg-white/10 backdrop-blur-sm border-black/10 shadow-md shadow-black/20"
               : "text-black border-transparent"

@@ -161,8 +161,8 @@ export default function StoryLayoutWithAzureTTS({
   const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
   const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
-  const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
   const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string } | null>>({});
+  const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
   const [savingWord, setSavingWord] = useState<number | null>(null);
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
@@ -479,6 +479,7 @@ export default function StoryLayoutWithAzureTTS({
     setManualTranslateFunctions(prev => ({ ...prev, [index]: translateFn }));
   }, []);
 
+
   const handleClearSelection = useCallback((index: number, clearFn: () => void) => {
     setClearSelectionFunctions(prev => ({ ...prev, [index]: clearFn }));
   }, []);
@@ -612,7 +613,8 @@ export default function StoryLayoutWithAzureTTS({
   // Helper function to clear all word selections
   const clearAllWordSelections = useCallback(() => {
     setWordSelections({});
-    // Clear internal selection state in all UnifiedTranslator components
+    // Directly clear internal selection in all UnifiedTranslator components
+    // so word de-highlight happens in the same React batch as save icon fade
     Object.values(clearSelectionFunctions).forEach(clearFn => clearFn());
   }, [clearSelectionFunctions]);
 
@@ -1518,12 +1520,12 @@ export default function StoryLayoutWithAzureTTS({
                       {/* Enhanced emoji buttons with loading states and selection indicators */}
                       <button
                         onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow
                             ? 'opacity-50 cursor-default'
                             : ''
                         } ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
                         }`}
                         data-audio-control="speaker"
                         disabled={playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow}
@@ -1532,17 +1534,17 @@ export default function StoryLayoutWithAzureTTS({
                         {playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow ? (
                           <Loader2 className="animate-spin h-5 w-5" />
                         ) : (
-                          <Volume2 className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                          <Volume2 className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                         )}
                       </button>
                       <button
                         onClick={() => handlePlay(lineIndex, true, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow
                             ? 'opacity-50 cursor-default'
                             : ''
                         } ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
                         }`}
                         data-audio-control="turtle"
                         disabled={playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow}
@@ -1551,28 +1553,32 @@ export default function StoryLayoutWithAzureTTS({
                         {playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow ? (
                           <Loader2 className="animate-spin h-5 w-5" />
                         ) : (
-                          <Turtle className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                          <Turtle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                         )}
                       </button>
                       {/* Save word button - fades in/out with word selection (between 🐢 and 💬) */}
-                      <button
-                        onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
-                        onMouseDown={() => { skipGlobalClickRef.current = true; }}
-                        className={`inline-flex items-center justify-center hover:scale-110 transition-all duration-200 rounded ${
-                          wordSelections[lineIndex]
-                            ? `w-7 h-7 opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
-                            : 'w-0 h-0 opacity-0 pointer-events-none overflow-hidden'
-                        } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
-                        data-translation-control="save"
-                        title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
-                        disabled={savingWord === lineIndex || !wordSelections[lineIndex]}
-                      >
-                        {savingWord === lineIndex ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                        ) : (
-                          <BookmarkPlus className={`w-4 h-4 ${translationData[lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
-                        )}
-                      </button>
+                      <div className={`transition-all duration-200 ease-in-out overflow-hidden h-7 ${
+                        wordSelections[lineIndex] ? 'w-7' : 'w-0 delay-500'
+                      }`}>
+                        <button
+                          onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
+                          onMouseDown={() => { skipGlobalClickRef.current = true; }}
+                          className={`inline-flex items-center justify-center w-7 h-7 transition-opacity duration-200 ease-in-out rounded ${
+                            wordSelections[lineIndex]
+                              ? `opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
+                              : 'opacity-0 pointer-events-none'
+                          } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
+                          data-translation-control="save"
+                          title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
+                          disabled={savingWord === lineIndex || !wordSelections[lineIndex]}
+                        >
+                          {savingWord === lineIndex ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                          ) : (
+                            <BookmarkPlus className={`w-4 h-4 ${translationData[lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
+                          )}
+                        </button>
+                      </div>
                       <button
                         onClick={() => {
                           setPreloadedMessages(null);
@@ -1585,12 +1591,12 @@ export default function StoryLayoutWithAzureTTS({
                           });
                           setIsStoryTutorOpen(true);
                         }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
+                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
                         }`}
                         title={wordSelections[lineIndex] ? 'Ask tutor about selection' : 'Ask tutor about this line'}
                       >
-                        <MessageCircle className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                        <MessageCircle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                       </button>
                       <button
                         onClick={() => {
@@ -1601,13 +1607,13 @@ export default function StoryLayoutWithAzureTTS({
                             manualTranslateFunctions[lineIndex]();
                           }
                         }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
+                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
                         }`}
                         data-translation-control="gpt"
                         title="Translate"
                       >
-                        <Languages className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                        <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                       </button>
                       {/* Pencil button for static translations */}
                       <button
@@ -1657,6 +1663,7 @@ export default function StoryLayoutWithAzureTTS({
                       onTranslationData={(data) => handleTranslationData(lineIndex, data)}
                       sentenceIndex={lineIndex}
                       contextSentences={sentences}
+                      parentHasSelection={!!wordSelections[lineIndex]}
                       // Cross-line selection for stanzas: parent controls selection
                       externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
                       onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(
@@ -1957,7 +1964,7 @@ export default function StoryLayoutWithAzureTTS({
                         playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow
                           ? 'opacity-50 cursor-default'
                           : ''
-                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
+                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'}`}
                       data-audio-control="speaker"
                       disabled={playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow}
                       title={hasSelection ? 'Play selected words' : 'Play full stanza'}
@@ -1965,16 +1972,16 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Volume2 className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                        <Volume2 className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                       )}
                     </button>
                     <button
                       onClick={() => handleStanzaPlay(true)}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                         playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow
                           ? 'opacity-50 cursor-default'
                           : ''
-                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent'}`}
+                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'}`}
                       data-audio-control="turtle"
                       disabled={playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow}
                       title={hasSelection ? 'Play selected words slowly' : 'Play full stanza slowly'}
@@ -1982,33 +1989,37 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <Turtle className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                        <Turtle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                       )}
                     </button>
                     {/* Save word button - fades in/out with word selection */}
-                    <button
-                      onClick={() => {
-                        if (linesWithSelection.length > 0) {
-                          const { line, lineIndex } = linesWithSelection[0];
-                          handleSaveWord(lineIndex, line[oppositeLang], line[typedLang]);
-                        }
-                      }}
-                      onMouseDown={() => { skipGlobalClickRef.current = true; }}
-                      className={`inline-flex items-center justify-center hover:scale-110 transition-all duration-200 rounded ${
-                        hasSelection
-                          ? `w-7 h-7 opacity-100 ${savingWord !== null ? 'opacity-50' : ''}`
-                          : 'w-0 h-0 opacity-0 pointer-events-none overflow-hidden'
-                      } ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
-                      data-translation-control="save"
-                      title="Save selected word to vocabulary"
-                      disabled={!hasSelection || savingWord !== null}
-                    >
-                      {savingWord !== null && linesWithSelection.some(l => l.lineIndex === savingWord) ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                      ) : (
-                        <BookmarkPlus className={`w-4 h-4 ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
-                      )}
-                    </button>
+                    <div className={`transition-all duration-200 ease-in-out overflow-hidden h-7 ${
+                      hasSelection ? 'w-7' : 'w-0 delay-500'
+                    }`}>
+                      <button
+                        onClick={() => {
+                          if (linesWithSelection.length > 0) {
+                            const { line, lineIndex } = linesWithSelection[0];
+                            handleSaveWord(lineIndex, line[oppositeLang], line[typedLang]);
+                          }
+                        }}
+                        onMouseDown={() => { skipGlobalClickRef.current = true; }}
+                        className={`inline-flex items-center justify-center w-7 h-7 transition-opacity duration-200 ease-in-out rounded ${
+                          hasSelection
+                            ? `opacity-100 ${savingWord !== null ? 'opacity-50' : ''}`
+                            : 'opacity-0 pointer-events-none'
+                        } ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
+                        data-translation-control="save"
+                        title="Save selected word to vocabulary"
+                        disabled={!hasSelection || savingWord !== null}
+                      >
+                        {savingWord !== null && linesWithSelection.some(l => l.lineIndex === savingWord) ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                        ) : (
+                          <BookmarkPlus className={`w-4 h-4 ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
+                        )}
+                      </button>
+                    </div>
                     <button
                       onClick={() => {
                         setPreloadedMessages(null);
@@ -2025,22 +2036,22 @@ export default function StoryLayoutWithAzureTTS({
                         });
                         setIsStoryTutorOpen(true);
                       }}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
-                        hasSelection ? 'bg-blue-100' : 'bg-transparent'
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
+                        hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
                       }`}
                       title={hasSelection ? 'Ask tutor about selection' : 'Ask tutor about this stanza'}
                     >
-                      <MessageCircle className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                      <MessageCircle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={handleStanzaTranslate}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
-                        hasSelection ? 'bg-blue-100' : 'bg-transparent'
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
+                        hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
                       }`}
                       data-translation-control="translate"
                       title={hasSelection ? 'Translate selection' : 'Translate full stanza'}
                     >
-                      <Languages className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                      <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={() => {

@@ -229,8 +229,8 @@ export default function VocabularyPage() {
         }}
       />
       <div className="relative max-w-4xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Header — stacked on mobile, inline on desktop */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex items-center gap-3">
             <BookMarked className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
@@ -239,7 +239,7 @@ export default function VocabularyPage() {
           {stats && stats.dueToday > 0 && (
             <button
               onClick={() => router.push(`/${lang}/vocabulary/review`)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors w-full md:w-auto justify-center"
             >
               <Play className="w-4 h-4" />
               <span>{t.startReview}</span>
@@ -292,7 +292,52 @@ export default function VocabularyPage() {
             <p className="text-gray-500 max-w-md mx-auto">{t.noWordsSavedDesc}</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <>
+          {/* Mobile: stacked cards */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {words.map((word) => {
+              const reviewStatus = getReviewStatus(word.nextReviewDate);
+              const snippet = word.sourceSentence
+                ? extractSentence(word.sourceSentence, word.word)
+                : null;
+              return (
+                <div
+                  key={word.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="font-semibold text-gray-900 text-lg">{word.word}</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${reviewStatus.className}`}>
+                        {reviewStatus.label}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(word.id)}
+                        disabled={deleting === word.id}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title={t.delete}
+                      >
+                        {deleting === word.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-600 mb-1">{word.translation}</p>
+                  {snippet && (
+                    <p className="text-xs text-gray-400 break-words line-clamp-2" title={word.sourceSentence!}>
+                      {snippet}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(6rem,auto)_2.5rem] gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500">
               <div>{t.word}</div>
               <div>{t.translation}</div>
@@ -339,6 +384,7 @@ export default function VocabularyPage() {
               })}
             </div>
           </div>
+          </>
         )}
       </div>
     </AppLayout>
