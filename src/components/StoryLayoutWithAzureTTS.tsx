@@ -166,6 +166,7 @@ export default function StoryLayoutWithAzureTTS({
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
   const [savingWord, setSavingWord] = useState<number | null>(null);
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
+  const skipGlobalClickRef = useRef(false);
   const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
@@ -916,7 +917,17 @@ export default function StoryLayoutWithAzureTTS({
   // Global click handler with line-specific emoji toggle
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+      // Skip if a control (e.g. save button) flagged to suppress this click
+      if (skipGlobalClickRef.current) {
+        skipGlobalClickRef.current = false;
+        return;
+      }
+
+      const rawTarget = e.target as Element;
+      // Resolve SVG elements to their HTML parent so closest() can traverse the HTML DOM
+      const target = (rawTarget instanceof SVGElement
+        ? rawTarget.closest('svg')?.parentElement ?? rawTarget
+        : rawTarget) as HTMLElement;
 
       if (
         target.tagName === 'BUTTON' ||
@@ -1546,10 +1557,11 @@ export default function StoryLayoutWithAzureTTS({
                       {/* Save word button - fades in/out with word selection (between 🐢 and 💬) */}
                       <button
                         onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 rounded ${
+                        onMouseDown={() => { skipGlobalClickRef.current = true; }}
+                        className={`inline-flex items-center justify-center hover:scale-110 transition-all duration-200 rounded ${
                           wordSelections[lineIndex]
-                            ? `opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
-                            : 'opacity-0 pointer-events-none w-0 h-0 overflow-hidden'
+                            ? `w-7 h-7 opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
+                            : 'w-0 h-0 opacity-0 pointer-events-none overflow-hidden'
                         } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
                         data-translation-control="save"
                         title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
@@ -1973,6 +1985,30 @@ export default function StoryLayoutWithAzureTTS({
                         <Turtle className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                       )}
                     </button>
+                    {/* Save word button - fades in/out with word selection */}
+                    <button
+                      onClick={() => {
+                        if (linesWithSelection.length > 0) {
+                          const { line, lineIndex } = linesWithSelection[0];
+                          handleSaveWord(lineIndex, line[oppositeLang], line[typedLang]);
+                        }
+                      }}
+                      onMouseDown={() => { skipGlobalClickRef.current = true; }}
+                      className={`inline-flex items-center justify-center hover:scale-110 transition-all duration-200 rounded ${
+                        hasSelection
+                          ? `w-7 h-7 opacity-100 ${savingWord !== null ? 'opacity-50' : ''}`
+                          : 'w-0 h-0 opacity-0 pointer-events-none overflow-hidden'
+                      } ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
+                      data-translation-control="save"
+                      title="Save selected word to vocabulary"
+                      disabled={!hasSelection || savingWord !== null}
+                    >
+                      {savingWord !== null && linesWithSelection.some(l => l.lineIndex === savingWord) ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                      ) : (
+                        <BookmarkPlus className={`w-4 h-4 ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
+                      )}
+                    </button>
                     <button
                       onClick={() => {
                         setPreloadedMessages(null);
@@ -2027,10 +2063,10 @@ export default function StoryLayoutWithAzureTTS({
                               stop();
                               setActiveAudio(null);
                             }}
-                            className="ml-2 text-xl hover:scale-110 transition z-10"
+                            className="ml-2 hover:scale-110 transition z-10"
                             data-audio-control="close"
                           >
-                            ✖️
+                            <X className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
                           </button>
                         </>
                       ) : null}

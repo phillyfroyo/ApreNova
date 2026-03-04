@@ -435,20 +435,21 @@ useEffect(() => {
 useEffect(() => {
   const handleOutsideClick = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    
+
     // ALWAYS exempt audio/translation controls - don't rely on timing
     // Use parentElement traversal as fallback for SVG elements where closest() may not cross SVG→HTML boundary
     const htmlTarget = target instanceof SVGElement ? target.closest('svg')?.parentElement ?? target : target;
     if (
       htmlTarget.hasAttribute('data-audio-control') ||       // Audio buttons (speaker, turtle, close)
-      htmlTarget.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond)
+      htmlTarget.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond, save)
       htmlTarget.closest('[data-audio-scrubber]') ||         // Audio scrubber area
       htmlTarget.closest('[data-audio-control]') ||          // Any audio control element
-      htmlTarget.closest('[data-translation-control]')       // Any translation control element
+      htmlTarget.closest('[data-translation-control]') ||    // Any translation control element
+      htmlTarget.closest('button')                           // Any button (emoji row icons are Lucide SVGs inside buttons)
     ) {
       return; // Never close translation for these elements
     }
-    
+
     if (
       containerRef.current &&
       !containerRef.current.contains(e.target as Node) &&
@@ -458,7 +459,7 @@ useEffect(() => {
       // Mark this element as having just closed a translation
       target.setAttribute('data-just-closed-translation', 'true');
       setTimeout(() => target.removeAttribute('data-just-closed-translation'), 10);
-      
+
       setStartIdx(null);
       setEndIdx(null);
       setTranslations([]);
