@@ -18,7 +18,7 @@ type DropdownProps = {
 const baseStyles: Record<DropdownVariant, string> = {
   default: "border bg-white rounded shadow hover:bg-gray-100 px-4 py-2",
   glass:
-    "border border-emerald-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-emerald-700 font-semibold hover:bg-emerald-50 px-4 py-2",
+    "border border-indigo-200 bg-[#f5f0e6] rounded-xl shadow-md backdrop-blur-md text-indigo-600 font-medium hover:bg-[#ede4d3] px-4 py-2 transition-colors",
   blue:
   "border border-sky-400 bg-white/80 rounded-xl shadow-md backdrop-blur-md text-sky-700 font-semibold hover:bg-sky-50 px-4 py-2",
   rounded:

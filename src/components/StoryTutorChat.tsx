@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, MessageCircle } from "lucide-react";
 import type { Language } from "@/types/i18n";
 import { t } from "@/lib/t";
 
@@ -334,7 +334,7 @@ export default function StoryTutorChat({
     >
       {/* Header */}
       <div className="bg-purple-600/95 backdrop-blur-sm text-white px-4 py-3 flex items-center justify-between border-b border-purple-700">
-        <h2 className="text-lg font-semibold">💬 {t(typedLang, "storyTutor", "title")}</h2>
+        <h2 className="text-lg font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5" strokeWidth={1.5} /> {t(typedLang, "storyTutor", "title")}</h2>
         <button
           onClick={onClose}
           className="text-white hover:bg-purple-700 rounded-full p-1 transition"

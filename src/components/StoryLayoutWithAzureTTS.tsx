@@ -5,7 +5,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
 import { getTheme } from "@/components/storyThemes";
 import Link from "next/link";
-import { Menu, X, Volume2, Loader2, AlertCircle, Headphones, BookmarkPlus, Check } from "lucide-react";
+import { Menu, X, Volume2, Loader2, AlertCircle, Headphones, BookmarkPlus, Check, Turtle, MessageCircle, Languages, PenLine, ChevronLeft, ChevronRight } from "lucide-react";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import UnifiedTranslator from "@/components/UnifiedTranslator";
@@ -991,11 +991,9 @@ export default function StoryLayoutWithAzureTTS({
         return;
       }
 
-      // If words are selected, deselect them and hide emoji buttons
+      // Priority 1: If words are selected, deselect them first (keep emoji row open)
       if (hasSelectedWords()) {
         clearAllWordSelections();
-        setShowEmojiButtons({});
-        setSaveAuthLine(null);
         return;
       }
 
@@ -1170,7 +1168,7 @@ export default function StoryLayoutWithAzureTTS({
 
       <header className="fixed top-4 left-4 z-50">
         <button
-          className="p-2 rounded-md bg-white/80 border border-emerald-300 hover:bg-emerald-50 shadow-md"
+          className="p-2 rounded-full bg-[#f5f0e6] backdrop-blur-md border border-indigo-200 hover:bg-[#ede4d3] shadow-md transition-colors text-indigo-600"
           onClick={() => setMenuOpen(!menuOpen)}
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -1179,7 +1177,7 @@ export default function StoryLayoutWithAzureTTS({
 
       {/* Menu and Navigation (same as original) */}
       {menuOpen && (
-        <div className="fixed top-16 left-4 right-4 z-40 bg-white/90 backdrop-blur-md shadow-md rounded-xl p-4 space-y-4 border border-emerald-200">
+        <div className="fixed top-16 left-4 right-4 z-40 bg-[#f5f0e6]/95 backdrop-blur-md shadow-md rounded-xl p-4 space-y-4 border border-indigo-200">
           <div className="flex flex-wrap gap-4">
             <Dropdown
               label={t(typedLang, "story", "navigate")}
@@ -1346,36 +1344,29 @@ export default function StoryLayoutWithAzureTTS({
       <div className={`fixed left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''} ${audioPlayer.state.isVisible ? 'hidden' : 'bottom-4'}`}>
         {(() => {
           const { prev, next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
-          const buttonClass = (disabled: boolean, color: string) =>
-            `px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-white transition transform ${color} ${
-              disabled ? "opacity-40 cursor-default" : `${theme.hoverAccentColor} hover:scale-105`
+          const navBtn = (disabled: boolean) =>
+            `inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors ${
+              disabled
+                ? 'bg-[#ede4d3]/80 border-gray-200 text-gray-300 cursor-default'
+                : 'bg-[#f5f0e6] backdrop-blur-md border-indigo-200 text-indigo-600 hover:bg-[#ede4d3] shadow-md'
             }`;
 
           return (
-            <div className="flex flex-col items-center space-y-4 mt-8">
-              <div className="flex space-x-4">
-                {prev ? (
-                  <Link
-                    className={buttonClass(false, "bg-green-600")}
-                    href={getNavigationUrl(currentLevel, prev.ch, prev.pg)}
-                  >
-                    ⬅
-                  </Link>
-                ) : (
-                  <span className={buttonClass(true, "bg-green-600")}>⬅</span>
-                )}
-                {next ? (
-                  <Link
-                    className={buttonClass(false, "bg-green-700")}
-                    href={getNavigationUrl(currentLevel, next.ch, next.pg)}
-                  >
-                    ➡
-                  </Link>
-                ) : (
-                  <span className={buttonClass(true, "bg-green-700")}>➡</span>
-                )}
-              </div>
-
+            <div className="flex items-center gap-3">
+              {prev ? (
+                <Link className={navBtn(false)} href={getNavigationUrl(currentLevel, prev.ch, prev.pg)}>
+                  <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
+                </Link>
+              ) : (
+                <span className={navBtn(true)}><ChevronLeft className="w-5 h-5" strokeWidth={1.5} /></span>
+              )}
+              {next ? (
+                <Link className={navBtn(false)} href={getNavigationUrl(currentLevel, next.ch, next.pg)}>
+                  <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+                </Link>
+              ) : (
+                <span className={navBtn(true)}><ChevronRight className="w-5 h-5" strokeWidth={1.5} /></span>
+              )}
             </div>
           );
         })()}
@@ -1516,7 +1507,7 @@ export default function StoryLayoutWithAzureTTS({
                       {/* Enhanced emoji buttons with loading states and selection indicators */}
                       <button
                         onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow
                             ? 'opacity-50 cursor-default'
                             : ''
@@ -1530,12 +1521,12 @@ export default function StoryLayoutWithAzureTTS({
                         {playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow ? (
                           <Loader2 className="animate-spin h-5 w-5" />
                         ) : (
-                          <span className={`text-lg leading-none ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>🔊</span>
+                          <Volume2 className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                         )}
                       </button>
                       <button
                         onClick={() => handlePlay(lineIndex, true, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                           playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow
                             ? 'opacity-50 cursor-default'
                             : ''
@@ -1549,7 +1540,25 @@ export default function StoryLayoutWithAzureTTS({
                         {playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow ? (
                           <Loader2 className="animate-spin h-5 w-5" />
                         ) : (
-                          <span className={`text-lg leading-none ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>🐢</span>
+                          <Turtle className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
+                        )}
+                      </button>
+                      {/* Save word button - fades in/out with word selection (between 🐢 and 💬) */}
+                      <button
+                        onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 rounded ${
+                          wordSelections[lineIndex]
+                            ? `opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
+                            : 'opacity-0 pointer-events-none w-0 h-0 overflow-hidden'
+                        } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
+                        data-translation-control="save"
+                        title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
+                        disabled={savingWord === lineIndex || !wordSelections[lineIndex]}
+                      >
+                        {savingWord === lineIndex ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                        ) : (
+                          <BookmarkPlus className={`w-4 h-4 ${translationData[lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
                         )}
                       </button>
                       <button
@@ -1564,12 +1573,12 @@ export default function StoryLayoutWithAzureTTS({
                           });
                           setIsStoryTutorOpen(true);
                         }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
                         }`}
                         title={wordSelections[lineIndex] ? 'Ask tutor about selection' : 'Ask tutor about this line'}
                       >
-                        <span className={`text-lg leading-none ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>💬</span>
+                        <MessageCircle className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                       </button>
                       <button
                         onClick={() => {
@@ -1580,13 +1589,13 @@ export default function StoryLayoutWithAzureTTS({
                             manualTranslateFunctions[lineIndex]();
                           }
                         }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent'
                         }`}
                         data-translation-control="gpt"
                         title="Translate"
                       >
-                        <span className={`text-lg leading-none ${wordSelections[lineIndex] ? 'text-blue-600' : ''}`}>友</span>
+                        <Languages className={`w-5 h-5 transition-colors duration-200 ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                       </button>
                       {/* Pencil button for static translations */}
                       <button
@@ -1598,26 +1607,8 @@ export default function StoryLayoutWithAzureTTS({
                         data-translation-control="pencil"
                         title="Toggle full line translation"
                       >
-                        <span className="text-lg leading-none">✍️</span>
+                        <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
                       </button>
-                      {/* Save word button - visible when word is selected */}
-                      {wordSelections[lineIndex] && (
-                        <button
-                          onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
-                          className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded ${
-                            savingWord === lineIndex ? 'opacity-50' : ''
-                          } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
-                          data-translation-control="save"
-                          title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
-                          disabled={savingWord === lineIndex}
-                        >
-                          {savingWord === lineIndex ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                          ) : (
-                            <BookmarkPlus className={`w-4 h-4 ${translationData[lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
-                          )}
-                        </button>
-                      )}
                       {/* Audio playback progress bar - inline with emojis */}
                       <div className="relative flex-1 flex items-center h-[30px] ml-3">
                         {activeAudio?.index === lineIndex ? (
@@ -1628,10 +1619,10 @@ export default function StoryLayoutWithAzureTTS({
                                 stop();
                                 setActiveAudio(null);
                               }}
-                              className="ml-2 text-xl hover:scale-110 transition z-10"
+                              className="ml-2 hover:scale-110 transition z-10"
                               data-audio-control="close"
                             >
-                              ✖️
+                              <X className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
                             </button>
                           </>
                         ) : null}
@@ -1962,12 +1953,12 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>🔊</span>
+                        <Volume2 className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                       )}
                     </button>
                     <button
                       onClick={() => handleStanzaPlay(true)}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                         playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow
                           ? 'opacity-50 cursor-default'
                           : ''
@@ -1979,7 +1970,7 @@ export default function StoryLayoutWithAzureTTS({
                       {playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow ? (
                         <Loader2 className="animate-spin h-5 w-5" />
                       ) : (
-                        <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>🐢</span>
+                        <Turtle className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                       )}
                     </button>
                     <button
@@ -1998,22 +1989,22 @@ export default function StoryLayoutWithAzureTTS({
                         });
                         setIsStoryTutorOpen(true);
                       }}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                         hasSelection ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       title={hasSelection ? 'Ask tutor about selection' : 'Ask tutor about this stanza'}
                     >
-                      <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>💬</span>
+                      <MessageCircle className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={handleStanzaTranslate}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
+                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 relative rounded ${
                         hasSelection ? 'bg-blue-100' : 'bg-transparent'
                       }`}
                       data-translation-control="translate"
                       title={hasSelection ? 'Translate selection' : 'Translate full stanza'}
                     >
-                      <span className={`text-lg leading-none ${hasSelection ? 'text-blue-600' : ''}`}>友</span>
+                      <Languages className={`w-5 h-5 transition-colors duration-200 ${hasSelection ? 'text-blue-600' : 'text-gray-700'}`} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={() => {
@@ -2024,7 +2015,7 @@ export default function StoryLayoutWithAzureTTS({
                       data-translation-control="pencil"
                       title="Toggle stanza translation"
                     >
-                      <span className="text-lg leading-none">✍️</span>
+                      <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
                     </button>
                     {/* Audio progress bar */}
                     <div className="relative flex-1 flex items-center h-[30px] ml-3">
