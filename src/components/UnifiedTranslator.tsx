@@ -517,7 +517,7 @@ useEffect(() => {
           }}
           key={i}
           onClick={() => handleClick(i)}
-          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md transition-all duration-200 ease-in-out ${
+          className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md transition-colors duration-200 ease-in-out ${
             enabled && isSelected(i)
               ? "bg-white/10 backdrop-blur-sm border-black/10 shadow-md shadow-black/20"
               : "text-black border-transparent"
