@@ -1,6 +1,7 @@
 // src/hooks/useAzureTTS.ts
 "use client";
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import type { TTSRequest, TTSResponse, WordTiming } from '@/types/azure-tts';
 
 interface UseTTSOptions {
@@ -20,6 +21,7 @@ interface TTSPlaybackState {
 }
 
 export function useAzureTTS(options: UseTTSOptions = {}) {
+  const { data: authSession } = useSession();
   const [playbackState, setPlaybackState] = useState<TTSPlaybackState>({
     isPlaying: false,
     currentTime: 0,
@@ -59,6 +61,10 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     setPlaybackState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
+      if (!authSession?.user) {
+        throw new Error("Please sign in to use audio features");
+      }
+
       const response = await fetch('/api/azure-tts/generate', {
         method: 'POST',
         headers: {

@@ -165,6 +165,7 @@ export default function StoryLayoutWithAzureTTS({
   const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string } | null>>({});
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
   const [savingWord, setSavingWord] = useState<number | null>(null);
+  const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
   const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
@@ -485,7 +486,13 @@ export default function StoryLayoutWithAzureTTS({
     setTranslationData(prev => ({ ...prev, [index]: data }));
   }, []);
 
-  const handleSaveWord = useCallback(async (lineIndex: number, sentence: string) => {
+  const handleSaveWord = useCallback(async (lineIndex: number, sentence: string, translatedSentence?: string) => {
+    // Require authentication
+    if (!session?.user) {
+      setSaveAuthLine(lineIndex);
+      return;
+    }
+
     const selection = wordSelections[lineIndex];
 
     // Must have a word selected
@@ -503,13 +510,14 @@ export default function StoryLayoutWithAzureTTS({
 
       const existingData = translationData[lineIndex];
 
-      if (existingData?.word && existingData?.translation) {
-        // Use existing translation (only if both word and translation are valid)
+      if (existingData?.word && existingData?.translation && existingData.word !== existingData.translation) {
+        // Use existing translation (only if both word and translation are valid AND different)
         word = existingData.word;
         translation = existingData.translation;
       } else {
         // Extract selected word and auto-translate
-        const words = sentence.split(' ');
+        // Use trimStart() to match UnifiedTranslator's word tokenization
+        const words = sentence.trimStart().split(' ');
         const selectedWords = words.slice(selection.start, selection.end + 1);
         word = selectedWords.join(' ').replace(/[.,!?;:"""()]/g, '').trim();
 
@@ -520,11 +528,12 @@ export default function StoryLayoutWithAzureTTS({
           return;
         }
 
-        // Auto-translate the word
+        // Auto-translate the word (translate FROM oppositeLang TO the user's language)
         const isSingleWord = selectedWords.length === 1;
+        const targetLang = oppositeLang === 'es' ? 'en' : 'es';
         const endpoint = isSingleWord
-          ? `/api/translate-word?lang=es`
-          : `/api/translate-phrase?lang=es`;
+          ? `/api/translate-word?lang=${targetLang}`
+          : `/api/translate-phrase?lang=${targetLang}`;
 
         const translateRes = await fetch(endpoint, {
           method: 'POST',
@@ -541,9 +550,26 @@ export default function StoryLayoutWithAzureTTS({
         }
 
         const translateData = await translateRes.json();
-        translation = isSingleWord
-          ? translateData.contextTranslation || translateData.translation
-          : translateData.translation;
+        if (isSingleWord) {
+          // GPT sometimes returns contextTranslation in the source language instead of target.
+          // Detect this by checking if contextTranslation matches the input word.
+          const ctx = translateData.contextTranslation;
+          if (ctx && ctx.toLowerCase() !== word.toLowerCase()) {
+            translation = ctx;
+          } else if (translateData.rootWord) {
+            // rootWord is in the target language when contextTranslation is flipped
+            translation = translateData.rootWord;
+          } else {
+            translation = translateData.translation || ctx || word;
+          }
+        } else {
+          // Phrase endpoint returns { translations: { primary: "..." } }
+          translation = translateData.translations?.primary || translateData.translation || '';
+        }
+
+        if (!translation) {
+          throw new Error('Failed to get translation');
+        }
       }
 
       // Save the word
@@ -554,16 +580,17 @@ export default function StoryLayoutWithAzureTTS({
           word,
           translation,
           sourceSentence: sentence,
+          translatedSentence: translatedSentence || null,
           storySlug,
         }),
       });
 
       const result = await res.json();
 
-      if (res.status === 409) {
-        setSaveToast({ message: 'Already saved!', type: 'exists' });
-      } else if (!res.ok) {
+      if (!res.ok) {
         throw new Error(result.error || 'Failed to save');
+      } else if (result.alreadySaved) {
+        setSaveToast({ message: 'Already saved!', type: 'exists' });
       } else {
         setSaveToast({ message: 'Word saved!', type: 'success' });
       }
@@ -574,7 +601,7 @@ export default function StoryLayoutWithAzureTTS({
       setSavingWord(null);
       setTimeout(() => setSaveToast(null), 2500);
     }
-  }, [translationData, wordSelections, storySlug, currentLevel]);
+  }, [translationData, wordSelections, storySlug, currentLevel, oppositeLang, session]);
 
   // Helper function to check if any words are currently selected
   const hasSelectedWords = useCallback(() => {
@@ -926,6 +953,14 @@ export default function StoryLayoutWithAzureTTS({
 
       const hasActiveTranslations = Object.values(activeTranslations).some(Boolean);
       if (hasActiveTranslations) {
+        // If clicking inside the tooltip card itself, don't close
+        if (target.closest('[data-tooltip]')) {
+          return;
+        }
+        // Clicking outside an active translation/auth card - dismiss it
+        clearAllWordSelections();
+        setShowEmojiButtons({});
+        setSaveAuthLine(null);
         return;
       }
 
@@ -960,6 +995,7 @@ export default function StoryLayoutWithAzureTTS({
       if (hasSelectedWords()) {
         clearAllWordSelections();
         setShowEmojiButtons({});
+        setSaveAuthLine(null);
         return;
       }
 
@@ -1277,9 +1313,12 @@ export default function StoryLayoutWithAzureTTS({
             {!audioPlayer.isPlaying && audioPlayer.state.status !== "navigating" && (
               <button
                 onClick={() => {
+                  setMenuOpen(false);
+                  if (!session?.user) {
+                    setTtsAuthError(true);
+                  }
                   stop();
                   setActiveAudio(null);
-                  setMenuOpen(false);
 
                   audioPlayer.startContinuousPlayback({
                     storySlug,
@@ -1564,7 +1603,7 @@ export default function StoryLayoutWithAzureTTS({
                       {/* Save word button - visible when word is selected */}
                       {wordSelections[lineIndex] && (
                         <button
-                          onClick={() => handleSaveWord(lineIndex, s[oppositeLang])}
+                          onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
                           className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded ${
                             savingWord === lineIndex ? 'opacity-50' : ''
                           } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
@@ -1624,6 +1663,28 @@ export default function StoryLayoutWithAzureTTS({
                         stanzaContext.linesInStanza
                       ) : undefined}
                     />
+                    {/* Save auth prompt - matches translation tooltip style */}
+                    {saveAuthLine === lineIndex && (
+                      <div className="mt-1 -ml-[15px] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative" data-tooltip>
+                        <button
+                          onClick={() => setSaveAuthLine(null)}
+                          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+                          data-translation-control="close"
+                        >
+                          ✕
+                        </button>
+                        <div className="text-sm pr-6">
+                          <span className="text-gray-700">{t(typedLang, "translator", "saveSignInRequired")} </span>
+                          <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
+                            {t(typedLang, "translator", "signIn")}
+                          </Link>
+                          <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
+                          <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
+                            {t(typedLang, "translator", "createAccount")}
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                     {/* Per-line static translation: skip for stanza poems (handled at stanza level) */}
                     {!isInsideStanza && (
                     <div

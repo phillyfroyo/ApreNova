@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
 import { getStoryContent } from "@/lib/getStoryContent";
-import { STORY_METADATA, getStoryTitle, toLLevel } from "@/lib/stories";
+import { STORY_METADATA, getStoryTitle } from "@/lib/stories";
 import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
 import type { Language } from "@/types/i18n";
 import { getStoryMap } from "@/lib/getStoryMap";

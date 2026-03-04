@@ -259,6 +259,7 @@ translator: {
   signIn: "inicia sesión",
   or: "o",
   createAccount: "crea una cuenta gratis",
+  saveSignInRequired: "Para guardar palabras,",
   audioSignInRequired: "Para usar funciones de audio,",
   rootWord: "Raíz",
   lockedFeature: "Mejora tu plan para desbloquear traducciones inteligentes",

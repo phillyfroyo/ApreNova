@@ -11,33 +11,35 @@ interface FlashcardProps {
   translation: string;
   direction: 'es-en' | 'en-es';
   sourceSentence?: string | null;
+  translatedSentence?: string | null;
   easeFactor: number;
   interval: number;
   repetitions: number;
+  stability?: number;
   onRate: (quality: number) => void;
   lang?: 'en' | 'es';
 }
 
 const ratingLabels = {
   en: {
-    AGAIN: 'Again',
     HARD: 'Hard',
     GOOD: 'Good',
     EASY: 'Easy',
+    MASTERED: 'Mastered',
   },
   es: {
-    AGAIN: 'Otra vez',
     HARD: 'Difícil',
     GOOD: 'Bien',
     EASY: 'Fácil',
+    MASTERED: 'Dominada',
   },
 };
 
 const ratingColors = {
-  AGAIN: 'bg-red-500 hover:bg-red-600',
-  HARD: 'bg-amber-500 hover:bg-amber-600',
-  GOOD: 'bg-green-500 hover:bg-green-600',
-  EASY: 'bg-blue-500 hover:bg-blue-600',
+  HARD: 'bg-red-500 hover:bg-red-600',
+  GOOD: 'bg-amber-500 hover:bg-amber-600',
+  EASY: 'bg-green-500 hover:bg-green-600',
+  MASTERED: 'bg-indigo-500 hover:bg-indigo-600',
 };
 
 export default function Flashcard({
@@ -45,9 +47,11 @@ export default function Flashcard({
   translation,
   direction,
   sourceSentence,
+  translatedSentence,
   easeFactor,
   interval,
   repetitions,
+  stability = 0,
   onRate,
   lang = 'es',
 }: FlashcardProps) {
@@ -55,13 +59,17 @@ export default function Flashcard({
   const labels = ratingLabels[lang];
 
   // What shows on front vs back depends on direction
+  // word = Spanish, translation = English
+  // sourceSentence = Spanish sentence, translatedSentence = English sentence
   const front = direction === 'es-en' ? word : translation;
   const back = direction === 'es-en' ? translation : word;
   const frontLabel = direction === 'es-en' ? 'ES' : 'EN';
   const backLabel = direction === 'es-en' ? 'EN' : 'ES';
+  const frontSentence = direction === 'es-en' ? sourceSentence : translatedSentence;
+  const backSentence = direction === 'es-en' ? translatedSentence : sourceSentence;
 
   // Get interval previews for each rating
-  const previews = getIntervalPreview({ repetitions, easeFactor, interval });
+  const previews = getIntervalPreview({ repetitions, easeFactor, interval, stability });
 
   const handleRate = (rating: QualityRating) => {
     onRate(QUALITY_RATINGS[rating]);
@@ -90,9 +98,9 @@ export default function Flashcard({
               {frontLabel}
             </span>
             <p className="text-3xl font-bold text-gray-900 text-center">{front}</p>
-            {sourceSentence && !isFlipped && (
+            {frontSentence && !isFlipped && (
               <p className="text-sm text-gray-400 text-center mt-4 line-clamp-2">
-                {sourceSentence}
+                {frontSentence}
               </p>
             )}
             <p className="absolute bottom-4 text-sm text-gray-400">
@@ -119,6 +127,11 @@ export default function Flashcard({
               <RotateCcw className="w-4 h-4" />
             </button>
             <p className="text-3xl font-bold text-indigo-900 text-center">{back}</p>
+            {backSentence && (
+              <p className="text-sm text-indigo-400 text-center mt-4 line-clamp-2">
+                {backSentence}
+              </p>
+            )}
           </div>
         </motion.div>
       </div>
@@ -133,7 +146,7 @@ export default function Flashcard({
             transition={{ duration: 0.2 }}
             className="mt-6 grid grid-cols-4 gap-2"
           >
-            {(['AGAIN', 'HARD', 'GOOD', 'EASY'] as QualityRating[]).map((rating) => (
+            {(['HARD', 'GOOD', 'EASY', 'MASTERED'] as QualityRating[]).map((rating) => (
               <button
                 key={rating}
                 onClick={() => handleRate(rating)}

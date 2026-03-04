@@ -76,10 +76,10 @@ export async function GET() {
       masteredCount,
       reviewsToday,
     });
-  } catch (error) {
-    console.error('Error retrieving vocabulary stats:', error);
+  } catch (error: any) {
+    console.error('Error retrieving vocabulary stats:', error?.message || error);
     return NextResponse.json(
-      { error: 'Failed to retrieve stats' },
+      { error: 'Failed to retrieve stats', details: error?.message },
       { status: 500 }
     );
   }

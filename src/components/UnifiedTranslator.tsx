@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { t } from '@/lib/t';
 import type { Language } from "@/types/i18n";
@@ -30,6 +31,7 @@ interface Props {
 
 
 export default function UnifiedTranslator({ sentence, staticTranslation, enabled = false, autoTriggerAll, readOnlyMode = false, onTranslationStateChange, onSelectionChange, onManualTranslate, onClearSelection, onTranslationData, sentenceIndex, contextSentences, externalSelection, onWordClick }: Props) {
+  const { data: authSession } = useSession();
   // Extract leading whitespace for poetry indentation
   const leadingWhitespace = sentence.match(/^(\s*)/)?.[1] || "";
   const contentWithoutLeading = sentence.trimStart();
@@ -155,6 +157,11 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
       : { phrase: cleanWord, sentence, level: currentLevel, context };
 
     try {
+      // Skip fetch entirely if not authenticated
+      if (!authSession?.user) {
+        setAuthError(true);
+        return;
+      }
       setLoading(true);
       setError("");
       setAuthError(false);
@@ -254,6 +261,8 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
         // Use static translation for full line
         setTranslations([staticTranslation]);
         setEnhancedTranslation(null);
+      } else if (!authSession?.user) {
+        setAuthError(true);
       } else {
         // No static translation available - call GPT
         setLoading(true);
@@ -428,12 +437,14 @@ useEffect(() => {
     const target = e.target as HTMLElement;
     
     // ALWAYS exempt audio/translation controls - don't rely on timing
+    // Use parentElement traversal as fallback for SVG elements where closest() may not cross SVG→HTML boundary
+    const htmlTarget = target instanceof SVGElement ? target.closest('svg')?.parentElement ?? target : target;
     if (
-      target.hasAttribute('data-audio-control') ||       // Audio buttons (speaker, turtle, close)
-      target.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond)
-      target.closest('[data-audio-scrubber]') ||         // Audio scrubber area
-      target.closest('[data-audio-control]') ||          // Any audio control element
-      target.closest('[data-translation-control]')       // Any translation control element
+      htmlTarget.hasAttribute('data-audio-control') ||       // Audio buttons (speaker, turtle, close)
+      htmlTarget.hasAttribute('data-translation-control') || // Translation buttons (pencil, diamond)
+      htmlTarget.closest('[data-audio-scrubber]') ||         // Audio scrubber area
+      htmlTarget.closest('[data-audio-control]') ||          // Any audio control element
+      htmlTarget.closest('[data-translation-control]')       // Any translation control element
     ) {
       return; // Never close translation for these elements
     }

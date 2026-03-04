@@ -142,7 +142,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       handleSentenceComplete();
     },
     onError: (error) => {
-      console.error("[AudioPlayer] TTS error:", error);
+      // Don't log auth errors — expected for unauthenticated users
+      if (!error.message.includes("sign in")) {
+        console.error("[AudioPlayer] TTS error:", error);
+      }
       setState(prev => ({
         ...prev,
         status: "error",

@@ -258,6 +258,7 @@ translator: {
   signIn: "sign in",
   or: "or",
   createAccount: "create a free account",
+  saveSignInRequired: "To save words,",
   audioSignInRequired: "To use audio features,",
   rootWord: "Root word",
   lockedFeature: "Upgrade to unlock smart translations",

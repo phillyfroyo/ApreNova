@@ -125,18 +125,20 @@ model SavedWord {
   userId         String
   word           String
   translation    String
-  sourceSentence String?
-  storySlug      String?
-  easeFactor     Float       @default(2.5)
+  sourceSentence    String?
+  translatedSentence String?
+  storySlug         String?
+  easeFactor     Float       @default(5.0)
   interval       Int         @default(0)
   repetitions    Int         @default(0)
+  stability      Float       @default(0)
   nextReviewDate DateTime    @default(now())
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   ReviewLog      ReviewLog[]
   User           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, word])
+  @@unique([userId, word, sourceSentence])
   @@index([userId, nextReviewDate])
   @@index([userId])
 }

@@ -42,10 +42,12 @@ export async function GET(req: NextRequest) {
           word: true,
           translation: true,
           sourceSentence: true,
+          translatedSentence: true,
           storySlug: true,
           easeFactor: true,
           interval: true,
           repetitions: true,
+          stability: true,
           nextReviewDate: true,
           createdAt: true,
         },
@@ -77,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { word, translation, sourceSentence, storySlug } = body;
+    const { word, translation, sourceSentence, translatedSentence, storySlug } = body;
 
     if (!word || !translation) {
       return NextResponse.json(
@@ -88,21 +90,20 @@ export async function POST(req: NextRequest) {
 
     // Normalize the word (trim, lowercase for comparison)
     const normalizedWord = word.trim();
+    const normalizedSentence = sourceSentence?.trim() || null;
 
-    // Check if word already exists for this user
-    const existing = await prisma.savedWord.findUnique({
+    // Check if same word from same sentence already exists for this user
+    const existing = await prisma.savedWord.findFirst({
       where: {
-        userId_word: {
-          userId: session.user.id,
-          word: normalizedWord,
-        },
+        userId: session.user.id,
+        word: normalizedWord,
+        sourceSentence: normalizedSentence,
       },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'Word already saved', code: 'WORD_EXISTS', existing },
-        { status: 409 }
+        { success: true, alreadySaved: true, savedWord: existing },
       );
     }
 
@@ -113,6 +114,7 @@ export async function POST(req: NextRequest) {
         word: normalizedWord,
         translation: translation.trim(),
         sourceSentence: sourceSentence?.trim() || null,
+        translatedSentence: translatedSentence?.trim() || null,
         storySlug: storySlug || null,
         // SM-2 defaults are set in schema
       },

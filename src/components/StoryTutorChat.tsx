@@ -334,7 +334,7 @@ export default function StoryTutorChat({
     >
       {/* Header */}
       <div className="bg-purple-600/95 backdrop-blur-sm text-white px-4 py-3 flex items-center justify-between border-b border-purple-700">
-        <h2 className="text-lg font-semibold">❓ {t(typedLang, "storyTutor", "title")}</h2>
+        <h2 className="text-lg font-semibold">💬 {t(typedLang, "storyTutor", "title")}</h2>
         <button
           onClick={onClose}
           className="text-white hover:bg-purple-700 rounded-full p-1 transition"

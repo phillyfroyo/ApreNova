@@ -14,9 +14,11 @@ type SavedWord = {
   word: string;
   translation: string;
   sourceSentence: string | null;
+  translatedSentence: string | null;
   easeFactor: number;
   interval: number;
   repetitions: number;
+  stability: number;
 };
 
 type ReviewResult = {
@@ -126,8 +128,8 @@ export default function VocabularyReviewPage() {
   };
 
   // Calculate stats
-  const correctCount = results.filter(r => r.quality >= 3).length;
-  const needsWorkCount = results.filter(r => r.quality < 3).length;
+  const correctCount = results.filter(r => r.quality >= 2).length;
+  const needsWorkCount = results.filter(r => r.quality < 2).length;
 
   if (status === 'loading' || loading) {
     return (
@@ -252,9 +254,11 @@ export default function VocabularyReviewPage() {
             translation={currentCard.translation}
             direction={getDirection(currentIndex)}
             sourceSentence={currentCard.sourceSentence}
+            translatedSentence={currentCard.translatedSentence}
             easeFactor={currentCard.easeFactor}
             interval={currentCard.interval}
             repetitions={currentCard.repetitions}
+            stability={currentCard.stability}
             onRate={handleRate}
             lang={lang}
           />

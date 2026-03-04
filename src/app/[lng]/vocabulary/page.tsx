@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import { AppLayout } from '@/components/layout';
 import { BookMarked, Play, Trash2, Loader2, BookOpen, GraduationCap, Brain, Calendar } from 'lucide-react';
 import type { Language } from '@/types/i18n';
-import { formatInterval } from '@/lib/sm2';
+import { useCallback } from 'react';
 
 type SavedWord = {
   id: string;
@@ -18,6 +18,7 @@ type SavedWord = {
   easeFactor: number;
   interval: number;
   repetitions: number;
+  stability: number;
   nextReviewDate: string;
   createdAt: string;
 };
@@ -49,9 +50,14 @@ const content = {
       learning: 'Learning',
       mastered: 'Mastered',
     },
-    today: 'Today',
-    tomorrow: 'Tomorrow',
     overdue: 'Overdue',
+    now: 'Now',
+    minutes: (n: number) => `${n} minute${n === 1 ? '' : 's'}`,
+    hours: (n: number) => `${n} hour${n === 1 ? '' : 's'}`,
+    tomorrow: 'Tomorrow',
+    days: (n: number) => `${n} day${n === 1 ? '' : 's'}`,
+    weeks: (n: number) => `${n} week${n === 1 ? '' : 's'}`,
+    months: (n: number) => `${n} month${n === 1 ? '' : 's'}`,
   },
   es: {
     title: 'Mi Vocabulario',
@@ -70,11 +76,31 @@ const content = {
       learning: 'Aprendiendo',
       mastered: 'Dominadas',
     },
-    today: 'Hoy',
-    tomorrow: 'Mañana',
     overdue: 'Atrasado',
+    now: 'Ahora',
+    minutes: (n: number) => `${n} minuto${n === 1 ? '' : 's'}`,
+    hours: (n: number) => `${n} hora${n === 1 ? '' : 's'}`,
+    tomorrow: 'Mañana',
+    days: (n: number) => `${n} día${n === 1 ? '' : 's'}`,
+    weeks: (n: number) => `${n} semana${n === 1 ? '' : 's'}`,
+    months: (n: number) => `${n} mes${n === 1 ? '' : 'es'}`,
   },
 };
+
+/**
+ * Extract just the sentence containing the target word from a longer passage.
+ * Splits on sentence-ending punctuation (.!?), finds the matching sentence,
+ * and caps at maxLen characters with ellipsis as a safety net.
+ */
+function extractSentence(text: string, word: string, maxLen = 80): string {
+  // Split on sentence boundaries, keeping the delimiter attached
+  const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
+  const wordLower = word.toLowerCase();
+  const match = sentences.find(s => s.toLowerCase().includes(wordLower));
+  const sentence = (match || sentences[0]).trim();
+  if (sentence.length <= maxLen) return sentence;
+  return sentence.slice(0, maxLen).trimEnd() + '...';
+}
 
 export default function VocabularyPage() {
   const { lng } = useParams();
@@ -87,6 +113,7 @@ export default function VocabularyPage() {
   const [stats, setStats] = useState<VocabStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -108,6 +135,12 @@ export default function VocabularyPage() {
     }
   }, [status, router, lang]);
 
+  // Re-render every 60s so time-based badges stay current
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleDelete = async (id: string) => {
     if (!confirm(t.confirmDelete)) return;
 
@@ -128,21 +161,50 @@ export default function VocabularyPage() {
     }
   };
 
-  const getReviewStatus = (nextReviewDate: string) => {
+  const getReviewStatus = useCallback((nextReviewDate: string) => {
     const now = new Date();
     const review = new Date(nextReviewDate);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const reviewDay = new Date(review.getFullYear(), review.getMonth(), review.getDate());
+    const diffMs = review.getTime() - now.getTime();
 
-    if (reviewDay < today) return { label: t.overdue, className: 'text-red-600 bg-red-50' };
-    if (reviewDay.getTime() === today.getTime()) return { label: t.today, className: 'text-amber-600 bg-amber-50' };
-    if (reviewDay.getTime() === tomorrow.getTime()) return { label: t.tomorrow, className: 'text-blue-600 bg-blue-50' };
+    // Overdue or due now
+    if (diffMs <= 0) {
+      return { label: t.overdue, className: 'text-red-600 bg-red-50 border border-red-200' };
+    }
 
-    const days = Math.ceil((reviewDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return { label: formatInterval(days, lang), className: 'text-gray-600 bg-gray-50' };
-  };
+    const diffMinutes = Math.round(diffMs / 60_000);
+    const diffHours = Math.round(diffMs / 3_600_000);
+    const diffDays = Math.ceil(diffMs / 86_400_000);
+
+    // Within 1 hour → show minutes
+    if (diffMinutes < 60) {
+      return { label: t.minutes(diffMinutes), className: 'text-orange-600 bg-orange-50 border border-orange-200' };
+    }
+
+    // Within 24 hours → show hours
+    if (diffHours < 24) {
+      return { label: t.hours(diffHours), className: 'text-amber-600 bg-amber-50 border border-amber-200' };
+    }
+
+    // Tomorrow (24-48h)
+    if (diffDays <= 2) {
+      return { label: t.tomorrow, className: 'text-blue-600 bg-blue-50 border border-blue-200' };
+    }
+
+    // Days (up to 2 weeks)
+    if (diffDays < 14) {
+      return { label: t.days(diffDays), className: 'text-sky-600 bg-sky-50 border border-sky-200' };
+    }
+
+    // Weeks (up to ~2 months)
+    if (diffDays < 60) {
+      const weeks = Math.round(diffDays / 7);
+      return { label: t.weeks(weeks), className: 'text-violet-600 bg-violet-50 border border-violet-200' };
+    }
+
+    // Months
+    const months = Math.round(diffDays / 30);
+    return { label: t.months(months), className: 'text-emerald-600 bg-emerald-50 border border-emerald-200' };
+  }, [t]);
 
   if (status === 'loading' || loading) {
     return (
@@ -156,7 +218,17 @@ export default function VocabularyPage() {
 
   return (
     <AppLayout lang={lang}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundImage: "url('/images/background3.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          zIndex: -1,
+        }}
+      />
+      <div className="relative max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -221,7 +293,7 @@ export default function VocabularyPage() {
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500">
+            <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(6rem,auto)_2.5rem] gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500">
               <div>{t.word}</div>
               <div>{t.translation}</div>
               <div className="text-center">{t.nextReview}</div>
@@ -230,21 +302,24 @@ export default function VocabularyPage() {
             <div className="divide-y divide-gray-100">
               {words.map((word) => {
                 const reviewStatus = getReviewStatus(word.nextReviewDate);
+                const snippet = word.sourceSentence
+                  ? extractSentence(word.sourceSentence, word.word)
+                  : null;
                 return (
                   <div
                     key={word.id}
-                    className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 p-4 items-center hover:bg-gray-50 transition-colors"
+                    className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(6rem,auto)_2.5rem] gap-4 p-4 items-center hover:bg-gray-50 transition-colors"
                   >
-                    <div>
-                      <p className="font-medium text-gray-900">{word.word}</p>
-                      {word.sourceSentence && (
-                        <p className="text-xs text-gray-400 truncate mt-0.5" title={word.sourceSentence}>
-                          {word.sourceSentence}
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 break-words">{word.word}</p>
+                      {snippet && (
+                        <p className="text-xs text-gray-400 mt-0.5 break-words line-clamp-2" title={word.sourceSentence!}>
+                          {snippet}
                         </p>
                       )}
                     </div>
-                    <p className="text-gray-600">{word.translation}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${reviewStatus.className}`}>
+                    <p className="text-gray-600 min-w-0 break-words">{word.translation}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap text-center ${reviewStatus.className}`}>
                       {reviewStatus.label}
                     </span>
                     <button

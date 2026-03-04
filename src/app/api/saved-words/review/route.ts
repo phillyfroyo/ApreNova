@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (quality === undefined || quality < 0 || quality > 5) {
+    if (quality === undefined || quality < 1 || quality > 4) {
       return NextResponse.json(
-        { error: 'Quality must be between 0 and 5' },
+        { error: 'Quality must be between 1 and 4' },
         { status: 400 }
       );
     }
@@ -54,12 +54,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate new SM-2 values
+    // Calculate new FSRS values
     const sm2Result = calculateSM2({
       quality,
       repetitions: savedWord.repetitions,
       easeFactor: savedWord.easeFactor,
       interval: savedWord.interval,
+      stability: savedWord.stability,
     });
 
     // Update the saved word and create review log in a transaction
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
           easeFactor: sm2Result.easeFactor,
           interval: sm2Result.interval,
           nextReviewDate: sm2Result.nextReviewDate,
+          stability: sm2Result.stability,
         },
       }),
       prisma.reviewLog.create({

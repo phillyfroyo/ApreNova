@@ -1,5 +1,19 @@
 // lib/getStoryMap.ts
-import { getContentFromRegistry } from "./contentRegistry";
+
+/**
+ * Try to load story content from either split-chapter format (index.ts) or single-file format (content.ts)
+ */
+async function loadLevelContent(storySlug: string, level: string) {
+  // Try split-chapter format first (index.ts)
+  try {
+    const indexFile = await import(`@/content/${storySlug}/${level}/index.ts`);
+    return indexFile.default || indexFile.levelContent;
+  } catch {
+    // Fall back to single-file format (content.ts)
+    const consolidatedFile = await import(`@/content/${storySlug}/${level}/content.ts`);
+    return consolidatedFile.default || consolidatedFile.levelContent;
+  }
+}
 
 /** Poem info for anthology navigation */
 interface PoemNavInfo {
@@ -22,11 +36,7 @@ export async function getStoryMap(storySlug: string, level: string): Promise<{
   structureType?: "prose" | "anthology" | "epic" | "script";
 }> {
   try {
-    const levelContent = getContentFromRegistry(storySlug, level);
-    if (!levelContent) {
-      throw new Error(`Content not found in registry: ${storySlug}/${level}`);
-    }
-
+    const levelContent = await loadLevelContent(storySlug, level);
     const chapters = Object.keys(levelContent.chapters).map((chapterKey) => {
       const chapterNum = parseInt(chapterKey);
       const chapterData = levelContent.chapters[chapterNum];
