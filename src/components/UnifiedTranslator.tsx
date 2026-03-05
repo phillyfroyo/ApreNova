@@ -9,6 +9,40 @@ import { t } from '@/lib/t';
 import type { Language } from "@/types/i18n";
 
 
+
+function VosotrosRow({ leftPronoun, leftForm, rightForm, hasVosotros }: {
+  leftPronoun: string; leftForm: string; rightForm: string; hasVosotros: boolean;
+}) {
+  const [showVosotros, setShowVosotros] = useState(false);
+  return (
+    <>
+      <tr>
+        <td className="text-gray-500 pr-1 py-0.5 whitespace-nowrap">{leftPronoun}</td>
+        <td className="text-gray-900 pr-4 py-0.5">{leftForm}</td>
+        {showVosotros ? (
+          <>
+            <td className="text-gray-500 pr-1 py-0.5 whitespace-nowrap">vosotros</td>
+            <td className="text-gray-900 py-0.5">{rightForm}</td>
+          </>
+        ) : (
+          <td colSpan={2} className="py-0.5">
+            {hasVosotros && (
+              <button
+                onClick={() => setShowVosotros(true)}
+                className="flex items-center gap-1 text-blue-400 hover:text-blue-600 w-full"
+                data-translation-control="vosotros"
+              >
+                <span className="flex-1 border-b border-blue-300" />
+                <span className="text-[10px]">&#9660;</span>
+              </button>
+            )}
+          </td>
+        )}
+      </tr>
+    </>
+  );
+}
+
 interface Props {
   sentence: string;
   staticTranslation?: string; // Pre-existing translation to use when full line is selected (avoids GPT call)
@@ -42,13 +76,9 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   const [internalEndIdx, setInternalEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
-  const [enhancedTranslation, setEnhancedTranslation] = useState<{
-    contextTranslation?: string;
-    isDerivative?: boolean;
-    rootWord?: string;
-    rootTranslation?: string;
-    otherCommonTranslations?: string[];
-  } | null>(null);
+  const [enhancedTranslation, setEnhancedTranslation] = useState<{    contextTranslation?: string;    isDerivative?: boolean;    rootWord?: string;    rootTranslation?: string;    otherCommonTranslations?: string[];    partOfSpeech?: string;
+    subject?: string;
+    subjectTranslation?: string;    derivatives?: Array<{      pos: string;      word: string;      translation: string;      example: { en: string; es: string };    }>;    verbChart?: {      tense: string;      infinitive: string;      conjugations: Record<string, string>;    };  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [authError, setAuthError] = useState(false);
@@ -208,7 +238,12 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
             isDerivative: data.isDerivative,
             rootWord: data.rootWord,
             rootTranslation: data.rootTranslation,
-            otherCommonTranslations: data.otherCommonTranslations
+            otherCommonTranslations: data.otherCommonTranslations,
+            partOfSpeech: data.partOfSpeech,
+            subject: data.subject,
+            subjectTranslation: data.subjectTranslation,
+            derivatives: data.derivatives,
+            verbChart: data.verbChart,
           });
           setTranslations(data.translations || [data.contextTranslation]);
         } else {
@@ -374,6 +409,8 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
 
 const fetchExample = async (translation: string) => {
   const selected = words.slice(startIdx!, endIdx! + 1).join(" ");
+  // sourceWord is always English, targetWord is always Spanish
+  // regardless of language direction
   const sourceWord = isSpanishToEnglish ? translation : selected;
   const targetWord = isSpanishToEnglish ? selected : translation;
 
@@ -388,8 +425,8 @@ const fetchExample = async (translation: string) => {
 
   try {
  const payload = {
-  spanishWord: currentLang === "es" ? sourceWord : targetWord,
-  englishWord: currentLang === "es" ? targetWord : sourceWord,
+  spanishWord: targetWord,
+  englishWord: sourceWord,
   originalSentence: sentence,
   level: currentLevel,
 };
@@ -572,9 +609,51 @@ useEffect(() => {
               {/* Enhanced single word translation format */}
               {enhancedTranslation && startIdx === endIdx ? (
                 <>
-                  <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
+                  {enhancedTranslation.partOfSpeech ? (() => {
+                    const posMap: Record<string, string> = {
+                      noun: 'sustantivo', verb: 'verbo', adjective: 'adjetivo',
+                      adverb: 'adverbio', preposition: 'preposición', pronoun: 'pronombre',
+                      conjunction: 'conjunción', determiner: 'determinante',
+                    };
+                    const tenseToEnglish: Record<string, string> = {
+                      'Presente': 'present', 'Pretérito': 'simple past', 'Preterito': 'simple past',
+                      'Imperfecto': 'imperfect', 'Futuro': 'future', 'Futuro Simple': 'simple future',
+                      'Condicional': 'conditional', 'Presente Perfecto': 'present perfect',
+                      'Pretérito Perfecto': 'present perfect', 'Pluscuamperfecto': 'past perfect',
+                      'Pretérito Pluscuamperfecto': 'past perfect', 'Futuro Perfecto': 'future perfect',
+                      'Subjuntivo Presente': 'present subjunctive', 'Subjuntivo Imperfecto': 'imperfect subjunctive',
+                      'Imperativo': 'imperative', 'Presente Progresivo': 'present progressive',
+                      'Pretérito Progresivo': 'past progressive',
+                    };
+                    const tenseToSpanish: Record<string, string> = {
+                      'Present Simple': 'presente simple', 'Simple Present': 'presente simple',
+                      'Past Simple': 'pasado simple', 'Simple Past': 'pasado simple',
+                      'Present Continuous': 'presente continuo', 'Present Progressive': 'presente progresivo',
+                      'Past Continuous': 'pasado continuo', 'Past Progressive': 'pasado progresivo',
+                      'Present Perfect': 'presente perfecto', 'Past Perfect': 'pasado perfecto',
+                      'Future Simple': 'futuro simple', 'Simple Future': 'futuro simple',
+                      'Future': 'futuro', 'Conditional': 'condicional',
+                      'Future Perfect': 'futuro perfecto', 'Imperative': 'imperativo',
+                    };
+                    const posLabel = currentLang === 'es'
+                      ? (posMap[enhancedTranslation.partOfSpeech!] || enhancedTranslation.partOfSpeech)
+                      : enhancedTranslation.partOfSpeech;
+                    let tenseLabel = '';
+                    if (enhancedTranslation.partOfSpeech === 'verb' && enhancedTranslation.verbChart?.tense) {
+                      const tense = enhancedTranslation.verbChart.tense;
+                      const nativeMap = currentLang === 'en' ? tenseToEnglish : tenseToSpanish;
+                      const nativeTense = nativeMap[tense];
+                      tenseLabel = nativeTense ? `, ${tense} (${nativeTense})` : `, ${tense}`;
+                    }
+                    return (
+                      <p className="text-xs text-gray-500 italic mb-0.5">{posLabel}{tenseLabel}</p>
+                    );
+                  })() : (
+                    <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
+                  )}
                   <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
-                    <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.contextTranslation}
+                    {enhancedTranslation.subject && <span className="font-medium text-gray-500">{enhancedTranslation.subject} </span>}
+                    <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.subjectTranslation && <span className="text-gray-500">{enhancedTranslation.subjectTranslation} </span>}{enhancedTranslation.contextTranslation}
                   </div>
 
                   {enhancedTranslation.isDerivative && enhancedTranslation.rootWord && (
@@ -626,6 +705,96 @@ useEffect(() => {
                       </ul>
                     </>
                   )}
+
+                  {/* Derivatives / Word Family */}
+                  {enhancedTranslation.derivatives && enhancedTranslation.derivatives.length > 0 && (
+                    <div className="mt-3 border-t pt-2">
+                      <p className="font-semibold text-sm text-gray-700 mb-1">Word Family:</p>
+                      <div className="space-y-2">
+                        {enhancedTranslation.derivatives.map((d, i) => (
+                          <div key={i} className="text-sm">
+                            <span className="text-gray-500 italic text-xs">({d.pos})</span>{' '}
+                            <span className="font-medium">{d.word}</span>{' = '}
+                            <span className="text-gray-800">{d.translation}</span>
+                            {d.example && (
+                              <div className="ml-4 mt-0.5 text-xs text-gray-500">
+                                {showSpanishFirst ? (
+                                  <>
+                                    <p>&quot;{d.example.es}&quot;</p>
+                                    <p className="italic">&quot;{d.example.en}&quot;</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p>&quot;{d.example.en}&quot;</p>
+                                    <p className="italic">&quot;{d.example.es}&quot;</p>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verb Conjugation Chart - only for word families with verb forms */}
+                  {enhancedTranslation.verbChart && !["pronoun", "preposition", "conjunction", "determiner"].includes(enhancedTranslation.partOfSpeech || "") && (() => {
+                    const c = enhancedTranslation.verbChart!.conjugations;
+                    const isSpanish = 'yo' in c;
+                    const pairs: [string, string][] = isSpanish
+                      ? [
+                          ['yo', 'nosotros'],
+                          ['tú', 'vosotros'],
+                          ['él/ella/usted', 'ellos/ellas/ustedes'],
+                        ]
+                      : [
+                          ['I', 'we'],
+                          ['you', 'you all'],
+                          ['he/she/it', 'they'],
+                        ];
+                    const hasVosotros = isSpanish && c['vosotros'];
+                    return (
+                    <div className="mt-3 border-t pt-2">
+                      <p className="font-semibold text-sm text-gray-700 mb-1">
+                        {enhancedTranslation.verbChart!.infinitive} &mdash; {enhancedTranslation.verbChart!.tense}
+                      </p>
+                      <table className="text-sm w-full border-collapse">
+                        <tbody>
+                          {pairs.map(([left, right], i) => {
+                            const isVosotrosRow = right === 'vosotros';
+                            if (isVosotrosRow) {
+                              return (
+                                <VosotrosRow
+                                  key={i}
+                                  leftPronoun={left}
+                                  leftForm={c[left] || ''}
+                                  rightForm={c['vosotros'] || ''}
+                                  hasVosotros={!!hasVosotros}
+                                />
+                              );
+                            }
+                            const renderPronoun = (p: string) => {
+                              if (p.includes('/usted')) {
+                                const [main, rest] = p.split('/usted');
+                                const suffix = rest || '';
+                                return <span className="leading-tight inline-block">{main}<br/>usted{suffix}</span>;
+                              }
+                              return p;
+                            };
+                            return (
+                              <tr key={i}>
+                                <td className="text-gray-500 pr-1 py-0.5 align-top">{renderPronoun(left)}</td>
+                                <td className="text-gray-900 pr-4 py-0.5 align-top">{c[left] || ''}</td>
+                                <td className="text-gray-500 pr-1 py-0.5 align-top">{renderPronoun(right)}</td>
+                                <td className="text-gray-900 py-0.5 align-top">{c[right] || ''}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    );
+                  })()}
                 </>
               ) : (
                 /* Legacy format for phrases and fallback */

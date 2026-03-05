@@ -11,7 +11,8 @@ import { authOptions } from "@/lib/authOptions";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
-const cache = new Map<string, { translations: string[] }>();
+// Keyed on word|sentence|level for context-dependent responses
+const cache = new Map<string, any>();
 
 export async function POST(req: NextRequest) {
   // Require authentication for AI API calls
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   const { word, sentence, level, context } = await req.json();
 
-  console.log("🧪 translate-word input:", { word, level });
+  console.log("translate-word input:", { word, level });
 
   if (!word) {
     return NextResponse.json({ error: "Missing word." }, { status: 400 });
@@ -35,13 +36,8 @@ export async function POST(req: NextRequest) {
     ? getWordPromptToEnglish(word, sentence, level, context)
     : getWordPrompt(word, sentence, level, context);
 
-    const fullPrompt = `${prompt}
-
-      Spanish Word: ${word}
-      Sentence: ${sentence}
-    `;
-
-  const cacheKey = `${word.toLowerCase()}|${level ?? 2}`;
+  // Cache key includes sentence for context-dependent POS/verb chart
+  const cacheKey = `${word.toLowerCase()}|${(sentence || '').toLowerCase().slice(0, 100)}|${level ?? 2}`;
   if (cache.has(cacheKey)) {
     return NextResponse.json(cache.get(cacheKey));
   }
@@ -49,7 +45,6 @@ export async function POST(req: NextRequest) {
   const messages: ChatCompletionMessageParam[] = [
     { role: "user", content: `${prompt}\n\nWord: \"${word}\"` },
   ];
-
 
   try {
     const completion = await openai.chat.completions.create({
@@ -62,7 +57,7 @@ export async function POST(req: NextRequest) {
     logOpenAICost("translate-word", "gpt-4o", completion.usage, { userId: session.user.id });
 
     const reply = completion.choices[0]?.message?.content || "";
-    console.log("🧠 GPT raw reply:", reply);
+    console.log("GPT raw reply:", reply);
 
     const cleanReply = reply.replace(/```json|```/g, "").trim();
 
@@ -71,7 +66,7 @@ export async function POST(req: NextRequest) {
     try {
       const raw = JSON.parse(cleanReply);
       
-      // Handle new enhanced format
+      // Handle enhanced format with new fields
       if (typeof raw === "object" && raw.contextTranslation) {
         result = {
           contextTranslation: raw.contextTranslation,
@@ -79,6 +74,11 @@ export async function POST(req: NextRequest) {
           rootWord: raw.rootWord || null,
           rootTranslation: raw.rootTranslation || null,
           otherCommonTranslations: raw.otherCommonTranslations || [],
+          partOfSpeech: raw.partOfSpeech || null,
+          subject: raw.subject || null,
+          subjectTranslation: raw.subjectTranslation || null,
+          derivatives: raw.derivatives || [],
+          verbChart: raw.verbChart || null,
           // Legacy support - map contextTranslation to first item in translations
           translations: [raw.contextTranslation, ...(raw.otherCommonTranslations || [])]
         };
@@ -91,6 +91,11 @@ export async function POST(req: NextRequest) {
           rootWord: null,
           rootTranslation: null,
           otherCommonTranslations: raw.otherCommonTranslations || [],
+          partOfSpeech: null,
+          subject: null,
+          subjectTranslation: null,
+          derivatives: [],
+          verbChart: null,
           translations: [raw.primary, ...(raw.otherCommonTranslations || [])]
         };
       } else if (Array.isArray(raw)) {
@@ -100,23 +105,27 @@ export async function POST(req: NextRequest) {
           rootWord: null,
           rootTranslation: null,
           otherCommonTranslations: raw.slice(1) || [],
+          partOfSpeech: null,
+          subject: null,
+          subjectTranslation: null,
+          derivatives: [],
+          verbChart: null,
           translations: raw
         };
       } else {
         throw new Error("Invalid translation format");
       }
     } catch (parseError) {
-      console.error("❌ Failed to parse GPT response:", parseError);
+      console.error("Failed to parse GPT response:", parseError);
       return NextResponse.json({ error: "Invalid GPT translation format." }, { status: 500 });
     }
 
+    console.log("Parsed result subject:", result.subject, result.subjectTranslation);
     cache.set(cacheKey, result);
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error("❌ OpenAI error:", err);
+    console.error("OpenAI error:", err);
     return NextResponse.json({ error: "Failed to fetch translation." }, { status: 500 });
   }
 }
-
-

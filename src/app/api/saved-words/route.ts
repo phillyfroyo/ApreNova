@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
           sourceSentence: true,
           translatedSentence: true,
           storySlug: true,
+          enrichedData: true,
           easeFactor: true,
           interval: true,
           repetitions: true,
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { word, translation, sourceSentence, translatedSentence, storySlug } = body;
+    const { word, translation, sourceSentence, translatedSentence, storySlug, enrichedData } = body;
 
     if (!word || !translation) {
       return NextResponse.json(
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
         sourceSentence: sourceSentence?.trim() || null,
         translatedSentence: translatedSentence?.trim() || null,
         storySlug: storySlug || null,
+        enrichedData: enrichedData || null,
         // SM-2 defaults are set in schema
       },
     });

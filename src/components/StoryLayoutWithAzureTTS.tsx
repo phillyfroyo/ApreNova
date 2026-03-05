@@ -509,6 +509,7 @@ export default function StoryLayoutWithAzureTTS({
     try {
       let word: string;
       let translation: string;
+      let enrichedData: any = null;
 
       const existingData = translationData[lineIndex];
 
@@ -572,6 +573,19 @@ export default function StoryLayoutWithAzureTTS({
         if (!translation) {
           throw new Error('Failed to get translation');
         }
+
+        // Store enriched data for saving
+        if (isSingleWord && translateData) {
+          enrichedData = {
+            partOfSpeech: translateData.partOfSpeech,
+            derivatives: translateData.derivatives,
+            verbChart: translateData.verbChart,
+            isDerivative: translateData.isDerivative,
+            rootWord: translateData.rootWord,
+            rootTranslation: translateData.rootTranslation,
+            otherCommonTranslations: translateData.otherCommonTranslations,
+          };
+        }
       }
 
       // Save the word
@@ -584,6 +598,7 @@ export default function StoryLayoutWithAzureTTS({
           sourceSentence: sentence,
           translatedSentence: translatedSentence || null,
           storySlug,
+          enrichedData,
         }),
       });
 
@@ -1900,6 +1915,9 @@ export default function StoryLayoutWithAzureTTS({
                             rootWord: data.rootWord,
                             rootTranslation: data.rootTranslation,
                             otherCommonTranslations: data.otherCommonTranslations,
+                            partOfSpeech: data.partOfSpeech,
+                            derivatives: data.derivatives,
+                            verbChart: data.verbChart,
                           } : undefined,
                         }
                       }));
