@@ -10,39 +10,6 @@ import type { Language } from "@/types/i18n";
 
 
 
-function VosotrosRow({ leftPronoun, leftForm, rightForm, hasVosotros }: {
-  leftPronoun: string; leftForm: string; rightForm: string; hasVosotros: boolean;
-}) {
-  const [showVosotros, setShowVosotros] = useState(false);
-  return (
-    <>
-      <tr>
-        <td className="text-gray-500 pr-1 py-0.5 whitespace-nowrap">{leftPronoun}</td>
-        <td className="text-gray-900 pr-4 py-0.5">{leftForm}</td>
-        {showVosotros ? (
-          <>
-            <td className="text-gray-500 pr-1 py-0.5 whitespace-nowrap">vosotros</td>
-            <td className="text-gray-900 py-0.5">{rightForm}</td>
-          </>
-        ) : (
-          <td colSpan={2} className="py-0.5">
-            {hasVosotros && (
-              <button
-                onClick={() => setShowVosotros(true)}
-                className="flex items-center gap-1 text-blue-400 hover:text-blue-600 w-full"
-                data-translation-control="vosotros"
-              >
-                <span className="flex-1 border-b border-blue-300" />
-                <span className="text-[10px]">&#9660;</span>
-              </button>
-            )}
-          </td>
-        )}
-      </tr>
-    </>
-  );
-}
-
 interface Props {
   sentence: string;
   staticTranslation?: string; // Pre-existing translation to use when full line is selected (avoids GPT call)
@@ -613,7 +580,7 @@ useEffect(() => {
                     const posMap: Record<string, string> = {
                       noun: 'sustantivo', verb: 'verbo', adjective: 'adjetivo',
                       adverb: 'adverbio', preposition: 'preposición', pronoun: 'pronombre',
-                      conjunction: 'conjunción', determiner: 'determinante',
+                      conjunction: 'conjunción', determiner: 'determinante', 'auxiliary verb': 'verbo auxiliar', 'modal verb': 'verbo modal',
                     };
                     const tenseToEnglish: Record<string, string> = {
                       'Presente': 'present', 'Pretérito': 'simple past', 'Preterito': 'simple past',
@@ -639,8 +606,9 @@ useEffect(() => {
                       ? (posMap[enhancedTranslation.partOfSpeech!] || enhancedTranslation.partOfSpeech)
                       : enhancedTranslation.partOfSpeech;
                     let tenseLabel = '';
-                    if (enhancedTranslation.partOfSpeech === 'verb' && enhancedTranslation.verbChart?.tense) {
-                      const tense = enhancedTranslation.verbChart.tense;
+                    if ((enhancedTranslation.partOfSpeech === 'verb' || enhancedTranslation.partOfSpeech === 'auxiliary verb' || enhancedTranslation.partOfSpeech === 'modal verb') && enhancedTranslation.verbChart?.tense) {
+                      const rawTense = enhancedTranslation.verbChart.tense;
+                      const tense = rawTense.replace(/, (modal verb|auxiliary verb)$/i, '').trim();
                       const nativeMap = currentLang === 'en' ? tenseToEnglish : tenseToSpanish;
                       const nativeTense = nativeMap[tense];
                       tenseLabel = nativeTense ? `, ${tense} (${nativeTense})` : `, ${tense}`;
@@ -652,7 +620,7 @@ useEffect(() => {
                     <p className="font-semibold">{t(currentLang, "translator", "translation")}:</p>
                   )}
                   <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
-                    {enhancedTranslation.subject && <span className="font-medium text-gray-500">{enhancedTranslation.subject} </span>}
+                    {enhancedTranslation.subject && !getCleanSelectedText().toLowerCase().startsWith(enhancedTranslation.subject.toLowerCase()) && <span className="font-medium text-gray-500">{enhancedTranslation.subject} </span>}
                     <span className="font-medium">{getCleanSelectedText()}</span> = {enhancedTranslation.subjectTranslation && <span className="text-gray-500">{enhancedTranslation.subjectTranslation} </span>}{enhancedTranslation.contextTranslation}
                   </div>
 
@@ -752,41 +720,27 @@ useEffect(() => {
                           ['you', 'you all'],
                           ['he/she/it', 'they'],
                         ];
-                    const hasVosotros = isSpanish && c['vosotros'];
+                    const selectedWord = getCleanSelectedText().toLowerCase();
                     return (
                     <div className="mt-3 border-t pt-2">
                       <p className="font-semibold text-sm text-gray-700 mb-1">
                         {enhancedTranslation.verbChart!.infinitive} &mdash; {enhancedTranslation.verbChart!.tense}
                       </p>
-                      <table className="text-sm w-full border-collapse">
+                      <table className="text-sm w-full border-collapse border border-gray-200">
                         <tbody>
                           {pairs.map(([left, right], i) => {
-                            const isVosotrosRow = right === 'vosotros';
-                            if (isVosotrosRow) {
-                              return (
-                                <VosotrosRow
-                                  key={i}
-                                  leftPronoun={left}
-                                  leftForm={c[left] || ''}
-                                  rightForm={c['vosotros'] || ''}
-                                  hasVosotros={!!hasVosotros}
-                                />
-                              );
-                            }
-                            const renderPronoun = (p: string) => {
-                              if (p.includes('/usted')) {
-                                const [main, rest] = p.split('/usted');
-                                const suffix = rest || '';
-                                return <span className="leading-tight inline-block">{main}<br/>usted{suffix}</span>;
-                              }
-                              return p;
-                            };
+                            const leftForm = c[left] || '';
+                            const rightForm = c[right] || '';
+                            const leftMatch = leftForm.toLowerCase() === selectedWord;
+                            const rightMatch = rightForm.toLowerCase() === selectedWord;
+                            const leftLabel = left;
+                            const rightLabel = right === 'vosotros' ? 'vosotros (Spain)' : right;
                             return (
-                              <tr key={i}>
-                                <td className="text-gray-500 pr-1 py-0.5 align-top">{renderPronoun(left)}</td>
-                                <td className="text-gray-900 pr-4 py-0.5 align-top">{c[left] || ''}</td>
-                                <td className="text-gray-500 pr-1 py-0.5 align-top">{renderPronoun(right)}</td>
-                                <td className="text-gray-900 py-0.5 align-top">{c[right] || ''}</td>
+                              <tr key={i} className="border-b border-gray-200 last:border-b-0">
+                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (leftMatch ? " bg-yellow-100" : "")}>{leftLabel}</td>
+                                <td className={"px-2 py-1.5 border-r border-gray-300" + (leftMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{leftForm}</td>
+                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (rightMatch ? " bg-yellow-100" : "")}>{rightLabel}</td>
+                                <td className={"px-2 py-1.5" + (rightMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{rightForm}</td>
                               </tr>
                             );
                           })}

@@ -1,14 +1,13 @@
 // src/app/api/translate-word/route.ts
-import { OpenAI } from "openai";
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import Anthropic from "@anthropic-ai/sdk";
 import { getWordPrompt } from "@/lib/getWordPrompt";
 import { getWordPromptToEnglish } from "@/lib/getWordPromptToEnglish";
 import { NextRequest, NextResponse } from 'next/server';
-import { logOpenAICost } from "@/lib/cost-tracker";
+import { logAnthropicCost } from "@/lib/cost-tracker";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // TEMP: Simple in-memory cache (swap with Redis, KV, etc.)
 // Keyed on word|sentence|level for context-dependent responses
@@ -42,22 +41,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(cache.get(cacheKey));
   }
 
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "user", content: `${prompt}\n\nWord: \"${word}\"` },
-  ];
-
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
       temperature: 0.3,
+      messages: [
+        { role: "user", content: `${prompt}\n\nWord: "${word}"` },
+      ],
     });
 
     // Log cost (fire-and-forget)
-    logOpenAICost("translate-word", "gpt-4o", completion.usage, { userId: session.user.id });
+    logAnthropicCost("translate-word", "claude-sonnet-4-20250514", message.usage, { userId: session.user.id });
 
-    const reply = completion.choices[0]?.message?.content || "";
-    console.log("GPT raw reply:", reply);
+    const reply = message.content[0]?.type === "text" ? message.content[0].text : "";
+    console.log("Claude raw reply:", reply);
 
     const cleanReply = reply.replace(/```json|```/g, "").trim();
 
@@ -116,16 +114,15 @@ export async function POST(req: NextRequest) {
         throw new Error("Invalid translation format");
       }
     } catch (parseError) {
-      console.error("Failed to parse GPT response:", parseError);
-      return NextResponse.json({ error: "Invalid GPT translation format." }, { status: 500 });
+      console.error("Failed to parse Claude response:", parseError);
+      return NextResponse.json({ error: "Invalid translation format." }, { status: 500 });
     }
 
-    console.log("Parsed result subject:", result.subject, result.subjectTranslation);
     cache.set(cacheKey, result);
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error("OpenAI error:", err);
+    console.error("Claude API error:", err);
     return NextResponse.json({ error: "Failed to fetch translation." }, { status: 500 });
   }
 }
