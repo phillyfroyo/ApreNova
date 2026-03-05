@@ -21,6 +21,7 @@ type SavedWord = {
   stability: number;
   nextReviewDate: string;
   createdAt: string;
+  enrichedData?: any;
 };
 
 type VocabStats = {
@@ -85,6 +86,13 @@ const content = {
     weeks: (n: number) => `${n} semana${n === 1 ? '' : 's'}`,
     months: (n: number) => `${n} mes${n === 1 ? '' : 'es'}`,
   },
+};
+
+const posToSpanish: Record<string, string> = {
+  noun: 'sustantivo', verb: 'verbo', adjective: 'adjetivo',
+  adverb: 'adverbio', preposition: 'preposición', pronoun: 'pronombre',
+  conjunction: 'conjunción', determiner: 'determinante',
+  'auxiliary verb': 'verbo auxiliar', 'modal verb': 'verbo modal',
 };
 
 /**
@@ -306,7 +314,7 @@ export default function VocabularyPage() {
                   className="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="font-semibold text-gray-900 text-lg">{word.word}</p>
+                    <div className="flex items-center gap-2"><p className="font-semibold text-gray-900 text-lg">{word.word}</p>{word.enrichedData?.partOfSpeech && (<span className="text-xs italic text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{lang === 'es' ? word.enrichedData.partOfSpeech : (posToSpanish[word.enrichedData.partOfSpeech] || word.enrichedData.partOfSpeech)}</span>)}</div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${reviewStatus.className}`}>
                         {reviewStatus.label}
@@ -356,7 +364,7 @@ export default function VocabularyPage() {
                     className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(6rem,auto)_2.5rem] gap-4 p-4 items-center hover:bg-gray-50 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 break-words">{word.word}</p>
+                      <div className="flex items-center gap-2"><p className="font-medium text-gray-900 break-words">{word.word}</p>{word.enrichedData?.partOfSpeech && (<span className="text-xs italic text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{lang === 'es' ? word.enrichedData.partOfSpeech : (posToSpanish[word.enrichedData.partOfSpeech] || word.enrichedData.partOfSpeech)}</span>)}</div>
                       {snippet && (
                         <p className="text-xs text-gray-400 mt-0.5 break-words line-clamp-2" title={word.sourceSentence!}>
                           {snippet}

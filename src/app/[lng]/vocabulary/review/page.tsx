@@ -19,6 +19,7 @@ type SavedWord = {
   interval: number;
   repetitions: number;
   stability: number;
+  enrichedData?: any;
 };
 
 type ReviewResult = {
@@ -259,6 +260,7 @@ export default function VocabularyReviewPage() {
             interval={currentCard.interval}
             repetitions={currentCard.repetitions}
             stability={currentCard.stability}
+            enrichedData={currentCard.enrichedData}
             onRate={handleRate}
             lang={lang}
           />

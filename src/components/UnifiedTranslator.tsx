@@ -20,7 +20,7 @@ interface Props {
   onSelectionChange?: (selectedIndices: { start: number; end: number } | null) => void;
   onManualTranslate?: (translateFn: () => void) => void; // Provides manual translation function to parent
   onClearSelection?: (clearFn: () => void) => void; // Provides clear selection function to parent
-  onTranslationData?: (data: { word: string; translation: string } | null) => void; // Exposes current translation for saving
+  onTranslationData?: (data: { word: string; translation: string; enrichedData?: any } | null) => void; // Exposes current translation for saving
   // Context for better translations
   sentenceIndex?: number;
   contextSentences?: Array<{ es: string; en: string }>;
@@ -43,7 +43,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   const [internalEndIdx, setInternalEndIdx] = useState<number | null>(null);
   const [sentenceWidth, setSentenceWidth] = useState<number | null>(null);
   const [translations, setTranslations] = useState<string[]>([]);
-  const [enhancedTranslation, setEnhancedTranslation] = useState<{    contextTranslation?: string;    isDerivative?: boolean;    rootWord?: string;    rootTranslation?: string;    otherCommonTranslations?: string[];    partOfSpeech?: string;
+  const [enhancedTranslation, setEnhancedTranslation] = useState<{    contextTranslation?: string;    isDerivative?: boolean;    rootWord?: string;    rootTranslation?: string;    otherCommonTranslations?: Array<string | { translation: string; example?: { en: string; es: string } }>;    partOfSpeech?: string;
     subject?: string;
     subjectTranslation?: string;    derivatives?: Array<{      pos: string;      word: string;      translation: string;      example: { en: string; es: string };    }>;    verbChart?: {      tense: string;      infinitive: string;      conjugations: Record<string, string>;    };  } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,7 +89,17 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
     if (startIdx !== null && endIdx !== null && translations.length > 0) {
       const selectedText = words.slice(startIdx, endIdx + 1).join(" ").replace(/[.,!?;:()"]+/g, "");
       const translation = enhancedTranslation?.contextTranslation || translations[0];
-      onTranslationData?.({ word: selectedText, translation });
+      onTranslationData?.({ word: selectedText, translation, enrichedData: enhancedTranslation ? {
+        partOfSpeech: enhancedTranslation.partOfSpeech,
+        derivatives: enhancedTranslation.derivatives,
+        verbChart: enhancedTranslation.verbChart,
+        isDerivative: enhancedTranslation.isDerivative,
+        rootWord: enhancedTranslation.rootWord,
+        rootTranslation: enhancedTranslation.rootTranslation,
+        otherCommonTranslations: enhancedTranslation.otherCommonTranslations,
+        subject: enhancedTranslation.subject,
+        subjectTranslation: enhancedTranslation.subjectTranslation,
+      } : undefined });
     } else {
       onTranslationData?.(null);
     }
@@ -106,7 +116,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   const isSpanishToEnglish = currentLang === "en";
   const showSpanishFirst = currentLang === "en";
 
-  const [exampleMap, setExampleMap] = useState<{ [key: string]: { english: string; spanish: string } }>({});
+  const [visibleExamples, setVisibleExamples] = useState<Set<number>>(new Set());
 
 
   const getSelectedText = () => {
@@ -374,57 +384,14 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   setEndIdx(e);
   };
 
-const fetchExample = async (translation: string) => {
-  const selected = words.slice(startIdx!, endIdx! + 1).join(" ");
-  // sourceWord is always English, targetWord is always Spanish
-  // regardless of language direction
-  const sourceWord = isSpanishToEnglish ? translation : selected;
-  const targetWord = isSpanishToEnglish ? selected : translation;
-
-  if (exampleMap[translation]) {
-    setExampleMap((prev) => {
-      const updated = { ...prev };
-      delete updated[translation];
-      return updated;
+const toggleExample = (idx: number) => {
+    setVisibleExamples(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
     });
-    return;
-  }
-
-  try {
- const payload = {
-  spanishWord: targetWord,
-  englishWord: sourceWord,
-  originalSentence: sentence,
-  level: currentLevel,
-};
-
-console.log("📤 Example fetch payload:", payload);
-
-const res = await fetch(`/api/example-sentence?lang=${currentLang}`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload),
-});
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    setExampleMap((prev) => ({
-      ...prev,
-      [translation]: {
-        english: data.english,
-        spanish: data.spanish,
-      },
-    }));
-    console.log("🎯 Data from API:", data);
-  } catch (err: any) {
-    if (err.message === "Authentication required") {
-      setAuthError(true);
-    } else {
-      console.error("❌ Failed to fetch example:", err);
-    }
-  }
-};
+  };
 
   const isSelected = (i: number) => {
     // When parent signals no selection, immediately show deselected (syncs with save icon fade)
@@ -642,27 +609,32 @@ useEffect(() => {
                         {" "}{t(currentLang, "translator", "otherCommonUses")}:
                       </p>
                       <ul className="list-disc list-inside">
-                        {enhancedTranslation.otherCommonTranslations.map((t, i) => {
-                          const hasExample = !!exampleMap[t];
+                        {enhancedTranslation.otherCommonTranslations.map((item, i) => {
+                          const label = typeof item === 'string' ? item : item.translation;
+                          const example = typeof item === 'object' && item.example ? item.example : null;
                           return (
                             <li key={i}>
-                              <button
-                                onClick={() => fetchExample(t)}
-                                className="text-blue-600 hover:underline"
-                              >
-                                {t}
-                              </button>
-                              {hasExample && (
+                              {example ? (
+                                <button
+                                  onClick={() => toggleExample(i)}
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {label}
+                                </button>
+                              ) : (
+                                <span className="text-gray-800">{label}</span>
+                              )}
+                              {example && visibleExamples.has(i) && (
                                 <div className="ml-2 mt-1 text-sm">
                                   {showSpanishFirst ? (
                                     <>
-                                      <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
-                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
+                                      <p className="text-gray-900">&quot;{example.es}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{example.en}&quot;</p>
                                     </>
                                   ) : (
                                     <>
-                                      <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
-                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
+                                      <p className="text-gray-900">&quot;{example.en}&quot;</p>
+                                      <p className="text-gray-600 italic">&quot;{example.es}&quot;</p>
                                     </>
                                   )}
                                 </div>
@@ -767,34 +739,9 @@ useEffect(() => {
                         {" "}{t(currentLang, "translator", "otherCommonUses")}:
                       </p>
                       <ul className="list-disc list-inside">
-                        {translations.slice(1).map((t, i) => {
-                          const hasExample = !!exampleMap[t];
-                          return (
-                            <li key={i}>
-                              <button
-                                onClick={() => fetchExample(t)}
-                                className="text-blue-600 hover:underline"
-                              >
-                                {t}
-                              </button>
-                              {hasExample && (
-                                <div className="ml-2 mt-1 text-sm">
-                                  {showSpanishFirst ? (
-                                    <>
-                                      <p className="text-gray-900">&quot;{exampleMap[t].spanish}&quot;</p>
-                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].english}&quot;</p>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <p className="text-gray-900">&quot;{exampleMap[t].english}&quot;</p>
-                                      <p className="text-gray-600 italic">&quot;{exampleMap[t].spanish}&quot;</p>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </li>
-                          );
-                        })}
+                        {translations.slice(1).map((alt, i) => (
+                          <li key={i} className="text-gray-800">{alt}</li>
+                        ))}
                       </ul>
                     </>
                   )}

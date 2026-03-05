@@ -161,7 +161,7 @@ export default function StoryLayoutWithAzureTTS({
   const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
   const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
-  const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string } | null>>({});
+  const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string; enrichedData?: any } | null>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
   const [savingWord, setSavingWord] = useState<number | null>(null);
@@ -484,7 +484,7 @@ export default function StoryLayoutWithAzureTTS({
     setClearSelectionFunctions(prev => ({ ...prev, [index]: clearFn }));
   }, []);
 
-  const handleTranslationData = useCallback((index: number, data: { word: string; translation: string } | null) => {
+  const handleTranslationData = useCallback((index: number, data: { word: string; translation: string; enrichedData?: any } | null) => {
     setTranslationData(prev => ({ ...prev, [index]: data }));
   }, []);
 
@@ -517,6 +517,7 @@ export default function StoryLayoutWithAzureTTS({
         // Use existing translation (only if both word and translation are valid AND different)
         word = existingData.word;
         translation = existingData.translation;
+        enrichedData = existingData.enrichedData || null;
       } else {
         // Extract selected word and auto-translate
         // Use trimStart() to match UnifiedTranslator's word tokenization
@@ -584,6 +585,8 @@ export default function StoryLayoutWithAzureTTS({
             rootWord: translateData.rootWord,
             rootTranslation: translateData.rootTranslation,
             otherCommonTranslations: translateData.otherCommonTranslations,
+            subject: translateData.subject,
+            subjectTranslation: translateData.subjectTranslation,
           };
         }
       }

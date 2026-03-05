@@ -41,8 +41,11 @@ Optionally return one or two additional Spanish translations that represent func
   - should: deberia (advice/recommendation) vs. debio (past obligation)
   - must: debe (obligation) vs. debe de (assumption)
   Always include at least one alternate that shows a DIFFERENT function, not a variation of the same one.
-- Add a short 1-3 word parenthetical after each (e.g., "toca (contacto fisico)", "toca (instrumento musical)").
+- Add a short 1-3 word parenthetical after each translation label.
+- For each, provide an example sentence (8-15 words, appropriate for the CEFR level) showing that specific sense.
 - Target usage suitable for learners in Mexico.
+
+Return each as an object: { "translation": "toca (instrumento musical)", "example": { "en": "She plays the guitar every evening.", "es": "Ella toca la guitarra todas las noches." } }
 
 5. Word Family / Derivatives
 List common derivatives of this word in OTHER parts of speech (excluding the POS from section 1).
@@ -86,7 +89,7 @@ Example response for a non-verb word:
   "isDerivative": true,
   "rootWord": "interest",
   "rootTranslation": "interesar",
-  "otherCommonTranslations": ["fascinado (gran interes)"],
+  "otherCommonTranslations": [{"translation": "fascinado (gran interes)", "example": {"en": "He was fascinated by the old castle.", "es": "Estaba fascinado por el castillo antiguo."}}],
   "derivatives": [
     {
       "pos": "verb",
@@ -130,7 +133,7 @@ Example response for a verb:
   "isDerivative": true,
   "rootWord": "run",
   "rootTranslation": "correr",
-  "otherCommonTranslations": ["funciono (una maquina)"],
+  "otherCommonTranslations": [{"translation": "funciono (una maquina)", "example": {"en": "The machine ran all night without stopping.", "es": "La maquina funciono toda la noche sin parar."}}],
   "derivatives": [
     {
       "pos": "noun",

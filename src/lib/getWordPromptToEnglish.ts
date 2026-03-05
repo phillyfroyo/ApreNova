@@ -38,8 +38,11 @@ Optionally return one or two additional English translations that represent func
   - querer: want (desire) vs. will (willingness, "no quiso" = refused)
   - soler: used to (past habitual) vs. usually (present habitual)
   Always include at least one alternate that shows a DIFFERENT function, not a variation of the same one.
-- Add a short 1-3 word parenthetical after each (e.g., "touches (physical contact)", "plays (musical instrument)").
+- Add a short 1-3 word parenthetical after each translation label.
+- For each, provide an example sentence (8-15 words, appropriate for the CEFR level) showing that specific sense.
 - Target usage suitable for learners in the United States.
+
+Return each as an object: { "translation": "told (to someone)", "example": { "es": "Ella le dijo a su amigo la verdad.", "en": "She told her friend the truth." } }
 
 5. Word Family / Derivatives
 List common derivatives of this word in OTHER parts of speech (excluding the POS from section 1).
@@ -62,7 +65,7 @@ Rules:
 - If the word is a pronoun, preposition, conjunction, or determiner, or has no verb form in its word family, omit verbChart entirely.
 
 Use these Spanish subject pronouns in this exact order:
-"yo", "tu", "el/ella/usted", "nosotros", "vosotros", "ellos/ellas/ustedes"
+"yo", "tú", "él/ella/usted", "nosotros", "vosotros", "ellos/ellas/ustedes"
 
 Respond with valid JSON only. No prose, no markdown, no commentary.
 
@@ -75,7 +78,7 @@ Example response for a non-verb word:
   "isDerivative": true,
   "rootWord": "interesar",
   "rootTranslation": "to interest",
-  "otherCommonTranslations": ["fascinated (deep interest)"],
+  "otherCommonTranslations": [{"translation": "fascinated (deep interest)", "example": {"es": "Estaba fascinada por la historia del arte.", "en": "She was fascinated by the history of art."}}],
   "derivatives": [
     {
       "pos": "verb",
@@ -101,8 +104,8 @@ Example response for a non-verb word:
     "infinitive": "interesar",
     "conjugations": {
       "yo": "intereso",
-      "tu": "interesas",
-      "el/ella/usted": "interesa",
+      "tú": "interesas",
+      "él/ella/usted": "interesa",
       "nosotros": "interesamos",
       "vosotros": "interesais",
       "ellos/ellas/ustedes": "interesan"
@@ -119,7 +122,7 @@ Example response for a verb:
   "isDerivative": true,
   "rootWord": "correr",
   "rootTranslation": "to run",
-  "otherCommonTranslations": ["worked (a machine)"],
+  "otherCommonTranslations": [{"translation": "worked (a machine)", "example": {"es": "El motor corri\u00f3 sin problemas toda la noche.", "en": "The engine ran smoothly all night."}}],
   "derivatives": [
     {
       "pos": "noun",
@@ -136,8 +139,8 @@ Example response for a verb:
     "infinitive": "correr",
     "conjugations": {
       "yo": "corri",
-      "tu": "corriste",
-      "el/ella/usted": "corrio",
+      "tú": "corriste",
+      "él/ella/usted": "corrio",
       "nosotros": "corrimos",
       "vosotros": "corristeis",
       "ellos/ellas/ustedes": "corrieron"
