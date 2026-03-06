@@ -27,13 +27,14 @@ export default function AppLayout({ children, lang, hideNavigation = false, hide
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Initialize from localStorage synchronously to prevent flash
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('sidebarCollapsed') === 'true';
-    }
-    return false;
-  });
+  // Start collapsed to match most common state and avoid layout shift
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // Sync from localStorage after hydration
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebarCollapsed');
+    if (stored !== null) setSidebarCollapsed(stored === 'true');
+  }, []);
 
   const handleSidebarToggle = (collapsed: boolean) => {
     setSidebarCollapsed(collapsed);

@@ -87,7 +87,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   // Notify parent of translation data for saving vocabulary
   useEffect(() => {
     if (startIdx !== null && endIdx !== null && translations.length > 0) {
-      const selectedText = words.slice(startIdx, endIdx + 1).join(" ").replace(/[.,!?;:()"]+/g, "");
+      const selectedText = words.slice(startIdx, endIdx + 1).join(" ").replace(/[.,!?;:()"\u201C\u201D\u2018\u2019\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]+/g, "");
       const translation = enhancedTranslation?.contextTranslation || translations[0];
       onTranslationData?.({ word: selectedText, translation, enrichedData: enhancedTranslation ? {
         partOfSpeech: enhancedTranslation.partOfSpeech,
@@ -131,7 +131,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
       return "";
     }
     const selectedText = words.slice(startIdx, endIdx + 1).join(" ");
-    return selectedText.replace(/[.,!?;:()"]+/g, "");
+    return selectedText.replace(/[.,!?;:()"\u201C\u201D\u2018\u2019\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]+/g, "");
   };
 
   const getContextSentences = () => {
@@ -163,7 +163,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
     }
 
     const phrase = words.slice(start, end + 1).join(" ");
-    const cleanWord = phrase.replace(/[.,!?;:()"]+/g, "");
+    const cleanWord = phrase.replace(/[.,!?;:()"\u201C\u201D\u2018\u2019\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]+/g, "");
     const isSingleWord = start === end;
 
     const context = getContextSentences();

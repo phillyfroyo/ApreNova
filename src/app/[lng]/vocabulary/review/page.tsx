@@ -134,7 +134,8 @@ export default function VocabularyReviewPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="fixed inset-0 bg-cover bg-center -z-10" style={{ backgroundImage: "url('/images/background6.png')" }} />
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-gray-500">{t.loading}</p>
@@ -145,7 +146,9 @@ export default function VocabularyReviewPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-cover bg-center -z-10" style={{ backgroundImage: "url('/images/background6.png')" }} />
+        <div className="fixed inset-0 bg-cover bg-center -z-10" style={{ backgroundImage: "url('/images/background6.png')" }} />
         <div className="text-center max-w-md">
           <Trophy className="w-16 h-16 text-amber-400 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{t.noCards}</h1>
@@ -164,7 +167,7 @@ export default function VocabularyReviewPage() {
 
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -214,7 +217,8 @@ export default function VocabularyReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
+    <div className="min-h-screen bg-transparent p-4">
+      <div className="fixed inset-0 bg-cover bg-center -z-10" style={{ backgroundImage: "url('/images/background6.png')" }} />
       {/* Header */}
       <div className="max-w-md mx-auto mb-8">
         <div className="flex items-center justify-between mb-4">

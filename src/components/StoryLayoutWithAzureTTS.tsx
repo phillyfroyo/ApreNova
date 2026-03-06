@@ -523,7 +523,7 @@ export default function StoryLayoutWithAzureTTS({
         // Use trimStart() to match UnifiedTranslator's word tokenization
         const words = sentence.trimStart().split(' ');
         const selectedWords = words.slice(selection.start, selection.end + 1);
-        word = selectedWords.join(' ').replace(/[.,!?;:"""()]/g, '').trim();
+        word = selectedWords.join(' ').replace(/[.,!?;:"\u201C\u201D\u2018\u2019()\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]/g, '').trim();
 
         if (!word) {
           setSaveToast({ message: 'No word selected', type: 'error' });
