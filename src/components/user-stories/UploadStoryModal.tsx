@@ -247,7 +247,7 @@ export default function UploadStoryModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-6 sm:p-4 overflow-x-hidden">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -255,28 +255,28 @@ export default function UploadStoryModal() {
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-2xl flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">
+            <h2 className="text-xl font-semibold text-white">
               {t.myStories.uploadStory}
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-white/75 mt-1">
               {t.myStories.uploadSubtitle}
             </p>
           </div>
           <button
             onClick={handleClose}
             disabled={isUploading}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+            className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-6 flex-1 overflow-y-auto overflow-x-hidden">
           {/* Limit reached warning */}
           {stats && !canUpload && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">

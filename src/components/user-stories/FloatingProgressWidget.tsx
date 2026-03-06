@@ -865,7 +865,7 @@ export default function FloatingProgressWidget() {
           transform: "translateX(-50%)",
         }}
       >
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
         {/* Header - drag handle */}
         <div
           className={`px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center justify-between rounded-t-2xl ${
