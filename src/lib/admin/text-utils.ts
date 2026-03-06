@@ -111,39 +111,13 @@ export function cleanText(text: string, options: CleanTextOptions = {}): string 
     cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
   }
 
-  // Process line by line to remove quote wrapping
+  // Process line by line for whitespace normalization
   cleaned = cleaned
     .split("\n")
     .map(line => {
       // For poetry, preserve leading whitespace (indentation)
-      const trimmedLine = preserveWhitespace ? line.trimEnd() : line.trim();
-      let l = trimmedLine;
-
-      // Remove surrounding double quotes (straight and curly) from the trimmed content
-      const contentToCheck = l.trim();
-      if ((contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
-          (contentToCheck.startsWith('"') && contentToCheck.endsWith('"')) ||
-          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'")) ||
-          (contentToCheck.startsWith("'") && contentToCheck.endsWith("'"))) {
-        // Only unwrap if it's the whole line content
-        if (contentToCheck === l.trim()) {
-          const leadingSpace = preserveWhitespace ? l.match(/^\s*/)?.[0] || '' : '';
-          l = leadingSpace + contentToCheck.slice(1, -1);
-        }
-      }
-      // Handle lines that are just quotes
-      if (l.trim() === '""' || l.trim() === "''" || l.trim() === '""' || l.trim() === "''") {
-        return preserveWhitespace ? "" : "";
-      }
-      return l;
+      return preserveWhitespace ? line.trimEnd() : line.trim();
     })
-    .filter(line => line.length > 0 || line === "")
-    .join("\n");
-
-  // Final cleanup - remove any remaining quote-only lines
-  cleaned = cleaned
-    .split("\n")
-    .filter(line => !/^["'"'""'']+$/.test(line.trim()))
     .join("\n");
 
   // Only trim outer whitespace when NOT preserving whitespace

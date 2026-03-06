@@ -203,6 +203,12 @@ INDENTATION IS CRITICAL:
 - The rewritten text should be a substantial retelling, not a brief summary
 - Do NOT skip dialogue, descriptions, or character interactions
 
+DIALOGUE PUNCTUATION (CRITICAL):
+- If the original text contains dialogue with quotation marks ("..."), the rewrite MUST also include quotation marks
+- Preserve BOTH opening and closing quotation marks — never drop one or the other
+- Dialogue attribution (he said, she whispered, etc.) must remain with the dialogue
+- Do NOT convert direct speech to indirect speech (e.g., do NOT change "I am tired," she said → She said that she was tired)
+
 PARAGRAPH ALIGNMENT (CRITICAL):
 - Each paragraph in the input is prefixed with a marker like [P1], [P2], [P3], etc.
 - You MUST preserve these exact paragraph markers in your output
@@ -316,6 +322,10 @@ CRITICAL - LINE NUMBER PRESERVATION:
 - You MUST keep the same [N] prefix for each translated line
 - Each [N] line produces exactly ONE [N] translated line
 - Do NOT split, merge, or reorder lines
+
+DIALOGUE PUNCTUATION:
+- Preserve ALL quotation marks. If the original has "..." the translation MUST also have "..."
+- Never drop opening or closing quotation marks
 
 TEXT TO TRANSLATE:
 ${text}

@@ -330,6 +330,40 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
       // For prose: parse paragraph markers and reassemble with original spacing
       if (!isPoetry && contentParagraphCount > 0) {
         const parsedParagraphs = parseParagraphMarkers(rewrittenText, contentParagraphCount);
+
+        // Repair mismatched quotation marks by comparing with original paragraphs
+        // Match all quote types: straight ", curly " ", and guillemets « »
+        const ALL_QUOTES = /["\u201C\u201D\u00AB\u00BB]/g;
+        const OPEN_QUOTES = /^["\u201C\u00AB]/;
+        const CLOSE_QUOTES = /["\u201D\u00BB]\s*$/;
+        const contentSegments = segments.filter(s => s.type === 'content');
+        console.log(`[Rewrite] Quote repair: checking ${parsedParagraphs.length} paragraphs against ${contentSegments.length} originals`);
+        for (let i = 0; i < parsedParagraphs.length && i < contentSegments.length; i++) {
+          const original = contentSegments[i].text.trim();
+          let rewritten = parsedParagraphs[i];
+          const origQuotes = (original.match(ALL_QUOTES) || []).length;
+          const rewriteQuotes = (rewritten.match(ALL_QUOTES) || []).length;
+          if (origQuotes > 0) {
+            console.log(`[Rewrite] P${i + 1} quotes: original=${origQuotes}, rewrite=${rewriteQuotes}, orig starts with quote=${OPEN_QUOTES.test(original)}, rewrite starts with quote=${OPEN_QUOTES.test(rewritten)}`);
+          }
+          if (origQuotes > 0) {
+            // Check if opening quote is missing (regardless of total count)
+            if (OPEN_QUOTES.test(original) && !OPEN_QUOTES.test(rewritten)) {
+              const openChar = original.match(OPEN_QUOTES)![0];
+              rewritten = openChar + rewritten;
+            }
+            // Check if closing quote is missing (regardless of total count)
+            if (CLOSE_QUOTES.test(original) && !CLOSE_QUOTES.test(rewritten)) {
+              const closeChar = original.match(/(["\u201D\u00BB])\s*$/)![1];
+              rewritten = rewritten.trimEnd() + closeChar;
+            }
+            if (rewritten !== parsedParagraphs[i]) {
+              console.log(`[Rewrite] Repaired quotes in P${i + 1}: "${parsedParagraphs[i].substring(0, 50)}..." → "${rewritten.substring(0, 50)}..."`);
+              parsedParagraphs[i] = rewritten;
+            }
+          }
+        }
+
         rewrittenText = reassembleWithSpacing(segments, parsedParagraphs);
       }
 
