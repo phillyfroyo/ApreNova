@@ -246,7 +246,7 @@ export default function Flashcard({
     (enriched.isDerivative && enriched.rootWord) ||
     (enriched.otherCommonTranslations && enriched.otherCommonTranslations.length > 0) ||
     (enriched.derivatives && enriched.derivatives.length > 0) ||
-    (hasSpanishChart && !showConjugations)
+    (isVerb && hasSpanishChart && !showConjugations)
   );
   const showSpanishFirst = lang === 'en';
 
@@ -370,16 +370,16 @@ export default function Flashcard({
                 <AnimatePresence>
                   {showMoreInfo && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                      <div className="mt-2 bg-white rounded-xl border border-gray-200 p-5 text-[0.8125rem] leading-relaxed divide-y divide-gray-100 [&>*]:py-3 first:[&>*]:pt-0 last:[&>*]:pb-0">
+                      <div className="mt-2 bg-white rounded-xl border border-gray-200 p-5 text-sm leading-7 divide-y divide-gray-100 [&>*]:py-3 first:[&>*]:pt-0 last:[&>*]:pb-0">
                         {enriched.isDerivative && enriched.rootWord && (
                           <div>
-                            <p className="font-semibold text-gray-700 mb-1">{labels.rootWord}</p>
+                            <p className="font-semibold text-gray-700 mb-1.5 text-[0.9375rem]">{labels.rootWord}</p>
                             <p className="text-gray-600"><span className="font-medium">{enriched.rootWord}</span> = {enriched.rootTranslation}</p>
                           </div>
                         )}
                         {enriched.otherCommonTranslations && enriched.otherCommonTranslations.length > 0 && (
                           <div>
-                            <p className="font-semibold text-gray-700 mb-1">{labels.otherUses}</p>
+                            <p className="font-semibold text-gray-700 mb-1.5 text-[0.9375rem]">{labels.otherUses}</p>
                             <ul className="list-disc list-inside text-gray-600">
                               {enriched.otherCommonTranslations.map((item, i) => {
                                 const label = typeof item === 'string' ? item : item.translation;
@@ -388,7 +388,7 @@ export default function Flashcard({
                                   <li key={i}>
                                     {label}
                                     {example && (
-                                      <div className="ml-4 text-xs text-gray-400">
+                                      <div className="ml-4 text-[0.8125rem] text-gray-400 mt-1 leading-relaxed">
                                         {showSpanishFirst
                                           ? <><p>&quot;{highlightWord(example.es, word)}&quot;</p><p className="italic">&quot;{highlightWord(example.en, translation)}&quot;</p></>
                                           : <><p>&quot;{highlightWord(example.en, translation)}&quot;</p><p className="italic">&quot;{highlightWord(example.es, word)}&quot;</p></>}
@@ -402,14 +402,14 @@ export default function Flashcard({
                         )}
                         {enriched.derivatives && enriched.derivatives.length > 0 && (
                           <div>
-                            <p className="font-semibold text-gray-700 mb-1">{labels.wordFamily}</p>
-                            <div className="space-y-2.5">
+                            <p className="font-semibold text-gray-700 mb-1.5 text-[0.9375rem]">{labels.wordFamily}</p>
+                            <div className="space-y-3">
                               {enriched.derivatives.map((d, i) => (
                                 <div key={i} className="text-gray-600">
-                                  <span className="text-gray-400 italic text-xs">({d.pos})</span>{' '}
+                                  <span className="text-gray-400 italic text-[0.8125rem]">({d.pos})</span>{' '}
                                   <span className="font-medium">{d.word}</span> = {d.translation}
                                   {d.example && (
-                                    <div className="ml-4 text-xs text-gray-400 mt-1">
+                                    <div className="ml-4 text-[0.8125rem] text-gray-400 mt-1 leading-relaxed">
                                       {showSpanishFirst
                                         ? <><p>&quot;{highlightWord(d.example.es, d.word)}&quot;</p><p className="italic">&quot;{highlightWord(d.example.en, d.translation)}&quot;</p></>
                                         : <><p>&quot;{highlightWord(d.example.en, d.translation)}&quot;</p><p className="italic">&quot;{highlightWord(d.example.es, d.word)}&quot;</p></>}
@@ -420,9 +420,9 @@ export default function Flashcard({
                             </div>
                           </div>
                         )}
-                        {hasSpanishChart && !showConjugations && verbChart && (
+                        {isVerb && hasSpanishChart && !showConjugations && verbChart && (
                           <div>
-                            <p className="font-semibold text-gray-700 mb-1">{labels.conjugations}: {verbChart.infinitive} &mdash; {verbChart.tense}</p>
+                            <p className="font-semibold text-gray-700 mb-1.5 text-[0.9375rem]">{labels.conjugations}: {verbChart.infinitive} &mdash; {verbChart.tense}</p>
                             <table className="w-full text-sm border-collapse border border-gray-200 mt-1">
                               <tbody>
                                 {spanishPronounPairs.map(([left, right], i) => {
@@ -430,10 +430,10 @@ export default function Flashcard({
                                   const rightKey = Object.keys(verbChart.conjugations).find(k => stripAccents(k.toLowerCase()) === stripAccents(right.toLowerCase())) || right;
                                   return (
                                     <tr key={i} className="border-b border-gray-200 last:border-b-0">
-                                      <td className="text-gray-500 px-2 py-1 border-r border-gray-200 text-xs">{left}</td>
-                                      <td className="px-2 py-1 border-r border-gray-300 text-gray-900">{verbChart.conjugations[leftKey]}</td>
-                                      <td className="text-gray-500 px-2 py-1 border-r border-gray-200 text-xs">{right === 'vosotros' ? 'vosotros (Spain)' : right}</td>
-                                      <td className="px-2 py-1 text-gray-900">{verbChart.conjugations[rightKey]}</td>
+                                      <td className="text-gray-500 px-2 py-1.5 border-r border-gray-200 text-[0.8125rem]">{left}</td>
+                                      <td className="px-2 py-1.5 border-r border-gray-300 text-gray-900">{verbChart.conjugations[leftKey]}</td>
+                                      <td className="text-gray-500 px-2 py-1.5 border-r border-gray-200 text-[0.8125rem]">{right === 'vosotros' ? 'vosotros (Spain)' : right}</td>
+                                      <td className="px-2 py-1.5 text-gray-900">{verbChart.conjugations[rightKey]}</td>
                                     </tr>
                                   );
                                 })}

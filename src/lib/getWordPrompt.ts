@@ -62,8 +62,9 @@ Rules:
 - If no common derivatives exist, return an empty array.
 
 6. Verb Conjugation Chart
+IMPORTANT: verbChart is REQUIRED whenever a related verb exists — not just when the word itself is a verb.
 - If the word IS a verb in the sentence, conjugate it in the exact tense used in the sentence.
-- If the word is NOT a verb but has a verb in its word family, conjugate that verb in Present Simple.
+- If the word is NOT a verb (noun, adjective, adverb) but has a verb in its word family or derivatives, you MUST include verbChart for that related verb conjugated in Present Simple. For example: "telephone" (noun) → verbChart for "to call/phone"; "interested" (adjective) → verbChart for "to interest".
 - If the word is a modal verb (can, could, will, would, shall, should, may, might, must):
   - DO include the verb chart. Use the base modal as the infinitive (e.g., "can", not "be able to"). Never substitute with alternative constructions.
   - Do NOT append ", modal verb" to the tense — just use the tense name (e.g., "Past Simple").
@@ -73,7 +74,7 @@ Rules:
   - Do NOT append ", auxiliary verb" to the tense — just use the tense name (e.g., "Past Simple").
   - Conjugate the auxiliary form for each person (e.g., Past Simple: "didn't" for all; Present Simple: "don't" for most, "doesn't" for he/she/it).
   - Omit derivatives (return empty array).
-- If the word is a pronoun, preposition, conjunction, or determiner, or has no verb form in its word family, omit verbChart entirely.
+- Only omit verbChart if the word is a pronoun, preposition, conjunction, or determiner, OR if no related verb form exists at all.
 
 Use these English subject pronouns in this exact order:
 "I", "you", "he/she/it", "we", "you all", "they"

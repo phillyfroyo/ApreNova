@@ -11,18 +11,18 @@ export interface StoryTheme {
 
 export const STORY_THEMES: Record<string, StoryTheme> = {
   "aventura": {
-    backgroundGradient: "linear-gradient(135deg, #fffdf9 0%, #d4c4a8 100%)",
+    backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
     textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
+    accentColor: "bg-blue-600",
+    hoverAccentColor: "hover:bg-blue-300",
     fontFamily: "font-sans",
   },
   "the-last-word": {
-    backgroundGradient: "linear-gradient(135deg, #f5f0e6 0%, #e8dcc8 100%)",
+    backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
     textColor: "text-gray-900",
-    accentColor: "bg-amber-600",
-    hoverAccentColor: "hover:bg-amber-300",
-    fontFamily: "font-serif",
+    accentColor: "bg-blue-600",
+    hoverAccentColor: "hover:bg-blue-300",
+    fontFamily: "font-sans",
   },
   "diego-unplugged": {
     backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
@@ -38,10 +38,10 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     fontFamily: "font-sans",
   },
 "my-day-3": {
-    backgroundColor: "#f5f0e6",
+    backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
     textColor: "text-gray-900",
-    accentColor: "bg-green-600",
-    hoverAccentColor: "hover:bg-green-300",
+    accentColor: "bg-blue-600",
+    hoverAccentColor: "hover:bg-blue-300",
     fontFamily: "font-sans",
   },
 

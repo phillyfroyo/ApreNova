@@ -59,10 +59,11 @@ Rules:
 - If no common derivatives exist, return an empty array.
 
 6. Verb Conjugation Chart
+IMPORTANT: verbChart is REQUIRED whenever a related verb exists — not just when the word itself is a verb.
 - If the word IS a verb in the sentence, conjugate it in the exact tense used in the sentence.
-- If the word is NOT a verb but has a verb in its word family, conjugate that verb in Presente (present indicative).
+- If the word is NOT a verb (noun, adjective, adverb) but has a verb in its word family or derivatives, you MUST include verbChart for that related verb conjugated in Presente (present indicative). For example: "teléfono" (noun) → verbChart for "telefonear"; "interesado" (adjective) → verbChart for "interesar".
 - Spanish verbs like "poder", "deber", "querer" conjugate normally — always show verbChart for these. Never substitute a verb with an alternative construction (e.g., use "poder" not "ser capaz de").
-- If the word is a pronoun, preposition, conjunction, or determiner, or has no verb form in its word family, omit verbChart entirely.
+- Only omit verbChart if the word is a pronoun, preposition, conjunction, or determiner, OR if no related verb form exists at all.
 
 Use these Spanish subject pronouns in this exact order:
 "yo", "tú", "él/ella/usted", "nosotros", "vosotros", "ellos/ellas/ustedes"

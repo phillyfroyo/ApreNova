@@ -32,9 +32,7 @@ export async function GET(req: NextRequest) {
     const [words, total] = await Promise.all([
       prisma.savedWord.findMany({
         where,
-        orderBy: dueOnly
-          ? { nextReviewDate: 'asc' }
-          : { createdAt: 'desc' },
+        orderBy: { nextReviewDate: 'asc' },
         take: limit,
         skip: offset,
         select: {

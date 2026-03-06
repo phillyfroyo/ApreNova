@@ -222,7 +222,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
             derivatives: data.derivatives,
             verbChart: data.verbChart,
           });
-          setTranslations(data.translations || [data.contextTranslation]);
+          setTranslations([data.contextTranslation]);
         } else {
           // Fallback to legacy format
           setTranslations(data.translations || []);
@@ -678,7 +678,7 @@ useEffect(() => {
                   )}
 
                   {/* Verb Conjugation Chart - only for word families with verb forms */}
-                  {enhancedTranslation.verbChart && !["pronoun", "preposition", "conjunction", "determiner"].includes(enhancedTranslation.partOfSpeech || "") && (() => {
+                  {enhancedTranslation.verbChart && ["verb", "auxiliary verb", "modal verb"].includes(enhancedTranslation.partOfSpeech || "") && (() => {
                     const c = enhancedTranslation.verbChart!.conjugations;
                     const isSpanish = 'yo' in c;
                     const pairs: [string, string][] = isSpanish

@@ -154,11 +154,22 @@ export default function StoryLayoutWithAzureTTS({
       isDerivative?: boolean;
       rootWord?: string;
       rootTranslation?: string;
-      otherCommonTranslations?: string[];
+      otherCommonTranslations?: Array<string | { translation: string; example?: { en: string; es: string } }>;
+      partOfSpeech?: string;
+      subject?: string;
+      subjectTranslation?: string;
+      derivatives?: Array<{ pos: string; word: string; translation: string; example?: { en: string; es: string } }>;
+      verbChart?: { tense: string; infinitive: string; conjugations: Record<string, string> };
     };
     otherTranslations?: string[]; // for phrases
   }>>({});
   const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
+  const [visibleStanzaExamples, setVisibleStanzaExamples] = useState<Set<number>>(new Set());
+  const toggleStanzaExample = (i: number) => setVisibleStanzaExamples(prev => {
+    const next = new Set(prev);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    return next;
+  });
   const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string; enrichedData?: any } | null>>({});
@@ -1919,6 +1930,8 @@ export default function StoryLayoutWithAzureTTS({
                             rootTranslation: data.rootTranslation,
                             otherCommonTranslations: data.otherCommonTranslations,
                             partOfSpeech: data.partOfSpeech,
+                            subject: data.subject,
+                            subjectTranslation: data.subjectTranslation,
                             derivatives: data.derivatives,
                             verbChart: data.verbChart,
                           } : undefined,
@@ -2177,13 +2190,56 @@ export default function StoryLayoutWithAzureTTS({
                           </div>
                         ) : (
                           <div className="text-sm text-left relative">
-                            <p className="font-semibold">{t(typedLang, "translator", "translation")}:</p>
-
-                            {/* Enhanced single word translation with root word info */}
+                            {/* Enhanced single word translation with rich info */}
                             {aiTranslation.enhancedTranslation ? (
                               <>
-                                <div className="text-lg font-medium text-gray-900 mt-1" style={{ wordSpacing: '0.15em' }}>
-                                  <span className="font-medium">{aiTranslation.selectedWord}</span> = {aiTranslation.enhancedTranslation.contextTranslation}
+                                {aiTranslation.enhancedTranslation.partOfSpeech ? (() => {
+                                  const posMap: Record<string, string> = {
+                                    noun: 'sustantivo', verb: 'verbo', adjective: 'adjetivo',
+                                    adverb: 'adverbio', preposition: 'preposición', pronoun: 'pronombre',
+                                    conjunction: 'conjunción', determiner: 'determinante', 'auxiliary verb': 'verbo auxiliar', 'modal verb': 'verbo modal',
+                                  };
+                                  const tenseToEnglish: Record<string, string> = {
+                                    'Presente': 'present', 'Pretérito': 'simple past', 'Preterito': 'simple past',
+                                    'Imperfecto': 'imperfect', 'Futuro': 'future', 'Futuro Simple': 'simple future',
+                                    'Condicional': 'conditional', 'Presente Perfecto': 'present perfect',
+                                    'Pretérito Perfecto': 'present perfect', 'Pluscuamperfecto': 'past perfect',
+                                    'Pretérito Pluscuamperfecto': 'past perfect', 'Futuro Perfecto': 'future perfect',
+                                    'Subjuntivo Presente': 'present subjunctive', 'Subjuntivo Imperfecto': 'imperfect subjunctive',
+                                    'Imperativo': 'imperative', 'Presente Progresivo': 'present progressive',
+                                    'Pretérito Progresivo': 'past progressive',
+                                  };
+                                  const tenseToSpanish: Record<string, string> = {
+                                    'Present Simple': 'presente simple', 'Simple Present': 'presente simple',
+                                    'Past Simple': 'pasado simple', 'Simple Past': 'pasado simple',
+                                    'Present Continuous': 'presente continuo', 'Present Progressive': 'presente progresivo',
+                                    'Past Continuous': 'pasado continuo', 'Past Progressive': 'pasado progresivo',
+                                    'Present Perfect': 'presente perfecto', 'Past Perfect': 'pasado perfecto',
+                                    'Future Simple': 'futuro simple', 'Simple Future': 'futuro simple',
+                                    'Future': 'futuro', 'Conditional': 'condicional',
+                                    'Future Perfect': 'futuro perfecto', 'Imperative': 'imperativo',
+                                  };
+                                  const posLabel = typedLang === 'es'
+                                    ? (posMap[aiTranslation.enhancedTranslation!.partOfSpeech!] || aiTranslation.enhancedTranslation!.partOfSpeech)
+                                    : aiTranslation.enhancedTranslation!.partOfSpeech;
+                                  let tenseLabel = '';
+                                  const pos = aiTranslation.enhancedTranslation!.partOfSpeech!;
+                                  if (['verb', 'auxiliary verb', 'modal verb'].includes(pos) && aiTranslation.enhancedTranslation!.verbChart?.tense) {
+                                    const rawTense = aiTranslation.enhancedTranslation!.verbChart!.tense;
+                                    const tense = rawTense.replace(/, (modal verb|auxiliary verb)$/i, '').trim();
+                                    const nativeMap = typedLang === 'en' ? tenseToEnglish : tenseToSpanish;
+                                    const nativeTense = nativeMap[tense];
+                                    tenseLabel = nativeTense ? `, ${tense} (${nativeTense})` : `, ${tense}`;
+                                  }
+                                  return (
+                                    <p className="text-xs text-gray-500 italic mb-0.5">{posLabel}{tenseLabel}</p>
+                                  );
+                                })() : (
+                                  <p className="font-semibold">{t(typedLang, "translator", "translation")}:</p>
+                                )}
+                                <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
+                                  {aiTranslation.enhancedTranslation.subject && !aiTranslation.selectedWord?.toLowerCase().startsWith(aiTranslation.enhancedTranslation.subject.toLowerCase()) && <span className="font-medium text-gray-500">{aiTranslation.enhancedTranslation.subject} </span>}
+                                  <span className="font-medium">{aiTranslation.selectedWord}</span> = {aiTranslation.enhancedTranslation.subjectTranslation && <span className="text-gray-500">{aiTranslation.enhancedTranslation.subjectTranslation} </span>}{aiTranslation.enhancedTranslation.contextTranslation}
                                 </div>
 
                                 {aiTranslation.enhancedTranslation.isDerivative && aiTranslation.enhancedTranslation.rootWord && (
@@ -2202,27 +2258,32 @@ export default function StoryLayoutWithAzureTTS({
                                       {" "}{t(typedLang, "translator", "otherCommonUses")}:
                                     </p>
                                     <ul className="list-disc list-inside">
-                                      {aiTranslation.enhancedTranslation.otherCommonTranslations.map((trans, i) => {
-                                        const hasExample = !!stanzaExampleMap[trans];
+                                      {aiTranslation.enhancedTranslation.otherCommonTranslations.map((item, i) => {
+                                        const label = typeof item === 'string' ? item : item.translation;
+                                        const example = typeof item === 'object' && item !== null && 'example' in item ? item.example : null;
                                         return (
                                           <li key={i}>
-                                            <button
-                                              onClick={() => fetchStanzaExample(trans, aiTranslation.selectedWord || '', stanza)}
-                                              className="text-blue-600 hover:underline"
-                                            >
-                                              {trans}
-                                            </button>
-                                            {hasExample && (
+                                            {example ? (
+                                              <button
+                                                onClick={() => toggleStanzaExample(i)}
+                                                className="text-blue-600 hover:underline"
+                                              >
+                                                {label}
+                                              </button>
+                                            ) : (
+                                              <span className="text-gray-800">{label}</span>
+                                            )}
+                                            {example && visibleStanzaExamples.has(i) && (
                                               <div className="ml-2 mt-1 text-sm">
                                                 {showSpanishFirst ? (
                                                   <>
-                                                    <p className="text-gray-900">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
-                                                    <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                                    <p className="text-gray-900">&quot;{example.es}&quot;</p>
+                                                    <p className="text-gray-600 italic">&quot;{example.en}&quot;</p>
                                                   </>
                                                 ) : (
                                                   <>
-                                                    <p className="text-gray-900">&quot;{stanzaExampleMap[trans].english}&quot;</p>
-                                                    <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                                    <p className="text-gray-900">&quot;{example.en}&quot;</p>
+                                                    <p className="text-gray-600 italic">&quot;{example.es}&quot;</p>
                                                   </>
                                                 )}
                                               </div>
@@ -2233,6 +2294,74 @@ export default function StoryLayoutWithAzureTTS({
                                     </ul>
                                   </>
                                 )}
+
+                                {/* Derivatives / Word Family */}
+                                {aiTranslation.enhancedTranslation.derivatives && aiTranslation.enhancedTranslation.derivatives.length > 0 && (
+                                  <div className="mt-3 border-t pt-2">
+                                    <p className="font-semibold text-sm text-gray-700 mb-1">Word Family:</p>
+                                    <div className="space-y-2">
+                                      {aiTranslation.enhancedTranslation.derivatives.map((d, i) => (
+                                        <div key={i} className="text-sm">
+                                          <span className="text-gray-500 italic text-xs">({d.pos})</span>{' '}
+                                          <span className="font-medium">{d.word}</span>{' = '}
+                                          <span className="text-gray-800">{d.translation}</span>
+                                          {d.example && (
+                                            <div className="ml-4 mt-0.5 text-xs text-gray-500">
+                                              {showSpanishFirst ? (
+                                                <>
+                                                  <p>&quot;{d.example.es}&quot;</p>
+                                                  <p className="italic">&quot;{d.example.en}&quot;</p>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <p>&quot;{d.example.en}&quot;</p>
+                                                  <p className="italic">&quot;{d.example.es}&quot;</p>
+                                                </>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Verb Conjugation Chart - verbs only */}
+                                {aiTranslation.enhancedTranslation.verbChart && ['verb', 'auxiliary verb', 'modal verb'].includes(aiTranslation.enhancedTranslation.partOfSpeech || '') && (() => {
+                                  const vc = aiTranslation.enhancedTranslation.verbChart;
+                                  const conj = vc.conjugations;
+                                  const isSpanish = 'yo' in conj;
+                                  const pairs: [string, string][] = isSpanish
+                                    ? [['yo', 'nosotros'], ['tú', 'vosotros'], ['él/ella/usted', 'ellos/ellas/ustedes']]
+                                    : [['I', 'we'], ['you', 'you all'], ['he/she/it', 'they']];
+                                  const selWord = (aiTranslation.selectedWord || '').toLowerCase();
+                                  return (
+                                    <div className="mt-3 border-t pt-2">
+                                      <p className="font-semibold text-sm text-gray-700 mb-1">
+                                        {vc.infinitive} &mdash; {vc.tense}
+                                      </p>
+                                      <table className="text-sm w-full border-collapse border border-gray-200">
+                                        <tbody>
+                                          {pairs.map(([left, right], i) => {
+                                            const leftForm = conj[left] || '';
+                                            const rightForm = conj[right] || '';
+                                            const leftMatch = leftForm.toLowerCase() === selWord;
+                                            const rightMatch = rightForm.toLowerCase() === selWord;
+                                            const rightLabel = right === 'vosotros' ? 'vosotros (Spain)' : right;
+                                            return (
+                                              <tr key={i} className="border-b border-gray-200 last:border-b-0">
+                                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (leftMatch ? " bg-yellow-100" : "")}>{left}</td>
+                                                <td className={"px-2 py-1.5 border-r border-gray-300" + (leftMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{leftForm}</td>
+                                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (rightMatch ? " bg-yellow-100" : "")}>{rightLabel}</td>
+                                                <td className={"px-2 py-1.5" + (rightMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{rightForm}</td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  );
+                                })()}
                               </>
                             ) : aiTranslation.otherTranslations && aiTranslation.otherTranslations.length > 0 ? (
                               /* Phrase translation with other meanings */
