@@ -97,7 +97,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     } finally {
       setPlaybackState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [cache, generateCacheKey]);
+  }, [cache, generateCacheKey, authSession]);
 
   /**
    * Play TTS audio segment based on word indices
