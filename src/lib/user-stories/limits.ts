@@ -5,11 +5,11 @@ export const USER_STORY_LIMITS = {
   FREE_MAX_STORIES: -1, // -1 means unlimited
   PREMIUM_MAX_STORIES: -1, // -1 means unlimited (Infinity doesn't serialize to JSON)
 
-  // Character limits per story
-  // Free tier: One large upload (2M chars) per month, then 5K limit
-  FREE_FIRST_MONTHLY_STORY_LENGTH: 2000000,
-  FREE_MAX_STORY_LENGTH: 2000000, // Was: 5000 - TODO: REVERT FOR PRODUCTION
-  PREMIUM_MAX_STORY_LENGTH: 2000000,
+  // Word limits per story
+  // Free tier: One large upload (400K words) per month, then 400K limit
+  FREE_FIRST_MONTHLY_STORY_LENGTH: 400000,
+  FREE_MAX_STORY_LENGTH: 400000, // Was: 1000 - TODO: REVERT FOR PRODUCTION
+  PREMIUM_MAX_STORY_LENGTH: 400000,
 
   // Daily processing limits
   // Note: Free tier has unlimited small uploads (< 5K chars), so this only applies to large uploads

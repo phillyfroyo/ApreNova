@@ -125,6 +125,8 @@ export interface StoryProcessingProgress {
   chapterTotal?: number;
   // Current level being processed
   currentLevel?: string;
+  // Total word count for time estimation (set once after parsing)
+  totalWords?: number;
   timestamp: string;
 }
 
@@ -196,6 +198,7 @@ export async function updateStoryProgress(
     chapterCurrent?: number;
     chapterTotal?: number;
     currentLevel?: string;
+    totalWords?: number;
   }
 ): Promise<void> {
   const phase = STEP_PHASES[step];
@@ -213,10 +216,23 @@ export async function updateStoryProgress(
     chapterCurrent: options?.chapterCurrent,
     chapterTotal: options?.chapterTotal,
     currentLevel: options?.currentLevel,
+    totalWords: options?.totalWords,
     timestamp: new Date().toISOString(),
   };
 
   try {
+    // Preserve totalWords from previous progress if not provided in this update
+    if (!progress.totalWords) {
+      const existing = await prisma.userStory.findUnique({
+        where: { id: storyId },
+        select: { processingProgress: true },
+      });
+      const prev = existing?.processingProgress as StoryProcessingProgress | null;
+      if (prev?.totalWords) {
+        progress.totalWords = prev.totalWords;
+      }
+    }
+
     await prisma.userStory.update({
       where: { id: storyId },
       data: { processingProgress: progress as any },

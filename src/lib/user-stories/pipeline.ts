@@ -337,7 +337,16 @@ async function processAllLevels(
     structureType = parsed.structureType;
   }
 
-  console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}, storyType=${story.storyType}`);
+  // Calculate total word count for progress estimation
+  const totalWords = originalChapters.reduce((sum, ch) => {
+    const words = ch.text.trim().split(/\s+/).length;
+    return sum + words;
+  }, 0);
+
+  console.log(`[Pipeline] Parsed content: hasChapters=${hasChapters}, chapters=${originalChapters.length}, structureType=${structureType}, storyType=${story.storyType}, totalWords=${totalWords}`);
+
+  // Store totalWords in progress so frontend can estimate timing
+  await updateStoryProgress(story.id, "parsing_chapters", { totalWords, chapterTotal: originalChapters.length });
 
   // Track processed chapters for each level (after translation)
   const levelProcessedChapters: Map<string, ProcessedChapter[]> = new Map();

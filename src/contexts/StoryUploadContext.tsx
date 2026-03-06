@@ -71,6 +71,7 @@ export interface StoryProcessingProgress {
   chapterCurrent?: number;
   chapterTotal?: number;
   currentLevel?: string;
+  totalWords?: number;
   timestamp: string;
 }
 
@@ -175,59 +176,78 @@ export function useStoryUpload() {
   return context;
 }
 
-// Stage weights for initial processing (before per-level work)
-// Levels (rewriting + translating) take 30-90% of total progress
+// ============================================================================
+// TIME-BASED PROGRESS ESTIMATION
+// ============================================================================
+
+// Empirical rates from testing (words per second)
+const WORDS_PER_SECOND = 40; // ~200 chars/s ÷ 5 chars/word = 40 words/s (conservative)
+const DETECTING_TIME_S = 35; // Fixed ~35 seconds for detecting phase
+const FINALIZING_TIME_S = 10; // Fixed ~10 seconds for building/saving
+
+/**
+ * Calculate dynamic phase percentages based on total word count.
+ * Short stories get a large detecting %, novels get almost none.
+ */
+function calculatePhasePercentages(totalWords: number) {
+  const processingTimeS = totalWords / WORDS_PER_SECOND;
+  const totalTimeS = DETECTING_TIME_S + processingTimeS + FINALIZING_TIME_S;
+
+  const detectingPct = (DETECTING_TIME_S / totalTimeS) * 100;
+  const processingPct = (processingTimeS / totalTimeS) * 100;
+  const finalizingPct = (FINALIZING_TIME_S / totalTimeS) * 100;
+
+  return { detectingPct, processingPct, finalizingPct, totalTimeS, processingTimeS };
+}
+
+// Fallback fixed weights when totalWords is unknown
 const STAGE_WEIGHTS: Record<UploadStage, { start: number; end: number }> = {
   idle: { start: 0, end: 0 },
   uploading: { start: 0, end: 5 },
   "detecting-language": { start: 5, end: 10 },
   "detecting-level": { start: 10, end: 20 },
   "generating-description": { start: 20, end: 30 },
-  // These stages are now calculated dynamically based on level progress
   "rewriting-levels": { start: 30, end: 60 },
   translating: { start: 60, end: 90 },
   finalizing: { start: 90, end: 95 },
   review: { start: 95, end: 95 },
   complete: { start: 100, end: 100 },
   error: { start: 0, end: 0 },
-  "connection-lost": { start: 0, end: 0 }, // Preserves last progress visually
-  reconnecting: { start: 0, end: 0 }, // Shows while recovering from state loss
+  "connection-lost": { start: 0, end: 0 },
+  reconnecting: { start: 0, end: 0 },
 };
 
-// Helper to calculate overall progress accounting for multi-level processing
-function calculateMultiLevelProgress(
-  stage: 'rewriting' | 'translating' | 'complete',
-  currentLevel: number, // 0-indexed
-  totalLevels: number,
-  chapterProgress: number, // 0-100 within current level
-  isRewriteNeeded: boolean
+/**
+ * Calculate time-based progress within the processing phase.
+ * Tied to one translation pass (totalWords / WORDS_PER_SECOND) since
+ * all levels process in parallel and translation is the bottleneck.
+ *
+ * Each chapter gets an equal time slice. Progress ticks up based on elapsed
+ * time within the current chapter's range, capping at 95% until the backend
+ * confirms that chapter is complete.
+ */
+function calculateTimeBasedProcessingProgress(
+  elapsedS: number,
+  totalWords: number,
+  completedChapters: number,
+  totalChapters: number,
 ): number {
-  // Levels take from 30% to 90% of total progress
-  const levelStart = 30;
-  const levelEnd = 90;
-  const levelRange = levelEnd - levelStart;
+  const estimatedTotalS = totalWords / WORDS_PER_SECOND;
+  const timePerChapter = estimatedTotalS / totalChapters;
 
-  // Each level gets an equal share of the level range
-  const perLevelRange = levelRange / totalLevels;
-  const levelBase = levelStart + (currentLevel * perLevelRange);
+  // Floor: confirmed completed chapters (never go below this)
+  const completedPct = (completedChapters / totalChapters) * 100;
 
-  // Within each level: rewrite (if needed) takes 40%, translate takes 60%
-  let withinLevelProgress: number;
-  if (stage === 'complete') {
-    withinLevelProgress = 100;
-  } else if (stage === 'rewriting') {
-    // Rewriting is 0-40% of level work
-    withinLevelProgress = chapterProgress * 0.4;
-  } else {
-    // Translating is 40-100% of level work (or 0-100 if no rewrite needed)
-    if (isRewriteNeeded) {
-      withinLevelProgress = 40 + (chapterProgress * 0.6);
-    } else {
-      withinLevelProgress = chapterProgress;
-    }
-  }
+  // Time elapsed into the current (incomplete) chapter
+  const expectedElapsedForCompleted = completedChapters * timePerChapter;
+  const timeIntoCurrentChapter = Math.max(0, elapsedS - expectedElapsedForCompleted);
 
-  return Math.round(levelBase + (withinLevelProgress / 100) * perLevelRange);
+  // Progress within current chapter (cap at 95% — wait for confirmation before moving on)
+  const currentChapterRatio = Math.min(timeIntoCurrentChapter / timePerChapter, 0.95);
+  const chapterSlicePct = 100 / totalChapters;
+
+  // Total: completed chapters + time-based partial progress in current chapter
+  return Math.max(completedPct + currentChapterRatio * chapterSlicePct, completedPct);
 }
 
 // Step ordering for calculating progress during detecting phase
@@ -244,21 +264,28 @@ const DETECTING_STEPS = [
   "detecting_level",
 ];
 
-// Calculate progress percentage for detecting phase based on current step
-function calculateProgressForPhase(phase: string, step: string): number {
+/**
+ * Calculate progress percentage for detecting phase.
+ * Uses dynamic detectingPct based on totalWords when available.
+ */
+function calculateProgressForPhase(phase: string, step: string, totalWords?: number): number {
+  const { detectingPct, processingPct } = totalWords
+    ? calculatePhasePercentages(totalWords)
+    : { detectingPct: 30, processingPct: 60 };
+
   if (phase === "detecting") {
     const stepIndex = DETECTING_STEPS.indexOf(step);
     if (stepIndex >= 0) {
-      // Detecting phase is 0-30% of overall progress
-      return Math.round((stepIndex / DETECTING_STEPS.length) * 30);
+      return Math.round((stepIndex / DETECTING_STEPS.length) * detectingPct);
     }
-    return 15; // Default to middle of detecting phase
+    return Math.round(detectingPct / 2);
   }
-  // For other phases, return a reasonable default
-  if (phase === "adapting") return 50;
-  if (phase === "translating") return 70;
-  if (phase === "finalizing") return 90;
-  return 50;
+  // For non-detecting phases caught in the detecting branch (brief window before
+  // a level is PROCESSING), just return detectingPct. The time-based branch will
+  // handle granular progress once a level starts processing.
+  if (phase === "adapting" || phase === "translating") return Math.round(detectingPct);
+  if (phase === "finalizing") return Math.round(detectingPct + processingPct);
+  return Math.round(detectingPct);
 }
 
 // Build streams array from level data for parallel progress tracking
@@ -603,6 +630,10 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
   // Track if cancel was requested during upload (before story ID is known)
   // This allows us to cancel the story after creation completes
   const cancelRequestedRef = useRef(false);
+  // Word count from uploaded content — used for progress estimation before backend has totalWords
+  const uploadedWordCountRef = useRef<number>(0);
+  // Timestamp when processing phase started (for time-based progress ticking)
+  const processingStartTimeRef = useRef<number>(0);
 
   // Recover from persisted state if React state was lost (e.g., after 404 navigation)
   useEffect(() => {
@@ -693,11 +724,15 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
     // Merge with existing progress to preserve userLevel/detectedLevel
     setProgress(prev => {
+      // Never go backwards (except for error/reset states)
+      const newOverall = stage === "error" || stage === "idle"
+        ? Math.round(overallProgress)
+        : Math.max(prev.overallProgress, Math.round(overallProgress));
       const merged = {
         ...prev,
         stage,
         stageProgress,
-        overallProgress: Math.round(overallProgress),
+        overallProgress: newOverall,
         ...extra,
       };
       // Generate message with context (including chapter info)
@@ -723,9 +758,14 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
     // Clear cancel flag at start of new upload
     cancelRequestedRef.current = false;
     storyIdRef.current = null;
+    processingStartTimeRef.current = 0;
+
+    // Calculate word count for progress estimation
+    uploadedWordCountRef.current = content.trim().split(/\s+/).length;
 
     console.log("[StoryUpload] Starting upload", {
       contentLength: content.length,
+      wordCount: uploadedWordCountRef.current,
       title: optionalTitle || "(auto-generate)",
       sourceLanguage: sourceLanguage || "(auto-detect)",
       hasDescription: !!description,
@@ -937,6 +977,9 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           // Get story-level progress (detailed step info)
           const storyProgress = storyStatus.processingProgress as StoryProcessingProgress | null;
 
+          // Use backend totalWords (available after parsing) or frontend word count as fallback
+          const totalWords = storyProgress?.totalWords || uploadedWordCountRef.current || undefined;
+
           // Check level statuses to determine progress
           const levels = storyStatus.levels || [];
           const processingLevel = levels.find((l: any) => l.status === "PROCESSING");
@@ -951,6 +994,26 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           const phase = storyProgress?.phase;
           const stepLabel = storyProgress?.stepLabel;
           const phaseTitle = phase ? PHASE_TITLES[phase] : undefined;
+
+          // Debug: log branch selection for progress tracking
+          if (attempts % 2 === 0) {
+            console.log("[StoryUpload] Progress branch:", {
+              hasProcessingLevel: !!processingLevel,
+              processingLevelStatus: processingLevel?.status,
+              hasProcessingProgress: !!processingLevel?.processingProgress,
+              processingProgress: processingLevel?.processingProgress ? {
+                stage: (processingLevel.processingProgress as any).stage,
+                currentChapter: (processingLevel.processingProgress as any).currentChapter,
+                totalChapters: (processingLevel.processingProgress as any).totalChapters,
+                chaptersCompleted: (processingLevel.processingProgress as any).chaptersCompleted?.length,
+              } : null,
+              completedLevels,
+              totalWords,
+              storyPhase: storyProgress?.phase,
+              storyStep: storyProgress?.step,
+              processingStartTime: processingStartTimeRef.current,
+            });
+          }
 
           if (!processingLevel && completedLevels === 0) {
             // Still in early stages (language/level detection, description generation)
@@ -967,19 +1030,22 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 detecting_level: "detecting-level",
               };
               const stage = stageMap[storyProgress.step] || "detecting-level";
-              setProgress(prev => ({
-                ...prev,
-                stage,
-                stageProgress: 50,
-                overallProgress: calculateProgressForPhase(storyProgress.phase, storyProgress.step),
-                detectedLevel,
-                userLevel: userLevel || undefined,
-                message: getStageMessage(stage, { detectedLevel, userLevel: userLevel || undefined }),
-                phase,
-                stepLabel,
-                phaseTitle,
-                streams,
-              }));
+              setProgress(prev => {
+                const newOverall = Math.max(prev.overallProgress, calculateProgressForPhase(storyProgress.phase, storyProgress.step, totalWords));
+                return {
+                  ...prev,
+                  stage,
+                  stageProgress: 50,
+                  overallProgress: newOverall,
+                  detectedLevel,
+                  userLevel: userLevel || undefined,
+                  message: getStageMessage(stage, { detectedLevel, userLevel: userLevel || undefined }),
+                  phase,
+                  stepLabel,
+                  phaseTitle,
+                  streams,
+                };
+              });
             } else if (detectedLevel) {
               updateProgress("generating-description", 50, { detectedLevel, userLevel: userLevel || undefined });
             } else {
@@ -996,22 +1062,39 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
               rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
             };
 
-            // Calculate chapter progress within current level
-            const chapterProgress = progress.totalChapters > 0
-              ? (progress.chaptersCompleted.length / progress.totalChapters) * 100
-              : 0;
+            // Record when processing started (first time we see a level processing)
+            if (!processingStartTimeRef.current) {
+              processingStartTimeRef.current = Date.now();
+            }
 
-            // Determine if this level needs rewriting (user level differs from detected)
-            const isRewriteNeeded = processingLevel.level !== detectedLevel;
+            const completedCount = progress.chaptersCompleted?.length || 0;
+            const elapsedS = (Date.now() - processingStartTimeRef.current) / 1000;
 
-            // Calculate overall progress accounting for multi-level processing
-            const overallProgress = calculateMultiLevelProgress(
-              progress.stage,
-              completedLevels, // Current level index (0-indexed based on completed count)
-              totalLevelsToProcess,
-              chapterProgress,
-              isRewriteNeeded
-            );
+            // Calculate phase boundaries
+            const { detectingPct, processingPct } = totalWords
+              ? calculatePhasePercentages(totalWords)
+              : { detectingPct: 30, processingPct: 60 };
+
+            // Time-based progress: ticks smoothly based on elapsed time
+            // Tied to one translation pass (totalWords / WORDS_PER_SECOND)
+            let chapterProgress: number;
+            let overallProgress: number;
+
+            if (progress.stage === 'complete') {
+              chapterProgress = 100;
+              overallProgress = Math.round(detectingPct + processingPct);
+            } else if (totalWords) {
+              chapterProgress = calculateTimeBasedProcessingProgress(
+                elapsedS, totalWords, completedCount, progress.totalChapters
+              );
+              overallProgress = Math.round(detectingPct + (chapterProgress / 100) * processingPct);
+            } else {
+              // Fallback without word count: use chapter completion only
+              chapterProgress = progress.totalChapters > 0
+                ? (completedCount / progress.totalChapters) * 100
+                : 0;
+              overallProgress = Math.round(detectingPct + (chapterProgress / 100) * processingPct);
+            }
 
             if (progress.stage === 'rewriting') {
               // Rewriting stage - use calculated overall progress
@@ -1019,7 +1102,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 ...prev,
                 stage: "rewriting-levels",
                 stageProgress: chapterProgress,
-                overallProgress,
+                overallProgress: Math.max(prev.overallProgress, overallProgress),
                 currentLevel: processingLevel.level,
                 userLevel: userLevel || undefined,
                 detectedLevel,
@@ -1044,7 +1127,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 ...prev,
                 stage: "translating",
                 stageProgress: chapterProgress,
-                overallProgress,
+                overallProgress: Math.max(prev.overallProgress, overallProgress),
                 userLevel: userLevel || undefined,
                 detectedLevel,
                 currentChapter: progress.currentChapter,
@@ -1064,12 +1147,17 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             }
           } else {
             // Fallback: level is processing but no granular progress yet
-            const levelProgress = (completedLevels / totalLevelsToProcess) * 100;
+            if (!processingStartTimeRef.current) {
+              processingStartTimeRef.current = Date.now();
+            }
+            const { detectingPct } = totalWords
+              ? calculatePhasePercentages(totalWords)
+              : { detectingPct: 30 };
             setProgress(prev => ({
               ...prev,
               stage: "rewriting-levels",
-              stageProgress: levelProgress,
-              overallProgress: 30 + levelProgress * 0.6,
+              stageProgress: 0,
+              overallProgress: Math.max(prev.overallProgress, Math.round(detectingPct)),
               currentLevel: processingLevel?.level,
               userLevel: userLevel || undefined,
               detectedLevel,

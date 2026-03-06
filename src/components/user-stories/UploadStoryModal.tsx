@@ -196,9 +196,9 @@ export default function UploadStoryModal() {
   // maxStoryLength from stats already accounts for first-of-month bonus
   const maxLength = stats?.maxStoryLength ?? USER_STORY_LIMITS.FREE_MAX_STORY_LENGTH;
 
-  const charCount = content.length;
-  const isOverLimit = charCount > maxLength;
-  const percentUsed = Math.min((charCount / maxLength) * 100, 100);
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const isOverLimit = wordCount > maxLength;
+  const percentUsed = Math.min((wordCount / maxLength) * 100, 100);
 
   // Check if user can upload (-1 means unlimited)
   const canUpload = stats
@@ -216,7 +216,7 @@ export default function UploadStoryModal() {
       return;
     }
 
-    if (content.trim().length < 100) {
+    if (wordCount < 20) {
       setError(t.myStories.storyTooShort);
       return;
     }
@@ -317,7 +317,7 @@ export default function UploadStoryModal() {
                         <div>
                           <p className="font-medium text-green-800">{uploadedFileName}</p>
                           <p className="text-sm text-green-600">
-                            {content.length.toLocaleString()} {t.myStories.characters}
+                            {wordCount.toLocaleString()} {t.myStories.words}
                           </p>
                         </div>
                       </div>
@@ -341,7 +341,7 @@ export default function UploadStoryModal() {
                         />
                       </div>
                       <span className={`text-xs ${isOverLimit ? "text-red-500 font-medium" : "text-green-600"}`}>
-                        {charCount.toLocaleString()} / {maxLength.toLocaleString()}
+                        {wordCount.toLocaleString()} / {maxLength.toLocaleString()}
                       </span>
                     </div>
                     {isOverLimit && (
@@ -426,7 +426,7 @@ export default function UploadStoryModal() {
                         />
                       </div>
                       <span className={`text-xs ${isOverLimit ? "text-red-500 font-medium" : "text-gray-400"}`}>
-                        {charCount.toLocaleString()} / {maxLength.toLocaleString()}
+                        {wordCount.toLocaleString()} / {maxLength.toLocaleString()}
                       </span>
                     </div>
                   </div>
