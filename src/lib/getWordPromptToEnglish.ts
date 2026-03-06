@@ -40,6 +40,7 @@ Optionally return one or two additional English translations that represent func
   Always include at least one alternate that shows a DIFFERENT function, not a variation of the same one.
 - Add a short 1-3 word parenthetical after each translation label.
 - For each, provide an example sentence (8-15 words, appropriate for the CEFR level) showing that specific sense.
+- IMPORTANT: The Spanish example MUST use the original Spanish word being translated. The English example MUST use the alternative English translation. For example, if the word is "siempre" and the alternative is "constantly", the Spanish sentence must contain "siempre" and the English sentence must contain "constantly".
 - Target usage suitable for learners in the United States.
 
 Return each as an object: { "translation": "told (to someone)", "example": { "es": "Ella le dijo a su amigo la verdad.", "en": "She told her friend the truth." } }

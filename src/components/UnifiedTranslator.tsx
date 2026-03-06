@@ -70,9 +70,9 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
 
   // Notify parent of translation state changes
   useEffect(() => {
-    const hasActiveTranslation = translations.length > 0 || loading || error !== "" || authError;
+    const hasActiveTranslation = translations.length > 0 || !!enhancedTranslation || loading || error !== "" || authError;
     onTranslationStateChange?.(hasActiveTranslation);
-  }, [translations.length, loading, error, authError]); // Removed onTranslationStateChange from deps
+  }, [translations.length, enhancedTranslation, loading, error, authError]); // Removed onTranslationStateChange from deps
 
   // Notify parent of selection changes (only for internal selections, not external)
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
 
   // Notify parent of translation data for saving vocabulary
   useEffect(() => {
-    if (startIdx !== null && endIdx !== null && translations.length > 0) {
+    if (startIdx !== null && endIdx !== null && (translations.length > 0 || enhancedTranslation)) {
       const selectedText = words.slice(startIdx, endIdx + 1).join(" ").replace(/[.,!?;:()"\u201C\u201D\u2018\u2019\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]+/g, "");
       const translation = enhancedTranslation?.contextTranslation || translations[0];
       onTranslationData?.({ word: selectedText, translation, enrichedData: enhancedTranslation ? {
@@ -194,19 +194,20 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
       if (data.error) throw new Error(data.error);
 
       if (!isSingleWord) {
-        // Handle phrase translations (unchanged)
+        // Handle phrase translations with enhanced format (examples on alternatives)
         if (typeof data.translations === "object" && data.translations.primary) {
-          const merged = [
-            data.translations.primary,
-            ...(data.translations.otherCommonTranslations || [])
-          ];
-          setTranslations(merged);
+          setEnhancedTranslation({
+            contextTranslation: data.translations.primary,
+            otherCommonTranslations: data.translations.otherCommonTranslations || [],
+          });
+          setTranslations([]); // Clear legacy translations
         } else if (Array.isArray(data.translations)) {
-          setTranslations(data.translations); // fallback
+          // Legacy fallback: plain string array
+          setTranslations(data.translations);
+          setEnhancedTranslation(null);
         } else {
           throw new Error("Invalid phrase translation format");
         }
-        setEnhancedTranslation(null); // Clear enhanced data for phrases
       } else {
         // Handle single word translations with enhanced data
         if (data.contextTranslation) {
@@ -249,7 +250,7 @@ export default function UnifiedTranslator({ sentence, staticTranslation, enabled
   // Update the ref whenever dependencies change
   triggerManualTranslationRef.current = () => {
     // If translations are already showing or loading, hide them (toggle off)
-    if (translations.length > 0 || loading || error) {
+    if (translations.length > 0 || !!enhancedTranslation || loading || error) {
       setTranslations([]);
       setEnhancedTranslation(null);
       setLoading(false);
@@ -449,6 +450,7 @@ useEffect(() => {
       setStartIdx(null);
       setEndIdx(null);
       setTranslations([]);
+      setEnhancedTranslation(null);
       setError("");
     }
   };
@@ -500,7 +502,7 @@ useEffect(() => {
     </div>
     </div>
 
-    {enabled && (translations.length > 0 || loading || error || authError) && (
+    {enabled && (translations.length > 0 || !!enhancedTranslation || loading || error || authError) && (
       <div
   ref={tooltipRef}
   style={sentenceWidth ? { width: sentenceWidth } : undefined}
@@ -538,10 +540,10 @@ useEffect(() => {
             </div>
           )}
 
-          {translations.length > 0 && (
+          {(translations.length > 0 || enhancedTranslation) && (
             <div className="mt-1 space-y-2">
-              {/* Enhanced single word translation format */}
-              {enhancedTranslation && startIdx === endIdx ? (
+              {/* Enhanced translation format (single words + phrases with examples) */}
+              {enhancedTranslation ? (
                 <>
                   {enhancedTranslation.partOfSpeech ? (() => {
                     const posMap: Record<string, string> = {
@@ -698,7 +700,8 @@ useEffect(() => {
                       <p className="font-semibold text-sm text-gray-700 mb-1">
                         {enhancedTranslation.verbChart!.infinitive} &mdash; {enhancedTranslation.verbChart!.tense}
                       </p>
-                      <table className="text-sm w-full border-collapse border border-gray-200">
+                      <div className="overflow-x-auto">
+                      <table className="text-sm w-full border-collapse border border-gray-200 min-w-[340px]">
                         <tbody>
                           {pairs.map(([left, right], i) => {
                             const leftForm = c[left] || '';
@@ -718,6 +721,7 @@ useEffect(() => {
                           })}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                     );
                   })()}

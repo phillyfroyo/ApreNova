@@ -24,10 +24,15 @@ The longer the phrase, the more likely you are to return only the "Primary" tran
 
 You must respond with valid JSON only. No prose, no explanations, no markdown. Do not add "Here's the translation:" or any other commentary.
 
+IMPORTANT: In each example, the English sentence MUST use the original English phrase being translated, and the Spanish sentence MUST use the alternative Spanish translation.
+
 Respond with a raw JSON object, like:
 {
   "primary": "vino",
-  "otherCommonTranslations": ["llegó", "se presentó"]
+  "otherCommonTranslations": [
+    { "translation": "llegó", "example": { "en": "He came home late.", "es": "Llegó tarde a casa." } },
+    { "translation": "se presentó", "example": { "en": "He came to the party uninvited.", "es": "Se presentó en la fiesta sin invitación." } }
+  ]
 }
 
 Important:

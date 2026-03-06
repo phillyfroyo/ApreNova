@@ -43,6 +43,7 @@ Optionally return one or two additional Spanish translations that represent func
   Always include at least one alternate that shows a DIFFERENT function, not a variation of the same one.
 - Add a short 1-3 word parenthetical after each translation label.
 - For each, provide an example sentence (8-15 words, appropriate for the CEFR level) showing that specific sense.
+- IMPORTANT: The English example MUST use the original English word being translated. The Spanish example MUST use the alternative Spanish translation. For example, if the word is "always" and the alternative is "constantemente", the English sentence must contain "always" and the Spanish sentence must contain "constantemente".
 - Target usage suitable for learners in Mexico.
 
 Return each as an object: { "translation": "toca (instrumento musical)", "example": { "en": "She plays the guitar every evening.", "es": "Ella toca la guitarra todas las noches." } }

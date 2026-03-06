@@ -161,7 +161,7 @@ export default function StoryLayoutWithAzureTTS({
       derivatives?: Array<{ pos: string; word: string; translation: string; example?: { en: string; es: string } }>;
       verbChart?: { tense: string; infinitive: string; conjugations: Record<string, string> };
     };
-    otherTranslations?: string[]; // for phrases
+    otherTranslations?: Array<string | { translation: string; example?: { en: string; es: string } }>; // for phrases
   }>>({});
   const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
   const [visibleStanzaExamples, setVisibleStanzaExamples] = useState<Set<number>>(new Set());
@@ -2340,7 +2340,8 @@ export default function StoryLayoutWithAzureTTS({
                                       <p className="font-semibold text-sm text-gray-700 mb-1">
                                         {vc.infinitive} &mdash; {vc.tense}
                                       </p>
-                                      <table className="text-sm w-full border-collapse border border-gray-200">
+                                      <div className="overflow-x-auto">
+                                      <table className="text-sm w-full border-collapse border border-gray-200 min-w-[340px]">
                                         <tbody>
                                           {pairs.map(([left, right], i) => {
                                             const leftForm = conj[left] || '';
@@ -2359,6 +2360,7 @@ export default function StoryLayoutWithAzureTTS({
                                           })}
                                         </tbody>
                                       </table>
+                                      </div>
                                     </div>
                                   );
                                 })()}
@@ -2374,27 +2376,60 @@ export default function StoryLayoutWithAzureTTS({
                                   {" "}{t(typedLang, "translator", "otherCommonUses")}:
                                 </p>
                                 <ul className="list-disc list-inside">
-                                  {aiTranslation.otherTranslations.map((trans, i) => {
-                                    const hasExample = !!stanzaExampleMap[trans];
+                                  {aiTranslation.otherTranslations.map((item, i) => {
+                                    const label = typeof item === 'string' ? item : item.translation;
+                                    const inlineExample = typeof item === 'object' && item !== null && 'example' in item ? item.example : null;
+                                    const fallbackExample = stanzaExampleMap[label];
                                     return (
                                       <li key={i}>
-                                        <button
-                                          onClick={() => fetchStanzaExample(trans, aiTranslation.selectedWord || '', stanza)}
-                                          className="text-blue-600 hover:underline"
-                                        >
-                                          {trans}
-                                        </button>
-                                        {hasExample && (
+                                        {inlineExample ? (
+                                          <button
+                                            onClick={() => toggleStanzaExample(i)}
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            {label}
+                                          </button>
+                                        ) : fallbackExample ? (
+                                          <button
+                                            onClick={() => toggleStanzaExample(i)}
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            {label}
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={() => fetchStanzaExample(label, aiTranslation.selectedWord || '', stanza)}
+                                            className="text-blue-600 hover:underline"
+                                          >
+                                            {label}
+                                          </button>
+                                        )}
+                                        {inlineExample && visibleStanzaExamples.has(i) && (
                                           <div className="ml-2 mt-1 text-sm">
                                             {showSpanishFirst ? (
                                               <>
-                                                <p className="text-gray-900">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].english}&quot;</p>
+                                                <p className="text-gray-900">&quot;{inlineExample.es}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{inlineExample.en}&quot;</p>
                                               </>
                                             ) : (
                                               <>
-                                                <p className="text-gray-900">&quot;{stanzaExampleMap[trans].english}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{stanzaExampleMap[trans].spanish}&quot;</p>
+                                                <p className="text-gray-900">&quot;{inlineExample.en}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{inlineExample.es}&quot;</p>
+                                              </>
+                                            )}
+                                          </div>
+                                        )}
+                                        {!inlineExample && fallbackExample && visibleStanzaExamples.has(i) && (
+                                          <div className="ml-2 mt-1 text-sm">
+                                            {showSpanishFirst ? (
+                                              <>
+                                                <p className="text-gray-900">&quot;{fallbackExample.spanish}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{fallbackExample.english}&quot;</p>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <p className="text-gray-900">&quot;{fallbackExample.english}&quot;</p>
+                                                <p className="text-gray-600 italic">&quot;{fallbackExample.spanish}&quot;</p>
                                               </>
                                             )}
                                           </div>
