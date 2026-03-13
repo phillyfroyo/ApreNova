@@ -9,6 +9,7 @@
 Near term visions, in no particular order.
 - Steadily grow content library
 - Make sure user upload portal works for a range of story types. 
+- I think it would be cool for users to see which user # they are. especially since i'm handing out flyers saying the first 100 users get free access. And we don't really have any free/paid feature visibility, so those users will probably be confused if they're getting free access to everything. 
 - Need comprehensive error handing for all error types in the user upload portal. One user reported a silent fail where the pipeline was stuck at 50%, and again a failed upload where we showed an error, but the error was not described. 
 - need facebook / whatsapp login options
 - need a mobile app. look into the commplexity, difficulty, cost, and time to implement of making this a reality. 
