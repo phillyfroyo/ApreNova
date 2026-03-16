@@ -12,13 +12,20 @@ interface UserSummary {
 
 interface UserListItem {
   id: string;
+  userNumber: number;
   name: string | null;
   email: string | null;
+  nativeLanguage: string | null;
+  quizLevel: string | null;
+  isPremium: boolean;
+  readingMs: number;
   createdAt: string;
   storyCount: number;
   totalCostCents: number;
   avgCostPerStory: number;
 }
+
+type SortField = "userNumber" | "cost" | "stories" | "reading";
 
 interface UserDetail {
   id: string;
@@ -69,6 +76,16 @@ interface TutorUsage {
   breakdown: OperationBreakdown[];
 }
 
+interface StoryReadingTime {
+  storySlug: string;
+  ms: number;
+}
+
+interface ReadingTime {
+  totalMs: number;
+  byStory: StoryReadingTime[];
+}
+
 interface UsersData {
   summary: UserSummary;
   users: UserListItem[];
@@ -80,9 +97,10 @@ interface UserDetailsData {
   stories: StoryDetail[];
   inStoryUsage: InStoryUsage;
   tutorUsage: TutorUsage;
+  readingTime: ReadingTime;
 }
 
-type DetailTab = "stories" | "in-story" | "tutor";
+type DetailTab = "reading" | "in-story" | "stories" | "tutor";
 
 function formatCents(microcents: number): string {
   const dollars = microcents / 1_000_000;
@@ -96,6 +114,15 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
+function formatReadingTime(ms: number): string {
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return "<1m";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+}
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
@@ -103,6 +130,15 @@ function formatDate(dateStr: string): string {
     year: "numeric",
   });
 }
+
+// Internal level → CEFR label
+const CEFR_LABELS: Record<string, string> = {
+  l1: "A1",
+  l2: "A2",
+  l3: "B1",
+  l4: "B2",
+  l5: "C1",
+};
 
 // Story type formatting
 const STORY_TYPE_LABELS: Record<string, string> = {
@@ -134,6 +170,10 @@ export default function UsersManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Sort
+  const [sortField, setSortField] = useState<SortField>("userNumber");
+  const [sortDesc, setSortDesc] = useState(false);
+
   // Selected user details
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetailsData | null>(null);
@@ -147,7 +187,7 @@ export default function UsersManager() {
   useEffect(() => {
     if (selectedUserId) {
       fetchUserDetails(selectedUserId);
-      setActiveDetailTab("stories");
+      setActiveDetailTab("reading");
     } else {
       setUserDetails(null);
     }
@@ -184,13 +224,13 @@ export default function UsersManager() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto px-3 py-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h-24 bg-gray-200 rounded"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+            <div className="h-20 sm:h-24 bg-gray-200 rounded"></div>
+            <div className="h-20 sm:h-24 bg-gray-200 rounded"></div>
+            <div className="h-20 sm:h-24 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -234,8 +274,31 @@ export default function UsersManager() {
     0
   ) ?? 0;
 
+  // Sort users
+  function handleSort(field: SortField) {
+    if (sortField === field) {
+      setSortDesc(!sortDesc);
+    } else {
+      setSortField(field);
+      // Default direction: userNumber asc, others desc
+      setSortDesc(field !== "userNumber");
+    }
+  }
+
+  const sortedUsers = [...data.users].sort((a, b) => {
+    let diff = 0;
+    switch (sortField) {
+      case "userNumber": diff = a.userNumber - b.userNumber; break;
+      case "cost": diff = a.totalCostCents - b.totalCostCents; break;
+      case "stories": diff = a.storyCount - b.storyCount; break;
+      case "reading": diff = a.readingMs - b.readingMs; break;
+    }
+    return sortDesc ? -diff : diff;
+  });
+
+
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-3 py-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">User Analytics</h2>
@@ -248,57 +311,77 @@ export default function UsersManager() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Total Users</div>
-          <div className="text-2xl font-bold text-gray-900">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">Users</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {data.summary.totalUsers}
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Total Stories</div>
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">Stories</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {data.summary.totalStories}
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Total Cost</div>
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">Total Cost</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {formatCents(data.summary.totalCostCents)}
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Avg Cost/User</div>
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">Avg/User</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {formatCents(data.summary.avgCostPerUser)}
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-sm text-gray-500">Avg Cost/Story</div>
-          <div className="text-2xl font-bold text-blue-600">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">Avg/Story</div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">
             {formatCents(data.summary.avgCostPerStory)}
           </div>
         </div>
       </div>
 
       {/* Two Column Layout: User List + Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* User List */}
         <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Users</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Click a user to view their cost details
-            </p>
+          <div className="px-3 sm:px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium text-gray-900">Users</h3>
+              <p className="text-xs text-gray-500">Tap to view details</p>
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {([
+                ["userNumber", "#"],
+                ["cost", "Cost"],
+                ["stories", "Stories"],
+                ["reading", "Reading"],
+              ] as [SortField, string][]).map(([field, label]) => (
+                <button
+                  key={field}
+                  onClick={() => handleSort(field)}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    sortField === field
+                      ? "bg-blue-100 text-blue-700 font-medium"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="max-h-[500px] overflow-y-auto">
+          <div className="max-h-[60vh] sm:max-h-[500px] overflow-y-auto">
             {data.users.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No users with stories or costs yet
+                No registered users yet
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {data.users.map((user) => (
+                {sortedUsers.map((user) => (
                   <button
                     key={user.id}
                     onClick={() =>
@@ -306,27 +389,63 @@ export default function UsersManager() {
                         selectedUserId === user.id ? null : user.id
                       )
                     }
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                    className={`w-full px-3 sm:px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
                       selectedUserId === user.id ? "bg-blue-50" : ""
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {user.name || user.email || "Anonymous"}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-mono text-gray-400 flex-shrink-0">
+                            #{user.userNumber}
+                          </span>
+                          <span className="font-medium text-gray-900 truncate">
+                            {user.name || "Anonymous"}
+                          </span>
+                          {user.isPremium && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">
+                              Premium
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {user.storyCount} stories · Joined{" "}
-                          {formatDate(user.createdAt)}
+                        {user.email && (
+                          <div className="text-xs text-gray-400 truncate">
+                            {user.email}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {user.nativeLanguage && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">
+                              {user.nativeLanguage}
+                            </span>
+                          )}
+                          {user.quizLevel && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">
+                              {CEFR_LABELS[user.quizLevel] || user.quizLevel.toUpperCase()}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500">
+                            {user.storyCount} stories
+                          </span>
+                          {user.readingMs > 0 && (
+                            <span className="text-xs text-gray-500">
+                              · {formatReadingTime(user.readingMs)}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            · {formatDate(user.createdAt)}
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right ml-3 flex-shrink-0">
                         <div className="font-medium text-gray-900">
                           {formatCents(user.totalCostCents)}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {formatCents(user.avgCostPerStory)}/story
-                        </div>
+                        {user.storyCount > 0 && (
+                          <div className="text-xs text-gray-500">
+                            {formatCents(user.avgCostPerStory)}/story
+                          </div>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -358,45 +477,59 @@ export default function UsersManager() {
             </>
           ) : userDetails ? (
             <div>
-              {/* 3-Tab Strip */}
+              {/* 4-Tab Strip */}
               <div className="flex border-b border-gray-200">
-                <button
-                  onClick={() => setActiveDetailTab("stories")}
-                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
-                    activeDetailTab === "stories"
-                      ? "border-b-2 border-blue-500 text-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <div>Story Uploads</div>
-                  <div className="text-xs mt-0.5">{formatCents(storyUploadCost)}</div>
-                </button>
-                <button
-                  onClick={() => setActiveDetailTab("in-story")}
-                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
-                    activeDetailTab === "in-story"
-                      ? "border-b-2 border-blue-500 text-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <div>In-Story Usage</div>
-                  <div className="text-xs mt-0.5">{formatCents(inStoryCost)}</div>
-                </button>
-                <button
-                  onClick={() => setActiveDetailTab("tutor")}
-                  className={`flex-1 px-3 py-3 text-sm font-medium text-center transition-colors ${
-                    activeDetailTab === "tutor"
-                      ? "border-b-2 border-blue-500 text-blue-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <div>AI Tutor</div>
-                  <div className="text-xs mt-0.5">{formatCents(tutorCost)}</div>
-                </button>
+                {([
+                  { key: "reading" as DetailTab, label: "Time Reading", subtitle: formatReadingTime(userDetails.readingTime?.totalMs ?? 0) },
+                  { key: "in-story" as DetailTab, label: "In-Story Usage", subtitle: formatCents(inStoryCost) },
+                  { key: "stories" as DetailTab, label: "Story Uploads", subtitle: formatCents(storyUploadCost) },
+                  { key: "tutor" as DetailTab, label: "AI Tutor", subtitle: formatCents(tutorCost) },
+                ]).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveDetailTab(tab.key)}
+                    className={`flex-1 px-2 py-3 text-sm font-medium text-center transition-colors ${
+                      activeDetailTab === tab.key
+                        ? "border-b-2 border-blue-500 text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <div className="text-xs sm:text-sm">{tab.label}</div>
+                    <div className="text-xs mt-0.5">{tab.subtitle}</div>
+                  </button>
+                ))}
               </div>
 
               {/* Tab-Aware Summary Card */}
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                {activeDetailTab === "reading" && (() => {
+                  const totalMs = userDetails.readingTime?.totalMs ?? 0;
+                  const storyCount = userDetails.readingTime?.byStory.length ?? 0;
+                  return (
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {totalMs > 0 ? formatReadingTime(totalMs) : "—"}
+                        </div>
+                        <div className="text-xs text-gray-500">Total Time</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {storyCount}
+                        </div>
+                        <div className="text-xs text-gray-500">Stories Tracked</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-blue-600">
+                          {storyCount > 0
+                            ? formatReadingTime(Math.round(totalMs / storyCount))
+                            : "—"}
+                        </div>
+                        <div className="text-xs text-gray-500">Avg/Story</div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {activeDetailTab === "stories" && (
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -464,6 +597,60 @@ export default function UsersManager() {
                   </div>
                 )}
               </div>
+
+              {/* Time Reading Tab */}
+              {activeDetailTab === "reading" && (() => {
+                const totalMs = userDetails.readingTime?.totalMs ?? 0;
+                const byStory = userDetails.readingTime?.byStory ?? [];
+                const attributedMs = byStory.reduce((sum, s) => sum + s.ms, 0);
+                const unattributedMs = totalMs - attributedMs;
+
+                return (
+                  <div className="max-h-[380px] overflow-y-auto">
+                    {totalMs === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <div className="text-gray-400 mb-1">No reading data yet</div>
+                        <div className="text-xs text-gray-400">
+                          Reading time will appear here as the user reads stories
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="divide-y divide-gray-100">
+                          {byStory.map((story) => (
+                            <div key={story.storySlug} className="px-4 py-3">
+                              <div className="flex items-center justify-between">
+                                <div className="font-medium text-gray-900">
+                                  {story.storySlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                                </div>
+                                <div className="font-medium text-gray-900">
+                                  {formatReadingTime(story.ms)}
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                {story.storySlug}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {unattributedMs > 0 && (
+                          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-500">
+                                Unattributed
+                                <span className="text-xs text-gray-400 ml-1">(before per-story tracking)</span>
+                              </span>
+                              <span className="font-medium text-gray-700">
+                                {formatReadingTime(unattributedMs)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Story Uploads Tab */}
               {activeDetailTab === "stories" && (
@@ -652,9 +839,9 @@ export default function UsersManager() {
       {/* Empty State */}
       {data.users.length === 0 && (
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center">
-          <div className="text-gray-400 text-lg mb-2">No user data yet</div>
+          <div className="text-gray-400 text-lg mb-2">No users yet</div>
           <p className="text-gray-500 text-sm">
-            User analytics will appear here once users upload stories.
+            Registered users will appear here.
           </p>
         </div>
       )}

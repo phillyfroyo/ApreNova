@@ -41,7 +41,7 @@ export default function StoryLayout({
   title,
   storyMap,
 }: StoryLayoutProps) {
-  useSessionLogger('reading');
+  useSessionLogger('reading', storySlug);
 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;

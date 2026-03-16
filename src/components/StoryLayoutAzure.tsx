@@ -34,7 +34,7 @@ export default function StoryLayoutAzure({
   title,
   storyMap,
 }: StoryLayoutAzureProps) {
-  useSessionLogger('reading');
+  useSessionLogger('reading', storySlug);
 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;

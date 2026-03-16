@@ -82,7 +82,7 @@ export default function StoryLayoutWithAzureTTS({
   detectedLevel,
   structureType,
 }: StoryLayoutWithAzureTTSProps) {
-  useSessionLogger('reading');
+  useSessionLogger('reading', storySlug);
 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;

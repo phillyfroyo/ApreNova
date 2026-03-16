@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 
-export function useSessionLogger(type: 'general' | 'reading') {
+export function useSessionLogger(type: 'general' | 'reading', storySlug?: string) {
   useEffect(() => {
     const start = Date.now();
 
@@ -12,7 +12,7 @@ export function useSessionLogger(type: 'general' | 'reading') {
       fetch('/api/log-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ms, type }),
+        body: JSON.stringify({ ms, type, ...(storySlug && { storySlug }) }),
       });
     };
 
@@ -21,5 +21,5 @@ export function useSessionLogger(type: 'general' | 'reading') {
       logTime();
       window.removeEventListener('beforeunload', logTime);
     };
-  }, [type]);
+  }, [type, storySlug]);
 }
