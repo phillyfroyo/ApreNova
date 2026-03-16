@@ -296,8 +296,6 @@ export default function UsersManager() {
     return sortDesc ? -diff : diff;
   });
 
-  const sortArrow = (field: SortField) =>
-    sortField === field ? (sortDesc ? " \u25BC" : " \u25B2") : "";
 
   return (
     <div className="max-w-6xl mx-auto px-3 py-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -371,7 +369,7 @@ export default function UsersManager() {
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {label}{sortArrow(field)}
+                  {label}
                 </button>
               ))}
             </div>
