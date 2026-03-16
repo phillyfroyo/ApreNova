@@ -41,7 +41,7 @@ export default function StoryLayoutSandbox({
   title,
   storyMap,
 }: StoryLayoutSandboxProps) {
-  useSessionLogger('reading');
+  useSessionLogger('reading', storySlug);
 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;

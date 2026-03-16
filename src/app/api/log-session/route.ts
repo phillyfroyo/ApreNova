@@ -11,12 +11,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Expected JSON' }, { status: 400 });
   }
 
-  let ms: number, type: string;
+  let ms: number, type: string, storySlug: string | undefined;
 
   try {
     const body = await req.json();
     ms = body.ms;
     type = body.type;
+    storySlug = body.storySlug;
   } catch (err) {
     console.warn("⚠️ Malformed or missing JSON body in log POST");
     return NextResponse.json({ error: 'Malformed JSON' }, { status: 400 });
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
       data: {
         userId: session.user.id,
         ms: ms,
-        type: type
+        type: type,
+        ...(storySlug && { storySlug }),
       }
     });
 

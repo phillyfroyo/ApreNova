@@ -4,6 +4,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Helper to count words in text
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
@@ -52,12 +54,26 @@ export async function GET(req: NextRequest) {
 }
 
 async function getUsersSummary() {
-  // Get all users who have either stories or API costs
+  // Get reading time per user
+  const readingTimeByUser = await prisma.sessionLog.groupBy({
+    by: ["userId"],
+    where: { type: "reading" },
+    _sum: { ms: true },
+  });
+
+  const readingMsMap = new Map(
+    readingTimeByUser.map((r) => [r.userId, r._sum.ms || 0])
+  );
+
+  // Get all users
   const usersWithCosts = await prisma.user.findMany({
     select: {
       id: true,
       name: true,
       email: true,
+      nativeLanguage: true,
+      quizLevel: true,
+      isPremium: true,
       createdAt: true,
       UserStory: {
         select: { id: true },
@@ -66,19 +82,24 @@ async function getUsersSummary() {
         select: { costCents: true },
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
   });
 
-  const users = usersWithCosts.map((user) => {
+  const users = usersWithCosts.map((user, index) => {
     const totalCostCents = user.ApiCost.reduce(
       (sum, cost) => sum + cost.costCents,
       0
     );
     return {
       id: user.id,
+      userNumber: index + 1,
       name: user.name,
       email: user.email,
+      nativeLanguage: user.nativeLanguage,
+      quizLevel: user.quizLevel,
+      isPremium: user.isPremium,
       createdAt: user.createdAt.toISOString(),
+      readingMs: readingMsMap.get(user.id) || 0,
       storyCount: user.UserStory.length,
       totalCostCents,
       avgCostPerStory:
@@ -105,9 +126,7 @@ async function getUsersSummary() {
       avgCostPerUser,
       avgCostPerStory,
     },
-    users: users
-      .filter((u) => u.storyCount > 0 || u.totalCostCents > 0)
-      .sort((a, b) => b.totalCostCents - a.totalCostCents),
+    users,
   });
 }
 
@@ -223,6 +242,23 @@ async function getUserDetails(userId: string) {
     where: { userId },
   });
 
+  // Get per-story reading time
+  const readingTimeByStory = await prisma.sessionLog.groupBy({
+    by: ["storySlug"],
+    where: {
+      userId,
+      type: "reading",
+      storySlug: { not: null },
+    },
+    _sum: { ms: true },
+  });
+
+  // Get total reading time (including sessions without storySlug)
+  const totalReadingTime = await prisma.sessionLog.aggregate({
+    where: { userId, type: "reading" },
+    _sum: { ms: true },
+  });
+
   // Build story data for existing stories
   const storyData = stories.map((story) => {
     const wordCount = countWords(story.rawContent);
@@ -286,6 +322,15 @@ async function getUserDetails(userId: string) {
       totalCostCents: tutorTotalCostCents,
       messageCount: tutorMessageCount,
       breakdown: tutorBreakdown,
+    },
+    readingTime: {
+      totalMs: totalReadingTime._sum.ms || 0,
+      byStory: readingTimeByStory
+        .map((r) => ({
+          storySlug: r.storySlug as string,
+          ms: r._sum.ms || 0,
+        }))
+        .sort((a, b) => b.ms - a.ms),
     },
   });
 }

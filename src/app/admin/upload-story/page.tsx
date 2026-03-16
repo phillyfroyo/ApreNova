@@ -24,7 +24,7 @@ function warmupServerless() {
 export default function UploadStoryPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<AdminTab>("upload");
+  const [activeTab, setActiveTab] = useState<AdminTab>("users");
 
   useEffect(() => {
     // Check if already authenticated in this session
@@ -81,41 +81,11 @@ export default function UploadStoryPage() {
 
       {/* Tab Navigation */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setActiveTab("upload")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "upload"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Upload New Story
-            </button>
-            <button
-              onClick={() => setActiveTab("manage")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "manage"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Manage Stories
-            </button>
-            <button
-              onClick={() => setActiveTab("costs")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === "costs"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              API Costs
-            </button>
+        <div className="max-w-6xl mx-auto px-4 overflow-x-auto">
+          <div className="flex gap-1 min-w-max">
             <button
               onClick={() => setActiveTab("users")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === "users"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
@@ -124,8 +94,38 @@ export default function UploadStoryPage() {
               Users
             </button>
             <button
+              onClick={() => setActiveTab("upload")}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "upload"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Upload
+            </button>
+            <button
+              onClick={() => setActiveTab("manage")}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "manage"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Manage
+            </button>
+            <button
+              onClick={() => setActiveTab("costs")}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "costs"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Costs
+            </button>
+            <button
               onClick={() => setActiveTab("premium")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === "premium"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
@@ -135,13 +135,13 @@ export default function UploadStoryPage() {
             </button>
             <button
               onClick={() => setActiveTab("dev")}
-              className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === "dev"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              Dev Tools
+              Dev
             </button>
           </div>
         </div>

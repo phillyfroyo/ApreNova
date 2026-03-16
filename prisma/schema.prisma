@@ -64,8 +64,11 @@ model SessionLog {
   userId    String
   ms        Int
   type      String
+  storySlug String?
   createdAt DateTime @default(now())
   User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storySlug])
 }
 
 model StoryBookmark {
@@ -121,23 +124,23 @@ model TutorMessage {
 }
 
 model SavedWord {
-  id             String      @id @default(cuid())
-  userId         String
-  word           String
-  translation    String
-  sourceSentence    String?
+  id                 String      @id @default(cuid())
+  userId             String
+  word               String
+  translation        String
+  sourceSentence     String?
   translatedSentence String?
-  storySlug         String?
-  enrichedData      Json?
-  easeFactor     Float       @default(5.0)
-  interval       Int         @default(0)
-  repetitions    Int         @default(0)
-  stability      Float       @default(0)
-  nextReviewDate DateTime    @default(now())
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  ReviewLog      ReviewLog[]
-  User           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storySlug          String?
+  enrichedData       Json?
+  easeFactor         Float       @default(5.0)
+  interval           Int         @default(0)
+  repetitions        Int         @default(0)
+  stability          Float       @default(0)
+  nextReviewDate     DateTime    @default(now())
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  ReviewLog          ReviewLog[]
+  User               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, word, sourceSentence])
   @@index([userId, nextReviewDate])
