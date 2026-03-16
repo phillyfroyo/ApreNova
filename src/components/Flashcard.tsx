@@ -423,7 +423,8 @@ export default function Flashcard({
                         {isVerb && hasSpanishChart && !showConjugations && verbChart && (
                           <div>
                             <p className="font-semibold text-gray-700 mb-1.5 text-[0.9375rem]">{labels.conjugations}: {verbChart.infinitive} &mdash; {verbChart.tense}</p>
-                            <table className="w-full text-sm border-collapse border border-gray-200 mt-1">
+                            <div className="overflow-x-auto">
+                            <table className="text-sm w-full border-collapse border border-gray-200 mt-1 min-w-[340px]">
                               <tbody>
                                 {spanishPronounPairs.map(([left, right], i) => {
                                   const leftKey = Object.keys(verbChart.conjugations).find(k => stripAccents(k.toLowerCase()) === stripAccents(left.toLowerCase())) || left;
@@ -439,6 +440,7 @@ export default function Flashcard({
                                 })}
                               </tbody>
                             </table>
+                            </div>
                           </div>
                         )}
                       </div>
