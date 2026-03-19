@@ -59,9 +59,9 @@ export const DEFAULT_LINES_PER_PAGE = 10;
 export const STEPS = [
   { number: 1, label: "Upload Text" },
   { number: 2, label: "Parse & Detect" },
-  { number: 3, label: "Metadata" },
-  { number: 4, label: "Generate Levels" },
-  { number: 5, label: "Translate" },
+  { number: 3, label: "Generate Levels" },
+  { number: 4, label: "Translate" },
+  { number: 5, label: "Metadata" },
   { number: 6, label: "Paginate" },
   { number: 7, label: "Preview & Save" },
 ] as const;
@@ -87,7 +87,7 @@ export const ACCEPTED_EXTENSIONS = [".txt", ".html", ".htm", ".xhtml"] as const;
 // ============================================
 
 export const LEVEL_LABELS: Record<number, { short: string; full: string; description: string }> = {
-  1: { short: "A1", full: "A1 (Beginner)", description: "No past/future/perfect tenses" },
+  1: { short: "A1", full: "A1 (Beginner)", description: "Simple tenses only, no perfect/conditional" },
   2: { short: "A2", full: "A2 (Elementary)", description: "Simple present tense" },
   3: { short: "B1", full: "B1 (Intermediate)", description: "Complex structures allowed" },
   4: { short: "B2", full: "B2 (Upper Intermediate)", description: "Advanced vocabulary" },

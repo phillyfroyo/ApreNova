@@ -221,6 +221,7 @@ export function useTranslationPipeline({
             fromLanguage: storyData.sourceLanguage,
             level,
             slug: storyData.slug || undefined,
+            sessionId: storyData.sessionId || undefined,
             isPoetry,
           }),
           signal: timeoutController.signal,

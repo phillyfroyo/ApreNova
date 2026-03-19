@@ -9,7 +9,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, fromLanguage, level, slug, isPoetry } = await req.json();
+    const { text, fromLanguage, level, slug, sessionId, isPoetry } = await req.json();
 
     console.log(`[/api/admin/translate] Received: L${level}, ${fromLanguage}, ${text?.length || 0} chars, poetry=${isPoetry}, slug=${slug}`);
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       text,
       fromLanguage as "en" | "es",
       level,
-      { adminStorySlug: slug, isPoetry: isPoetry === true }
+      { adminStorySlug: slug, adminSessionId: sessionId, isPoetry: isPoetry === true }
     );
 
     console.log(`[/api/admin/translate] Success: L${level}, ${result.alignment.translatedLines}/${result.alignment.contentLines} lines, truncated=${result.truncated}`);

@@ -33,6 +33,7 @@ const initialStoryData: StoryData = {
   detectedFileType: null,
   sourceLanguage: "en",
   slug: "",
+  sessionId: null,
   detectedLevel: null,
   title: { en: "", es: "" },
   displayTitle: null,
@@ -115,6 +116,14 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
   }, [isProcessing, storyData, currentStep, saveProgress]);
 
   const clearSavedState = async () => {
+    // Delete orphaned cost records for this session (fire-and-forget)
+    if (storyData.sessionId) {
+      fetch("/api/admin/cleanup-session-costs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: storyData.sessionId }),
+      }).catch(() => {}); // Don't block on failure
+    }
     await clearProgress();
     setStoryData(initialStoryData);
     setCurrentStep(1);
@@ -128,14 +137,20 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
   const goToStep = (step: Step) => {
     // Clean raw text when moving from Step 1 to Step 2
     // Preserve whitespace during initial clean - structure-specific normalization happens later
+    // Also generate a session ID for cost tracking if one doesn't exist yet
     let updatedData = storyData;
     if (currentStep === 1 && step === 2) {
-      updatedData = { ...storyData, rawText: cleanText(storyData.rawText, { preserveWhitespace: true }) };
+      updatedData = {
+        ...storyData,
+        rawText: cleanText(storyData.rawText, { preserveWhitespace: true }),
+        sessionId: storyData.sessionId || crypto.randomUUID(),
+      };
       setStoryData(updatedData);
     }
     // Reset processing state when navigating away from steps that use async processing
     // This allows the user to use the Continue button on other steps
-    if ((currentStep === 4 || currentStep === 5) && step !== currentStep) {
+    // Steps 3 (Generate) and 4 (Translate) use async processing
+    if ((currentStep === 3 || currentStep === 4) && step !== currentStep) {
       setIsProcessing(false);
     }
     setCurrentStep(step);
@@ -165,16 +180,17 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
       case 2:
         return storyData.detectedLevel !== null;
       case 3:
-        return (storyData.title.en.length > 0 || storyData.title.es.length > 0) && storyData.slug.length > 0;
-      case 4:
-        // Allow proceeding if at least one level is generated (not omitted)
+        // Step 3: Generate Levels — at least one level generated (not omitted)
         return getGeneratedLevels().length > 0;
-      case 5:
-        // All generated levels must be translated
+      case 4:
+        // Step 4: Translate — all generated levels must be translated
         const generatedLevels = getGeneratedLevels();
         return generatedLevels.length > 0 && generatedLevels.every(
           (l) => storyData.levelContent[l]?.translatedText?.length > 0
         );
+      case 5:
+        // Step 5: Metadata — title and slug required
+        return (storyData.title.en.length > 0 || storyData.title.es.length > 0) && storyData.slug.length > 0;
       case 6:
         return true;
       default:
@@ -193,13 +209,9 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
         if (storyData.detectedLevel === null) missing.push("Level detection (click Detect)");
         break;
       case 3:
-        if (!storyData.title.en && !storyData.title.es) missing.push("Title (English or Spanish)");
-        if (!storyData.slug) missing.push("Story slug");
-        break;
-      case 4:
         if (getGeneratedLevels().length === 0) missing.push("At least one level generated");
         break;
-      case 5:
+      case 4:
         const generatedLevels = getGeneratedLevels();
         const untranslated = generatedLevels.filter(
           (l) => !storyData.levelContent[l]?.translatedText?.length
@@ -207,6 +219,10 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
         if (untranslated.length > 0) {
           missing.push(`Translation for level(s): ${untranslated.join(", ")}`);
         }
+        break;
+      case 5:
+        if (!storyData.title.en && !storyData.title.es) missing.push("Title (English or Spanish)");
+        if (!storyData.slug) missing.push("Story slug");
         break;
     }
     return missing;
@@ -359,19 +375,24 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
           {currentStep === 3 && (
             <StepErrorBoundary
               stepNumber={3}
-              stepLabel="Metadata"
+              stepLabel="Generate Levels"
               onGoBack={() => goToStep(2)}
             >
-              <Step3Metadata storyData={storyData} updateStoryData={updateStoryData} />
+              <Step4Generate
+                storyData={storyData}
+                updateStoryData={updateStoryData}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+              />
             </StepErrorBoundary>
           )}
           {currentStep === 4 && (
             <StepErrorBoundary
               stepNumber={4}
-              stepLabel="Generate Levels"
+              stepLabel="Translate"
               onGoBack={() => goToStep(3)}
             >
-              <Step4Generate
+              <Step5Translate
                 storyData={storyData}
                 updateStoryData={updateStoryData}
                 isProcessing={isProcessing}
@@ -382,15 +403,10 @@ export default function StoryUploadForm({ onLogout, hideHeader }: StoryUploadFor
           {currentStep === 5 && (
             <StepErrorBoundary
               stepNumber={5}
-              stepLabel="Translate"
+              stepLabel="Metadata"
               onGoBack={() => goToStep(4)}
             >
-              <Step5Translate
-                storyData={storyData}
-                updateStoryData={updateStoryData}
-                isProcessing={isProcessing}
-                setIsProcessing={setIsProcessing}
-              />
+              <Step3Metadata storyData={storyData} updateStoryData={updateStoryData} />
             </StepErrorBoundary>
           )}
           {currentStep === 6 && (

@@ -10,7 +10,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, sourceLanguage, targetLevel, sourceLevel, isPoetry, slug } = await req.json();
+    const { text, sourceLanguage, targetLevel, sourceLevel, isPoetry, slug, sessionId } = await req.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
@@ -28,13 +28,16 @@ export async function POST(req: NextRequest) {
 
     // For poetry, use chapter-level processing with markers for ~99% cost reduction
     // Falls back to poem-level then stanza-level if markers aren't preserved
+    // NOTE: maxRetries=1 here because the admin client (useRewritePipeline.ts withRetry)
+    // already retries failed requests up to 3 times. Using maxRetries>1 here would
+    // stack retries (client retries × server retries), causing excessive API calls.
     if (isPoetry) {
       const chapterResult = await rewritePoetryChapter(
         text,
         effectiveSourceLevel,
         targetLevel,
         language,
-        { isPoetry: true, maxRetries: 3, adminStorySlug: slug }
+        { isPoetry: true, maxRetries: 1, adminStorySlug: slug, adminSessionId: sessionId }
       );
 
       if (!chapterResult.wasRewritten && effectiveSourceLevel !== targetLevel) {
@@ -58,13 +61,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // For prose, use standard rewriting with 3 retries
+    // For prose, use standard rewriting — maxRetries=1 since the admin client
+    // (useRewritePipeline.ts withRetry) already handles retries with exponential backoff.
     const result: RewriteResult = await rewriteToLevel(
       text,
       effectiveSourceLevel,
       targetLevel,
       language,
-      { isPoetry: false, maxRetries: 3, adminStorySlug: slug }
+      { isPoetry: false, maxRetries: 1, adminStorySlug: slug, adminSessionId: sessionId }
     );
 
     if (!result.wasRewritten && effectiveSourceLevel !== targetLevel) {

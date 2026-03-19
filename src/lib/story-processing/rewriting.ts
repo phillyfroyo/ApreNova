@@ -184,6 +184,8 @@ export interface RewriteOptions {
   userId?: string;
   /** Admin story slug for cost tracking (admin uploads don't have storyId) */
   adminStorySlug?: string;
+  /** Admin session ID for cost tracking — stable across the entire upload session */
+  adminSessionId?: string;
 }
 
 /**
@@ -203,7 +205,7 @@ export async function rewriteToLevel(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<RewriteResult> {
-  const { isPoetry = false, maxRetries = 2, storyId, userId, adminStorySlug } = options;
+  const { isPoetry = false, maxRetries = 2, storyId, userId, adminStorySlug, adminSessionId } = options;
   const sourceLevelNum =
     typeof sourceLevel === "string" ? levelStringToNumber(sourceLevel) : sourceLevel;
   const targetLevelNum =
@@ -273,7 +275,7 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
       logOpenAICost("rewriting", "gpt-4o", completion.usage, {
         userId,
         userStoryId: storyId,
-        metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt, ...(adminStorySlug && { adminStorySlug }) },
+        metadata: { sourceLevel: sourceLevelNum, targetLevel: targetLevelNum, attempt, ...(adminStorySlug && { adminStorySlug }), ...(adminSessionId && { adminSessionId }) },
       }).catch(() => {}); // Swallow cost logging errors
 
       const rawResponse = completion.choices[0]?.message?.content?.trim() || "";
@@ -337,15 +339,11 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
         const OPEN_QUOTES = /^["\u201C\u00AB]/;
         const CLOSE_QUOTES = /["\u201D\u00BB]\s*$/;
         const contentSegments = segments.filter(s => s.type === 'content');
-        console.log(`[Rewrite] Quote repair: checking ${parsedParagraphs.length} paragraphs against ${contentSegments.length} originals`);
+        let repairCount = 0;
         for (let i = 0; i < parsedParagraphs.length && i < contentSegments.length; i++) {
           const original = contentSegments[i].text.trim();
           let rewritten = parsedParagraphs[i];
           const origQuotes = (original.match(ALL_QUOTES) || []).length;
-          const rewriteQuotes = (rewritten.match(ALL_QUOTES) || []).length;
-          if (origQuotes > 0) {
-            console.log(`[Rewrite] P${i + 1} quotes: original=${origQuotes}, rewrite=${rewriteQuotes}, orig starts with quote=${OPEN_QUOTES.test(original)}, rewrite starts with quote=${OPEN_QUOTES.test(rewritten)}`);
-          }
           if (origQuotes > 0) {
             // Check if opening quote is missing (regardless of total count)
             if (OPEN_QUOTES.test(original) && !OPEN_QUOTES.test(rewritten)) {
@@ -358,10 +356,13 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
               rewritten = rewritten.trimEnd() + closeChar;
             }
             if (rewritten !== parsedParagraphs[i]) {
-              console.log(`[Rewrite] Repaired quotes in P${i + 1}: "${parsedParagraphs[i].substring(0, 50)}..." → "${rewritten.substring(0, 50)}..."`);
+              repairCount++;
               parsedParagraphs[i] = rewritten;
             }
           }
+        }
+        if (repairCount > 0) {
+          console.log(`[Rewrite] Repaired quotes in ${repairCount}/${parsedParagraphs.length} paragraphs`);
         }
 
         rewrittenText = reassembleWithSpacing(segments, parsedParagraphs);
@@ -733,7 +734,7 @@ export async function rewritePoetryChapter(
   language: "en" | "es",
   options: RewriteOptions = {}
 ): Promise<ChapterRewriteResult> {
-  const { maxRetries = 2, storyId, userId, adminStorySlug } = options;
+  const { maxRetries = 2, storyId, userId, adminStorySlug, adminSessionId } = options;
   const sourceLevelNum =
     typeof sourceLevel === "string" ? levelStringToNumber(sourceLevel) : sourceLevel;
   const targetLevelNum =
@@ -837,6 +838,7 @@ Return ONLY the rewritten text with markers. No explanations, no headers.`;
           poemCount: markedResult.poemCount,
           isChapterLevel: true,
           ...(adminStorySlug && { adminStorySlug }),
+          ...(adminSessionId && { adminSessionId }),
         },
       }).catch(() => {});
 
@@ -986,6 +988,7 @@ async function rewritePoetryChapterByPoem(
           totalPoems: poems.length,
           isFallback: true,
           ...(options.adminStorySlug && { adminStorySlug: options.adminStorySlug }),
+          ...(options.adminSessionId && { adminSessionId: options.adminSessionId }),
         },
       }).catch(() => {});
 

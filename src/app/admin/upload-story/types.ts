@@ -102,6 +102,8 @@ export interface StoryData {
   detectedFileType: FileType | null; // File type detected from upload (html, txt, rtf, md)
   sourceLanguage: SourceLanguage;
   slug: string;
+  /** Stable session ID for cost tracking — generated once per upload, survives page refresh */
+  sessionId: string | null;
   detectedLevel: number | null;
   title: { en: string; es: string };
   displayTitle: { en: string; es: string } | null;

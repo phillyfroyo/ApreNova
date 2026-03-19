@@ -1,5 +1,10 @@
 // src/lib/story-processing/cefr-prompts.ts
 // CEFR prompts for AI processing - uses central cefr.ts definitions
+//
+// Prompt tiers by level:
+//   A1-B1 ("full"): Complete grammar constraints, style guidance, and writing rules
+//   B2 ("light"): Minimal constraints — preserve literary quality, only simplify archaic/obscure
+//   C1-C2 ("minimal"): Near-passthrough — modernize archaic forms only (C1) or no changes (C2)
 
 import {
   type CEFRCode,
@@ -21,57 +26,18 @@ import {
  */
 export const CHAPTER_POETRY_STRUCTURE_RULES = `
 CHAPTER STRUCTURE (CRITICAL - MULTIPLE POEMS):
-This text contains multiple poems with explicit structural markers. You MUST preserve ALL markers EXACTLY:
-
-MANDATORY MARKERS TO PRESERVE:
-1. [POEM: "Title"] - Start of each poem. Keep the exact title in quotes.
-2. [/POEM] - End of each poem. Must appear after each poem.
-3. [STANZA] - Stanza break within poems. Must remain in exact positions.
+Preserve ALL structural markers EXACTLY:
+1. [POEM: "Title"] — start of each poem, keep exact title
+2. [/POEM] — end of each poem
+3. [STANZA] — stanza break, must remain in exact positions
 
 RULES:
-- Return the SAME number of [POEM: ...] ... [/POEM] blocks as the input
-- Return the SAME number of [STANZA] markers within each poem
-- Poem titles in markers must be UNCHANGED (exact case, spelling, punctuation)
-- You may adjust vocabulary and line count within stanzas for the target level
-- Do NOT merge or split poems
-- Do NOT merge or split stanzas across [STANZA] markers
-- Do NOT add or remove [STANZA] markers
-- Do NOT rename poems or change title text inside [POEM: "..."]
-
-FORMAT YOUR RESPONSE:
-- Each poem must start with [POEM: "Title"] on its own line
-- Each poem must end with [/POEM] on its own line
-- Stanza breaks use [STANZA] on its own line (no extra blank lines around it)
-- Preserve line indentation/leading whitespace from original
-
-EXAMPLE INPUT:
-[POEM: "Hope"]
-Hope is the thing with feathers
-That perches in the soul
-[STANZA]
-And sings the tune without the words
-And never stops at all
-[/POEM]
-
-[POEM: "Success"]
-Success is counted sweetest
-By those who ne'er succeed
-[/POEM]
-
-EXAMPLE OUTPUT (for lower level):
-[POEM: "Hope"]
-Hope is like a bird with feathers
-It lives inside the heart
-[STANZA]
-It sings a song with no words
-And never ever stops
-[/POEM]
-
-[POEM: "Success"]
-Success feels most sweet
-To those who never win
-[/POEM]
-`;
+- Same number of [POEM]...[/POEM] blocks and [STANZA] markers as input
+- Poem titles unchanged (exact case, spelling, punctuation)
+- Do NOT merge/split poems or stanzas
+- Each [POEM: "Title"] and [/POEM] on its own line
+- [STANZA] on its own line (no extra blank lines around it)
+- Preserve line indentation/leading whitespace from original`;
 
 // Re-export from cefr.ts for backwards compatibility
 export { toCEFR, toNumericLevel, fromNumericLevel };
@@ -96,16 +62,99 @@ export interface RewritePromptOptions {
   isChapterWithMarkers?: boolean;
 }
 
+// ============================================================================
+// PROSE STRUCTURE RULES — shared across all prose rewrite levels
+// ============================================================================
+
+const PROSE_STRUCTURE_RULES = `STORY FAITHFULNESS:
+- RETELL the full story — do NOT summarize or condense
+- Every scene, event, dialogue, and plot point from the original must appear in the rewrite
+- Simplify the LANGUAGE, not the STORY
+
+PARAGRAPH ALIGNMENT:
+- Each [PN] input paragraph produces EXACTLY ONE [PN] output paragraph
+- Never merge, skip, or reorder paragraph markers
+- Text within each paragraph flows naturally — no line breaks within paragraphs
+
+DIALOGUE PUNCTUATION:
+- Preserve ALL quotation marks ("...") — both opening and closing
+- Keep dialogue attribution (he said, she whispered) with the dialogue
+- Never convert direct speech to indirect speech`;
+
+// ============================================================================
+// POETRY STRUCTURE RULES
+// ============================================================================
+
+const POETRY_STRUCTURE_RULES = `STRUCTURE (CRITICAL):
+- EXACT same number of lines as the original — non-negotiable
+- Each original line → exactly ONE rewritten line
+- Stanza breaks (empty lines) must remain in exact same positions
+- Preserve leading whitespace/indentation exactly
+
+POETIC ELEMENTS (preserve as much as possible):
+- Rhyme scheme, meter/rhythm, tone and mood, imagery
+- Repetition/refrains: if the original repeats lines, your rewrite must too
+
+SIMPLIFY only vocabulary and verb forms — never change line count, stanza breaks, or indentation`;
+
+// ============================================================================
+// PER-LEVEL WRITING GUIDELINES
+// Merged from style guidance + pitfalls — one concise section per level
+// ============================================================================
+
+const WRITING_GUIDELINES: Record<string, string> = {
+  A1: `WRITING GUIDELINES:
+- Write connected prose, not isolated sentences — this is a STORY, not a vocabulary exercise
+- Keep cause-and-effect clear with simple connectors
+- Simple dialogue adds variety; preserve basic character emotions
+- Use pronouns after 2-3 sentences about the same subject
+- Do NOT create choppy note-taking style or remove character personality`,
+
+  A2: `WRITING GUIDELINES:
+- Write CONNECTED prose — "simple and direct", not fragmented
+- Every scene and event from the original must appear — do NOT skip or condense
+- Preserve the author's voice, humor, and personality through simple patterns
+- Mix simple and compound sentences for natural rhythm; vary sentence length
+- Use connectors to maintain narrative flow
+- Dialogue conveys personality — use it. Emotional reactions should remain
+- Do NOT over-fragment into tiny disconnected sentences
+- Do NOT flatten character voice into neutral narration or remove humor`,
+
+  B1: `WRITING GUIDELINES:
+- Write "simple CONNECTED text" — full narrative flow that reads naturally, not "adapted"
+- Preserve the author's voice, humor, irony, and style
+- Keep complex emotions, internal monologue, and character development intact
+- Subplots, descriptive passages, and narrative tension should remain
+- Mix simple, compound, and complex sentences naturally
+- Do NOT over-simplify to A2 level — B1 readers handle much more complexity
+- Do NOT flatten character voice or remove descriptive richness`,
+
+  B2: `WRITING GUIDELINES:
+- Minimal simplification — preserve the author's full literary voice
+- Keep all literary devices: metaphor, irony, figurative language, stylistic flourishes
+- Maintain complex character psychology and sophisticated narrative techniques
+- Only simplify what would genuinely confuse a B2 reader (obscure/archaic vocabulary)`,
+
+  C1: `WRITING GUIDELINES:
+- Only modernize archaic elements — preserve everything else
+- Replace archaic forms with their modern equivalents
+- Maintain full literary sophistication, all devices and techniques
+- If the original is complex, the C1 version should be equally complex`,
+
+  C2: `No adaptation needed — preserve the original text exactly as-is.`,
+};
+
+// ============================================================================
+// REWRITE PROMPT GENERATOR
+// ============================================================================
+
 /**
- * Generate a prompt for rewriting text at a specific CEFR level
+ * Generate a prompt for rewriting text at a specific CEFR level.
  *
- * The prompt includes:
- * - Official CEFR context (what learners at this level can do)
- * - Grammar constraints (what to avoid)
- * - Allowed structures (what IS appropriate - often underused)
- * - Connectors to use (for cohesion)
- * - Style guidance (how to preserve narrative quality)
- * - Common pitfalls to avoid
+ * Three tiers based on how much adaptation the level requires:
+ *   A1-B1 ("full"): Grammar constraints, allowed structures, writing guidelines
+ *   B2 ("light"): Light constraints, writing guidelines only
+ *   C1-C2 ("minimal"): Minimal instructions
  */
 export function generateRewritePrompt(
   targetLevel: CEFRCode | number | string,
@@ -121,137 +170,81 @@ export function generateRewritePrompt(
   const { isPoetry = false, isChapterWithMarkers = false } = options;
   const level = getLevelDetails(targetLevel);
   const langName = sourceLanguage === "es" ? "Spanish" : "English";
-
-  // Build forbidden rules section
-  const forbiddenSection =
-    level.forbidden.length > 0
-      ? `GRAMMAR CONSTRAINTS (AVOID):\n${level.forbidden.map(r => `- ${r}`).join("\n")}`
-      : "";
-
-  // Build allowed structures section
-  const allowedSection =
-    level.allowed.length > 0
-      ? `ALLOWED STRUCTURES (USE THESE):\n${level.allowed.map(r => `- ${r}`).join("\n")}`
-      : "";
-
-  // Build connectors section
-  const connectorsSection =
-    level.connectors.length > 0
-      ? `CONNECTORS FOR COHESION:\nUse these to maintain flow: ${level.connectors.join(", ")}`
-      : "";
-
-  // Build style guidance section
-  const styleSection =
-    level.styleGuidance.length > 0
-      ? `STYLE GUIDANCE (CRITICAL FOR QUALITY):\n${level.styleGuidance.map(r => `- ${r}`).join("\n")}`
-      : "";
-
-  // Build pitfalls section
-  const pitfallsSection =
-    level.pitfalls.length > 0
-      ? `COMMON MISTAKES TO AVOID:\n${level.pitfalls.map(r => `- ${r}`).join("\n")}`
-      : "";
-
-  // Different structure rules for poetry vs prose vs chapter-level poetry
-  // Chapter-level poetry with markers has its own comprehensive rules
-  let structureRules: string;
-
-  if (isChapterWithMarkers) {
-    // Use chapter-level poetry rules with marker preservation
-    structureRules = CHAPTER_POETRY_STRUCTURE_RULES;
-  } else if (isPoetry) {
-    structureRules = `STRUCTURE RULES (POETRY) - CRITICAL:
-LINE COUNT REQUIREMENT (MANDATORY):
-- The rewritten poem MUST have EXACTLY the same number of lines as the original
-- Each original line → exactly ONE rewritten line (simplified vocabulary, same position)
-- Empty lines/stanza breaks must remain in the exact same positions
-- This is NON-NEGOTIABLE - a poem with wrong line count is a failed rewrite
-
-POETIC FORM PRESERVATION:
-- Identify the poem type (Sonnet, Haiku, Limerick, Ballad, Ode, Villanelle, Elegy, Free Verse, Epic, etc.)
-- Preserve the form's structure (14 lines for sonnet, 3 lines for haiku, etc.)
-- Maintain stanza divisions exactly as in the original
-
-POETIC ELEMENTS (preserve as much as possible):
-- Rhyme scheme: Try to maintain end rhymes (ABAB, AABB, etc.) using simpler words
-- Meter/rhythm: Keep similar syllable patterns and stress where possible
-- Tone and mood: The emotional feel must remain (melancholic, joyful, mysterious, etc.)
-- Imagery: Simplify vocabulary but keep the visual/sensory images
-- Repetition/refrains: If the original repeats lines, your rewrite must repeat the same lines
-
-WHAT TO SIMPLIFY:
-- Replace complex vocabulary with simpler synonyms
-- Use more common verb forms (but keep the line count!)
-- Simplify metaphors only if absolutely necessary for the target level
-
-WHAT TO NEVER CHANGE:
-- Number of lines
-- Stanza breaks (empty lines)
-- Leading whitespace/indentation (if a line starts with spaces, your rewritten line must start with the SAME spaces)
-- Character/place names
-- The core meaning of each line
-
-INDENTATION IS CRITICAL:
-- Some poems use visual indentation as part of their structure
-- If the original line is "  By those who ne'er succeed." (starts with 2 spaces)
-- Your rewrite must be "  Por quienes nunca triunfan." (also starts with 2 spaces)
-- Copy the EXACT leading whitespace from each input line to your output line`;
-  } else {
-    structureRules = `STRUCTURE RULES (PROSE):
-- RETELL the full story in simpler language — do NOT summarize or condense
-- Every scene, event, and plot point from the original must appear in the rewrite
-- The rewritten text should be a substantial retelling, not a brief summary
-- Do NOT skip dialogue, descriptions, or character interactions
-
-DIALOGUE PUNCTUATION (CRITICAL):
-- If the original text contains dialogue with quotation marks ("..."), the rewrite MUST also include quotation marks
-- Preserve BOTH opening and closing quotation marks — never drop one or the other
-- Dialogue attribution (he said, she whispered, etc.) must remain with the dialogue
-- Do NOT convert direct speech to indirect speech (e.g., do NOT change "I am tired," she said → She said that she was tired)
-
-PARAGRAPH ALIGNMENT (CRITICAL):
-- Each paragraph in the input is prefixed with a marker like [P1], [P2], [P3], etc.
-- You MUST preserve these exact paragraph markers in your output
-- Each [PN] input paragraph produces EXACTLY ONE [PN] output paragraph
-- NEVER merge multiple paragraphs — each [PN] marker must appear on its own line in your output
-- NEVER skip any [PN] marker — every marker from the input must appear in your output
-- Within each paragraph, text should flow naturally as prose
-- Do NOT break sentences into separate lines within a paragraph
-- Do NOT add line breaks within paragraphs
-
-Example:
-Input:
-[P1] In my younger years my father gave me some advice that I have been thinking about ever since.
-[P2] "Don't judge people," he said. "Not everyone has the same advantages as you."
-[P3] He didn't say more, but I understood he meant a lot.
-
-Output (for lower level):
-[P1] When I was young, my father gave me advice. I still think about it.
-[P2] "Don't judge people," he said. "Not everyone has what you have."
-[P3] He did not say more. But I understood.`;
-  }
+  const numLevel = level.numericLevel;
 
   // Determine content type for prompt header
   const contentType = isChapterWithMarkers ? "poetry chapter" : (isPoetry ? "poem" : "story");
 
+  // Structure rules depend on content type, not level
+  let structureRules: string;
+  if (isChapterWithMarkers) {
+    structureRules = CHAPTER_POETRY_STRUCTURE_RULES;
+  } else if (isPoetry) {
+    structureRules = POETRY_STRUCTURE_RULES;
+  } else {
+    structureRules = PROSE_STRUCTURE_RULES;
+  }
+
+  // Writing guidelines are per-level
+  const guidelines = WRITING_GUIDELINES[level.code] || WRITING_GUIDELINES.B2;
+
+  // ── Tier: C1-C2 (minimal) ──────────────────────────────────────────────
+  if (numLevel >= 5) {
+    return `Rewrite this ${langName} ${contentType} for CEFR ${level.code} (${level.name}).
+
+${guidelines}
+
+${structureRules}
+
+TEXT TO REWRITE:
+"""
+${sourceText}
+"""
+
+Return ONLY the rewritten text.`;
+  }
+
+  // ── Tier: B2 (light) ──────────────────────────────────────────────────
+  if (numLevel === 4) {
+    const forbiddenSection = level.forbidden.length > 0
+      ? `AVOID:\n${level.forbidden.map(r => `- ${r}`).join("\n")}`
+      : "";
+
+    return `Rewrite this ${langName} ${contentType} for CEFR ${level.code} (${level.name}).
+
+LANGUAGE: Sentences ${level.sentenceLength}. Vocabulary: ${level.vocabulary}.
+${forbiddenSection}
+
+${guidelines}
+
+${structureRules}
+
+TEXT TO REWRITE:
+"""
+${sourceText}
+"""
+
+Return ONLY the rewritten text. Preserve the story's voice and flow.`;
+  }
+
+  // ── Tier: A1-B1 (full) ────────────────────────────────────────────────
+  const forbiddenSection = level.forbidden.length > 0
+    ? `GRAMMAR — AVOID:\n${level.forbidden.map(r => `- ${r}`).join("\n")}`
+    : "";
+
+  const allowedSection = level.allowed.length > 0
+    ? `GRAMMAR — USE THESE:\n${level.allowed.map(r => `- ${r}`).join("\n")}`
+    : "";
+
   return `Rewrite this ${langName} ${contentType} for CEFR ${level.code} (${level.name}).
 
-TARGET READER PROFILE:
-${level.officialDescription}
-
-LANGUAGE PARAMETERS:
-- Sentence length: ${level.sentenceLength}
-- Vocabulary: ${level.vocabulary}
+LANGUAGE: Sentences ${level.sentenceLength}. Vocabulary: ${level.vocabulary}.
 
 ${forbiddenSection}
 
 ${allowedSection}
 
-${connectorsSection}
-
-${styleSection}
-
-${pitfallsSection}
+${guidelines}
 
 ${structureRules}
 
@@ -263,8 +256,13 @@ ${sourceText}
 Return ONLY the rewritten text. Preserve the story's voice and flow while adapting the language level.`;
 }
 
+// ============================================================================
+// TRANSLATION PROMPT GENERATOR
+// ============================================================================
+
 /**
- * Generate a prompt for translating text while maintaining level-appropriate language
+ * Generate a prompt for translating text while maintaining level-appropriate language.
+ * Translation prompts are already lean — light per-level tiering applied.
  */
 export function generateTranslationPrompt(
   text: string,
@@ -281,33 +279,27 @@ export function generateTranslationPrompt(
       ? `\nFORBIDDEN:\n${cefrLevel.forbidden.join("\n")}`
       : "";
 
-  // Poetry-specific translation guidance
+  // Poetry-specific translation guidance (kept concise)
   const poetryGuidance = isPoetry
     ? `
-POETRY TRANSLATION (THIS IS A POEM - HANDLE WITH CARE):
-Translating poetry is an art. Your goal is to create a translation that feels like a poem
-in ${toLangName}, not just a literal word-for-word conversion.
-
-PRESERVE THESE POETIC ELEMENTS:
-- Rhyme scheme: If the original rhymes (ABAB, AABB, etc.), try to maintain rhymes in ${toLangName}
-  - It's okay to slightly adjust word choice to achieve rhyme
-  - Prioritize natural-sounding rhymes over forced ones
-- Rhythm and meter: Match the syllable patterns and stress where possible
-  - ${toLangName === "Spanish" ? "Spanish has natural rhythm - use it" : "English stress patterns matter for flow"}
-- Imagery and metaphors: Translate the IMAGE, not just the words
-  - If a metaphor doesn't work in ${toLangName}, find an equivalent that evokes the same feeling
-- Tone and mood: Preserve the emotional atmosphere (melancholic, joyful, mysterious, etc.)
-- Sound devices: Alliteration, assonance, onomatopoeia - recreate these effects where possible
-- Line breaks: These are intentional - maintain the same line structure
-
-POETRY TRANSLATION PRINCIPLES:
-- Faithfulness to MEANING over literal words
+POETRY TRANSLATION:
+- Translate the IMAGE and MEANING, not just the words
+- Try to maintain rhyme scheme, rhythm, and tone in ${toLangName}
+- Preserve line breaks exactly — they are intentional
 - A beautiful ${toLangName} poem > an awkward literal translation
-- When choosing between accuracy and artistry, lean toward artistry
-- Read your translation aloud - does it SOUND like poetry?
-
 `
     : "";
+
+  // For lower levels, add style guidance so translation matches the rewrite's tone
+  const numLevel = cefrLevel.numericLevel;
+  let translationStyle = "";
+  if (numLevel <= 1) {
+    translationStyle = `\nSTYLE: Use short, simple sentences. Concrete vocabulary only. The translation should feel natural at A1 level.`;
+  } else if (numLevel <= 2) {
+    translationStyle = `\nSTYLE: Use simple, connected sentences. The translation should read as natural ${toLangName} at A2 level, not feel like a word-for-word conversion.`;
+  } else if (numLevel <= 3) {
+    translationStyle = `\nSTYLE: Maintain natural narrative flow. The translation should read like a well-written ${toLangName} story at B1 level.`;
+  }
 
   const contentType = isPoetry ? "poem" : "text";
 
@@ -315,23 +307,23 @@ POETRY TRANSLATION PRINCIPLES:
 
 RULES:
 - Vocabulary: ${cefrLevel.vocabulary}
-- Match the sentence complexity of ${cefrLevel.code}${forbiddenRules}
+- Match the sentence complexity of ${cefrLevel.code}${forbiddenRules}${translationStyle}
 ${poetryGuidance}
-CRITICAL - LINE NUMBER PRESERVATION:
-- Each line starts with [N] where N is a number
-- You MUST keep the same [N] prefix for each translated line
-- Each [N] line produces exactly ONE [N] translated line
-- Do NOT split, merge, or reorder lines
+LINE PRESERVATION:
+- Each line starts with [N] — keep the same [N] prefix for each translated line
+- Each [N] produces exactly ONE [N] translated line — do NOT split, merge, or reorder
 
-DIALOGUE PUNCTUATION:
-- Preserve ALL quotation marks. If the original has "..." the translation MUST also have "..."
-- Never drop opening or closing quotation marks
+DIALOGUE: Preserve ALL quotation marks ("...") — both opening and closing.
 
 TEXT TO TRANSLATE:
 ${text}
 
-Return ONLY the numbered translated lines in the same format.`;
+Return ONLY the numbered translated lines.`;
 }
+
+// ============================================================================
+// DETECTION PROMPT
+// ============================================================================
 
 /**
  * Generate a prompt for detecting the CEFR level of text
