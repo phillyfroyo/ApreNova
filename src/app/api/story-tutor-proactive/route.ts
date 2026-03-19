@@ -124,8 +124,67 @@ Example: El coche es rápido. (The car is fast.)
 
 Ask if you'd like more examples!`;
   } else {
-    // For phrases/sentences
-    return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner. Their native language is English. The student selected "${selectedText}" from this sentence: "${context.fullLine}"
+    const wordCount = selectedText.trim().split(/\s+/).length;
+    const isLongText = wordCount > 20;
+
+    if (isLongText) {
+      // For long paragraphs/full lines — sentence-by-sentence translation
+      return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner. Their native language is English. The student selected a long passage from the story: "${selectedText}"
+
+Your response MUST follow this exact structure:
+
+1. SENTENCE-BY-SENTENCE TRANSLATION:
+   Break the passage into individual sentences. For each sentence, write:
+   Spanish:
+   [the Spanish sentence]
+
+   English:
+   [the English translation]
+
+   (Leave a blank line between each pair.)
+
+2. After ALL sentence pairs, write "Key vocabulary:" and list 3-5 of the most useful or challenging words:
+   - For each: the SPANISH word/phrase = English meaning, with a brief note if helpful (tense, idiom, false cognate)
+
+3. Write "Grammar:" and mention 1-2 notable grammar patterns in a brief sentence
+
+4. End with a warm closing inviting further questions
+
+LANGUAGE MIXING INSTRUCTION:
+${languageMix}
+
+CRITICAL RULES:
+- You may use **bold** for key vocabulary words
+- Do NOT use other markdown (no #, no numbered lists, no bullet points with -)
+- Do NOT break down every single word — only highlight the most useful ones in the Key vocabulary section
+- NO story plot or theme explanations
+- Focus ONLY on linguistic content
+
+EXAMPLE for passage "No dijo más, pero entendí. Siempre hablábamos de una manera tranquila.":
+
+Spanish:
+No dijo más, pero entendí.
+
+English:
+He didn't say more, but I understood.
+
+Spanish:
+Siempre hablábamos de una manera tranquila.
+
+English:
+We always spoke in a calm way.
+
+Key vocabulary:
+**entendí** = I understood (preterite of "entender" — irregular stem change)
+**hablábamos** = we used to speak (imperfect of "hablar" — shows ongoing past action)
+**de una manera tranquila** = in a calm way (useful phrase pattern: "de una manera + adjective")
+
+Grammar: The passage uses the preterite ("entendí") for completed actions and the imperfect ("hablábamos") for habitual past actions — a common contrast in Spanish storytelling.
+
+Feel free to ask about any specific word or phrase!`;
+    } else {
+      // For short phrases/sentences
+      return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner. Their native language is English. The student selected "${selectedText}" from this sentence: "${context.fullLine}"
 
 Your response should include:
 1. Overall translation: ${selectedText} = [English translation]
@@ -154,6 +213,7 @@ Here's a breakdown:
 - afuera: outside
 
 Feel free to ask if you need clarification on anything!`;
+    }
   }
 }
 
@@ -262,8 +322,67 @@ Ejemplo: The car is fast. (El coche es rápido.)
 
 ¡Pregunta si quieres más ejemplos!`;
   } else {
-    // Para frases/oraciones
-    return `Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó "${selectedText}" de esta oración: "${context.fullLine}"
+    const wordCount = selectedText.trim().split(/\s+/).length;
+    const isLongText = wordCount > 20;
+
+    if (isLongText) {
+      // Para pasajes largos/líneas completas — traducción oración por oración
+      return `Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó un pasaje largo de la historia: "${selectedText}"
+
+Tu respuesta DEBE seguir esta estructura exacta:
+
+1. TRADUCCIÓN ORACIÓN POR ORACIÓN:
+   Divide el pasaje en oraciones individuales. Para cada oración, escribe:
+   English:
+   [la oración en inglés]
+
+   Español:
+   [la traducción al español]
+
+   (Deja una línea en blanco entre cada par.)
+
+2. Después de TODOS los pares de oraciones, escribe "Vocabulario clave:" y lista 3-5 de las palabras más útiles o difíciles:
+   - Para cada una: la palabra/frase en INGLÉS = significado en español, con una nota breve si es útil (tiempo verbal, modismo, falso cognado)
+
+3. Escribe "Gramática:" y menciona 1-2 patrones gramaticales notables en una oración breve
+
+4. Termina con un cierre cálido invitando más preguntas
+
+INSTRUCCIÓN DE MEZCLA DE IDIOMAS:
+${languageMix}
+
+REGLAS CRÍTICAS:
+- Puedes usar **negrita** para palabras de vocabulario clave
+- NO uses otro formato markdown (sin #, sin listas numeradas, sin viñetas con -)
+- NO desgloses cada palabra — solo destaca las más útiles en la sección de Vocabulario clave
+- SIN explicaciones de la trama o temas de la historia
+- Enfócate SOLO en contenido lingüístico
+
+EJEMPLO para el pasaje "He didn't say more, but I understood. We always spoke in a calm way.":
+
+English:
+He didn't say more, but I understood.
+
+Español:
+No dijo más, pero entendí.
+
+English:
+We always spoke in a calm way.
+
+Español:
+Siempre hablábamos de una manera tranquila.
+
+Vocabulario clave:
+**understood** = entendí/comprendí (pasado de "understand" — verbo irregular: understand/understood/understood)
+**spoke** = hablábamos (pasado de "speak" — verbo irregular: speak/spoke/spoken)
+**in a calm way** = de una manera tranquila (patrón útil: "in a + adjective + way")
+
+Gramática: El pasaje usa el pasado simple ("didn't say", "understood") para acciones completadas y "always spoke" para hábitos pasados.
+
+¡Pregunta sobre cualquier palabra o frase específica!`;
+    } else {
+      // Para frases/oraciones cortas
+      return `Eres un tutor de idiomas útil que ayuda a un estudiante de inglés de nivel ${ceferLevel}. Su idioma nativo es español. El estudiante seleccionó "${selectedText}" de esta oración: "${context.fullLine}"
 
 Tu respuesta debe incluir:
 1. Traducción general: ${selectedText} = [traducción al español]
@@ -292,6 +411,7 @@ Desglose:
 - line: línea
 
 ¡Pregunta si necesitas más ayuda!`;
+    }
   }
 }
 
@@ -354,6 +474,11 @@ export async function POST(req: NextRequest) {
     console.log(systemPrompt.substring(0, 500) + "...");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
+    // Determine token limit based on text length
+    const contextText = context.selectedText || context.fullLine;
+    const contextWordCount = contextText.trim().split(/\s+/).length;
+    const maxTokens = contextWordCount > 20 ? 800 : 300;
+
     // For proactive responses, we only need the last message (the "You selected" one)
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -362,7 +487,7 @@ export async function POST(req: NextRequest) {
         { role: "user", content: lastUserMessage.content }
       ],
       temperature: 0.3, // Lower temperature for more consistent formatting
-      max_tokens: 300,
+      max_tokens: maxTokens,
     });
 
     // Log cost (fire-and-forget)

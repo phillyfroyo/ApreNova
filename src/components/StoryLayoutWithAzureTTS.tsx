@@ -1615,7 +1615,7 @@ export default function StoryLayoutWithAzureTTS({
                             lineIndex,
                             fullLine: s[oppositeLang],
                             selectedText: wordSelections[lineIndex]
-                              ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                              ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
                               : undefined,
                           });
                           setIsStoryTutorOpen(true);
@@ -1630,7 +1630,7 @@ export default function StoryLayoutWithAzureTTS({
                       <button
                         onClick={() => {
                           const selectedText = wordSelections[lineIndex]
-                            ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                            ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
                             : s[oppositeLang];
                           if (manualTranslateFunctions[lineIndex]) {
                             manualTranslateFunctions[lineIndex]();

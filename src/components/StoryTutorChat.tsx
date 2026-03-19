@@ -50,6 +50,35 @@ function renderMarkdown(text: string): React.ReactElement {
   return <>{parts}</>;
 }
 
+// Expandable "You selected" message — truncates long quoted text with a "See more" toggle
+function ExpandableYouSelected({ content, lang }: { content: string; lang: Language }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Extract the quoted text from patterns like: You selected "..." or Seleccionaste "..."
+  const match = content.match(/^(.+?")([\s\S]+)("\.?)$/);
+  if (!match) return <p className="whitespace-pre-wrap text-sm">{renderMarkdown(content)}</p>;
+
+  const [, prefix, quotedText, suffix] = match;
+  const isLong = quotedText.length > 80;
+
+  if (!isLong) return <p className="whitespace-pre-wrap text-sm">{renderMarkdown(content)}</p>;
+
+  const displayText = expanded ? quotedText : quotedText.slice(0, 77) + "...";
+
+  return (
+    <p className="whitespace-pre-wrap text-sm">
+      {renderMarkdown(prefix + displayText + suffix)}
+      {" "}
+      <span
+        onClick={() => setExpanded(prev => !prev)}
+        className="text-purple-200 cursor-pointer text-xs font-medium"
+      >
+        {expanded ? t(lang, "storyTutor", "seeLess") : t(lang, "storyTutor", "seeMore")}
+      </span>
+    </p>
+  );
+}
+
 interface StoryTutorChatProps {
   storySlug: string;
   currentPageText: string[];
@@ -362,7 +391,11 @@ export default function StoryTutorChat({
             >
               {message.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl px-4 py-2 bg-purple-600/95 backdrop-blur-sm text-white shadow-lg">
-                  <p className="whitespace-pre-wrap text-sm">{renderMarkdown(message.content)}</p>
+                  {message.content.startsWith(t(typedLang, "storyTutor", "youSelected").split("{text}")[0]) ? (
+                    <ExpandableYouSelected content={message.content} lang={typedLang} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm">{renderMarkdown(message.content)}</p>
+                  )}
                 </div>
               ) : message.content === "__AUTH_REQUIRED__" ? (
                 <div className="max-w-[85%] bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-md">

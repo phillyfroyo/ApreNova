@@ -277,6 +277,8 @@ storyTutor: {
   autoMessageSentence: "¿Puedes ayudarme a entender esta oración?",
   errorMessage: "Lo siento, encontré un error. Por favor intenta de nuevo.",
   youSelected: "Seleccionaste \"{text}\"",
+  seeMore: "Ver más",
+  seeLess: "Ver menos",
   signInToUse: "Para usar el Tutor de Historia con IA,",
   signIn: "inicia sesión",
   or: "o",
