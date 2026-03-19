@@ -192,7 +192,8 @@ export async function POST(req: NextRequest) {
       const finalContent = buildContentStructure(
         slug,
         levelData.level,
-        { en: enChapters, es: esChapters }
+        { en: enChapters, es: esChapters },
+        linesPerPage
       );
 
       const maxChapters = Object.keys(finalContent.chapters).length;

@@ -607,12 +607,13 @@ storiesMetadata: {
     title: "Poems by Emily Dickinson, Three Series, Complete",
     hook: "Discover the introspective and unconventional poetry of Emily Dickinson, reflecting her unique perspective on life and success.",
     description: "This collection brings together the early published poems of Emily Dickinson, edited after her death by Mabel Loomis Todd and T. W. Higginson. Written largely without thought of publication, her verses reflect a fiercely independent spirit and an unconventional style that defied the literary norms of her time. A lifelong recluse from Amherst, Massachusetts, Dickinson produced poems of striking originality—flashes of profound insight into nature, life, faith, and death—marked by vivid imagery, daring thought, and a voice unlike any other in American poetry.",
-  },
-  "the-great-gatsby": {
+  },"the-great-gatsby-a-8": {
     title: "The Great Gatsby",
     hook: "In the roaring twenties, a mysterious millionaire captivates with his lavish lifestyle and secrets.",
-    description: "In the shimmering summer of 1922, a young man from the Midwest arrives on the shores of Long Island and enters a world of unimaginable wealth, reckless indulgence, and broken dreams. His enigmatic neighbor, Jay Gatsby, throws lavish parties at his Gothic mansion—yet no one seems to know who he truly is or what he desires.\n\nAs Nick Carraway is drawn into Gatsby's orbit, he discovers the truth behind the spectacle: a consuming, hopeless love for Daisy Buchanan—a woman of old money, charm, and carelessness. Gatsby has reinvented himself entirely, building a fortune on the dark fringes of the American Dream, all for the chance to reclaim a past that may never have truly existed.\n\nBut beneath the glitter of Jazz Age New York lies a world of betrayal, violence, and moral decay. When secrets unravel and loyalties are tested, the consequences prove devastating—and inescapable.\n\nWidely regarded as one of the greatest novels ever written, The Great Gatsby is F. Scott Fitzgerald's luminous portrait of the American Dream—its promise, its seduction, and its ruin.\n",
+    description: "In the shimmering summer of 1922, a young man from the Midwest arrives on the shores of Long Island and enters a world of unimaginable wealth, reckless indulgence, and broken dreams. His enigmatic neighbor, Jay Gatsby, throws lavish parties at his Gothic mansion—yet no one seems to know who he truly is or what he desires.\n\nAs Nick Carraway is drawn into Gatsby's orbit, he discovers the truth behind the spectacle: a consuming, hopeless love for Daisy Buchanan—a woman of old money, charm, and carelessness. Gatsby has reinvented himself entirely, building a fortune on the dark fringes of the American Dream, all for the chance to reclaim a past that may never have truly existed.\n\nBut beneath the glitter of Jazz Age New York lies a world of betrayal, violence, and moral decay. When secrets unravel and loyalties are tested, the consequences prove devastating—and inescapable.\n\nWidely regarded as one of the greatest novels ever written, The Great Gatsby is F. Scott Fitzgerald's luminous portrait of the American Dream—its promise, its seduction, and its ruin.",
   },
+
+
 },
 
 audioPlayer: {

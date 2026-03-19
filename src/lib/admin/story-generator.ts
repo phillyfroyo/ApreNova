@@ -437,34 +437,34 @@ export function generateUITranslationEntry(
 export function buildContentStructure(
   storySlug: string,
   level: number,
-  chapters: { en: string[][]; es: string[][] }
+  chapters: { en: string[][]; es: string[][] },
+  linesPerPage: number = 10
 ): GeneratedStoryContent {
   const hasChapters = chapters.en.length > 1;
   const chapterContent: Record<number, StoryChapter> = {};
 
   for (let chIdx = 0; chIdx < chapters.en.length; chIdx++) {
-    const enPages = paginateLines(chapters.en[chIdx]);
-    const esPages = paginateLines(chapters.es[chIdx]);
+    const enLines = chapters.en[chIdx] || [];
+    const esLines = chapters.es[chIdx] || [];
 
+    // Pair lines first, then paginate the pairs together.
+    // This ensures en/es alignment is preserved regardless of pagination.
+    const maxLines = Math.max(enLines.length, esLines.length);
+    const pairedLines: StoryLine[] = [];
+    for (let i = 0; i < maxLines; i++) {
+      pairedLines.push({
+        en: enLines[i] || "",
+        es: esLines[i] || "",
+      });
+    }
+
+    // Paginate the paired lines
     const pages: Record<number, StoryPage> = {};
-
-    // Match pages by index
-    const maxPages = Math.max(enPages.length, esPages.length);
-
-    for (let pIdx = 0; pIdx < maxPages; pIdx++) {
-      const enLines = enPages[pIdx] || [];
-      const esLines = esPages[pIdx] || [];
-      const maxLines = Math.max(enLines.length, esLines.length);
-
-      const lines: StoryLine[] = [];
-      for (let lIdx = 0; lIdx < maxLines; lIdx++) {
-        lines.push({
-          en: enLines[lIdx] || "",
-          es: esLines[lIdx] || "",
-        });
-      }
-
-      pages[pIdx + 1] = { lines };
+    const totalPages = Math.ceil(pairedLines.length / linesPerPage) || 1;
+    for (let pIdx = 0; pIdx < totalPages; pIdx++) {
+      const start = pIdx * linesPerPage;
+      const pageLines = pairedLines.slice(start, start + linesPerPage);
+      pages[pIdx + 1] = { lines: pageLines };
     }
 
     chapterContent[chIdx + 1] = { pages };
