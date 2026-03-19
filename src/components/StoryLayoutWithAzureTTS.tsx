@@ -179,8 +179,10 @@ export default function StoryLayoutWithAzureTTS({
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
   const skipGlobalClickRef = useRef(false);
   const [isStoryTutorOpen, _setIsStoryTutorOpen] = useState(false);
+  const [shouldRenderTutor, setShouldRenderTutor] = useState(false);
   const scrollYBeforeTutorRef = useRef(0);
   const openStoryTutor = useCallback(() => {
+    setShouldRenderTutor(true);
     _setIsStoryTutorOpen(prev => {
       if (!prev) scrollYBeforeTutorRef.current = window.scrollY;
       return true;
@@ -188,6 +190,8 @@ export default function StoryLayoutWithAzureTTS({
   }, []);
   const closeStoryTutor = useCallback(() => {
     _setIsStoryTutorOpen(false);
+    // Keep chat mounted for 300ms so the slide-out animation shows content
+    setTimeout(() => setShouldRenderTutor(false), 300);
     // Only restore scroll on mobile where keyboard may have shifted viewport
     if (window.innerWidth < 1024) {
       const savedY = scrollYBeforeTutorRef.current;
@@ -2571,45 +2575,39 @@ export default function StoryLayoutWithAzureTTS({
           )}
         </div>
 
-        {/* Tab for story page - visible on all screen sizes, fades when chat opens */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Story tab clicked - opening chat');
-            setTutorContext(null);
-            openStoryTutor();
-          }}
-          className={`fixed right-0 top-1/2 -translate-y-1/2 z-[100] bg-amber-100 px-1.5 py-3 rounded-l-lg shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center ${
-            isStoryTutorOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
-          title="Open Story Tutor"
-        >
-          <span className="text-gray-600 text-sm font-bold">||</span>
-        </button>
-
-        {/* Tab to close chat - visible on all screen sizes when chat is open */}
-        {isStoryTutorOpen && (
-          <button
+        {/* AI Story Tutor Chat Panel - slides in from right on all screen sizes */}
+        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 overflow-visible ${
+          isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          {/* Tab handle - two-sided tab centered on panel left edge on mobile for object permanence;
+              on desktop, single tab fully outside the panel to the left */}
+          <div
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('Close tab clicked - closing chat');
-              closeStoryTutor();
-              setTutorContext(null);
+              if (isStoryTutorOpen) {
+                closeStoryTutor();
+                setTutorContext(null);
+              } else {
+                setTutorContext(null);
+                openStoryTutor();
+              }
             }}
-            className="fixed left-0 top-1/2 -translate-y-1/2 lg:left-auto lg:right-[400px] z-[100] bg-amber-100 px-1.5 py-3 rounded-r-lg lg:rounded-l-lg lg:rounded-r-none shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center"
-            title="Close Story Tutor"
+            className="absolute top-1/2 -translate-y-1/2 z-[100] flex cursor-pointer left-0 -translate-x-1/2 lg:left-auto lg:right-full lg:translate-x-0"
+            title={isStoryTutorOpen ? "Close Story Tutor" : "Open Story Tutor"}
+            role="button"
+            tabIndex={0}
           >
-            <span className="text-gray-600 text-sm font-bold">||</span>
-          </button>
-        )}
-
-        {/* AI Story Tutor Chat Panel - slides in from right on all screen sizes */}
-        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 ${
-          isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}>
-          {isStoryTutorOpen && (
+            {/* Left face - visible from story side when chat is closed (clipped when open) */}
+            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-l-lg shadow-lg flex items-center justify-center lg:rounded-r-none">
+              <span className="text-gray-600 text-sm font-bold">||</span>
+            </div>
+            {/* Right face - visible from chat side when chat is open (clipped when closed) */}
+            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-r-lg shadow-lg flex items-center justify-center lg:hidden">
+              <span className="text-gray-600 text-sm font-bold">||</span>
+            </div>
+          </div>
+          {shouldRenderTutor && (
             <StoryTutorChat
               storySlug={storySlug}
               currentPageText={sentences.map(s => s[oppositeLang])}
