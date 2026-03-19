@@ -178,7 +178,17 @@ export default function StoryLayoutWithAzureTTS({
   const [savingWord, setSavingWord] = useState<number | null>(null);
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
   const skipGlobalClickRef = useRef(false);
-  const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
+  const [isStoryTutorOpen, _setIsStoryTutorOpen] = useState(false);
+  const scrollYBeforeTutorRef = useRef(0);
+  const openStoryTutor = useCallback(() => {
+    scrollYBeforeTutorRef.current = window.scrollY;
+    _setIsStoryTutorOpen(true);
+  }, []);
+  const closeStoryTutor = useCallback(() => {
+    _setIsStoryTutorOpen(false);
+    const savedY = scrollYBeforeTutorRef.current;
+    requestAnimationFrame(() => window.scrollTo(0, savedY));
+  }, []);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
     fullLine: string;
@@ -1618,7 +1628,7 @@ export default function StoryLayoutWithAzureTTS({
                               ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
                               : undefined,
                           });
-                          setIsStoryTutorOpen(true);
+                          openStoryTutor();
                         }}
                         className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
@@ -2068,7 +2078,7 @@ export default function StoryLayoutWithAzureTTS({
                           fullLine: stanzaText,
                           selectedText,
                         });
-                        setIsStoryTutorOpen(true);
+                        openStoryTutor();
                       }}
                       className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                         hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
@@ -2565,7 +2575,7 @@ export default function StoryLayoutWithAzureTTS({
             e.stopPropagation();
             console.log('Story tab clicked - opening chat');
             setTutorContext(null);
-            setIsStoryTutorOpen(true);
+            openStoryTutor();
           }}
           className={`fixed right-0 top-1/2 -translate-y-1/2 z-[100] bg-amber-100 px-1.5 py-3 rounded-l-lg shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center ${
             isStoryTutorOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
@@ -2582,7 +2592,7 @@ export default function StoryLayoutWithAzureTTS({
               e.preventDefault();
               e.stopPropagation();
               console.log('Close tab clicked - closing chat');
-              setIsStoryTutorOpen(false);
+              closeStoryTutor();
               setTutorContext(null);
             }}
             className="fixed left-0 top-1/2 -translate-y-1/2 lg:left-auto lg:right-[400px] z-[100] bg-amber-100 px-1.5 py-3 rounded-r-lg lg:rounded-l-lg lg:rounded-r-none shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center"
@@ -2601,7 +2611,7 @@ export default function StoryLayoutWithAzureTTS({
               storySlug={storySlug}
               currentPageText={sentences.map(s => s[oppositeLang])}
               onClose={() => {
-                setIsStoryTutorOpen(false);
+                closeStoryTutor();
                 setTutorContext(null);
               }}
               isOpen={isStoryTutorOpen}
