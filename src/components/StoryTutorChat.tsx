@@ -107,7 +107,17 @@ export default function StoryTutorChat({
   const { lng } = useParams();
   const typedLang = (lng as Language) ?? "es";
   const { data: session } = useSession();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const history = preloadedMessages ?? [];
+    if (initialContext) {
+      const selectedText = initialContext.selectedText || initialContext.fullLine;
+      return [...history, {
+        role: "user" as const,
+        content: t(typedLang, "storyTutor", "youSelected").replace("{text}", selectedText),
+      }];
+    }
+    return history;
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -176,13 +186,12 @@ export default function StoryTutorChat({
           return;
         }
 
-        // Step 3: New context - mark it as being processed and show history
+        // Step 3: New context - mark it as being processed
         isProcessingRef.current = true;
         lastProcessedContextRef.current = contextId;
         hasLoadedHistoryRef.current = true;
-        setMessages(loadedMessages);
 
-        // Step 4: If there's initial context, send "You selected" as a real message
+        // Step 4: If there's initial context, build "You selected" message
         if (initialContext) {
           const selectedText = initialContext.selectedText || initialContext.fullLine;
           const youSelectedMessage: Message = {
@@ -190,8 +199,8 @@ export default function StoryTutorChat({
             content: t(typedLang, "storyTutor", "youSelected").replace("{text}", selectedText)
           };
 
-          // Add "You selected" message to UI immediately
-          setMessages(prev => [...prev, youSelectedMessage]);
+          // Set history + "You selected" in a single update (avoids flash)
+          setMessages([...loadedMessages, youSelectedMessage]);
 
           // Check if we should send to GPT (only if not recently addressed)
           const textToCheck = initialContext.selectedText || initialContext.fullLine;

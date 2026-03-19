@@ -181,13 +181,18 @@ export default function StoryLayoutWithAzureTTS({
   const [isStoryTutorOpen, _setIsStoryTutorOpen] = useState(false);
   const scrollYBeforeTutorRef = useRef(0);
   const openStoryTutor = useCallback(() => {
-    scrollYBeforeTutorRef.current = window.scrollY;
-    _setIsStoryTutorOpen(true);
+    _setIsStoryTutorOpen(prev => {
+      if (!prev) scrollYBeforeTutorRef.current = window.scrollY;
+      return true;
+    });
   }, []);
   const closeStoryTutor = useCallback(() => {
     _setIsStoryTutorOpen(false);
-    const savedY = scrollYBeforeTutorRef.current;
-    requestAnimationFrame(() => window.scrollTo(0, savedY));
+    // Only restore scroll on mobile where keyboard may have shifted viewport
+    if (window.innerWidth < 1024) {
+      const savedY = scrollYBeforeTutorRef.current;
+      requestAnimationFrame(() => window.scrollTo(0, savedY));
+    }
   }, []);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
@@ -1620,7 +1625,6 @@ export default function StoryLayoutWithAzureTTS({
                       </div>
                       <button
                         onClick={() => {
-                          setPreloadedMessages(null);
                           setTutorContext({
                             lineIndex,
                             fullLine: s[oppositeLang],
@@ -2066,7 +2070,6 @@ export default function StoryLayoutWithAzureTTS({
                     </div>
                     <button
                       onClick={() => {
-                        setPreloadedMessages(null);
                         const stanzaText = stanza
                           .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
                           .map(l => l[oppositeLang])
