@@ -13,9 +13,12 @@
  * This ensures we don't exceed token limits and allows for better error recovery.
  * - GPT-4o has 128K context, but we chunk smaller for reliability
  * - Claude Haiku has 200K context
- * - 12000 chars ≈ 3000-4000 tokens (safe margin)
+ * - 8000 chars ≈ 2000-2700 tokens of content, leaving ample room for
+ *   the system prompt + CEFR instructions (~800-1200 tokens depending on level)
+ * - Previously 12000, reduced because near-max chunks combined with
+ *   detailed CEFR prompts caused GPT-4o refusals on valid content
  */
-export const MAX_CHUNK_CHARS = 12000;
+export const MAX_CHUNK_CHARS = 8000;
 
 /**
  * Maximum tokens per chapter for chapter-level poetry processing.

@@ -154,6 +154,8 @@ export function Step3Metadata({
           sourceLanguage: storyData.sourceLanguage,
           type,
           customPrompt: customPrompt || undefined,
+          slug: storyData.slug || undefined,
+          sessionId: storyData.sessionId || undefined,
         }),
       });
 
@@ -223,6 +225,8 @@ export function Step3Metadata({
           type: "bundle",
           frontMatter: storyData.parsedResult?.frontMatter,
           customPrompt: titlePrompt || undefined,
+          slug: storyData.slug || undefined,
+          sessionId: storyData.sessionId || undefined,
         }),
       });
 
@@ -416,6 +420,8 @@ export function Step3Metadata({
           storyText: textsToTranslate.map(t => t.text).join("\n\n---SEPARATOR---\n\n"),
           sourceLanguage: sourceKey,
           type: direction === "en-to-es" ? "translate-to-spanish" : "translate-to-english",
+          slug: storyData.slug || undefined,
+          sessionId: storyData.sessionId || undefined,
         }),
       });
 
