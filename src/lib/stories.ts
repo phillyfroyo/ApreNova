@@ -259,15 +259,13 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["love","death","usa","inspiring"],
     targetAudience: "all",
     structureType: "anthology",
-  },
-
-  {
-    slug: "the-great-gatsby",
-    image: "/images/the-great-gatsby-thumbnail-8480.jpeg",
+  },{
+    slug: "the-great-gatsby-a-8",
+    image: "/images/the-great-gatsby-a-8-thumbnail-7588.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     type: "novel",
-    origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." } } },
-    tags: ["romance","love","tragedy","urban"],
+    origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/64317" } } },
+    tags: ["romance", "urban", "tragedy", "love"],
     targetAudience: "all",
   },
 ];
