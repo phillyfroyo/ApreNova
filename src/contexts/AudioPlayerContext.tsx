@@ -63,11 +63,14 @@ const DEFAULT_VOICES: VoiceSelection = {
   'es-ES': 'es-MX-DaliaNeural',
 };
 
-export const AVAILABLE_SPEEDS = [0.8, 0.85, 0.9, 0.95, 1.0, 1.05];
+export const AVAILABLE_SPEEDS = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05];
+export const AVAILABLE_WORD_BREAKS = [0, 50, 100, 150, 200, 300];
 const DEFAULT_PLAYBACK_RATE = 1.0;
+const DEFAULT_WORD_BREAK = 0;
 
 const VOICE_STORAGE_KEY = 'cuentana_voice_selection';
 const SPEED_STORAGE_KEY = 'cuentana_playback_speed';
+const WORD_BREAK_STORAGE_KEY = 'cuentana_word_break';
 
 function loadVoiceSelection(): VoiceSelection {
   try {
@@ -100,6 +103,20 @@ function savePlaybackRate(rate: number) {
   } catch (e) {}
 }
 
+function loadWordBreak(): number {
+  try {
+    const stored = localStorage.getItem(WORD_BREAK_STORAGE_KEY);
+    if (stored) return parseInt(stored, 10);
+  } catch (e) {}
+  return DEFAULT_WORD_BREAK;
+}
+
+function saveWordBreak(ms: number) {
+  try {
+    localStorage.setItem(WORD_BREAK_STORAGE_KEY, String(ms));
+  } catch (e) {}
+}
+
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
   position: AudioPlayerPosition | null;
@@ -111,6 +128,7 @@ export interface AudioPlayerState {
   error: string | null;
   voiceSelection: VoiceSelection;
   playbackRate: number;
+  wordBreakMs: number;
 }
 
 interface StartPlaybackOptions {
@@ -141,6 +159,7 @@ interface AudioPlayerContextType {
   isPlaying: boolean;
   setVoice: (language: 'en-US' | 'es-ES', voiceId: string) => void;
   setPlaybackRate: (rate: number) => void;
+  setWordBreak: (ms: number) => void;
 }
 
 const STORAGE_KEY = "cuentana_audio_player";
@@ -203,7 +222,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     stop: stopTTS,
     pause: pauseTTS,
     resume: resumeTTS,
-    setPlaybackRate: setTTSPlaybackRate,
     playbackState: ttsPlaybackState,
   } = useAzureTTS({
     autoCache: true,
@@ -234,18 +252,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     error: null,
     voiceSelection: DEFAULT_VOICES,
     playbackRate: DEFAULT_PLAYBACK_RATE,
+    wordBreakMs: DEFAULT_WORD_BREAK,
   });
 
-  // Load voice selection and playback rate from localStorage on mount
+  // Load settings from localStorage on mount
   useEffect(() => {
-    const savedRate = loadPlaybackRate();
-    setTTSPlaybackRate(savedRate);
     setState(prev => ({
       ...prev,
       voiceSelection: loadVoiceSelection(),
-      playbackRate: savedRate,
+      playbackRate: loadPlaybackRate(),
+      wordBreakMs: loadWordBreak(),
     }));
-  }, [setTTSPlaybackRate]);
+  }, []);
 
   // Refs for stable access in callbacks
   const stateRef = useRef(state);
@@ -289,7 +307,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     const ttsLang = getTTSLanguage(language);
-    const selectedVoice = stateRef.current.voiceSelection[ttsLang];
+    const s = stateRef.current;
+    const selectedVoice = s.voiceSelection[ttsLang];
 
     setState(prev => ({
       ...prev,
@@ -307,7 +326,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       language: ttsLang,
       speed: "normal",
       voice: selectedVoice,
-      storySlug: stateRef.current.position?.storySlug,
+      rate: s.playbackRate !== 1.0 ? s.playbackRate : undefined,
+      wordBreakMs: s.wordBreakMs > 0 ? s.wordBreakMs : undefined,
+      storySlug: s.position?.storySlug,
     });
   }, [oppositeLang, lng, getTTSLanguage, playTTS]);
 
@@ -487,10 +508,14 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const setPlaybackRate = useCallback((rate: number) => {
-    setTTSPlaybackRate(rate);
     savePlaybackRate(rate);
     setState(prev => ({ ...prev, playbackRate: rate }));
-  }, [setTTSPlaybackRate]);
+  }, []);
+
+  const setWordBreak = useCallback((ms: number) => {
+    saveWordBreak(ms);
+    setState(prev => ({ ...prev, wordBreakMs: ms }));
+  }, []);
 
   // ---- Skip / Page Navigation ----
 
@@ -670,6 +695,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     isPlaying: state.status === "playing",
     setVoice,
     setPlaybackRate,
+    setWordBreak,
   };
 
   return (

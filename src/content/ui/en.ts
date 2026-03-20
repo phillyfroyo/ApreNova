@@ -630,6 +630,7 @@ audioPlayer: {
   english: "English",
   spanish: "Spanish",
   playbackSpeed: "Playback Speed",
+  wordBreak: "Word Spacing",
 },
 };
 

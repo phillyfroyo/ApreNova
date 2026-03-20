@@ -46,7 +46,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    * Generate cache key for TTS request
    */
   const generateCacheKey = useCallback((request: TTSRequest): string => {
-    return `${request.text}-${request.language}-${request.speed}-${request.voice || 'default'}`;
+    return `${request.text}-${request.language}-${request.speed}-${request.voice || 'default'}-${request.rate ?? 'default'}-${request.wordBreakMs ?? 0}`;
   }, []);
 
   /**
@@ -199,7 +199,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
 
       // Create and configure audio element
       const audio = new Audio(ttsResponse.audioUrl);
-      audio.playbackRate = playbackRateRef.current;
       audioRef.current = audio;
       wordTimingsRef.current = ttsResponse.wordTimings;
 

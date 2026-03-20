@@ -631,6 +631,7 @@ audioPlayer: {
   english: "Inglés",
   spanish: "Español",
   playbackSpeed: "Velocidad de reproducción",
+  wordBreak: "Espaciado entre palabras",
 },
 };
 
