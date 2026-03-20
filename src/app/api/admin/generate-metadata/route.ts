@@ -13,13 +13,14 @@ interface GenerateMetadataRequest {
   type: "title" | "description" | "image" | "background" | "translate-to-spanish" | "translate-to-english" | "bundle";
   customPrompt?: string;
   slug?: string; // For cost tracking
+  sessionId?: string; // For session-based cost tracking
   frontMatter?: string; // For algorithmic title extraction from Gutenberg
   existingTitle?: { en: string; es: string }; // For translating existing title in bundle
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { storyText, sourceLanguage, type, customPrompt, slug, frontMatter, existingTitle }: GenerateMetadataRequest = await req.json();
+    const { storyText, sourceLanguage, type, customPrompt, slug, sessionId, frontMatter, existingTitle }: GenerateMetadataRequest = await req.json();
 
     if (!storyText || typeof storyText !== "string") {
       return NextResponse.json({ error: "Story text is required" }, { status: 400 });
@@ -31,31 +32,31 @@ export async function POST(req: NextRequest) {
 
     // For image generation, use DALL-E
     if (type === "image") {
-      return generateImage(storyText, sourceLanguage, customPrompt, "thumbnail", slug);
+      return generateImage(storyText, sourceLanguage, customPrompt, "thumbnail", slug, sessionId);
     }
 
     // For background image generation, use DALL-E with landscape format
     if (type === "background") {
-      return generateImage(storyText, sourceLanguage, customPrompt, "background", slug);
+      return generateImage(storyText, sourceLanguage, customPrompt, "background", slug, sessionId);
     }
 
     // For translation to Spanish
     if (type === "translate-to-spanish") {
-      return translateText(storyText, "es", slug);
+      return translateText(storyText, "es", slug, sessionId);
     }
 
     // For translation to English
     if (type === "translate-to-english") {
-      return translateText(storyText, "en", slug);
+      return translateText(storyText, "en", slug, sessionId);
     }
 
     // For bundled metadata generation (title, displayTitle, slug, hook in one call)
     if (type === "bundle") {
-      return generateBundledMetadata(storyText, sourceLanguage, frontMatter, customPrompt, slug, existingTitle);
+      return generateBundledMetadata(storyText, sourceLanguage, frontMatter, customPrompt, slug, existingTitle, sessionId);
     }
 
     // For title and description, use GPT-4o
-    return generateTextMetadata(storyText, sourceLanguage, type, customPrompt, slug);
+    return generateTextMetadata(storyText, sourceLanguage, type, customPrompt, slug, sessionId);
   } catch (error) {
     console.error("Generate metadata error:", error);
     return NextResponse.json(
@@ -70,7 +71,8 @@ async function generateTextMetadata(
   sourceLanguage: "en" | "es",
   type: "title" | "description",
   customPrompt?: string,
-  slug?: string
+  slug?: string,
+  sessionId?: string
 ) {
   const isTitle = type === "title";
   const langName = sourceLanguage === "en" ? "English" : "Spanish";
@@ -115,7 +117,7 @@ Return ONLY the JSON, no other text.`;
 
   // Log cost (fire-and-forget) - admin operations don't have userId
   logOpenAICost("metadata", "gpt-4o", response.usage, {
-    metadata: { type, admin: true, ...(slug && { adminStorySlug: slug }) },
+    metadata: { type, admin: true, ...(slug && { adminStorySlug: slug }), ...(sessionId && { adminSessionId: sessionId }) },
   });
 
   const content = response.choices[0]?.message?.content?.trim();
@@ -155,7 +157,8 @@ async function generateBundledMetadata(
   frontMatter?: string,
   customPrompt?: string,
   slug?: string,
-  existingTitle?: { en: string; es: string }
+  existingTitle?: { en: string; es: string },
+  sessionId?: string
 ) {
   const langName = sourceLanguage === "en" ? "English" : "Spanish";
   const otherLang = sourceLanguage === "en" ? "Spanish" : "English";
@@ -239,7 +242,7 @@ Return ONLY the JSON, no other text.`;
 
   // Log cost (fire-and-forget)
   logOpenAICost("metadata", "gpt-4o", response.usage, {
-    metadata: { type: "bundle", admin: true, ...(slug && { adminStorySlug: slug }) },
+    metadata: { type: "bundle", admin: true, ...(slug && { adminStorySlug: slug }), ...(sessionId && { adminSessionId: sessionId }) },
   });
 
   const content = response.choices[0]?.message?.content?.trim();
@@ -274,7 +277,8 @@ async function generateImage(
   sourceLanguage: "en" | "es",
   customPrompt?: string,
   imageType: "thumbnail" | "background" = "thumbnail",
-  slug?: string
+  slug?: string,
+  sessionId?: string
 ) {
   // Create a prompt for DALL-E based on the story content
   const langName = sourceLanguage === "en" ? "English" : "Spanish";
@@ -328,7 +332,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
 
   // Log cost (fire-and-forget)
   logOpenAICost("thumbnail", "gpt-4o", promptResponse.usage, {
-    metadata: { type: "prompt-generation", imageType, admin: true, ...(slug && { adminStorySlug: slug }) },
+    metadata: { type: "prompt-generation", imageType, admin: true, ...(slug && { adminStorySlug: slug }), ...(sessionId && { adminSessionId: sessionId }) },
   });
 
   let imagePrompt = promptResponse.choices[0]?.message?.content?.trim();
@@ -357,7 +361,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
       if (result.data && result.data[0]?.url) {
         // Log DALL-E cost (fire-and-forget)
         logDalleCost("thumbnail", 1, imageSize, {
-          metadata: { imageType, admin: true, ...(slug && { adminStorySlug: slug }) },
+          metadata: { imageType, admin: true, ...(slug && { adminStorySlug: slug }), ...(sessionId && { adminSessionId: sessionId }) },
         });
 
         return {
@@ -424,7 +428,7 @@ Create a DALL-E prompt describing the key visual from this story. Return ONLY th
   }
 }
 
-async function translateText(text: string, targetLanguage: "en" | "es", slug?: string) {
+async function translateText(text: string, targetLanguage: "en" | "es", slug?: string, sessionId?: string) {
   // Text may contain multiple items separated by ---SEPARATOR---
   const items = text.split("\n\n---SEPARATOR---\n\n");
 
@@ -454,7 +458,7 @@ Return the translations as a JSON array of strings, one for each input item.`;
 
   // Log cost (fire-and-forget)
   logOpenAICost("translation", "gpt-4o", response.usage, {
-    metadata: { targetLanguage, admin: true, ...(slug && { adminStorySlug: slug }) },
+    metadata: { targetLanguage, admin: true, ...(slug && { adminStorySlug: slug }), ...(sessionId && { adminSessionId: sessionId }) },
   });
 
   const content = response.choices[0]?.message?.content?.trim();

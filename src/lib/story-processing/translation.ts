@@ -64,6 +64,8 @@ export interface TranslationOptions {
   isPoetry?: boolean;
   /** Admin story slug for cost tracking (admin uploads don't have storyId) */
   adminStorySlug?: string;
+  /** Admin session ID for cost tracking — stable across the entire upload session */
+  adminSessionId?: string;
 }
 
 /**
@@ -82,7 +84,7 @@ export async function translateText(
   level: string | number,
   options: TranslationOptions = {}
 ): Promise<TranslationResult> {
-  const { maxRetries = 3, storyId, userId, isPoetry = false, adminStorySlug } = options;
+  const { maxRetries = 3, storyId, userId, isPoetry = false, adminStorySlug, adminSessionId } = options;
   const levelNum = typeof level === "string" ? levelStringToNumber(level) : level;
   const { numberedText, lineCount, totalLines, blankLinePositions, structuralLines } = addLineNumbers(text);
   const sourceLines = text.split("\n");
@@ -185,7 +187,7 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
       logAnthropicCost("translation", "claude-haiku-4-5-20251001", response.usage, {
         userId,
         userStoryId: storyId,
-        metadata: { level: levelNum, lineCount, attempt, ...(adminStorySlug && { adminStorySlug }) },
+        metadata: { level: levelNum, lineCount, attempt, ...(adminStorySlug && { adminStorySlug }), ...(adminSessionId && { adminSessionId }) },
       }).catch(() => {});
 
       const rawResponse =
@@ -352,6 +354,7 @@ export interface TranslateChapterOptions {
   userId?: string;
   isPoetry?: boolean;
   adminStorySlug?: string;
+  adminSessionId?: string;
 }
 
 /**
@@ -372,13 +375,14 @@ export async function translateChapter(
   level: string | number,
   options: TranslateChapterOptions = {}
 ): Promise<{ translatedText: string; translatedLines: string[] }> {
-  const { storyId, userId, isPoetry = false, adminStorySlug } = options;
+  const { storyId, userId, isPoetry = false, adminStorySlug, adminSessionId } = options;
 
   const translateOptions: TranslationOptions = {
     storyId,
     userId,
     isPoetry,
     adminStorySlug,
+    adminSessionId,
   };
 
   let translatedText: string;

@@ -209,51 +209,40 @@ export async function updateUITranslation(
     }
 
     // Story doesn't exist, add new entry.
-    // Strategy: find `};\n\nexport default` which closes the outer `const xx = {` object.
-    // Then search backwards from `};` to find the `},` that closes `storiesMetadata: {`.
-    // Insert the new entry between the last story entry and that closing `},`.
+    // Strategy: find `storiesMetadata: {` and track brace depth to find its closing `}`.
+    // Insert the new entry just before that closing `}`.
 
-    const exportIdx = content.indexOf('export default');
-    if (exportIdx === -1) {
-      console.error(`[file-writer] Could not find 'export default' in ${lang}.ts`);
+    const storiesMetaIdx = content.indexOf('storiesMetadata:');
+    if (storiesMetaIdx === -1) {
+      console.error(`[file-writer] Could not find 'storiesMetadata:' in ${lang}.ts`);
       return false;
     }
 
-    // Find the `};` that closes the outer object (right before `export default`)
-    const beforeExport = content.slice(0, exportIdx);
-    const outerCloseIdx = beforeExport.lastIndexOf('};');
-    if (outerCloseIdx === -1) {
-      console.error(`[file-writer] Could not find outer closing '};\' in ${lang}.ts`);
+    // Find the opening `{` of storiesMetadata
+    const openBraceIdx = content.indexOf('{', storiesMetaIdx);
+    if (openBraceIdx === -1) {
+      console.error(`[file-writer] Could not find opening brace for storiesMetadata in ${lang}.ts`);
       return false;
     }
 
-    // Find the `},` or `}` that closes storiesMetadata (right before the outer `};`)
-    // Walk backwards from outerCloseIdx, skipping whitespace, to find the closing `}`
-    let searchIdx = outerCloseIdx - 1;
-    while (searchIdx >= 0 && /\s/.test(content[searchIdx])) {
-      searchIdx--;
+    // Track brace depth to find the matching closing `}`
+    let depth = 1;
+    let closeBraceIdx = openBraceIdx + 1;
+    while (closeBraceIdx < content.length && depth > 0) {
+      if (content[closeBraceIdx] === '{') depth++;
+      if (content[closeBraceIdx] === '}') depth--;
+      if (depth > 0) closeBraceIdx++;
     }
 
-    // We should now be at `,` or `}` — the end of storiesMetadata
-    // If at `,`, step back one more to find the `}`
-    if (content[searchIdx] === ',') {
-      searchIdx--;
-    }
-    // Skip any whitespace between `}` and `,`
-    while (searchIdx >= 0 && /\s/.test(content[searchIdx])) {
-      searchIdx--;
-    }
-
-    if (content[searchIdx] !== '}') {
-      console.error(`[file-writer] Expected '}' at position ${searchIdx} in ${lang}.ts, found '${content[searchIdx]}'`);
-      console.error(`[file-writer] Context: ...${JSON.stringify(content.slice(Math.max(0, searchIdx - 50), searchIdx + 10))}...`);
+    if (depth !== 0) {
+      console.error(`[file-writer] Could not find closing brace for storiesMetadata in ${lang}.ts`);
       return false;
     }
 
-    // searchIdx is now at the `}` that closes storiesMetadata.
-    // We need to insert BEFORE this `}`, after the last story entry.
-    // Walk backwards from searchIdx to find the `},` that closes the last story entry.
-    let lastEntryEnd = searchIdx - 1;
+    // closeBraceIdx is now at the `}` that closes storiesMetadata.
+    // Insert the new entry just before it, after the last story entry.
+    // Walk backwards from closeBraceIdx to find the end of the last entry.
+    let lastEntryEnd = closeBraceIdx - 1;
     while (lastEntryEnd >= 0 && /\s/.test(content[lastEntryEnd])) {
       lastEntryEnd--;
     }

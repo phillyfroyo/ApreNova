@@ -112,6 +112,15 @@ export function Step7Preview({
         return;
       }
 
+      // Backfill cost records with the final slug (fire-and-forget)
+      if (storyData.sessionId && storyData.slug) {
+        fetch("/api/admin/backfill-session-costs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: storyData.sessionId, slug: storyData.slug }),
+        }).catch(() => {}); // Don't block on failure
+      }
+
       setSaveResult({
         success: true,
         message: `Story saved successfully!`,
