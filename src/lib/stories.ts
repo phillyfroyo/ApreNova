@@ -271,11 +271,11 @@ export const STORY_METADATA: StoryMetadata[] = [
 
   {
     slug: "the-adventures-of-tom-sawyer",
-    image: "/images/the-adventures-of-tom-sawyer-thumbnail-7449.jpeg",
+    image: "/images/the-adventures-of-tom-sawyer-thumbnail-4502.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "Mark Twain", lifespan: "1835-1910", note: "Mark Twain is the pen name of Samuel Langhorne Clemens." }, yearWritten: "c. 1876", yearFirstPublished: 1876, sourceEdition: { title: "The Adventures of Tom Sawyer", isPublicDomain: true, publicDomainNote: "Published before 1928 and author died over 70 years ago.", url: "https://www.gutenberg.org/ebooks/74" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/74" }, region: "United States", genres: ["novel", "children's literature"] } },
-    tags: ["friendship", "adventure", "coming-of-age", "humorous", "nature", "travel", "historical", "rural"],
+    tags: ["friendship","adventure","coming-of-age","humorous","nature","travel","historical","rural"],
     targetAudience: "all",
   },
 ];
