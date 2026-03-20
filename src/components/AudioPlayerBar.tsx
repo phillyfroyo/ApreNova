@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS } from "@/contexts/AudioPlayerContext";
+import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS, AVAILABLE_WORD_BREAKS } from "@/contexts/AudioPlayerContext";
 import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { useParams } from "next/navigation";
 import { t } from "@/lib/t";
@@ -31,7 +31,7 @@ function getContentSentencePosition(sentences: any[], highlightIndex: number | n
 export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
-    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate,
+    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate, setWordBreak,
   } = useAudioPlayer();
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
@@ -69,7 +69,7 @@ export default function AudioPlayerBar() {
 
   if (!state.isVisible) return null;
 
-  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate } = state;
+  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate, wordBreakMs } = state;
 
   const totalSentences = getContentSentenceCount(currentPageSentences);
   const currentSentence = getContentSentencePosition(currentPageSentences, highlightedSentenceIndex);
@@ -115,7 +115,7 @@ export default function AudioPlayerBar() {
         {showVoiceMenu && (
           <div
             ref={voiceMenuRef}
-            className="absolute bottom-full mb-2 left-2 right-2 md:left-auto md:right-4 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
+            className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
           >
             <div className="max-w-md mx-auto space-y-3">
               {/* Playback speed */}
@@ -123,18 +123,40 @@ export default function AudioPlayerBar() {
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   {t(lng, "audioPlayer", "playbackSpeed")}
                 </h4>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 overflow-x-auto pb-2">
                   {AVAILABLE_SPEEDS.map(speed => (
                     <button
                       key={speed}
                       onClick={() => setPlaybackRate(speed)}
-                      className={`px-2.5 py-1.5 rounded-md text-sm transition-colors
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
                         ${playbackRate === speed
                           ? 'bg-indigo-100 text-indigo-700 font-medium'
                           : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                         }`}
                     >
                       {speed === 1.0 ? '1x' : `${speed}x`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Word spacing */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {t(lng, "audioPlayer", "wordBreak")}
+                </h4>
+                <div className="flex gap-1.5 overflow-x-auto pb-2">
+                  {AVAILABLE_WORD_BREAKS.map(ms => (
+                    <button
+                      key={ms}
+                      onClick={() => setWordBreak(ms)}
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
+                        ${wordBreakMs === ms
+                          ? 'bg-indigo-100 text-indigo-700 font-medium'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      {ms === 0 ? 'Off' : `${ms}ms`}
                     </button>
                   ))}
                 </div>
