@@ -627,6 +627,9 @@ audioPlayer: {
   resumeListening: "Resume listening",
   errorRetry: "Retry",
   errorSkip: "Skip",
+  english: "English",
+  spanish: "Spanish",
+  playbackSpeed: "Playback Speed",
 },
 };
 

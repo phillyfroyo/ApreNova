@@ -36,6 +36,70 @@ export interface AudioPlayerPosition {
   userStoryId?: string;
 }
 
+export interface VoiceSelection {
+  'en-US': string;
+  'es-ES': string;
+}
+
+export const AVAILABLE_VOICES: Record<'en-US' | 'es-ES', { id: string; label: string }[]> = {
+  'en-US': [
+    { id: 'en-US-JennyMultilingualNeural', label: 'Jenny' },
+    { id: 'en-US-AndrewMultilingualNeural', label: 'Andrew' },
+    { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
+    { id: 'en-US-EmmaMultilingualNeural', label: 'Emma' },
+    { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
+  ],
+  'es-ES': [
+    { id: 'es-MX-DaliaNeural', label: 'Dalia' },
+    { id: 'en-US-AndrewMultilingualNeural', label: 'Andrew' },
+    { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
+    { id: 'en-US-EmmaMultilingualNeural', label: 'Emma' },
+    { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
+  ],
+};
+
+const DEFAULT_VOICES: VoiceSelection = {
+  'en-US': 'en-US-AndrewMultilingualNeural',
+  'es-ES': 'es-MX-DaliaNeural',
+};
+
+export const AVAILABLE_SPEEDS = [0.8, 0.85, 0.9, 0.95, 1.0, 1.05];
+const DEFAULT_PLAYBACK_RATE = 1.0;
+
+const VOICE_STORAGE_KEY = 'cuentana_voice_selection';
+const SPEED_STORAGE_KEY = 'cuentana_playback_speed';
+
+function loadVoiceSelection(): VoiceSelection {
+  try {
+    const stored = localStorage.getItem(VOICE_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return { ...DEFAULT_VOICES, ...parsed };
+    }
+  } catch (e) {}
+  return { ...DEFAULT_VOICES };
+}
+
+function saveVoiceSelection(voices: VoiceSelection) {
+  try {
+    localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(voices));
+  } catch (e) {}
+}
+
+function loadPlaybackRate(): number {
+  try {
+    const stored = localStorage.getItem(SPEED_STORAGE_KEY);
+    if (stored) return parseFloat(stored);
+  } catch (e) {}
+  return DEFAULT_PLAYBACK_RATE;
+}
+
+function savePlaybackRate(rate: number) {
+  try {
+    localStorage.setItem(SPEED_STORAGE_KEY, String(rate));
+  } catch (e) {}
+}
+
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
   position: AudioPlayerPosition | null;
@@ -45,6 +109,8 @@ export interface AudioPlayerState {
   isVisible: boolean;
   highlightedSentenceIndex: number | null;
   error: string | null;
+  voiceSelection: VoiceSelection;
+  playbackRate: number;
 }
 
 interface StartPlaybackOptions {
@@ -73,6 +139,8 @@ interface AudioPlayerContextType {
   nextPage: () => void;
   prevPage: () => void;
   isPlaying: boolean;
+  setVoice: (language: 'en-US' | 'es-ES', voiceId: string) => void;
+  setPlaybackRate: (rate: number) => void;
 }
 
 const STORAGE_KEY = "cuentana_audio_player";
@@ -135,6 +203,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     stop: stopTTS,
     pause: pauseTTS,
     resume: resumeTTS,
+    setPlaybackRate: setTTSPlaybackRate,
     playbackState: ttsPlaybackState,
   } = useAzureTTS({
     autoCache: true,
@@ -163,7 +232,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     isVisible: false,
     highlightedSentenceIndex: null,
     error: null,
+    voiceSelection: DEFAULT_VOICES,
+    playbackRate: DEFAULT_PLAYBACK_RATE,
   });
+
+  // Load voice selection and playback rate from localStorage on mount
+  useEffect(() => {
+    const savedRate = loadPlaybackRate();
+    setTTSPlaybackRate(savedRate);
+    setState(prev => ({
+      ...prev,
+      voiceSelection: loadVoiceSelection(),
+      playbackRate: savedRate,
+    }));
+  }, [setTTSPlaybackRate]);
 
   // Refs for stable access in callbacks
   const stateRef = useRef(state);
@@ -180,30 +262,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
     return lng === "es" ? "es-ES" : "en-US";
   }, [lng, oppositeLang]);
-
-  // ---- Pre-fetch all sentences on a page into TTS cache ----
-  const prefetchPageAudio = useCallback((sentences: StoryLine[], storySlug?: string) => {
-    const contentSentences = getContentSentences(sentences);
-    const s = stateRef.current;
-    const targetLang = getTTSLanguage("target");
-    const nativeLang = getTTSLanguage("native");
-
-    for (const entry of contentSentences) {
-      // Pre-fetch target language
-      const targetText = (entry.line[oppositeLang] || "").trim();
-      if (targetText) {
-        generateTTS({ text: targetText, language: targetLang, speed: "normal", storySlug }).catch(() => {});
-      }
-
-      // Pre-fetch native language too (needed for bilingual mode)
-      if (s.mode === "bilingual") {
-        const nativeText = (entry.line[lng] || "").trim();
-        if (nativeText) {
-          generateTTS({ text: nativeText, language: nativeLang, speed: "normal", storySlug }).catch(() => {});
-        }
-      }
-    }
-  }, [generateTTS, getTTSLanguage, oppositeLang, lng]);
 
   // ---- Play a specific sentence ----
   const playSentence = useCallback((
@@ -231,6 +289,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     const ttsLang = getTTSLanguage(language);
+    const selectedVoice = stateRef.current.voiceSelection[ttsLang];
 
     setState(prev => ({
       ...prev,
@@ -247,6 +306,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       text,
       language: ttsLang,
       speed: "normal",
+      voice: selectedVoice,
       storySlug: stateRef.current.position?.storySlug,
     });
   }, [oppositeLang, lng, getTTSLanguage, playTTS]);
@@ -254,7 +314,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // ---- Sentence complete handler (the core chaining logic) ----
   const handleSentenceComplete = useCallback(() => {
     const s = stateRef.current;
-    if (!s.position || s.status === "idle" || s.status === "finished") return;
+    if (!s.position || s.status === "idle" || s.status === "finished" || s.status === "paused") return;
 
     const { position, mode, currentPageSentences, storyMap } = s;
     const contentSentences = getContentSentences(currentPageSentences);
@@ -363,9 +423,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     persistState(position, stateRef.current.mode);
 
-    // Pre-fetch all sentences on this page into TTS cache
-    prefetchPageAudio(options.sentences, options.storySlug);
-
     // Delay slightly to let state settle
     setTimeout(() => {
       playSentence(options.sentences, startEntry.originalIndex, "target");
@@ -380,7 +437,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       navigator.mediaSession.setActionHandler("play", () => resumePlayback());
       navigator.mediaSession.setActionHandler("pause", () => pausePlayback());
     }
-  }, [stopTTS, playSentence, prefetchPageAudio]);
+  }, [stopTTS, playSentence]);
 
   const pausePlayback = useCallback(() => {
     pauseTTS();
@@ -420,6 +477,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return { ...prev, mode: newMode };
     });
   }, []);
+
+  const setVoice = useCallback((language: 'en-US' | 'es-ES', voiceId: string) => {
+    setState(prev => {
+      const newVoiceSelection = { ...prev.voiceSelection, [language]: voiceId };
+      saveVoiceSelection(newVoiceSelection);
+      return { ...prev, voiceSelection: newVoiceSelection };
+    });
+  }, []);
+
+  const setPlaybackRate = useCallback((rate: number) => {
+    setTTSPlaybackRate(rate);
+    savePlaybackRate(rate);
+    setState(prev => ({ ...prev, playbackRate: rate }));
+  }, [setTTSPlaybackRate]);
 
   // ---- Skip / Page Navigation ----
 
@@ -559,16 +630,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           } : null,
         }));
 
-        // Pre-fetch all sentences on this new page
-        prefetchPageAudio(sentences, s.position?.storySlug);
-
         // Small delay to let the page render
         setTimeout(() => {
           playSentence(sentences, firstIndex, "target");
         }, 500);
       }
     }
-  }, [playSentence, handleSentenceComplete, prefetchPageAudio]);
+  }, [playSentence, handleSentenceComplete]);
 
   // ---- Auto-hide after finish ----
   useEffect(() => {
@@ -600,6 +668,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     nextPage,
     prevPage,
     isPlaying: state.status === "playing",
+    setVoice,
+    setPlaybackRate,
   };
 
   return (

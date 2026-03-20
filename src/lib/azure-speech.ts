@@ -20,8 +20,8 @@ const VOICE_CONFIG: VoiceConfig = {
     slow: 'es-MX-DaliaNeural'
   },
   'en-US': {
-    normal: 'en-US-AriaNeural', 
-    slow: 'en-US-AriaNeural'
+    normal: 'en-US-AndrewMultilingualNeural',
+    slow: 'en-US-AndrewMultilingualNeural'
   }
 };
 
@@ -104,7 +104,8 @@ export class AzureSpeechService {
    * Generate unique hash for cache key
    */
   public generateCacheKey(request: TTSRequest): string {
-    const content = `${request.text}-${request.language}-${request.speed}`;
+    const voicePart = request.voice || 'default';
+    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 
@@ -126,7 +127,7 @@ export class AzureSpeechService {
    */
   public async generateSpeech(request: TTSRequest): Promise<TTSResponse> {
     try {
-      const voice = VOICE_CONFIG[request.language][request.speed];
+      const voice = request.voice || VOICE_CONFIG[request.language][request.speed];
       const rate = SPEED_RATES[request.speed];
 
       // Generate SSML with optional speaker name and stage direction
@@ -204,7 +205,7 @@ export class AzureSpeechService {
    */
   public async generateSpeechBuffer(request: TTSRequest): Promise<{ buffer: ArrayBuffer; wordTimings: WordTiming[]; duration: number }> {
     try {
-      const voice = VOICE_CONFIG[request.language][request.speed];
+      const voice = request.voice || VOICE_CONFIG[request.language][request.speed];
       const rate = SPEED_RATES[request.speed];
 
       // Generate SSML with optional speaker name and stage direction
