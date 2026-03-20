@@ -178,7 +178,30 @@ export default function StoryLayoutWithAzureTTS({
   const [savingWord, setSavingWord] = useState<number | null>(null);
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
   const skipGlobalClickRef = useRef(false);
-  const [isStoryTutorOpen, setIsStoryTutorOpen] = useState(false);
+  const [isStoryTutorOpen, _setIsStoryTutorOpen] = useState(false);
+  const [shouldRenderTutor, setShouldRenderTutor] = useState(false);
+  const scrollYBeforeTutorRef = useRef(0);
+  const tabOffsetY = useRef(0);
+  const tabDragRef = useRef<{ startY: number; startOffset: number; moved: boolean; prevY: number; prevTime: number; velocityY: number } | null>(null);
+  const tabElRef = useRef<HTMLDivElement>(null);
+  const tabMomentumRef = useRef(0);
+  const openStoryTutor = useCallback(() => {
+    setShouldRenderTutor(true);
+    _setIsStoryTutorOpen(prev => {
+      if (!prev) scrollYBeforeTutorRef.current = window.scrollY;
+      return true;
+    });
+  }, []);
+  const closeStoryTutor = useCallback(() => {
+    _setIsStoryTutorOpen(false);
+    // Keep chat mounted for 300ms so the slide-out animation shows content
+    setTimeout(() => setShouldRenderTutor(false), 300);
+    // Only restore scroll on mobile where keyboard may have shifted viewport
+    if (window.innerWidth < 1024) {
+      const savedY = scrollYBeforeTutorRef.current;
+      requestAnimationFrame(() => window.scrollTo(0, savedY));
+    }
+  }, []);
   const [tutorContext, setTutorContext] = useState<{
     lineIndex: number;
     fullLine: string;
@@ -1610,15 +1633,14 @@ export default function StoryLayoutWithAzureTTS({
                       </div>
                       <button
                         onClick={() => {
-                          setPreloadedMessages(null);
                           setTutorContext({
                             lineIndex,
                             fullLine: s[oppositeLang],
                             selectedText: wordSelections[lineIndex]
-                              ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                              ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
                               : undefined,
                           });
-                          setIsStoryTutorOpen(true);
+                          openStoryTutor();
                         }}
                         className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                           wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
@@ -1630,7 +1652,7 @@ export default function StoryLayoutWithAzureTTS({
                       <button
                         onClick={() => {
                           const selectedText = wordSelections[lineIndex]
-                            ? s[oppositeLang].slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end)
+                            ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
                             : s[oppositeLang];
                           if (manualTranslateFunctions[lineIndex]) {
                             manualTranslateFunctions[lineIndex]();
@@ -2056,7 +2078,6 @@ export default function StoryLayoutWithAzureTTS({
                     </div>
                     <button
                       onClick={() => {
-                        setPreloadedMessages(null);
                         const stanzaText = stanza
                           .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
                           .map(l => l[oppositeLang])
@@ -2068,7 +2089,7 @@ export default function StoryLayoutWithAzureTTS({
                           fullLine: stanzaText,
                           selectedText,
                         });
-                        setIsStoryTutorOpen(true);
+                        openStoryTutor();
                       }}
                       className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
                         hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
@@ -2558,50 +2579,108 @@ export default function StoryLayoutWithAzureTTS({
           )}
         </div>
 
-        {/* Tab for story page - visible on all screen sizes, fades when chat opens */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Story tab clicked - opening chat');
-            setTutorContext(null);
-            setIsStoryTutorOpen(true);
-          }}
-          className={`fixed right-0 top-1/2 -translate-y-1/2 z-[100] bg-amber-100 px-1.5 py-3 rounded-l-lg shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center ${
-            isStoryTutorOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
-          title="Open Story Tutor"
-        >
-          <span className="text-gray-600 text-sm font-bold">||</span>
-        </button>
-
-        {/* Tab to close chat - visible on all screen sizes when chat is open */}
-        {isStoryTutorOpen && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Close tab clicked - closing chat');
-              setIsStoryTutorOpen(false);
-              setTutorContext(null);
-            }}
-            className="fixed left-0 top-1/2 -translate-y-1/2 lg:left-auto lg:right-[400px] z-[100] bg-amber-100 px-1.5 py-3 rounded-r-lg lg:rounded-l-lg lg:rounded-r-none shadow-lg hover:bg-amber-200 transition-all duration-300 flex items-center justify-center"
-            title="Close Story Tutor"
-          >
-            <span className="text-gray-600 text-sm font-bold">||</span>
-          </button>
-        )}
-
         {/* AI Story Tutor Chat Panel - slides in from right on all screen sizes */}
-        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 ${
+        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 overflow-visible ${
           isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
-          {isStoryTutorOpen && (
+          {/* Tab handle - two-sided tab centered on panel left edge on mobile for object permanence;
+              on desktop, single tab fully outside the panel to the left.
+              Draggable vertically — pointer events distinguish drag from click. */}
+          <div
+            ref={tabElRef}
+            onPointerDown={(e) => {
+              // Cancel any ongoing momentum animation
+              cancelAnimationFrame(tabMomentumRef.current);
+              const now = performance.now();
+              tabDragRef.current = { startY: e.clientY, startOffset: tabOffsetY.current, moved: false, prevY: e.clientY, prevTime: now, velocityY: 0 };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const drag = tabDragRef.current;
+              if (!drag) return;
+              const dy = e.clientY - drag.startY;
+              if (Math.abs(dy) > 3) drag.moved = true;
+              if (!drag.moved) return;
+              // Track velocity from recent movement
+              const now = performance.now();
+              const dt = now - drag.prevTime;
+              if (dt > 0) {
+                drag.velocityY = (e.clientY - drag.prevY) / dt; // px/ms
+                drag.prevY = e.clientY;
+                drag.prevTime = now;
+              }
+              // Clamp so tab stays within the panel's visible area
+              const parentEl = tabElRef.current?.parentElement;
+              const parentH = parentEl ? parentEl.clientHeight : window.innerHeight;
+              const tabH = tabElRef.current?.offsetHeight ?? 40;
+              const maxOffset = parentH / 2 - tabH / 2 - 8;
+              const newOffset = Math.max(-maxOffset, Math.min(maxOffset, drag.startOffset + dy));
+              tabOffsetY.current = newOffset;
+              if (tabElRef.current) {
+                tabElRef.current.style.top = `calc(50% + ${newOffset}px)`;
+              }
+            }}
+            onPointerUp={(e) => {
+              const drag = tabDragRef.current;
+              tabDragRef.current = null;
+              if (drag && !drag.moved) {
+                // It was a tap/click, toggle the chat
+                e.preventDefault();
+                e.stopPropagation();
+                if (isStoryTutorOpen) {
+                  closeStoryTutor();
+                  setTutorContext(null);
+                } else {
+                  setTutorContext(null);
+                  openStoryTutor();
+                }
+              } else if (drag) {
+                // Decay velocity based on time since last move — if the user
+                // paused before releasing, the stale velocity shouldn't apply
+                const timeSinceLastMove = performance.now() - drag.prevTime;
+                const decayedVelocity = drag.velocityY * Math.max(0, 1 - timeSinceLastMove / 100);
+                if (Math.abs(decayedVelocity) <= 0.1) return;
+                // Momentum glide
+                let velocity = decayedVelocity * 16; // convert px/ms to px/frame (~16ms)
+                const friction = 0.92;
+                const animate = () => {
+                  velocity *= friction;
+                  if (Math.abs(velocity) < 0.5) return;
+                  const parentEl = tabElRef.current?.parentElement;
+                  const parentH = parentEl ? parentEl.clientHeight : window.innerHeight;
+                  const tabH = tabElRef.current?.offsetHeight ?? 40;
+                  const maxOffset = parentH / 2 - tabH / 2 - 8;
+                  const newOffset = Math.max(-maxOffset, Math.min(maxOffset, tabOffsetY.current + velocity));
+                  tabOffsetY.current = newOffset;
+                  if (tabElRef.current) {
+                    tabElRef.current.style.top = `calc(50% + ${newOffset}px)`;
+                  }
+                  tabMomentumRef.current = requestAnimationFrame(animate);
+                };
+                tabMomentumRef.current = requestAnimationFrame(animate);
+              }
+            }}
+            style={{ top: `calc(50% + ${tabOffsetY.current}px)` }}
+            className="absolute -translate-y-1/2 z-[100] flex cursor-pointer select-none touch-none left-0 -translate-x-1/2 lg:left-auto lg:right-full lg:translate-x-0"
+            title={isStoryTutorOpen ? "Close Story Tutor" : "Open Story Tutor"}
+            role="button"
+            tabIndex={0}
+          >
+            {/* Left face - visible from story side when chat is closed (clipped when open) */}
+            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-l-lg shadow-lg flex items-center justify-center lg:rounded-r-none">
+              <span className="text-gray-600 text-sm font-bold">||</span>
+            </div>
+            {/* Right face - visible from chat side when chat is open (clipped when closed) */}
+            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-r-lg shadow-lg flex items-center justify-center lg:hidden">
+              <span className="text-gray-600 text-sm font-bold">||</span>
+            </div>
+          </div>
+          {shouldRenderTutor && (
             <StoryTutorChat
               storySlug={storySlug}
               currentPageText={sentences.map(s => s[oppositeLang])}
               onClose={() => {
-                setIsStoryTutorOpen(false);
+                closeStoryTutor();
                 setTutorContext(null);
               }}
               isOpen={isStoryTutorOpen}

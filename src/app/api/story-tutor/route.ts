@@ -41,24 +41,41 @@ function getConversationalPrompt_EnglishLearner(
 
   let contextSection = "";
   if (context?.selectedText) {
-    const isSingleWord = context.selectedText.trim().split(/\s+/).length === 1;
+    const wordCount = context.selectedText.trim().split(/\s+/).length;
+    const isSingleWord = wordCount === 1;
+    const isLongText = wordCount > 20;
     const verbInstruction = isSingleWord
       ? `\n\nIMPORTANT: If "${context.selectedText}" is a verb, provide a full SPANISH conjugation table:
 - If the verb in the story is in PRESENT tense: Show the present tense conjugation table in Spanish
 - If the verb in ANY OTHER tense: Show BOTH that tense AND present tense tables in Spanish
 - Use Spanish pronouns: yo, tú, él/ella, nosotros, vosotros, ellos/ellas`
       : "";
+    const longTextInstruction = isLongText
+      ? `\n\nIMPORTANT: This is a long passage. Do NOT break down every word. Instead:
+- Translate SENTENCE BY SENTENCE: For each sentence, show "Spanish:" then the Spanish sentence, then "English:" then the translation, with a blank line between each pair
+- After all sentence pairs, show "Key vocabulary:" with 3-5 key/difficult words
+- Then "Grammar:" with 1-2 notable grammar patterns in a brief sentence`
+      : "";
 
     contextSection = `\n
 IMMEDIATE FOCUS:
 The student has selected the following Spanish text from line ${context.lineIndex + 1}: "${context.selectedText}"
 This is from the full sentence: "${context.fullLine}"
-Start by focusing on this specific phrase/word unless they ask something else.${verbInstruction}`;
+Start by focusing on this specific phrase/word unless they ask something else.${verbInstruction}${longTextInstruction}`;
   } else if (context) {
+    const wordCount = context.fullLine.trim().split(/\s+/).length;
+    const isLongText = wordCount > 20;
+    const longTextInstruction = isLongText
+      ? `\nIMPORTANT: This is a long passage. Do NOT break down every word. Instead:
+- Translate SENTENCE BY SENTENCE: For each sentence, show "Spanish:" then the Spanish sentence, then "English:" then the translation, with a blank line between each pair
+- After all sentence pairs, show "Key vocabulary:" with 3-5 key/difficult words
+- Then "Grammar:" with 1-2 notable grammar patterns in a brief sentence`
+      : "";
+
     contextSection = `\n
 IMMEDIATE FOCUS:
 The student is asking about line ${context.lineIndex + 1}: "${context.fullLine}"
-Start by focusing on this sentence unless they ask something else.`;
+Start by focusing on this sentence unless they ask something else.${longTextInstruction}`;
   }
 
   return `You are a helpful language tutor assisting a ${ceferLevel}-level Spanish learner who is reading a story. Their native language is English.
@@ -119,7 +136,9 @@ function getConversationalPrompt_SpanishLearner(
 
   let contextSection = "";
   if (context?.selectedText) {
-    const isSingleWord = context.selectedText.trim().split(/\s+/).length === 1;
+    const wordCount = context.selectedText.trim().split(/\s+/).length;
+    const isSingleWord = wordCount === 1;
+    const isLongText = wordCount > 20;
     const verbInstruction = isSingleWord
       ? `\n\nRECORDATORIO CRÍTICO SOBRE CONJUGACIONES:
 - "${context.selectedText}" es una palabra en INGLÉS (el idioma que el estudiante está aprendiendo)
@@ -129,17 +148,32 @@ function getConversationalPrompt_SpanishLearner(
 - Usa pronombres en inglés: I, you, he/she, we, you all, they
 - Si el verbo NO está en presente: Muestra AMBAS tablas (ese tiempo Y el presente) en inglés`
       : "";
+    const longTextInstruction = isLongText
+      ? `\n\nIMPORTANTE: Este es un pasaje largo. NO desgloses cada palabra. En su lugar:
+- Traduce ORACIÓN POR ORACIÓN: Para cada oración, muestra "English:" luego la oración en inglés, luego "Español:" luego la traducción, con una línea en blanco entre cada par
+- Después de todos los pares, muestra "Vocabulario clave:" con 3-5 palabras clave/difíciles
+- Luego "Gramática:" con 1-2 patrones gramaticales notables en una oración breve`
+      : "";
 
     contextSection = `\n
 ENFOQUE INMEDIATO:
 El estudiante ha seleccionado el siguiente texto en inglés de la línea ${context.lineIndex + 1}: "${context.selectedText}"
 Esto es de la oración completa: "${context.fullLine}"
-Comienza enfocándote en esta frase/palabra específica a menos que pregunten otra cosa.${verbInstruction}`;
+Comienza enfocándote en esta frase/palabra específica a menos que pregunten otra cosa.${verbInstruction}${longTextInstruction}`;
   } else if (context) {
+    const wordCount = context.fullLine.trim().split(/\s+/).length;
+    const isLongText = wordCount > 20;
+    const longTextInstruction = isLongText
+      ? `\nIMPORTANTE: Este es un pasaje largo. NO desgloses cada palabra. En su lugar:
+- Traduce ORACIÓN POR ORACIÓN: Para cada oración, muestra "English:" luego la oración en inglés, luego "Español:" luego la traducción, con una línea en blanco entre cada par
+- Después de todos los pares, muestra "Vocabulario clave:" con 3-5 palabras clave/difíciles
+- Luego "Gramática:" con 1-2 patrones gramaticales notables en una oración breve`
+      : "";
+
     contextSection = `\n
 ENFOQUE INMEDIATO:
 El estudiante está preguntando sobre la línea ${context.lineIndex + 1}: "${context.fullLine}"
-Comienza enfocándote en esta oración a menos que pregunten otra cosa.`;
+Comienza enfocándote en esta oración a menos que pregunten otra cosa.${longTextInstruction}`;
   }
 
   return `REGLA #1 - LA MÁS IMPORTANTE:
@@ -273,6 +307,11 @@ export async function POST(req: NextRequest) {
     // Only send last 50 messages to OpenAI to manage context window
     const recentMessages = messages.slice(-50);
 
+    // Bump token limit for long text contexts
+    const contextText = context?.selectedText || context?.fullLine || "";
+    const contextWordCount = contextText.trim().split(/\s+/).length;
+    const maxTokens = contextWordCount > 20 ? 800 : 300;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -280,7 +319,7 @@ export async function POST(req: NextRequest) {
         ...recentMessages.map(m => ({ role: m.role, content: m.content }))
       ],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: maxTokens,
     });
 
     // Log cost (fire-and-forget)
