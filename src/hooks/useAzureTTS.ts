@@ -35,6 +35,8 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wordTimingsRef = useRef<WordTiming[]>([]);
   const currentRequestRef = useRef<string | null>(null);
+  const isPausedRef = useRef(false);
+  const playbackRateRef = useRef(1.0);
   const optionsRef = useRef(options);
 
   // Update options ref when options change
@@ -44,7 +46,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    * Generate cache key for TTS request
    */
   const generateCacheKey = useCallback((request: TTSRequest): string => {
-    return `${request.text}-${request.language}-${request.speed}`;
+    return `${request.text}-${request.language}-${request.speed}-${request.voice || 'default'}`;
   }, []);
 
   /**
@@ -170,8 +172,9 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    */
   const playTTS = useCallback(async (request: TTSRequest): Promise<void> => {
     try {
+      isPausedRef.current = false;
       const requestKey = generateCacheKey(request);
-      
+
       // Stop any currently playing audio
       if (audioRef.current) {
         audioRef.current.pause();
@@ -196,6 +199,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
 
       // Create and configure audio element
       const audio = new Audio(ttsResponse.audioUrl);
+      audio.playbackRate = playbackRateRef.current;
       audioRef.current = audio;
       wordTimingsRef.current = ttsResponse.wordTimings;
 
@@ -242,7 +246,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       };
 
       const handleEnded = () => {
-        // Check if this audio element is still current
+        // Check if this audio element is still current and wasn't intentionally paused
         if (audioRef.current === audio) {
           setPlaybackState(prev => ({
             ...prev,
@@ -250,7 +254,10 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
             currentTime: 0,
             currentWordIndex: -1
           }));
-          optionsRef.current.onPlaybackComplete?.();
+          // Only chain to next sentence if we weren't paused by the user
+          if (!isPausedRef.current) {
+            optionsRef.current.onPlaybackComplete?.();
+          }
         }
       };
 
@@ -299,6 +306,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    */
   const pause = useCallback(() => {
     if (audioRef.current) {
+      isPausedRef.current = true;
       audioRef.current.pause();
       setPlaybackState(prev => ({ ...prev, isPlaying: false }));
     }
@@ -309,6 +317,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    */
   const resume = useCallback(() => {
     if (audioRef.current) {
+      isPausedRef.current = false;
       audioRef.current.play();
       setPlaybackState(prev => ({ ...prev, isPlaying: true }));
     }
@@ -319,6 +328,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    */
   const stop = useCallback(() => {
     if (audioRef.current) {
+      isPausedRef.current = true;
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
@@ -339,6 +349,16 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
   const seekTo = useCallback((time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.max(0, Math.min(time, audioRef.current.duration));
+    }
+  }, []);
+
+  /**
+   * Set playback rate (applies immediately to current audio and future audio)
+   */
+  const setPlaybackRate = useCallback((rate: number) => {
+    playbackRateRef.current = rate;
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
     }
   }, []);
 
@@ -404,6 +424,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     stop,
     seekTo,
     togglePlayback,
+    setPlaybackRate,
     
     // Utilities
     generateTTS,

@@ -161,11 +161,11 @@ export default function StoryLayoutAzureSimple({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>
-              <span>🇺🇸 English uses clear American accent (en-US-AriaNeural)</span>
+              <span>🇺🇸 English uses Andrew Multilingual voice (en-US-AndrewMultilingualNeural)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>
-              <span>🇲🇽 Spanish uses Mexican accent (es-MX-DaliaNeural)</span>
+              <span>🇲🇽 Spanish uses Andrew Multilingual voice (en-US-AndrewMultilingualNeural)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 bg-gray-200 rounded-full"></span>

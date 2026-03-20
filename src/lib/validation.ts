@@ -54,6 +54,15 @@ export function validateTTSRequest(data: any): TTSRequest {
     }
   }
 
+  // Validate optional voice override
+  if (data.voice !== undefined) {
+    if (typeof data.voice !== 'string') {
+      errors.push('voice must be a string');
+    } else if (data.voice.length > 100) {
+      errors.push('voice exceeds maximum length of 100 characters');
+    }
+  }
+
   if (errors.length > 0) {
     throw new ValidationError(`Validation failed: ${errors.join(', ')}`);
   }
@@ -62,6 +71,7 @@ export function validateTTSRequest(data: any): TTSRequest {
     text: data.text.trim(),
     language: data.language,
     speed: data.speed,
+    voice: data.voice,
     storySlug: data.storySlug,
     chapterPage: data.chapterPage
   };

@@ -14,6 +14,7 @@ export interface TTSRequest {
   text: string;
   language: TTSLanguage;
   speed: TTSSpeed;
+  voice?: string;            // Override default voice (e.g. 'en-US-AndrewMultilingualNeural')
   storySlug?: string;
   chapterPage?: string;
   // Script support - speaker name and stage direction
