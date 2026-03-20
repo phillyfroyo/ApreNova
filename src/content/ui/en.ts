@@ -614,6 +614,12 @@ storiesMetadata: {
     hook: "In the roaring twenties, a mysterious millionaire captivates with his lavish lifestyle and secrets.",
     description: "In the shimmering summer of 1922, a young man from the Midwest arrives on the shores of Long Island and enters a world of unimaginable wealth, reckless indulgence, and broken dreams. His enigmatic neighbor, Jay Gatsby, throws lavish parties at his Gothic mansion—yet no one seems to know who he truly is or what he desires.\n\nAs Nick Carraway is drawn into Gatsby's orbit, he discovers the truth behind the spectacle: a consuming, hopeless love for Daisy Buchanan—a woman of old money, charm, and carelessness. Gatsby has reinvented himself entirely, building a fortune on the dark fringes of the American Dream, all for the chance to reclaim a past that may never have truly existed.\n\nBut beneath the glitter of Jazz Age New York lies a world of betrayal, violence, and moral decay. When secrets unravel and loyalties are tested, the consequences prove devastating—and inescapable.\n\nWidely regarded as one of the greatest novels ever written, The Great Gatsby is F. Scott Fitzgerald's luminous portrait of the American Dream—its promise, its seduction, and its ruin.",
   },
+  "the-adventures-of-tom-sawyer": {
+    title: "The Adventures of Tom Sawyer",
+    hook: "Join Tom Sawyer in a world of mischief, friendship, and unforgettable adventures along the Mississippi River.",
+    description: "This classic story follows Tom Sawyer, a clever and adventurous boy growing up in a small town in 19th-century America. Alongside his friend Huck Finn, he gets caught up in exciting escapades—from treasure hunts and cave explorations to witnessing a shocking crime.\n\nMany of the adventures in this story were inspired by real experiences from Mark Twain’s childhood and the lives of those around him. Tom Sawyer himself is a blend of several boys Twain knew, making him a vivid and authentic character.\n\nAlthough written with young readers in mind, the story also invites adults to rediscover the imagination, curiosity, and bold spirit of childhood.",
+  },
+
 
 
 },

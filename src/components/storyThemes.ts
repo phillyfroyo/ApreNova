@@ -58,6 +58,14 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
   },
+
+  "the-adventures-of-tom-sawyer": {
+    backgroundColor: "#f5f0e6",
+    textColor: "text-gray-900",
+    accentColor: "bg-green-600",
+    hoverAccentColor: "hover:bg-green-300",
+    fontFamily: "font-sans",
+  },
 };
 
 // Default theme fallback for stories without a specific theme
