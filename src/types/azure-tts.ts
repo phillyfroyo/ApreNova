@@ -14,6 +14,9 @@ export interface TTSRequest {
   text: string;
   language: TTSLanguage;
   speed: TTSSpeed;
+  voice?: string;            // Override default voice (e.g. 'en-US-AndrewMultilingualNeural')
+  rate?: number;             // Override speech rate (0.5-2.0, default 1.0) — applied Azure-side via SSML
+  wordBreakMs?: number;      // Insert pauses between words in ms (0 = no breaks)
   storySlug?: string;
   chapterPage?: string;
   // Script support - speaker name and stage direction

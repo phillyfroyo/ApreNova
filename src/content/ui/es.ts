@@ -635,6 +635,10 @@ audioPlayer: {
   resumeListening: "Reanudar escucha",
   errorRetry: "Reintentar",
   errorSkip: "Saltar",
+  english: "Inglés",
+  spanish: "Español",
+  playbackSpeed: "Velocidad de reproducción",
+  wordBreak: "Espaciado entre palabras",
 },
 };
 

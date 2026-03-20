@@ -1,9 +1,9 @@
 // src/components/AudioPlayerBar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
-import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS, AVAILABLE_WORD_BREAKS } from "@/contexts/AudioPlayerContext";
+import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { useParams } from "next/navigation";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
@@ -31,10 +31,14 @@ function getContentSentencePosition(sentences: any[], highlightIndex: number | n
 export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
-    skipForward, skipBack, nextPage, prevPage,
+    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate, setWordBreak,
   } = useAudioPlayer();
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
+
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
+  const voiceMenuRef = useRef<HTMLDivElement>(null);
+  const gearButtonRef = useRef<HTMLButtonElement>(null);
 
   // Detect if mobile bottom nav is present (story pages hide it)
   const [hasBottomNav, setHasBottomNav] = useState(false);
@@ -49,9 +53,23 @@ export default function AudioPlayerBar() {
     return () => observer.disconnect();
   }, []);
 
+  // Close voice menu when tapping outside
+  useEffect(() => {
+    if (!showVoiceMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (gearButtonRef.current?.contains(target)) return;
+      if (voiceMenuRef.current && !voiceMenuRef.current.contains(target)) {
+        setShowVoiceMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showVoiceMenu]);
+
   if (!state.isVisible) return null;
 
-  const { status, position, mode, currentPageSentences, highlightedSentenceIndex } = state;
+  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate, wordBreakMs } = state;
 
   const totalSentences = getContentSentenceCount(currentPageSentences);
   const currentSentence = getContentSentencePosition(currentPageSentences, highlightedSentenceIndex);
@@ -93,6 +111,107 @@ export default function AudioPlayerBar() {
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
         style={{ height: 90 }}
       >
+        {/* Voice selection menu (above the player bar) */}
+        {showVoiceMenu && (
+          <div
+            ref={voiceMenuRef}
+            className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
+          >
+            <div className="max-w-md mx-auto space-y-3">
+              {/* Playback speed */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {t(lng, "audioPlayer", "playbackSpeed")}
+                </h4>
+                <div className="flex gap-1.5 overflow-x-auto pb-2">
+                  {AVAILABLE_SPEEDS.map(speed => (
+                    <button
+                      key={speed}
+                      onClick={() => setPlaybackRate(speed)}
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
+                        ${playbackRate === speed
+                          ? 'bg-indigo-100 text-indigo-700 font-medium'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      {speed === 1.0 ? '1x' : `${speed}x`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Word spacing */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {t(lng, "audioPlayer", "wordBreak")}
+                </h4>
+                <div className="flex gap-1.5 overflow-x-auto pb-2">
+                  {AVAILABLE_WORD_BREAKS.map(ms => (
+                    <button
+                      key={ms}
+                      onClick={() => setWordBreak(ms)}
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
+                        ${wordBreakMs === ms
+                          ? 'bg-indigo-100 text-indigo-700 font-medium'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      {ms === 0 ? 'Off' : `${ms}ms`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Voice selection */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* English voices */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    {t(lng, "audioPlayer", "english")}
+                  </h4>
+                  <div className="space-y-1">
+                    {AVAILABLE_VOICES['en-US'].map(voice => (
+                      <button
+                        key={voice.id}
+                        onClick={() => setVoice('en-US', voice.id)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                          ${voiceSelection['en-US'] === voice.id
+                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                      >
+                        {voice.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Spanish voices */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    {t(lng, "audioPlayer", "spanish")}
+                  </h4>
+                  <div className="space-y-1">
+                    {AVAILABLE_VOICES['es-ES'].map(voice => (
+                      <button
+                        key={voice.id}
+                        onClick={() => setVoice('es-ES', voice.id)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                          ${voiceSelection['es-ES'] === voice.id
+                            ? 'bg-indigo-100 text-indigo-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                      >
+                        {voice.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Progress bar */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gray-100">
           <div
@@ -101,7 +220,7 @@ export default function AudioPlayerBar() {
           />
         </div>
 
-        {/* Top row: title, position, language toggle, close */}
+        {/* Top row: title, position, voice settings, language toggle, close */}
         <div className="flex items-center h-[38px] px-3 gap-2">
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-900 truncate">
@@ -115,6 +234,20 @@ export default function AudioPlayerBar() {
               {totalSentences > 0 && ` · ${currentSentence}/${totalSentences}`}
             </span>
           )}
+
+          {/* Voice settings */}
+          <button
+            ref={gearButtonRef}
+            onClick={() => setShowVoiceMenu(prev => !prev)}
+            className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-medium transition-colors
+              ${showVoiceMenu
+                ? "bg-indigo-100 text-indigo-700"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            title="Voice settings"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
 
           {/* Language mode toggle */}
           <button

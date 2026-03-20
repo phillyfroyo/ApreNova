@@ -20,8 +20,8 @@ const VOICE_CONFIG: VoiceConfig = {
     slow: 'es-MX-DaliaNeural'
   },
   'en-US': {
-    normal: 'en-US-AriaNeural', 
-    slow: 'en-US-AriaNeural'
+    normal: 'en-US-AndrewMultilingualNeural',
+    slow: 'en-US-AndrewMultilingualNeural'
   }
 };
 
@@ -61,8 +61,8 @@ export class AzureSpeechService {
    * Generate SSML markup for precise speech control.
    * For scripts: reads speaker name, pauses, then optionally stage direction (softer), then dialogue.
    */
-  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string }): string {
-    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection } = options;
+  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string; wordBreakMs?: number }): string {
+    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection, wordBreakMs } = options;
 
     let content = '';
 
@@ -76,8 +76,17 @@ export class AzureSpeechService {
       content += `<prosody volume="soft" rate="medium">${this.escapeXML(stageDirection)}</prosody><break time="200ms"/>`;
     }
 
-    // Main text/dialogue with normal prosody settings
-    content += `<prosody rate="${rate}" pitch="${pitch}" volume="${volume}">${this.escapeXML(text)}</prosody>`;
+    // Main text/dialogue with prosody settings
+    // If wordBreakMs is set, insert breaks between words
+    let textContent: string;
+    if (wordBreakMs && wordBreakMs > 0) {
+      const words = text.split(/\s+/).filter(w => w.length > 0);
+      textContent = words.map(w => this.escapeXML(w)).join(`<break time="${wordBreakMs}ms"/>`);
+    } else {
+      textContent = this.escapeXML(text);
+    }
+
+    content += `<prosody rate="${rate}" pitch="${pitch}" volume="${volume}">${textContent}</prosody>`;
 
     return `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voice.substring(0, 5)}">
@@ -104,7 +113,10 @@ export class AzureSpeechService {
    * Generate unique hash for cache key
    */
   public generateCacheKey(request: TTSRequest): string {
-    const content = `${request.text}-${request.language}-${request.speed}`;
+    const voicePart = request.voice || 'default';
+    const ratePart = request.rate ?? 'default';
+    const breakPart = request.wordBreakMs ?? 0;
+    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}-${breakPart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 
@@ -126,16 +138,17 @@ export class AzureSpeechService {
    */
   public async generateSpeech(request: TTSRequest): Promise<TTSResponse> {
     try {
-      const voice = VOICE_CONFIG[request.language][request.speed];
-      const rate = SPEED_RATES[request.speed];
+      const voice = request.voice || VOICE_CONFIG[request.language][request.speed];
+      const rate = request.rate ?? SPEED_RATES[request.speed];
 
-      // Generate SSML with optional speaker name and stage direction
+      // Generate SSML with optional speaker name, stage direction, and word breaks
       const ssml = this.generateSSML({
         text: request.text,
         voice,
         rate,
         speakerName: request.speakerName,
-        stageDirection: request.stageDirection
+        stageDirection: request.stageDirection,
+        wordBreakMs: request.wordBreakMs,
       });
 
       // Create synthesizer with audio config
@@ -204,16 +217,17 @@ export class AzureSpeechService {
    */
   public async generateSpeechBuffer(request: TTSRequest): Promise<{ buffer: ArrayBuffer; wordTimings: WordTiming[]; duration: number }> {
     try {
-      const voice = VOICE_CONFIG[request.language][request.speed];
-      const rate = SPEED_RATES[request.speed];
+      const voice = request.voice || VOICE_CONFIG[request.language][request.speed];
+      const rate = request.rate ?? SPEED_RATES[request.speed];
 
-      // Generate SSML with optional speaker name and stage direction
+      // Generate SSML with optional speaker name, stage direction, and word breaks
       const ssml = this.generateSSML({
         text: request.text,
         voice,
         rate,
         speakerName: request.speakerName,
-        stageDirection: request.stageDirection
+        stageDirection: request.stageDirection,
+        wordBreakMs: request.wordBreakMs,
       });
 
       // Create synthesizer without audio output (for buffer generation)
