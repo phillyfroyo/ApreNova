@@ -43,8 +43,7 @@ export class TTSCacheService {
   public generateCacheKey(request: TTSRequest): string {
     const voicePart = request.voice || 'default';
     const ratePart = request.rate ?? 'default';
-    const breakPart = request.wordBreakMs ?? 0;
-    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}-${breakPart}`;
+    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 

@@ -72,15 +72,6 @@ export function validateTTSRequest(data: any): TTSRequest {
     }
   }
 
-  // Validate optional word break
-  if (data.wordBreakMs !== undefined) {
-    if (typeof data.wordBreakMs !== 'number') {
-      errors.push('wordBreakMs must be a number');
-    } else if (data.wordBreakMs < 0 || data.wordBreakMs > 2000) {
-      errors.push('wordBreakMs must be between 0 and 2000');
-    }
-  }
-
   if (errors.length > 0) {
     throw new ValidationError(`Validation failed: ${errors.join(', ')}`);
   }
@@ -91,7 +82,6 @@ export function validateTTSRequest(data: any): TTSRequest {
     speed: data.speed,
     voice: data.voice,
     rate: data.rate,
-    wordBreakMs: data.wordBreakMs,
     storySlug: data.storySlug,
     chapterPage: data.chapterPage
   };

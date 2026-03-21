@@ -61,8 +61,8 @@ export class AzureSpeechService {
    * Generate SSML markup for precise speech control.
    * For scripts: reads speaker name, pauses, then optionally stage direction (softer), then dialogue.
    */
-  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string; wordBreakMs?: number }): string {
-    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection, wordBreakMs } = options;
+  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string; language?: TTSLanguage }): string {
+    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection, language } = options;
 
     let content = '';
 
@@ -77,21 +77,31 @@ export class AzureSpeechService {
     }
 
     // Main text/dialogue with prosody settings
-    // If wordBreakMs is set, insert breaks between words
-    let textContent: string;
-    if (wordBreakMs && wordBreakMs > 0) {
-      const words = text.split(/\s+/).filter(w => w.length > 0);
-      textContent = words.map(w => this.escapeXML(w)).join(`<break time="${wordBreakMs}ms"/>`);
-    } else {
-      textContent = this.escapeXML(text);
-    }
+    const textContent = this.escapeXML(text);
 
     content += `<prosody rate="${rate}" pitch="${pitch}" volume="${volume}">${textContent}</prosody>`;
 
+    // Determine the SSML lang from the content language, falling back to the voice locale.
+    // Map es-ES → es-MX to match our Mexican Spanish voices and accent.
+    const LOCALE_MAP: Record<string, string> = { 'es-ES': 'es-MX' };
+    const rawLang = language || voice.substring(0, 5);
+    const ssmlLang = LOCALE_MAP[rawLang] || rawLang;
+
+    // For multilingual voices reading text in a non-primary language,
+    // wrap content in <lang> to force correct pronunciation.
+    // e.g. en-US-AvaMultilingualNeural reading Spanish needs <lang xml:lang="es-ES">
+    const voiceLang = voice.substring(0, 2); // 'en' or 'es'
+    const contentLang = ssmlLang.substring(0, 2); // 'en' or 'es'
+    const needsLangTag = voiceLang !== contentLang;
+
+    const wrappedContent = needsLangTag
+      ? `<lang xml:lang="${ssmlLang}">${content}</lang>`
+      : content;
+
     return `
-      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voice.substring(0, 5)}">
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${ssmlLang}">
         <voice name="${voice}">
-          ${content}
+          ${wrappedContent}
         </voice>
       </speak>
     `.trim();
@@ -115,8 +125,7 @@ export class AzureSpeechService {
   public generateCacheKey(request: TTSRequest): string {
     const voicePart = request.voice || 'default';
     const ratePart = request.rate ?? 'default';
-    const breakPart = request.wordBreakMs ?? 0;
-    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}-${breakPart}`;
+    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 
@@ -148,7 +157,7 @@ export class AzureSpeechService {
         rate,
         speakerName: request.speakerName,
         stageDirection: request.stageDirection,
-        wordBreakMs: request.wordBreakMs,
+        language: request.language,
       });
 
       // Create synthesizer with audio config
@@ -227,7 +236,7 @@ export class AzureSpeechService {
         rate,
         speakerName: request.speakerName,
         stageDirection: request.stageDirection,
-        wordBreakMs: request.wordBreakMs,
+        language: request.language,
       });
 
       // Create synthesizer without audio output (for buffer generation)

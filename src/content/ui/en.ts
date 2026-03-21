@@ -637,7 +637,11 @@ audioPlayer: {
   english: "English",
   spanish: "Spanish",
   playbackSpeed: "Playback Speed",
-  wordBreak: "Word Spacing",
+  settings: "Settings",
+  speed: "Speed",
+  close: "Close",
+  languageToggle: "Language",
+  readBothLanguages: "Read both languages",
 },
 };
 

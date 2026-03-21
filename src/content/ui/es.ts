@@ -638,7 +638,11 @@ audioPlayer: {
   english: "Inglés",
   spanish: "Español",
   playbackSpeed: "Velocidad de reproducción",
-  wordBreak: "Espaciado entre palabras",
+  settings: "Ajustes",
+  speed: "Velocidad",
+  close: "Cerrar",
+  languageToggle: "Idioma",
+  readBothLanguages: "Leer ambos idiomas",
 },
 };
 
