@@ -61,8 +61,8 @@ export class AzureSpeechService {
    * Generate SSML markup for precise speech control.
    * For scripts: reads speaker name, pauses, then optionally stage direction (softer), then dialogue.
    */
-  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string; wordBreakMs?: number; language?: TTSLanguage }): string {
-    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection, wordBreakMs, language } = options;
+  private generateSSML(options: SSMLOptions & { speakerName?: string; stageDirection?: string; language?: TTSLanguage }): string {
+    const { text, voice, rate, pitch = '+0Hz', volume = 'medium', speakerName, stageDirection, language } = options;
 
     let content = '';
 
@@ -77,14 +77,7 @@ export class AzureSpeechService {
     }
 
     // Main text/dialogue with prosody settings
-    // If wordBreakMs is set, insert breaks between words
-    let textContent: string;
-    if (wordBreakMs && wordBreakMs > 0) {
-      const words = text.split(/\s+/).filter(w => w.length > 0);
-      textContent = words.map(w => this.escapeXML(w)).join(`<break time="${wordBreakMs}ms"/>`);
-    } else {
-      textContent = this.escapeXML(text);
-    }
+    const textContent = this.escapeXML(text);
 
     content += `<prosody rate="${rate}" pitch="${pitch}" volume="${volume}">${textContent}</prosody>`;
 
@@ -132,8 +125,7 @@ export class AzureSpeechService {
   public generateCacheKey(request: TTSRequest): string {
     const voicePart = request.voice || 'default';
     const ratePart = request.rate ?? 'default';
-    const breakPart = request.wordBreakMs ?? 0;
-    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}-${breakPart}`;
+    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 
@@ -165,7 +157,6 @@ export class AzureSpeechService {
         rate,
         speakerName: request.speakerName,
         stageDirection: request.stageDirection,
-        wordBreakMs: request.wordBreakMs,
         language: request.language,
       });
 
@@ -245,7 +236,6 @@ export class AzureSpeechService {
         rate,
         speakerName: request.speakerName,
         stageDirection: request.stageDirection,
-        wordBreakMs: request.wordBreakMs,
         language: request.language,
       });
 

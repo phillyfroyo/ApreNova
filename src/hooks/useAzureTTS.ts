@@ -46,7 +46,7 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
    * Generate cache key for TTS request
    */
   const generateCacheKey = useCallback((request: TTSRequest): string => {
-    return `${request.text}-${request.language}-${request.speed}-${request.voice || 'default'}-${request.rate ?? 'default'}-${request.wordBreakMs ?? 0}`;
+    return `${request.text}-${request.language}-${request.speed}-${request.voice || 'default'}-${request.rate ?? 'default'}`;
   }, []);
 
   /**

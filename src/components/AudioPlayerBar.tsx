@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS, AVAILABLE_WORD_BREAKS } from "@/contexts/AudioPlayerContext";
+import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS } from "@/contexts/AudioPlayerContext";
 import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { useParams } from "next/navigation";
 import { t } from "@/lib/t";
@@ -31,14 +31,16 @@ function getContentSentencePosition(sentences: any[], highlightIndex: number | n
 export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
-    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate, setWordBreak,
+    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate,
   } = useAudioPlayer();
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
 
-  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const voiceMenuRef = useRef<HTMLDivElement>(null);
-  const gearButtonRef = useRef<HTMLButtonElement>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const [langToast, setLangToast] = useState<"on" | "off" | null>(null);
+  const langToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Detect if mobile bottom nav is present (story pages hide it)
   const [hasBottomNav, setHasBottomNav] = useState(false);
@@ -53,23 +55,23 @@ export default function AudioPlayerBar() {
     return () => observer.disconnect();
   }, []);
 
-  // Close voice menu when tapping outside
+  // Close settings when tapping outside
   useEffect(() => {
-    if (!showVoiceMenu) return;
+    if (!showSettings) return;
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (gearButtonRef.current?.contains(target)) return;
-      if (voiceMenuRef.current && !voiceMenuRef.current.contains(target)) {
-        setShowVoiceMenu(false);
+      if (settingsButtonRef.current?.contains(target)) return;
+      if (settingsRef.current && !settingsRef.current.contains(target)) {
+        setShowSettings(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showVoiceMenu]);
+  }, [showSettings]);
 
   if (!state.isVisible) return null;
 
-  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate, wordBreakMs } = state;
+  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate } = state;
 
   const totalSentences = getContentSentenceCount(currentPageSentences);
   const currentSentence = getContentSentencePosition(currentPageSentences, highlightedSentenceIndex);
@@ -94,7 +96,7 @@ export default function AudioPlayerBar() {
   })();
 
   const positionLabel = position
-    ? `Ch ${position.chapter} · P ${position.page}`
+    ? `Ch ${position.chapter} · Page ${position.page}`
     : "";
 
   const isTransport = status !== "finished";
@@ -103,18 +105,17 @@ export default function AudioPlayerBar() {
   return (
     <>
       {/* Spacer to prevent content from being hidden behind the bar on mobile */}
-      <div className="md:hidden h-[90px]" />
+      <div className="md:hidden h-[240px]" />
 
       <div
         data-audio-player-bar
-        className={`fixed left-0 right-0 z-[55] bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg
+        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
-        style={{ height: 90 }}
       >
-        {/* Voice selection menu (above the player bar) */}
-        {showVoiceMenu && (
+        {/* Settings popup (above the player) */}
+        {showSettings && (
           <div
-            ref={voiceMenuRef}
+            ref={settingsRef}
             className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
           >
             <div className="max-w-md mx-auto space-y-3">
@@ -123,7 +124,7 @@ export default function AudioPlayerBar() {
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   {t(lng, "audioPlayer", "playbackSpeed")}
                 </h4>
-                <div className="flex gap-1.5 overflow-x-auto pb-2">
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
                   {AVAILABLE_SPEEDS.map(speed => (
                     <button
                       key={speed}
@@ -135,28 +136,6 @@ export default function AudioPlayerBar() {
                         }`}
                     >
                       {speed === 1.0 ? '1x' : `${speed}x`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Word spacing */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  {t(lng, "audioPlayer", "wordBreak")}
-                </h4>
-                <div className="flex gap-1.5 overflow-x-auto pb-2">
-                  {AVAILABLE_WORD_BREAKS.map(ms => (
-                    <button
-                      key={ms}
-                      onClick={() => setWordBreak(ms)}
-                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
-                        ${wordBreakMs === ms
-                          ? 'bg-indigo-100 text-indigo-700 font-medium'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                        }`}
-                    >
-                      {ms === 0 ? 'Off' : `${ms}ms`}
                     </button>
                   ))}
                 </div>
@@ -212,79 +191,58 @@ export default function AudioPlayerBar() {
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gray-100">
-          <div
-            className="h-full bg-indigo-500 transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        {/* Language toggle toast — positioned above the player */}
+        {langToast && (
+          <div className="absolute bottom-full mb-2 left-0 right-0 flex justify-center pointer-events-none z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900/85 text-white text-xs font-medium shadow-lg">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
+                ${langToast === "on" ? "bg-indigo-500 text-white" : "bg-gray-600 text-gray-300"}`}>
+                {langToast === "on" ? "ON" : "OFF"}
+              </span>
+              {t(lng, "audioPlayer", "readBothLanguages")}
+            </div>
+          </div>
+        )}
 
-        {/* Top row: title, position, voice settings, language toggle, close */}
-        <div className="flex items-center h-[38px] px-3 gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 truncate">
-              {statusLabel}
+        {/* ============================================================ */}
+        {/* TOP ROW: Title + chapter info + close                        */}
+        {/* ============================================================ */}
+        <div className="px-5 pt-4 pb-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-semibold text-gray-900 truncate leading-tight">
+                {statusLabel}
+              </h3>
+              {positionLabel && status !== "finished" && (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {positionLabel}
+                </p>
+              )}
             </div>
           </div>
 
-          {positionLabel && status !== "finished" && (
-            <span className="text-xs text-gray-400 flex-shrink-0">
-              {positionLabel}
-              {totalSentences > 0 && ` · ${currentSentence}/${totalSentences}`}
-            </span>
-          )}
-
-          {/* Voice settings */}
-          <button
-            ref={gearButtonRef}
-            onClick={() => setShowVoiceMenu(prev => !prev)}
-            className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-medium transition-colors
-              ${showVoiceMenu
-                ? "bg-indigo-100 text-indigo-700"
-                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
-            title="Voice settings"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Language mode toggle */}
-          <button
-            onClick={toggleMode}
-            className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-medium transition-colors
-              ${mode === "bilingual"
-                ? "bg-indigo-100 text-indigo-700"
-                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}
-            title={mode === "bilingual"
-              ? t(lng, "audioPlayer", "bilingual")
-              : t(lng, "audioPlayer", "targetOnly")
-            }
-          >
-            <Languages className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Close */}
-          <button
-            onClick={stopPlayback}
-            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full
-              text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+          {/* Progress bar */}
+          <div className="mt-3">
+            <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Bottom row: transport controls */}
+        {/* ============================================================ */}
+        {/* MIDDLE ROW: Transport controls                               */}
+        {/* ============================================================ */}
         {isTransport && (
-          <div className="flex items-center justify-center h-[48px] gap-1">
+          <div className="flex items-center justify-center py-2 gap-3">
             {/* Prev page */}
             <button
               onClick={prevPage}
               disabled={transportDisabled}
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors
+              className="w-10 h-10 flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
                 disabled:text-gray-300 disabled:hover:bg-transparent"
               aria-label="Previous page"
             >
@@ -295,29 +253,30 @@ export default function AudioPlayerBar() {
             <button
               onClick={skipBack}
               disabled={transportDisabled}
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors
+              className="w-10 h-10 flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
                 disabled:text-gray-300 disabled:hover:bg-transparent"
               aria-label="Previous sentence"
             >
-              <SkipBack className="w-4 h-4" fill="currentColor" />
+              <SkipBack className="w-5 h-5" fill="currentColor" />
             </button>
 
-            {/* Play / Pause */}
+            {/* Play / Pause — larger */}
             <button
               onClick={handlePlayPause}
               disabled={transportDisabled}
-              className="w-11 h-11 flex items-center justify-center rounded-full
+              className="w-14 h-14 flex items-center justify-center rounded-full
                 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors
-                disabled:bg-gray-300 disabled:cursor-default mx-1"
+                disabled:bg-gray-300 disabled:cursor-default
+                shadow-md shadow-indigo-200"
               aria-label={status === "playing" ? "Pause" : "Play"}
             >
               {transportDisabled ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : status === "playing" ? (
-                <Pause className="w-5 h-5" fill="currentColor" />
+                <Pause className="w-6 h-6" fill="currentColor" />
               ) : (
-                <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+                <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
               )}
             </button>
 
@@ -325,20 +284,20 @@ export default function AudioPlayerBar() {
             <button
               onClick={skipForward}
               disabled={transportDisabled}
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors
+              className="w-10 h-10 flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
                 disabled:text-gray-300 disabled:hover:bg-transparent"
               aria-label="Next sentence"
             >
-              <SkipForward className="w-4 h-4" fill="currentColor" />
+              <SkipForward className="w-5 h-5" fill="currentColor" />
             </button>
 
             {/* Next page */}
             <button
               onClick={nextPage}
               disabled={transportDisabled}
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors
+              className="w-10 h-10 flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
                 disabled:text-gray-300 disabled:hover:bg-transparent"
               aria-label="Next page"
             >
@@ -346,6 +305,57 @@ export default function AudioPlayerBar() {
             </button>
           </div>
         )}
+
+        {/* ============================================================ */}
+        {/* BOTTOM ROW: Settings, Language, Close                        */}
+        {/* ============================================================ */}
+        <div className="flex pb-2 pt-2">
+          {/* Settings */}
+          <button
+            ref={settingsButtonRef}
+            onClick={() => setShowSettings(prev => !prev)}
+            className={`flex-1 flex flex-col items-center gap-1 transition-colors
+              ${showSettings
+                ? "text-indigo-600"
+                : "text-gray-500 hover:text-gray-900"
+              }`}
+            title="Voice settings"
+          >
+            <Settings className="w-[22px] h-[22px]" />
+            <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "settings")}</span>
+          </button>
+
+          {/* Language mode toggle */}
+          <button
+            onClick={() => {
+              toggleMode();
+              const newMode = mode === "bilingual" ? "off" : "on";
+              setLangToast(newMode);
+              if (langToastTimer.current) clearTimeout(langToastTimer.current);
+              langToastTimer.current = setTimeout(() => setLangToast(null), 2500);
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 transition-colors
+              ${mode === "bilingual"
+                ? "text-indigo-600"
+                : "text-gray-500 hover:text-gray-900"
+              }`}
+          >
+            <Languages className="w-[22px] h-[22px]" />
+            <span className="text-[11px] font-medium">
+              {t(lng, "audioPlayer", "languageToggle")}
+            </span>
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={stopPlayback}
+            className="flex-1 flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-[22px] h-[22px]" />
+            <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
+          </button>
+        </div>
       </div>
     </>
   );
