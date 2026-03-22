@@ -437,6 +437,16 @@ useEffect(() => {
       return; // Never close translation for these elements
     }
 
+    // Exempt clicks inside the audio player bar (fixed overlay — use bounding rect)
+    const audioBar = document.querySelector('[data-audio-player-bar]');
+    if (audioBar) {
+      const barRect = audioBar.getBoundingClientRect();
+      if (e.clientX >= barRect.left && e.clientX <= barRect.right &&
+          e.clientY >= barRect.top && e.clientY <= barRect.bottom) {
+        return;
+      }
+    }
+
     if (
       containerRef.current &&
       !containerRef.current.contains(e.target as Node) &&
