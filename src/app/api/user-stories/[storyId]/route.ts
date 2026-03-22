@@ -115,17 +115,24 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
     // Create deleted story record to preserve cost data for analytics
     if (costCents > 0) {
+      const wordCount = story.rawContent.trim().split(/\s+/).filter(Boolean).length;
       await prisma.deletedUserStory.create({
         data: {
           userId: session.user.id,
           originalStoryId: storyId,
           costCents,
+          storyType: story.storyType,
+          wordCount,
         },
       });
     }
 
+    // Delete associated ApiCost records (aggregate is preserved in DeletedUserStory)
+    await prisma.apiCost.deleteMany({
+      where: { userStoryId: storyId },
+    });
+
     // Delete story (cascades to levels and bookmarks)
-    // Note: ApiCost records are preserved with userStoryId set to null (onDelete: SetNull)
     await prisma.userStory.delete({
       where: { id: storyId },
     });

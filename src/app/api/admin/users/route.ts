@@ -75,6 +75,7 @@ async function getUsersSummary() {
       quizLevel: true,
       isPremium: true,
       createdAt: true,
+      deletedAt: true,
       UserStory: {
         select: { id: true },
       },
@@ -99,6 +100,7 @@ async function getUsersSummary() {
       quizLevel: user.quizLevel,
       isPremium: user.isPremium,
       createdAt: user.createdAt.toISOString(),
+      deletedAt: user.deletedAt?.toISOString() || null,
       readingMs: readingMsMap.get(user.id) || 0,
       storyCount: user.UserStory.length,
       totalCostCents,
@@ -109,14 +111,34 @@ async function getUsersSummary() {
     };
   });
 
-  // Calculate totals
-  const totalUsers = users.length;
-  const totalStories = users.reduce((sum, u) => sum + u.storyCount, 0);
-  const totalCostCents = users.reduce((sum, u) => sum + u.totalCostCents, 0);
+  // Exclude admin/test account and deleted users from summary averages
+  const EXCLUDED_USER_ID = "cmcwccvsd0000ja6065zucooe";
+  const nonExcludedUsers = users.filter((u) => u.id !== EXCLUDED_USER_ID && !u.deletedAt);
+  const activeUsers = users.filter((u) => !u.deletedAt);
+
+  // Calculate totals (excluding test account for cost/usage stats; deleted users excluded from count)
+  const totalUsers = activeUsers.length;
+  const totalStories = nonExcludedUsers.reduce((sum, u) => sum + u.storyCount, 0);
+  const totalCostCents = nonExcludedUsers.reduce((sum, u) => sum + u.totalCostCents, 0);
   const avgCostPerUser =
     totalUsers > 0 ? Math.round(totalCostCents / totalUsers) : 0;
+  // Avg per story uses ALL users (including test account) since per-story cost is still useful
+  const allStories = users.reduce((sum, u) => sum + u.storyCount, 0);
+  const allCostCents = users.reduce((sum, u) => sum + u.totalCostCents, 0);
   const avgCostPerStory =
-    totalStories > 0 ? Math.round(totalCostCents / totalStories) : 0;
+    allStories > 0 ? Math.round(allCostCents / allStories) : 0;
+
+  // Current month's costs (resets each month)
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthCosts = await prisma.apiCost.aggregate({
+    where: {
+      createdAt: { gte: monthStart },
+      userId: { not: EXCLUDED_USER_ID },
+    },
+    _sum: { costCents: true },
+  });
+  const monthCostCents = monthCosts._sum.costCents || 0;
 
   return NextResponse.json({
     summary: {
@@ -125,6 +147,7 @@ async function getUsersSummary() {
       totalCostCents,
       avgCostPerUser,
       avgCostPerStory,
+      monthCostCents,
     },
     users,
   });
@@ -280,7 +303,8 @@ async function getUserDetails(userId: string) {
   const totalExistingStories = storyData.length;
   const totalWords = storyData.reduce((sum, s) => sum + s.wordCount, 0);
   const existingStoryCostTotal = storyData.reduce((sum, s) => sum + s.costCents, 0);
-  const totalCostCents = totalUserCosts._sum.costCents || 0;
+  // ApiCost records are deleted when a story is deleted, so add back deleted story costs
+  const totalCostCents = (totalUserCosts._sum.costCents || 0) + deletedStoryCostCents;
 
   // Total story cost = existing + deleted
   const allStoryCostCents = existingStoryCostTotal + deletedStoryCostCents;

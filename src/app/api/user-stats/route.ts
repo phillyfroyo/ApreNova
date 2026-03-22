@@ -82,6 +82,13 @@ export async function GET() {
     calculateStreak(userId),
   ]);
 
+  // User number = count of users created on or before this user
+  const userNumber = user?.createdAt
+    ? await prisma.user.count({
+        where: { createdAt: { lte: user.createdAt } },
+      })
+    : null;
+
   // Count unique chapters visited
   const uniqueChapters = await prisma.pageVisit.groupBy({
     by: ['storySlug', 'level', 'chapter'],
@@ -97,5 +104,6 @@ export async function GET() {
     pagesRead: pagesRead,
     chaptersVisited: uniqueChapters.length,
     currentStreak: streak,
+    userNumber,
   });
 }

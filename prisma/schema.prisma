@@ -178,6 +178,7 @@ model User {
   updatedAt         DateTime            @updatedAt
   isPremium         Boolean             @default(false)
   stripeCustomerId  String?             @unique
+  deletedAt         DateTime?
   Account           Account[]
   ApiCost           ApiCost[]
   CompletedStory    CompletedStory[]
@@ -347,6 +348,8 @@ model DeletedUserStory {
   userId          String
   originalStoryId String   // The original UserStory.id before deletion
   costCents       Int      // Total API cost for this story
+  storyType       String?  // e.g., "short-story", "article", etc.
+  wordCount       Int?     // Word count of the original story
   deletedAt       DateTime @default(now())
 
   User            User     @relation(fields: [userId], references: [id], onDelete: Cascade)

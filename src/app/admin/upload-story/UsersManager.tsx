@@ -8,6 +8,7 @@ interface UserSummary {
   totalCostCents: number;
   avgCostPerUser: number;
   avgCostPerStory: number;
+  monthCostCents: number;
 }
 
 interface UserListItem {
@@ -20,6 +21,7 @@ interface UserListItem {
   isPremium: boolean;
   readingMs: number;
   createdAt: string;
+  deletedAt: string | null;
   storyCount: number;
   totalCostCents: number;
   avgCostPerStory: number;
@@ -311,7 +313,7 @@ export default function UsersManager() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
           <div className="text-xs sm:text-sm text-gray-500">Users</div>
           <div className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -328,6 +330,12 @@ export default function UsersManager() {
           <div className="text-xs sm:text-sm text-gray-500">Total Cost</div>
           <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {formatCents(data.summary.totalCostCents)}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="text-xs sm:text-sm text-gray-500">This Month</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
+            {formatCents(data.summary.monthCostCents)}
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
@@ -391,7 +399,7 @@ export default function UsersManager() {
                     }
                     className={`w-full px-3 sm:px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
                       selectedUserId === user.id ? "bg-blue-50" : ""
-                    }`}
+                    } ${user.deletedAt ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
@@ -402,7 +410,12 @@ export default function UsersManager() {
                           <span className="font-medium text-gray-900 truncate">
                             {user.name || "Anonymous"}
                           </span>
-                          {user.isPremium && (
+                          {user.deletedAt && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex-shrink-0">
+                              Deleted
+                            </span>
+                          )}
+                          {user.isPremium && !user.deletedAt && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">
                               Premium
                             </span>

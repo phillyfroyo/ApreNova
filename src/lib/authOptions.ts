@@ -43,7 +43,7 @@ export const authOptions: AuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-        if (!user?.password) return null;
+        if (!user?.password || user.deletedAt) return null;
 
         const isValid = await compare(credentials.password, user.password);
         return isValid
@@ -70,7 +70,7 @@ export const authOptions: AuthOptions = {
     ? await prisma.user.findUnique({ where: { email: user.email } })
     : null;
 
-    if (dbUser) {
+    if (dbUser && !dbUser.deletedAt) {
       token.id = dbUser.id;
       if (dbUser.image) token.image = dbUser.image;
       if (dbUser.nativeLanguage) token.nativeLanguage = dbUser.nativeLanguage;
