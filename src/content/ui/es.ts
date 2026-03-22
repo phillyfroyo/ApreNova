@@ -642,9 +642,12 @@ audioPlayer: {
   playbackSpeed: "Velocidad de reproducción",
   settings: "Ajustes",
   speed: "Velocidad",
+  voice: "Voz",
   close: "Cerrar",
   languageToggle: "Idioma",
   readBothLanguages: "Leer ambos idiomas",
+  on: "SÍ",
+  off: "NO",
 },
 };
 

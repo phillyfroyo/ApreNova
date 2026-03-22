@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS } from "@/contexts/AudioPlayerContext";
-import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { useAudioPlayer, AVAILABLE_VOICES } from "@/contexts/AudioPlayerContext";
+import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Gauge, Turtle, Mic } from "lucide-react";
 import { useParams } from "next/navigation";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
@@ -42,11 +42,15 @@ export default function AudioPlayerBar() {
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
 
-  const [showSettings, setShowSettings] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const [showVoice, setShowVoice] = useState(false);
+  const voiceRef = useRef<HTMLDivElement>(null);
+  const voiceButtonRef = useRef<HTMLButtonElement>(null);
   const [langToast, setLangToast] = useState<"on" | "off" | null>(null);
+  const [langToastFading, setLangToastFading] = useState(false);
   const langToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [speedToast, setSpeedToast] = useState<string | null>(null);
+  const [speedToastFading, setSpeedToastFading] = useState(false);
+  const speedToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Minimize state + drag
   const [minimized, setMinimized] = useState(false);
@@ -117,7 +121,7 @@ export default function AudioPlayerBar() {
       }
 
       setMinimized(shouldMinimize);
-      if (shouldMinimize) setShowSettings(false);
+      if (shouldMinimize) setShowVoice(false);
       setDragProgress(null);
     };
 
@@ -144,19 +148,17 @@ export default function AudioPlayerBar() {
     return () => observer.disconnect();
   }, []);
 
-  // Close settings when tapping outside
+  // Close voice popup when tapping outside
   useEffect(() => {
-    if (!showSettings) return;
+    if (!showVoice) return;
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (settingsButtonRef.current?.contains(target)) return;
-      if (settingsRef.current && !settingsRef.current.contains(target)) {
-        setShowSettings(false);
-      }
+      if (voiceButtonRef.current?.contains(target)) return;
+      if (voiceRef.current && !voiceRef.current.contains(target)) setShowVoice(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showSettings]);
+  }, [showVoice]);
 
   if (!state.isVisible) return null;
 
@@ -190,7 +192,7 @@ export default function AudioPlayerBar() {
 
   const handleClick = () => {
     setMinimized(prev => {
-      if (!prev) setShowSettings(false);
+      if (!prev) setShowVoice(false);
       return !prev;
     });
   };
@@ -235,92 +237,79 @@ export default function AudioPlayerBar() {
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
 
-        {/* Settings popup (above the player) — only when expanded */}
-        {progress < 0.5 && showSettings && (
+        {/* Voice popup (above the player) */}
+        {progress < 0.5 && showVoice && (
           <div
-            ref={settingsRef}
+            ref={voiceRef}
             className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
           >
-            <div className="max-w-md mx-auto space-y-3">
-              {/* Playback speed */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* English voices */}
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  {t(lng, "audioPlayer", "playbackSpeed")}
+                  {t(lng, "audioPlayer", "english")}
                 </h4>
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  {AVAILABLE_SPEEDS.map(speed => (
+                <div className="space-y-1">
+                  {AVAILABLE_VOICES['en-US'].map(voice => (
                     <button
-                      key={speed}
-                      onClick={() => setPlaybackRate(speed)}
-                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-md text-sm transition-colors
-                        ${playbackRate === speed
+                      key={voice.id}
+                      onClick={() => setVoice('en-US', voice.id)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                        ${voiceSelection['en-US'] === voice.id
                           ? 'bg-indigo-100 text-indigo-700 font-medium'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          : 'text-gray-700 hover:bg-gray-100'
                         }`}
                     >
-                      {speed === 1.0 ? '1x' : `${speed}x`}
+                      {voice.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Voice selection */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* English voices */}
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    {t(lng, "audioPlayer", "english")}
-                  </h4>
-                  <div className="space-y-1">
-                    {AVAILABLE_VOICES['en-US'].map(voice => (
-                      <button
-                        key={voice.id}
-                        onClick={() => setVoice('en-US', voice.id)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
-                          ${voiceSelection['en-US'] === voice.id
-                            ? 'bg-indigo-100 text-indigo-700 font-medium'
-                            : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        {voice.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Spanish voices */}
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    {t(lng, "audioPlayer", "spanish")}
-                  </h4>
-                  <div className="space-y-1">
-                    {AVAILABLE_VOICES['es-ES'].map(voice => (
-                      <button
-                        key={voice.id}
-                        onClick={() => setVoice('es-ES', voice.id)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
-                          ${voiceSelection['es-ES'] === voice.id
-                            ? 'bg-indigo-100 text-indigo-700 font-medium'
-                            : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                      >
-                        {voice.label}
-                      </button>
-                    ))}
-                  </div>
+              {/* Spanish voices */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {t(lng, "audioPlayer", "spanish")}
+                </h4>
+                <div className="space-y-1">
+                  {AVAILABLE_VOICES['es-ES'].map(voice => (
+                    <button
+                      key={voice.id}
+                      onClick={() => setVoice('es-ES', voice.id)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm transition-colors
+                        ${voiceSelection['es-ES'] === voice.id
+                          ? 'bg-indigo-100 text-indigo-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                    >
+                      {voice.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Speed toggle toast — positioned above the player */}
+        {speedToast && (
+          <div className={`absolute bottom-full mb-2 left-0 right-0 flex justify-center pointer-events-none z-10 transition-opacity duration-300 ${speedToastFading ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900/85 text-white text-xs font-medium shadow-lg">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-indigo-500 text-white">
+                {speedToast}
+              </span>
+              {t(lng, "audioPlayer", "playbackSpeed")}
+            </div>
+          </div>
+        )}
+
         {/* Language toggle toast — positioned above the player */}
         {langToast && (
-          <div className="absolute bottom-full mb-2 left-0 right-0 flex justify-center pointer-events-none z-10">
+          <div className={`absolute bottom-full mb-2 left-0 right-0 flex justify-center pointer-events-none z-10 transition-opacity duration-300 ${langToastFading ? 'opacity-0' : 'opacity-100'}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900/85 text-white text-xs font-medium shadow-lg">
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
                 ${langToast === "on" ? "bg-indigo-500 text-white" : "bg-gray-600 text-gray-300"}`}>
-                {langToast === "on" ? "ON" : "OFF"}
+                {langToast === "on" ? t(lng, "audioPlayer", "on") : t(lng, "audioPlayer", "off")}
               </span>
               {t(lng, "audioPlayer", "readBothLanguages")}
             </div>
@@ -470,19 +459,39 @@ export default function AudioPlayerBar() {
           }}
         >
           <div className="flex pb-2 pt-2">
-            {/* Settings */}
+            {/* Speed toggle */}
             <button
-              ref={settingsButtonRef}
-              onClick={() => setShowSettings(prev => !prev)}
-              className={`flex-1 flex flex-col items-center gap-1 transition-colors
-                ${showSettings
-                  ? "text-indigo-600"
-                  : "text-gray-500 hover:text-gray-900"
-                }`}
-              title="Voice settings"
+              onClick={() => {
+                const newSpeed = playbackRate === 1.0 ? 0.7 : 1.0;
+                setPlaybackRate(newSpeed);
+                setShowVoice(false);
+                setSpeedToast(newSpeed === 1.0 ? '1x' : '0.7x');
+                setSpeedToastFading(false);
+                if (speedToastTimer.current) clearTimeout(speedToastTimer.current);
+                speedToastTimer.current = setTimeout(() => {
+                  setSpeedToastFading(true);
+                  setTimeout(() => { setSpeedToast(null); setSpeedToastFading(false); }, 300);
+                }, 2200);
+              }}
+              className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors"
+              title="Toggle playback speed"
             >
-              <Settings className="w-[22px] h-[22px]" />
-              <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "settings")}</span>
+              {playbackRate === 1.0
+                ? <Gauge className="w-[22px] h-[22px]" />
+                : <Turtle className="w-[22px] h-[22px]" />
+              }
+              <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "speed")}</span>
+            </button>
+
+            {/* Voice */}
+            <button
+              ref={voiceButtonRef}
+              onClick={() => setShowVoice(prev => !prev)}
+              className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors"
+              title="Voice selection"
+            >
+              <Mic className="w-[22px] h-[22px]" />
+              <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "voice")}</span>
             </button>
 
             {/* Language mode toggle */}
@@ -491,13 +500,17 @@ export default function AudioPlayerBar() {
                 toggleMode();
                 const newMode = mode === "bilingual" ? "off" : "on";
                 setLangToast(newMode);
+                setLangToastFading(false);
                 if (langToastTimer.current) clearTimeout(langToastTimer.current);
-                langToastTimer.current = setTimeout(() => setLangToast(null), 2500);
+                langToastTimer.current = setTimeout(() => {
+                  setLangToastFading(true);
+                  setTimeout(() => { setLangToast(null); setLangToastFading(false); }, 300);
+                }, 2200);
               }}
               className={`flex-1 flex flex-col items-center gap-1 transition-colors
                 ${mode === "bilingual"
                   ? "text-indigo-600"
-                  : "text-gray-500 hover:text-gray-900"
+                  : "text-gray-700"
                 }`}
             >
               <Languages className="w-[22px] h-[22px]" />
@@ -509,7 +522,7 @@ export default function AudioPlayerBar() {
             {/* Close */}
             <button
               onClick={stopPlayback}
-              className="flex-1 flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors"
+              className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors"
               aria-label="Close"
             >
               <X className="w-[22px] h-[22px]" />

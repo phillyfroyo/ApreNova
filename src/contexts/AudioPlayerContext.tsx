@@ -43,27 +43,21 @@ export interface VoiceSelection {
 
 export const AVAILABLE_VOICES: Record<'en-US' | 'es-ES', { id: string; label: string }[]> = {
   'en-US': [
-    { id: 'en-US-JennyMultilingualNeural', label: 'Jenny' },
-    { id: 'en-US-AndrewMultilingualNeural', label: 'Andrew' },
     { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
-    { id: 'en-US-EmmaMultilingualNeural', label: 'Emma' },
     { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
   ],
   'es-ES': [
-    { id: 'es-MX-DaliaNeural', label: 'Dalia' },
-    { id: 'en-US-AndrewMultilingualNeural', label: 'Andrew' },
     { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
-    { id: 'en-US-EmmaMultilingualNeural', label: 'Emma' },
     { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
   ],
 };
 
 const DEFAULT_VOICES: VoiceSelection = {
-  'en-US': 'en-US-AndrewMultilingualNeural',
-  'es-ES': 'es-MX-DaliaNeural',
+  'en-US': 'en-US-BrianMultilingualNeural',
+  'es-ES': 'en-US-BrianMultilingualNeural',
 };
 
-export const AVAILABLE_SPEEDS = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05];
+export const AVAILABLE_SPEEDS = [0.7, 1.0];
 const DEFAULT_PLAYBACK_RATE = 1.0;
 
 const VOICE_STORAGE_KEY = 'cuentana_voice_selection';

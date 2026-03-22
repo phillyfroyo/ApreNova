@@ -641,9 +641,12 @@ audioPlayer: {
   playbackSpeed: "Playback Speed",
   settings: "Settings",
   speed: "Speed",
+  voice: "Voice",
   close: "Close",
   languageToggle: "Language",
   readBothLanguages: "Read both languages",
+  on: "ON",
+  off: "OFF",
 },
 };
 
