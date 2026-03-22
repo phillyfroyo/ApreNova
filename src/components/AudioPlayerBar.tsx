@@ -1,7 +1,7 @@
 // src/components/AudioPlayerBar.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAudioPlayer, AVAILABLE_VOICES, AVAILABLE_SPEEDS } from "@/contexts/AudioPlayerContext";
 import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -28,6 +28,12 @@ function getContentSentencePosition(sentences: any[], highlightIndex: number | n
   return 0;
 }
 
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+const DRAG_DISTANCE = 120; // px of drag to go from expanded to minimized
+
 export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
@@ -42,9 +48,88 @@ export default function AudioPlayerBar() {
   const [langToast, setLangToast] = useState<"on" | "off" | null>(null);
   const langToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Minimize state + touch drag handling
+  // Minimize state + drag
   const [minimized, setMinimized] = useState(false);
+  const [dragProgress, setDragProgress] = useState<number | null>(null);
   const dragStartY = useRef<number | null>(null);
+  const dragStartMinimized = useRef(false);
+  const lastTouchY = useRef<number | null>(null);
+  const lastTouchTime = useRef<number>(0);
+  const velocityY = useRef<number>(0);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // progress: 0 = expanded, 1 = minimized
+  const isDragging = dragProgress !== null;
+  const progress = isDragging ? dragProgress : (minimized ? 1 : 0);
+
+  // Register native touch handlers on the bar for live drag
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      dragStartY.current = e.touches[0].clientY;
+      lastTouchY.current = e.touches[0].clientY;
+      lastTouchTime.current = Date.now();
+      velocityY.current = 0;
+      dragStartMinimized.current = minimized;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (dragStartY.current === null) return;
+      e.preventDefault();
+      const now = Date.now();
+      const currentY = e.touches[0].clientY;
+
+      // Track velocity (px/ms, positive = downward)
+      if (lastTouchY.current !== null) {
+        const dt = now - lastTouchTime.current;
+        if (dt > 0) {
+          velocityY.current = (currentY - lastTouchY.current) / dt;
+        }
+      }
+      lastTouchY.current = currentY;
+      lastTouchTime.current = now;
+
+      const delta = currentY - dragStartY.current;
+      let p: number;
+      if (dragStartMinimized.current) {
+        p = Math.max(0, Math.min(1, 1 + delta / DRAG_DISTANCE));
+      } else {
+        p = Math.max(0, Math.min(1, delta / DRAG_DISTANCE));
+      }
+      setDragProgress(p);
+    };
+
+    const onTouchEnd = () => {
+      if (dragStartY.current === null) return;
+      dragStartY.current = null;
+
+      if (dragProgress === null) return;
+
+      // Flick detection: if velocity is fast enough, snap in that direction
+      const FLICK_THRESHOLD = 0.3; // px/ms
+      let shouldMinimize: boolean;
+      if (Math.abs(velocityY.current) > FLICK_THRESHOLD) {
+        shouldMinimize = velocityY.current > 0; // Flick down = minimize
+      } else {
+        shouldMinimize = dragProgress > 0.4; // Otherwise use position threshold
+      }
+
+      setMinimized(shouldMinimize);
+      if (shouldMinimize) setShowSettings(false);
+      setDragProgress(null);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [minimized, dragProgress]);
 
   // Detect if mobile bottom nav is present (story pages hide it)
   const [hasBottomNav, setHasBottomNav] = useState(false);
@@ -79,14 +164,11 @@ export default function AudioPlayerBar() {
 
   const totalSentences = getContentSentenceCount(currentPageSentences);
   const currentSentence = getContentSentencePosition(currentPageSentences, highlightedSentenceIndex);
-  const progress = totalSentences > 0 ? (currentSentence / totalSentences) * 100 : 0;
+  const progressBar = totalSentences > 0 ? (currentSentence / totalSentences) * 100 : 0;
 
   const handlePlayPause = () => {
-    if (status === "playing") {
-      pausePlayback();
-    } else if (status === "paused") {
-      resumePlayback();
-    }
+    if (status === "playing") pausePlayback();
+    else if (status === "paused") resumePlayback();
   };
 
   const statusLabel = (() => {
@@ -106,7 +188,6 @@ export default function AudioPlayerBar() {
   const isTransport = status !== "finished";
   const transportDisabled = status === "loading" || status === "navigating";
 
-
   const handleClick = () => {
     setMinimized(prev => {
       if (!prev) setShowSettings(false);
@@ -114,35 +195,48 @@ export default function AudioPlayerBar() {
     });
   };
 
+  // Transition class: only apply when NOT dragging (so snap animates but drag is instant)
+  const transitionClass = isDragging ? '' : 'transition-all duration-300 ease-in-out';
+
+  // Interpolated sizes
+  const playBtnSize = lerp(56, 40, progress);    // 3.5rem → 2.5rem
+  const playIconSize = lerp(24, 20, progress);   // 1.5rem → 1.25rem
+  const navBtnSize = lerp(40, 32, progress);     // 2.5rem → 2rem
+  const navIconSize = lerp(20, 16, progress);    // 1.25rem → 1rem
+  const controlGap = lerp(12, 8, progress);      // gap-3 → gap-2
+  const controlPyTop = lerp(8, 4, progress);       // top padding shrinks when minimized
+  const controlPyBottom = lerp(8, 14, progress);   // more bottom padding when minimized
+
+  // Fading sections
+  const fadeOut = 1 - Math.min(1, progress * 2.5);  // Fades out by ~40% progress
+  const fadeIn = Math.max(0, (progress - 0.5) * 2); // Fades in after 50% progress
+
   return (
     <>
       {/* Spacer to prevent content from being hidden behind the bar on mobile */}
-      <div className={`md:hidden ${minimized ? 'h-[72px]' : 'h-[240px]'} transition-all duration-300`} />
+      <div
+        className={`md:hidden ${transitionClass}`}
+        style={{ height: `${lerp(240, 72, progress)}px` }}
+      />
 
       <div
+        ref={barRef}
         data-audio-player-bar
-        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl transition-all duration-300 touch-none
+        className={`fixed left-0 right-0 z-[55] backdrop-blur-xl border-t border-white/50 rounded-t-[36px] touch-none
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
-        onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY; }}
-        onTouchEnd={(e) => {
-          if (dragStartY.current === null) return;
-          const delta = e.changedTouches[0].clientY - dragStartY.current;
-          dragStartY.current = null;
-          if (Math.abs(delta) < 20) return; // Too small — not a swipe
-          if (delta > 0) { setMinimized(true); setShowSettings(false); }
-          else { setMinimized(false); }
-        }}
+        style={{ backgroundColor: `rgba(255, 255, 255, ${lerp(0.7, 0.25, progress)})` }}
       >
         {/* Drag handle — tap to toggle */}
         <div
-          className="flex justify-center items-center py-3 cursor-pointer select-none"
+          className={`flex justify-center items-center cursor-pointer select-none ${transitionClass}`}
+          style={{ paddingTop: '8px', paddingBottom: `${lerp(12, 4, progress)}px` }}
           onClick={handleClick}
         >
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
 
         {/* Settings popup (above the player) — only when expanded */}
-        {!minimized && showSettings && (
+        {progress < 0.5 && showSettings && (
           <div
             ref={settingsRef}
             className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
@@ -234,17 +328,15 @@ export default function AudioPlayerBar() {
         )}
 
         {/* ============================================================ */}
-        {/* EXPANDED CONTENT — slides away when minimized                */}
+        {/* TITLE + PROGRESS BAR — fades out as we minimize              */}
         {/* ============================================================ */}
         <div
-          className="grid transition-[grid-template-rows,opacity] duration-300 ease-in-out"
+          className={`overflow-hidden ${transitionClass}`}
           style={{
-            gridTemplateRows: minimized ? '0fr' : '1fr',
-            opacity: minimized ? 0 : 1,
+            maxHeight: `${lerp(80, 0, progress)}px`,
+            opacity: fadeOut,
           }}
         >
-          <div className="overflow-hidden">
-          {/* TOP ROW: Title + chapter info */}
           <div className="px-5 pt-2 pb-1">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -263,86 +355,120 @@ export default function AudioPlayerBar() {
             <div className="mt-3">
               <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progress}%` }}
+                  className="h-full bg-indigo-500 rounded-full transition-[width] duration-500 ease-out"
+                  style={{ width: `${progressBar}%` }}
                 />
               </div>
             </div>
           </div>
+        </div>
 
-          {/* MIDDLE ROW: Transport controls */}
-          {isTransport && (
-            <div className="flex items-center justify-center py-2 gap-3">
-              {/* Prev page */}
-              <button
-                onClick={prevPage}
-                disabled={transportDisabled}
-                className="w-10 h-10 flex items-center justify-center rounded-full
-                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                  disabled:text-gray-300 disabled:hover:bg-transparent"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
-              </button>
+        {/* ============================================================ */}
+        {/* TRANSPORT CONTROLS — single row, sizes interpolate           */}
+        {/* ============================================================ */}
+        {isTransport && (
+          <div
+            className={`relative flex items-center justify-center ${transitionClass}`}
+            style={{ gap: `${controlGap}px`, paddingTop: `${controlPyTop}px`, paddingBottom: `${controlPyBottom}px` }}
+          >
+            {/* Prev page */}
+            <button
+              onClick={prevPage}
+              disabled={transportDisabled}
+              className={`flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50
+                disabled:text-gray-300 disabled:hover:bg-transparent ${transitionClass}`}
+              style={{ width: `${navBtnSize}px`, height: `${navBtnSize}px` }}
+              aria-label="Previous page"
+            >
+              <ChevronLeft style={{ width: `${navIconSize}px`, height: `${navIconSize}px` }} strokeWidth={2.5} />
+            </button>
 
-              {/* Prev sentence */}
-              <button
-                onClick={skipBack}
-                disabled={transportDisabled}
-                className="w-10 h-10 flex items-center justify-center rounded-full
-                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                  disabled:text-gray-300 disabled:hover:bg-transparent"
-                aria-label="Previous sentence"
-              >
-                <SkipBack className="w-5 h-5" fill="currentColor" />
-              </button>
+            {/* Prev sentence */}
+            <button
+              onClick={skipBack}
+              disabled={transportDisabled}
+              className={`flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50
+                disabled:text-gray-300 disabled:hover:bg-transparent ${transitionClass}`}
+              style={{ width: `${navBtnSize}px`, height: `${navBtnSize}px` }}
+              aria-label="Previous sentence"
+            >
+              <SkipBack style={{ width: `${navIconSize}px`, height: `${navIconSize}px` }} fill="currentColor" />
+            </button>
 
-              {/* Play / Pause — larger */}
-              <button
-                onClick={handlePlayPause}
-                disabled={transportDisabled}
-                className="w-14 h-14 flex items-center justify-center rounded-full
-                  bg-indigo-600 text-white hover:bg-indigo-700 transition-colors
-                  disabled:bg-gray-300 disabled:cursor-default
-                  shadow-md shadow-indigo-200"
-                aria-label={status === "playing" ? "Pause" : "Play"}
-              >
-                {transportDisabled ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : status === "playing" ? (
-                  <Pause className="w-6 h-6" fill="currentColor" />
-                ) : (
-                  <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
-                )}
-              </button>
+            {/* Play / Pause */}
+            <button
+              onClick={handlePlayPause}
+              disabled={transportDisabled}
+              className={`flex items-center justify-center rounded-full
+                bg-indigo-600 text-white hover:bg-indigo-700
+                disabled:bg-gray-300 disabled:cursor-default
+                shadow-md shadow-indigo-200 ${transitionClass}`}
+              style={{ width: `${playBtnSize}px`, height: `${playBtnSize}px` }}
+              aria-label={status === "playing" ? "Pause" : "Play"}
+            >
+              {transportDisabled ? (
+                <Loader2 style={{ width: `${playIconSize}px`, height: `${playIconSize}px` }} className="animate-spin" />
+              ) : status === "playing" ? (
+                <Pause style={{ width: `${playIconSize}px`, height: `${playIconSize}px` }} fill="currentColor" />
+              ) : (
+                <Play style={{ width: `${playIconSize}px`, height: `${playIconSize}px`, marginLeft: '2px' }} fill="currentColor" />
+              )}
+            </button>
 
-              {/* Next sentence */}
-              <button
-                onClick={skipForward}
-                disabled={transportDisabled}
-                className="w-10 h-10 flex items-center justify-center rounded-full
-                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                  disabled:text-gray-300 disabled:hover:bg-transparent"
-                aria-label="Next sentence"
-              >
-                <SkipForward className="w-5 h-5" fill="currentColor" />
-              </button>
+            {/* Next sentence */}
+            <button
+              onClick={skipForward}
+              disabled={transportDisabled}
+              className={`flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50
+                disabled:text-gray-300 disabled:hover:bg-transparent ${transitionClass}`}
+              style={{ width: `${navBtnSize}px`, height: `${navBtnSize}px` }}
+              aria-label="Next sentence"
+            >
+              <SkipForward style={{ width: `${navIconSize}px`, height: `${navIconSize}px` }} fill="currentColor" />
+            </button>
 
-              {/* Next page */}
-              <button
-                onClick={nextPage}
-                disabled={transportDisabled}
-                className="w-10 h-10 flex items-center justify-center rounded-full
-                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                  disabled:text-gray-300 disabled:hover:bg-transparent"
-                aria-label="Next page"
-              >
-                <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
-              </button>
-            </div>
-          )}
+            {/* Next page */}
+            <button
+              onClick={nextPage}
+              disabled={transportDisabled}
+              className={`flex items-center justify-center rounded-full
+                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50
+                disabled:text-gray-300 disabled:hover:bg-transparent ${transitionClass}`}
+              style={{ width: `${navBtnSize}px`, height: `${navBtnSize}px` }}
+              aria-label="Next page"
+            >
+              <ChevronRight style={{ width: `${navIconSize}px`, height: `${navIconSize}px` }} strokeWidth={2.5} />
+            </button>
 
-          {/* BOTTOM ROW: Settings, Language, Close */}
+            {/* Close button — fades in when minimized */}
+            <button
+              onClick={stopPlayback}
+              className={`absolute right-4 w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-400 hover:text-gray-900 ${transitionClass}`}
+              style={{
+                opacity: fadeIn,
+                pointerEvents: progress > 0.5 ? 'auto' : 'none',
+              }}
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* BOTTOM ROW: Settings, Language, Close — fades out            */}
+        {/* ============================================================ */}
+        <div
+          className={`overflow-hidden ${transitionClass}`}
+          style={{
+            maxHeight: `${lerp(56, 0, progress)}px`,
+            opacity: fadeOut,
+          }}
+        >
           <div className="flex pb-2 pt-2">
             {/* Settings */}
             <button
@@ -389,98 +515,6 @@ export default function AudioPlayerBar() {
               <X className="w-[22px] h-[22px]" />
               <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
             </button>
-          </div>
-          </div>
-        </div>
-
-        {/* ============================================================ */}
-        {/* MINIMIZED CONTROLS — slides in when minimized                */}
-        {/* ============================================================ */}
-        <div
-          className="grid transition-[grid-template-rows,opacity] duration-300 ease-in-out"
-          style={{
-            gridTemplateRows: minimized ? '1fr' : '0fr',
-            opacity: minimized ? 1 : 0,
-          }}
-        >
-          <div className="overflow-hidden">
-          <div className="relative flex items-center justify-center gap-2 px-4 pb-3">
-            {/* Prev page */}
-            <button
-              onClick={prevPage}
-              disabled={transportDisabled}
-              className="w-8 h-8 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-900 transition-colors
-                disabled:text-gray-300"
-              aria-label="Previous page"
-            >
-              <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-            </button>
-
-            {/* Skip back */}
-            <button
-              onClick={skipBack}
-              disabled={transportDisabled}
-              className="w-8 h-8 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-900 transition-colors
-                disabled:text-gray-300"
-              aria-label="Previous sentence"
-            >
-              <SkipBack className="w-4 h-4" fill="currentColor" />
-            </button>
-
-            {/* Play/Pause */}
-            <button
-              onClick={handlePlayPause}
-              disabled={transportDisabled}
-              className="w-10 h-10 flex items-center justify-center rounded-full
-                bg-indigo-600 text-white hover:bg-indigo-700 transition-colors
-                disabled:bg-gray-300 disabled:cursor-default shadow-sm"
-              aria-label={status === "playing" ? "Pause" : "Play"}
-            >
-              {transportDisabled ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : status === "playing" ? (
-                <Pause className="w-5 h-5" fill="currentColor" />
-              ) : (
-                <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
-              )}
-            </button>
-
-            {/* Skip forward */}
-            <button
-              onClick={skipForward}
-              disabled={transportDisabled}
-              className="w-8 h-8 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-900 transition-colors
-                disabled:text-gray-300"
-              aria-label="Next sentence"
-            >
-              <SkipForward className="w-4 h-4" fill="currentColor" />
-            </button>
-
-            {/* Next page */}
-            <button
-              onClick={nextPage}
-              disabled={transportDisabled}
-              className="w-8 h-8 flex items-center justify-center rounded-full
-                text-gray-500 hover:text-gray-900 transition-colors
-                disabled:text-gray-300"
-              aria-label="Next page"
-            >
-              <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-            </button>
-
-            {/* Close — absolutely positioned so it doesn't affect centering */}
-            <button
-              onClick={stopPlayback}
-              className="absolute right-4 w-8 h-8 flex items-center justify-center rounded-full
-                text-gray-400 hover:text-gray-900 transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
           </div>
         </div>
       </div>
