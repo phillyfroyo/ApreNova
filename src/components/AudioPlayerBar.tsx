@@ -121,22 +121,22 @@ export default function AudioPlayerBar() {
 
       <div
         data-audio-player-bar
-        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl transition-all duration-300
+        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl transition-all duration-300 touch-none
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
+        onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY; }}
+        onTouchEnd={(e) => {
+          if (dragStartY.current === null) return;
+          const delta = e.changedTouches[0].clientY - dragStartY.current;
+          dragStartY.current = null;
+          if (Math.abs(delta) < 20) return; // Too small — not a swipe
+          if (delta > 0) { setMinimized(true); setShowSettings(false); }
+          else { setMinimized(false); }
+        }}
       >
-        {/* Drag handle — tap to toggle, swipe to minimize/expand */}
+        {/* Drag handle — tap to toggle */}
         <div
-          className="flex justify-center items-center py-3 cursor-pointer select-none touch-none"
+          className="flex justify-center items-center py-3 cursor-pointer select-none"
           onClick={handleClick}
-          onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY; }}
-          onTouchEnd={(e) => {
-            if (dragStartY.current === null) return;
-            const delta = e.changedTouches[0].clientY - dragStartY.current;
-            dragStartY.current = null;
-            if (Math.abs(delta) < 20) return; // Too small — let onClick handle as tap
-            if (delta > 0) { setMinimized(true); setShowSettings(false); }
-            else { setMinimized(false); }
-          }}
         >
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
@@ -237,12 +237,13 @@ export default function AudioPlayerBar() {
         {/* EXPANDED CONTENT — slides away when minimized                */}
         {/* ============================================================ */}
         <div
-          className="overflow-hidden transition-all duration-300 ease-in-out"
+          className="grid transition-[grid-template-rows,opacity] duration-300 ease-in-out"
           style={{
-            maxHeight: minimized ? '0px' : '200px',
+            gridTemplateRows: minimized ? '0fr' : '1fr',
             opacity: minimized ? 0 : 1,
           }}
         >
+          <div className="overflow-hidden">
           {/* TOP ROW: Title + chapter info */}
           <div className="px-5 pt-2 pb-1">
             <div className="flex items-start justify-between gap-3">
@@ -389,18 +390,20 @@ export default function AudioPlayerBar() {
               <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
             </button>
           </div>
+          </div>
         </div>
 
         {/* ============================================================ */}
         {/* MINIMIZED CONTROLS — slides in when minimized                */}
         {/* ============================================================ */}
         <div
-          className="overflow-hidden transition-all duration-300 ease-in-out"
+          className="grid transition-[grid-template-rows,opacity] duration-300 ease-in-out"
           style={{
-            maxHeight: minimized ? '56px' : '0px',
+            gridTemplateRows: minimized ? '1fr' : '0fr',
             opacity: minimized ? 1 : 0,
           }}
         >
+          <div className="overflow-hidden">
           <div className="relative flex items-center justify-center gap-2 px-4 pb-3">
             {/* Prev page */}
             <button
@@ -477,6 +480,7 @@ export default function AudioPlayerBar() {
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
           </div>
         </div>
       </div>
