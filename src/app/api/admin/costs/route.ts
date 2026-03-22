@@ -133,6 +133,20 @@ export async function GET(req: NextRequest) {
       ])
     );
 
+    // Include deleted stories in story type analysis
+    const deletedStories = await prisma.deletedUserStory.findMany({
+      where: {
+        deletedAt: { gte: startDate },
+        storyType: { not: null },
+        wordCount: { not: null },
+      },
+      select: {
+        costCents: true,
+        storyType: true,
+        wordCount: true,
+      },
+    });
+
     // Calculate average cost by story type
     const storyTypeCosts: Record<
       string,
@@ -149,6 +163,18 @@ export async function GET(req: NextRequest) {
         storyTypeCosts[storyType] = { totalCents: 0, count: 0, totalWords: 0 };
       }
       storyTypeCosts[storyType].totalCents += cost._sum.costCents || 0;
+      storyTypeCosts[storyType].count += 1;
+      storyTypeCosts[storyType].totalWords += wordCount;
+    }
+
+    // Add deleted stories to the story type breakdown
+    for (const ds of deletedStories) {
+      const storyType = ds.storyType!;
+      const wordCount = ds.wordCount!;
+      if (!storyTypeCosts[storyType]) {
+        storyTypeCosts[storyType] = { totalCents: 0, count: 0, totalWords: 0 };
+      }
+      storyTypeCosts[storyType].totalCents += ds.costCents;
       storyTypeCosts[storyType].count += 1;
       storyTypeCosts[storyType].totalWords += wordCount;
     }

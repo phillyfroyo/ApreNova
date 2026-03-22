@@ -192,6 +192,8 @@ settings: {
   currentLevel: "Nivel actual",
   levelUndefined: "Nivel actual: indefinido. Haz el quiz",
   changeLevel: "Haz el quiz para cambiar tu nivel",
+  earlyAdopterTitle: "Eres uno de nuestros primeros 100 usuarios!",
+  earlyAdopterMessage: "Gracias por apoyarnos desde el principio. Disfrutas de acceso gratuito como adoptor temprano.",
 },
 
 stats: {

@@ -3,7 +3,7 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -52,6 +52,16 @@ export default function SettingsPage() {
 
   // Billing error state
   const [billingError, setBillingError] = useState<string | null>(null)
+
+  // User number
+  const [userNumber, setUserNumber] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/user-stats', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => { if (data.userNumber) setUserNumber(data.userNumber) })
+      .catch(() => {})
+  }, [])
 
   if (status === 'loading') {
     return (
@@ -284,8 +294,32 @@ export default function SettingsPage() {
                   {session.user.name || 'User'}
                 </p>
                 <p className="text-sm text-gray-500">{session.user.email}</p>
+                {userNumber && (
+                  <p className="text-xs text-indigo-600 font-medium mt-1">
+                    User #{userNumber}
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Early Adopter Banner */}
+            {userNumber != null && userNumber <= 100 && (
+              <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 mb-2 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-lg font-bold shrink-0">
+                    #{userNumber}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">
+                      {t(typedLang, 'settings', 'earlyAdopterTitle')}
+                    </p>
+                    <p className="text-xs text-white/80 mt-0.5">
+                      {t(typedLang, 'settings', 'earlyAdopterMessage')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Editable Fields */}
             <div className="space-y-4">

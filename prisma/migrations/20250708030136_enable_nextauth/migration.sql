@@ -1,0 +1,2 @@
+-- This migration was applied directly to the database
+-- Placeholder to satisfy Prisma migration history
