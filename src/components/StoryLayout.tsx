@@ -533,12 +533,12 @@ onOpenChange={(isOpen) => {
 })()}
       </div>
 
-      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
-        {/* Total page count in top right */}
-        <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
-          {currentPagePosition}
-        </div>
-        
+      {/* Total page count in top right — scrolls with content */}
+      <div className="text-right pr-4 text-sm text-gray-600">
+        {currentPagePosition}
+      </div>
+
+      <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
         <div className="flex flex-col items-start w-full max-w-md sm:max-w-lg mx-auto px-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-6 w-full">{dynamicPageTitle}</h2>

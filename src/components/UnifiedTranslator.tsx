@@ -476,7 +476,7 @@ useEffect(() => {
 }, [sentence]);
 
           return (
-  <div className="relative" data-translator>
+  <div className="relative w-full" data-translator>
     <div ref={containerRef} className="relative">
       <div ref={sentenceRef} className="flex flex-wrap justify-start gap-1 text-lg text-left w-full">
       {/* Render leading whitespace for poetry indentation */}
@@ -505,8 +505,7 @@ useEffect(() => {
     {enabled && (translations.length > 0 || !!enhancedTranslation || loading || error || authError) && (
       <div
   ref={tooltipRef}
-  style={sentenceWidth ? { width: sentenceWidth } : undefined}
-  className="mt-1 -ml-[15px] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative"
+  className="mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative w-[calc(100%+16px)] -ml-2"
   data-tooltip
 >
         {/* Close button */}

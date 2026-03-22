@@ -1447,12 +1447,12 @@ export default function StoryLayoutWithAzureTTS({
         })()}
       </div>
 
-      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
-        {/* Total page count in top right */}
-        <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
-          {currentPagePosition}
-        </div>
+      {/* Total page count in top right — scrolls with content */}
+      <div className="text-right pr-4 text-sm text-gray-600">
+        {currentPagePosition}
+      </div>
 
+      <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
         {/* Story Content - slides left when chat opens, centered by default */}
         <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg px-4 transition-transform duration-300 ${
           isStoryTutorOpen ? '-translate-x-full lg:-translate-x-[50%]' : 'translate-x-0 lg:translate-x-0 mx-auto'
@@ -1548,7 +1548,7 @@ export default function StoryLayoutWithAzureTTS({
                 <div
                   key={lineIndex}
                   ref={el => { sentenceRefs.current[lineIndex] = el; }}
-                  className={`${lineSpacing} w-full relative transition-colors duration-300 ${isHighlighted ? 'bg-indigo-50 rounded-lg' : ''}`}
+                  className={`${lineSpacing} w-full relative transition-colors duration-300 ${isHighlighted ? 'bg-indigo-50 rounded-xl' : ''}`}
                   data-sentence-index={lineIndex}
                 >
                   {/* Speaker name for scripts */}
@@ -1736,7 +1736,7 @@ export default function StoryLayoutWithAzureTTS({
                     />
                     {/* Save auth prompt - matches translation tooltip style */}
                     {saveAuthLine === lineIndex && (
-                      <div className="mt-1 -ml-[15px] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative" data-tooltip>
+                      <div className="mt-1 -ml-2 w-[calc(100%+16px)] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative" data-tooltip>
                         <button
                           onClick={() => setSaveAuthLine(null)}
                           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
@@ -1760,7 +1760,7 @@ export default function StoryLayoutWithAzureTTS({
                     {!isInsideStanza && (
                     <div
                       ref={el => { translationRefs.current[lineIndex] = el; }}
-                      className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-[15px] relative"
+                      className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-2 w-[calc(100%+16px)] relative"
                     >
                       <button
                         onClick={() => {

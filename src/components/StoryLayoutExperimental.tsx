@@ -569,12 +569,12 @@ export default function StoryLayoutExperimental({
         })()}
       </div>
 
-      <div className="flex justify-center mt-16 sm:mt-28 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
-        {/* Total page count in top right */}
-        <div className="fixed top-4 right-4 text-sm text-gray-600 z-10">
-          {currentPagePosition}
-        </div>
-        
+      {/* Total page count in top right — scrolls with content */}
+      <div className="text-right pr-4 text-sm text-gray-600">
+        {currentPagePosition}
+      </div>
+
+      <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative">
         {/* Non-clickable Feedback Button */}
         <div className="fixed bottom-4 right-4 z-50">
           <Button 
