@@ -42,6 +42,10 @@ export default function AudioPlayerBar() {
   const [langToast, setLangToast] = useState<"on" | "off" | null>(null);
   const langToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Minimize state + touch drag handling
+  const [minimized, setMinimized] = useState(false);
+  const dragStartY = useRef<number | null>(null);
+
   // Detect if mobile bottom nav is present (story pages hide it)
   const [hasBottomNav, setHasBottomNav] = useState(false);
   useEffect(() => {
@@ -102,18 +106,43 @@ export default function AudioPlayerBar() {
   const isTransport = status !== "finished";
   const transportDisabled = status === "loading" || status === "navigating";
 
+
+  const handleClick = () => {
+    setMinimized(prev => {
+      if (!prev) setShowSettings(false);
+      return !prev;
+    });
+  };
+
   return (
     <>
       {/* Spacer to prevent content from being hidden behind the bar on mobile */}
-      <div className="md:hidden h-[240px]" />
+      <div className={`md:hidden ${minimized ? 'h-[72px]' : 'h-[240px]'} transition-all duration-300`} />
 
       <div
         data-audio-player-bar
-        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl
+        className={`fixed left-0 right-0 z-[55] bg-white/70 backdrop-blur-xl border-t border-white/50 rounded-t-2xl transition-all duration-300
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
       >
-        {/* Settings popup (above the player) */}
-        {showSettings && (
+        {/* Drag handle — tap to toggle, swipe to minimize/expand */}
+        <div
+          className="flex justify-center items-center py-3 cursor-pointer select-none touch-none"
+          onClick={handleClick}
+          onTouchStart={(e) => { dragStartY.current = e.touches[0].clientY; }}
+          onTouchEnd={(e) => {
+            if (dragStartY.current === null) return;
+            const delta = e.changedTouches[0].clientY - dragStartY.current;
+            dragStartY.current = null;
+            if (Math.abs(delta) < 20) return; // Too small — let onClick handle as tap
+            if (delta > 0) { setMinimized(true); setShowSettings(false); }
+            else { setMinimized(false); }
+          }}
+        >
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+
+        {/* Settings popup (above the player) — only when expanded */}
+        {!minimized && showSettings && (
           <div
             ref={settingsRef}
             className="absolute bottom-full mb-2.5 left-2.5 right-2.5 md:left-auto md:right-2.5 md:w-auto bg-white border border-gray-200 shadow-lg rounded-xl px-4 py-3"
@@ -205,156 +234,250 @@ export default function AudioPlayerBar() {
         )}
 
         {/* ============================================================ */}
-        {/* TOP ROW: Title + chapter info + close                        */}
+        {/* EXPANDED CONTENT — slides away when minimized                */}
         {/* ============================================================ */}
-        <div className="px-5 pt-4 pb-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold text-gray-900 truncate leading-tight">
-                {statusLabel}
-              </h3>
-              {positionLabel && status !== "finished" && (
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {positionLabel}
-                </p>
-              )}
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxHeight: minimized ? '0px' : '200px',
+            opacity: minimized ? 0 : 1,
+          }}
+        >
+          {/* TOP ROW: Title + chapter info */}
+          <div className="px-5 pt-2 pb-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-gray-900 truncate leading-tight">
+                  {statusLabel}
+                </h3>
+                {positionLabel && status !== "finished" && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {positionLabel}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-3">
+              <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-3">
-            <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progress}%` }}
-              />
+          {/* MIDDLE ROW: Transport controls */}
+          {isTransport && (
+            <div className="flex items-center justify-center py-2 gap-3">
+              {/* Prev page */}
+              <button
+                onClick={prevPage}
+                disabled={transportDisabled}
+                className="w-10 h-10 flex items-center justify-center rounded-full
+                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
+                  disabled:text-gray-300 disabled:hover:bg-transparent"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+              </button>
+
+              {/* Prev sentence */}
+              <button
+                onClick={skipBack}
+                disabled={transportDisabled}
+                className="w-10 h-10 flex items-center justify-center rounded-full
+                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
+                  disabled:text-gray-300 disabled:hover:bg-transparent"
+                aria-label="Previous sentence"
+              >
+                <SkipBack className="w-5 h-5" fill="currentColor" />
+              </button>
+
+              {/* Play / Pause — larger */}
+              <button
+                onClick={handlePlayPause}
+                disabled={transportDisabled}
+                className="w-14 h-14 flex items-center justify-center rounded-full
+                  bg-indigo-600 text-white hover:bg-indigo-700 transition-colors
+                  disabled:bg-gray-300 disabled:cursor-default
+                  shadow-md shadow-indigo-200"
+                aria-label={status === "playing" ? "Pause" : "Play"}
+              >
+                {transportDisabled ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : status === "playing" ? (
+                  <Pause className="w-6 h-6" fill="currentColor" />
+                ) : (
+                  <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
+                )}
+              </button>
+
+              {/* Next sentence */}
+              <button
+                onClick={skipForward}
+                disabled={transportDisabled}
+                className="w-10 h-10 flex items-center justify-center rounded-full
+                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
+                  disabled:text-gray-300 disabled:hover:bg-transparent"
+                aria-label="Next sentence"
+              >
+                <SkipForward className="w-5 h-5" fill="currentColor" />
+              </button>
+
+              {/* Next page */}
+              <button
+                onClick={nextPage}
+                disabled={transportDisabled}
+                className="w-10 h-10 flex items-center justify-center rounded-full
+                  text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
+                  disabled:text-gray-300 disabled:hover:bg-transparent"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
+              </button>
             </div>
+          )}
+
+          {/* BOTTOM ROW: Settings, Language, Close */}
+          <div className="flex pb-2 pt-2">
+            {/* Settings */}
+            <button
+              ref={settingsButtonRef}
+              onClick={() => setShowSettings(prev => !prev)}
+              className={`flex-1 flex flex-col items-center gap-1 transition-colors
+                ${showSettings
+                  ? "text-indigo-600"
+                  : "text-gray-500 hover:text-gray-900"
+                }`}
+              title="Voice settings"
+            >
+              <Settings className="w-[22px] h-[22px]" />
+              <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "settings")}</span>
+            </button>
+
+            {/* Language mode toggle */}
+            <button
+              onClick={() => {
+                toggleMode();
+                const newMode = mode === "bilingual" ? "off" : "on";
+                setLangToast(newMode);
+                if (langToastTimer.current) clearTimeout(langToastTimer.current);
+                langToastTimer.current = setTimeout(() => setLangToast(null), 2500);
+              }}
+              className={`flex-1 flex flex-col items-center gap-1 transition-colors
+                ${mode === "bilingual"
+                  ? "text-indigo-600"
+                  : "text-gray-500 hover:text-gray-900"
+                }`}
+            >
+              <Languages className="w-[22px] h-[22px]" />
+              <span className="text-[11px] font-medium">
+                {t(lng, "audioPlayer", "languageToggle")}
+              </span>
+            </button>
+
+            {/* Close */}
+            <button
+              onClick={stopPlayback}
+              className="flex-1 flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-[22px] h-[22px]" />
+              <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
+            </button>
           </div>
         </div>
 
         {/* ============================================================ */}
-        {/* MIDDLE ROW: Transport controls                               */}
+        {/* MINIMIZED CONTROLS — slides in when minimized                */}
         {/* ============================================================ */}
-        {isTransport && (
-          <div className="flex items-center justify-center py-2 gap-3">
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxHeight: minimized ? '56px' : '0px',
+            opacity: minimized ? 1 : 0,
+          }}
+        >
+          <div className="relative flex items-center justify-center gap-2 px-4 pb-3">
             {/* Prev page */}
             <button
               onClick={prevPage}
               disabled={transportDisabled}
-              className="w-10 h-10 flex items-center justify-center rounded-full
-                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                disabled:text-gray-300 disabled:hover:bg-transparent"
+              className="w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-500 hover:text-gray-900 transition-colors
+                disabled:text-gray-300"
               aria-label="Previous page"
             >
-              <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+              <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
             </button>
 
-            {/* Prev sentence */}
+            {/* Skip back */}
             <button
               onClick={skipBack}
               disabled={transportDisabled}
-              className="w-10 h-10 flex items-center justify-center rounded-full
-                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                disabled:text-gray-300 disabled:hover:bg-transparent"
+              className="w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-500 hover:text-gray-900 transition-colors
+                disabled:text-gray-300"
               aria-label="Previous sentence"
             >
-              <SkipBack className="w-5 h-5" fill="currentColor" />
+              <SkipBack className="w-4 h-4" fill="currentColor" />
             </button>
 
-            {/* Play / Pause — larger */}
+            {/* Play/Pause */}
             <button
               onClick={handlePlayPause}
               disabled={transportDisabled}
-              className="w-14 h-14 flex items-center justify-center rounded-full
+              className="w-10 h-10 flex items-center justify-center rounded-full
                 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors
-                disabled:bg-gray-300 disabled:cursor-default
-                shadow-md shadow-indigo-200"
+                disabled:bg-gray-300 disabled:cursor-default shadow-sm"
               aria-label={status === "playing" ? "Pause" : "Play"}
             >
               {transportDisabled ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : status === "playing" ? (
-                <Pause className="w-6 h-6" fill="currentColor" />
+                <Pause className="w-5 h-5" fill="currentColor" />
               ) : (
-                <Play className="w-6 h-6 ml-0.5" fill="currentColor" />
+                <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
               )}
             </button>
 
-            {/* Next sentence */}
+            {/* Skip forward */}
             <button
               onClick={skipForward}
               disabled={transportDisabled}
-              className="w-10 h-10 flex items-center justify-center rounded-full
-                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                disabled:text-gray-300 disabled:hover:bg-transparent"
+              className="w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-500 hover:text-gray-900 transition-colors
+                disabled:text-gray-300"
               aria-label="Next sentence"
             >
-              <SkipForward className="w-5 h-5" fill="currentColor" />
+              <SkipForward className="w-4 h-4" fill="currentColor" />
             </button>
 
             {/* Next page */}
             <button
               onClick={nextPage}
               disabled={transportDisabled}
-              className="w-10 h-10 flex items-center justify-center rounded-full
-                text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors
-                disabled:text-gray-300 disabled:hover:bg-transparent"
+              className="w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-500 hover:text-gray-900 transition-colors
+                disabled:text-gray-300"
               aria-label="Next page"
             >
-              <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
+              <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+
+            {/* Close — absolutely positioned so it doesn't affect centering */}
+            <button
+              onClick={stopPlayback}
+              className="absolute right-4 w-8 h-8 flex items-center justify-center rounded-full
+                text-gray-400 hover:text-gray-900 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* BOTTOM ROW: Settings, Language, Close                        */}
-        {/* ============================================================ */}
-        <div className="flex pb-2 pt-2">
-          {/* Settings */}
-          <button
-            ref={settingsButtonRef}
-            onClick={() => setShowSettings(prev => !prev)}
-            className={`flex-1 flex flex-col items-center gap-1 transition-colors
-              ${showSettings
-                ? "text-indigo-600"
-                : "text-gray-500 hover:text-gray-900"
-              }`}
-            title="Voice settings"
-          >
-            <Settings className="w-[22px] h-[22px]" />
-            <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "settings")}</span>
-          </button>
-
-          {/* Language mode toggle */}
-          <button
-            onClick={() => {
-              toggleMode();
-              const newMode = mode === "bilingual" ? "off" : "on";
-              setLangToast(newMode);
-              if (langToastTimer.current) clearTimeout(langToastTimer.current);
-              langToastTimer.current = setTimeout(() => setLangToast(null), 2500);
-            }}
-            className={`flex-1 flex flex-col items-center gap-1 transition-colors
-              ${mode === "bilingual"
-                ? "text-indigo-600"
-                : "text-gray-500 hover:text-gray-900"
-              }`}
-          >
-            <Languages className="w-[22px] h-[22px]" />
-            <span className="text-[11px] font-medium">
-              {t(lng, "audioPlayer", "languageToggle")}
-            </span>
-          </button>
-
-          {/* Close */}
-          <button
-            onClick={stopPlayback}
-            className="flex-1 flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-[22px] h-[22px]" />
-            <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
-          </button>
         </div>
       </div>
     </>

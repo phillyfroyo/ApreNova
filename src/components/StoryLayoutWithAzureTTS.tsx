@@ -1007,6 +1007,16 @@ export default function StoryLayoutWithAzureTTS({
         // If clicked in empty space of translator, allow it to pass through
       }
 
+      // Ignore all clicks inside the audio player bar (check bounds since it's fixed/overlay)
+      const audioBar = document.querySelector('[data-audio-player-bar]');
+      if (audioBar) {
+        const barRect = audioBar.getBoundingClientRect();
+        if (e.clientX >= barRect.left && e.clientX <= barRect.right &&
+            e.clientY >= barRect.top && e.clientY <= barRect.bottom) {
+          return;
+        }
+      }
+
       if (menuOpen) {
         setMenuOpen(false);
         return;

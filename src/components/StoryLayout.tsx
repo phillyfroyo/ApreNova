@@ -218,8 +218,18 @@ const readOnlyMode = false;
         return;
       }
       
+      // Ignore all clicks inside the audio player bar (check bounds since it's fixed/overlay)
+      const audioBar = document.querySelector('[data-audio-player-bar]');
+      if (audioBar) {
+        const barRect = audioBar.getBoundingClientRect();
+        if (e.clientX >= barRect.left && e.clientX <= barRect.right &&
+            e.clientY >= barRect.top && e.clientY <= barRect.bottom) {
+          return;
+        }
+      }
+
       // State hierarchy: handle highest priority active state first
-      
+
       // 1. If menu or dropdown is open, close them (highest priority)
       if (menuOpen) {
         setMenuOpen(false);
