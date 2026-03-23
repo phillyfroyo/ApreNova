@@ -126,6 +126,7 @@ export default function StoryLayoutWithAzureTTS({
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+
   // Premium restrictions removed - all users get full translation features
   const [translationMode, setTranslationMode] = useState<"free" | "premium">("premium");
   const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
@@ -1382,35 +1383,6 @@ export default function StoryLayoutWithAzureTTS({
               );
             })()}
 
-            {/* Listen button – starts continuous playback */}
-            {!audioPlayer.isPlaying && audioPlayer.state.status !== "navigating" && (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (!session?.user) {
-                    setTtsAuthError(true);
-                  }
-                  stop();
-                  setActiveAudio(null);
-
-                  audioPlayer.startContinuousPlayback({
-                    storySlug,
-                    storyTitle: title,
-                    level: currentLevel,
-                    chapter: chapterNumber,
-                    page: pageNumber,
-                    sentences,
-                    storyMap,
-                    isUserStory,
-                    userStoryId,
-                  });
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-200"
-              >
-                <Headphones className="w-4 h-4" />
-                {t(typedLang, "audioPlayer", "listen")}
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -1447,9 +1419,41 @@ export default function StoryLayoutWithAzureTTS({
         })()}
       </div>
 
-      {/* Total page count in top right — scrolls with content */}
-      <div className="text-right pr-4 text-sm text-gray-600">
-        {currentPagePosition}
+      {/* Listen button / badge + page count — scrolls with content */}
+      <div className="flex items-center justify-end gap-3 pr-4">
+        {audioPlayer.isPlaying || audioPlayer.state.status === "navigating" || audioPlayer.state.status === "paused" || audioPlayer.state.status === "loading" ? (
+          <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-full border border-indigo-200">
+            <Headphones className="w-4 h-4" />
+            {t(typedLang, "audioPlayer", "listening")}
+          </span>
+        ) : (
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              if (!session?.user) {
+                setTtsAuthError(true);
+              }
+              stop();
+              setActiveAudio(null);
+              audioPlayer.startContinuousPlayback({
+                storySlug,
+                storyTitle: title,
+                level: currentLevel,
+                chapter: chapterNumber,
+                page: pageNumber,
+                sentences,
+                storyMap,
+                isUserStory,
+                userStoryId,
+              });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-colors"
+          >
+            <Headphones className="w-4 h-4" />
+            {t(typedLang, "audioPlayer", "listen")}
+          </button>
+        )}
+        <span className="text-sm text-gray-600">{currentPagePosition}</span>
       </div>
 
       <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
@@ -1460,15 +1464,6 @@ export default function StoryLayoutWithAzureTTS({
           <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
           <h2 className="text-lg sm:text-xl text-center mb-2 w-full">{dynamicPageTitle}</h2>
 
-          {/* Listening badge – visible when continuous playback is active */}
-          {(audioPlayer.isPlaying || audioPlayer.state.status === "navigating" || audioPlayer.state.status === "paused" || audioPlayer.state.status === "loading") && (
-            <div className="flex justify-center w-full mb-4">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-full border border-indigo-200">
-                <Headphones className="w-4 h-4" />
-                {t(typedLang, "audioPlayer", "listening")}
-              </span>
-            </div>
-          )}
 
           {/* Determine if this is poetry for tight line spacing */}
           {(() => {

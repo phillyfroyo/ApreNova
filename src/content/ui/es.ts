@@ -644,7 +644,7 @@ audioPlayer: {
   speed: "Velocidad",
   voice: "Voz",
   close: "Cerrar",
-  languageToggle: "Idioma",
+  languageToggle: "EN + ES",
   readBothLanguages: "Leer ambos idiomas",
   on: "SÍ",
   off: "NO",

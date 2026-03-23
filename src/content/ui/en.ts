@@ -643,7 +643,7 @@ audioPlayer: {
   speed: "Speed",
   voice: "Voice",
   close: "Close",
-  languageToggle: "Language",
+  languageToggle: "ES + EN",
   readBothLanguages: "Read both languages",
   on: "ON",
   off: "OFF",
