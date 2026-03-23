@@ -294,12 +294,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       } : null,
     }));
 
+    // Native language always plays at normal speed, only target language uses slow rate
+    const effectiveRate = language === "native" ? undefined
+      : s.playbackRate !== 1.0 ? s.playbackRate : undefined;
+
     playTTS({
       text,
       language: ttsLang,
       speed: "normal",
       voice: selectedVoice,
-      rate: s.playbackRate !== 1.0 ? s.playbackRate : undefined,
+      rate: effectiveRate,
       storySlug: s.position?.storySlug,
     });
   }, [oppositeLang, lng, getTTSLanguage, playTTS]);

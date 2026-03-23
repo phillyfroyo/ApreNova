@@ -6,6 +6,7 @@ import { useAudioPlayer, AVAILABLE_VOICES } from "@/contexts/AudioPlayerContext"
 import { Pause, Play, X, Loader2, Languages, SkipBack, SkipForward, ChevronLeft, ChevronRight, Gauge, Turtle, Mic } from "lucide-react";
 import { useParams } from "next/navigation";
 import { t } from "@/lib/t";
+import { STORY_METADATA } from "@/lib/stories";
 import type { Language } from "@/types/i18n";
 
 function getContentSentenceCount(sentences: any[]): number {
@@ -197,6 +198,31 @@ export default function AudioPlayerBar() {
     });
   };
 
+  const handleSpeedToggle = () => {
+    const newSpeed = playbackRate === 1.0 ? 0.7 : 1.0;
+    setPlaybackRate(newSpeed);
+    setShowVoice(false);
+    setSpeedToast(newSpeed === 1.0 ? '1x' : '0.7x');
+    setSpeedToastFading(false);
+    if (speedToastTimer.current) clearTimeout(speedToastTimer.current);
+    speedToastTimer.current = setTimeout(() => {
+      setSpeedToastFading(true);
+      setTimeout(() => { setSpeedToast(null); setSpeedToastFading(false); }, 300);
+    }, 2200);
+  };
+
+  const handleLangToggle = () => {
+    toggleMode();
+    const newMode = mode === "bilingual" ? "off" : "on";
+    setLangToast(newMode);
+    setLangToastFading(false);
+    if (langToastTimer.current) clearTimeout(langToastTimer.current);
+    langToastTimer.current = setTimeout(() => {
+      setLangToastFading(true);
+      setTimeout(() => { setLangToast(null); setLangToastFading(false); }, 300);
+    }, 2200);
+  };
+
   // Transition class: only apply when NOT dragging (so snap animates but drag is instant)
   const transitionClass = isDragging ? '' : 'transition-all duration-300 ease-in-out';
 
@@ -224,13 +250,13 @@ export default function AudioPlayerBar() {
       <div
         ref={barRef}
         data-audio-player-bar
-        className={`fixed left-0 right-0 z-[55] backdrop-blur-xl border-t border-white/50 rounded-t-[36px] touch-none
+        className={`fixed left-0 right-0 z-[55] backdrop-blur-xl border-t border-white/50 rounded-t-[36px] md:rounded-none touch-none
           ${hasBottomNav ? 'bottom-16' : 'bottom-0'} md:bottom-0`}
         style={{ backgroundColor: `rgba(255, 255, 255, ${lerp(0.7, 0.25, progress)})` }}
       >
-        {/* Drag handle — tap to toggle */}
+        {/* Drag handle — tap to toggle (mobile only) */}
         <div
-          className={`flex justify-center items-center cursor-pointer select-none ${transitionClass}`}
+          className={`md:hidden flex justify-center items-center cursor-pointer select-none ${transitionClass}`}
           style={{ paddingTop: '8px', paddingBottom: `${lerp(12, 4, progress)}px` }}
           onClick={handleClick}
         >
@@ -317,17 +343,29 @@ export default function AudioPlayerBar() {
         )}
 
         {/* ============================================================ */}
-        {/* TITLE + PROGRESS BAR — fades out as we minimize              */}
+        {/* MOBILE LAYOUT                                                */}
         {/* ============================================================ */}
+
+        {/* TITLE + PROGRESS BAR — fades out as we minimize              */}
         <div
-          className={`overflow-hidden ${transitionClass}`}
+          className={`md:hidden overflow-hidden ${transitionClass}`}
           style={{
             maxHeight: `${lerp(80, 0, progress)}px`,
             opacity: fadeOut,
           }}
         >
           <div className="px-5 pt-2 pb-1">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {(() => {
+                const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
+                return storyMeta?.image ? (
+                  <img
+                    src={storyMeta.image}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                  />
+                ) : null;
+              })()}
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-gray-900 truncate leading-tight">
                   {statusLabel}
@@ -352,12 +390,10 @@ export default function AudioPlayerBar() {
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* TRANSPORT CONTROLS — single row, sizes interpolate           */}
-        {/* ============================================================ */}
+        {/* TRANSPORT CONTROLS — single row, sizes interpolate (mobile)  */}
         {isTransport && (
           <div
-            className={`relative flex items-center justify-center ${transitionClass}`}
+            className={`md:hidden relative flex items-center justify-center ${transitionClass}`}
             style={{ gap: `${controlGap}px`, paddingTop: `${controlPyTop}px`, paddingBottom: `${controlPyBottom}px` }}
           >
             {/* Prev page */}
@@ -448,11 +484,9 @@ export default function AudioPlayerBar() {
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* BOTTOM ROW: Settings, Language, Close — fades out            */}
-        {/* ============================================================ */}
+        {/* BOTTOM ROW: Settings, Language, Close — fades out (mobile)   */}
         <div
-          className={`overflow-hidden ${transitionClass}`}
+          className={`md:hidden overflow-hidden ${transitionClass}`}
           style={{
             maxHeight: `${lerp(56, 0, progress)}px`,
             opacity: fadeOut,
@@ -461,18 +495,7 @@ export default function AudioPlayerBar() {
           <div className="flex pb-2 pt-2">
             {/* Speed toggle */}
             <button
-              onClick={() => {
-                const newSpeed = playbackRate === 1.0 ? 0.7 : 1.0;
-                setPlaybackRate(newSpeed);
-                setShowVoice(false);
-                setSpeedToast(newSpeed === 1.0 ? '1x' : '0.7x');
-                setSpeedToastFading(false);
-                if (speedToastTimer.current) clearTimeout(speedToastTimer.current);
-                speedToastTimer.current = setTimeout(() => {
-                  setSpeedToastFading(true);
-                  setTimeout(() => { setSpeedToast(null); setSpeedToastFading(false); }, 300);
-                }, 2200);
-              }}
+              onClick={handleSpeedToggle}
               className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors"
               title="Toggle playback speed"
             >
@@ -496,17 +519,7 @@ export default function AudioPlayerBar() {
 
             {/* Language mode toggle */}
             <button
-              onClick={() => {
-                toggleMode();
-                const newMode = mode === "bilingual" ? "off" : "on";
-                setLangToast(newMode);
-                setLangToastFading(false);
-                if (langToastTimer.current) clearTimeout(langToastTimer.current);
-                langToastTimer.current = setTimeout(() => {
-                  setLangToastFading(true);
-                  setTimeout(() => { setLangToast(null); setLangToastFading(false); }, 300);
-                }, 2200);
-              }}
+              onClick={handleLangToggle}
               className={`flex-1 flex flex-col items-center gap-1 transition-colors
                 ${mode === "bilingual"
                   ? "text-indigo-600"
@@ -529,6 +542,143 @@ export default function AudioPlayerBar() {
               <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "close")}</span>
             </button>
           </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* DESKTOP LAYOUT — single row                                  */}
+        {/* ============================================================ */}
+        <div className="hidden md:block">
+          {/* Progress bar — thin line across top */}
+          <div className="w-full h-0.5 bg-gray-200">
+            <div
+              className="h-full bg-indigo-500 transition-[width] duration-500 ease-out"
+              style={{ width: `${progressBar}%` }}
+            />
+          </div>
+
+          {isTransport ? (
+            <div className="flex items-center px-6 py-2">
+              {/* Left: Thumbnail + Title + position */}
+              <div className="flex-1 min-w-0 flex items-center gap-3">
+                {(() => {
+                  const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
+                  return storyMeta?.image ? (
+                    <img
+                      src={storyMeta.image}
+                      alt=""
+                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                    />
+                  ) : null;
+                })()}
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                    {statusLabel}
+                  </h3>
+                  {positionLabel && (
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {positionLabel}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Center: Transport controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={prevPage}
+                  disabled={transportDisabled}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
+                </button>
+                <button
+                  onClick={skipBack}
+                  disabled={transportDisabled}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
+                  aria-label="Previous sentence"
+                >
+                  <SkipBack className="w-[18px] h-[18px]" fill="currentColor" />
+                </button>
+                <button
+                  onClick={handlePlayPause}
+                  disabled={transportDisabled}
+                  className="w-11 h-11 flex items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-default shadow-md shadow-indigo-200 transition-colors"
+                  aria-label={status === "playing" ? "Pause" : "Play"}
+                >
+                  {transportDisabled ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : status === "playing" ? (
+                    <Pause className="w-5 h-5" fill="currentColor" />
+                  ) : (
+                    <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+                  )}
+                </button>
+                <button
+                  onClick={skipForward}
+                  disabled={transportDisabled}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
+                  aria-label="Next sentence"
+                >
+                  <SkipForward className="w-[18px] h-[18px]" fill="currentColor" />
+                </button>
+                <button
+                  onClick={nextPage}
+                  disabled={transportDisabled}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
+                </button>
+              </div>
+
+              {/* Right: Settings */}
+              <div className="flex-1 flex items-center justify-end gap-1">
+                <button
+                  onClick={handleSpeedToggle}
+                  className="h-9 px-3 flex items-center gap-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors"
+                  title="Toggle playback speed"
+                >
+                  {playbackRate === 1.0
+                    ? <Gauge className="w-[18px] h-[18px]" />
+                    : <Turtle className="w-[18px] h-[18px]" />
+                  }
+                  <span className="text-xs font-medium">{t(lng, "audioPlayer", "speed")}</span>
+                </button>
+                <button
+                  ref={voiceButtonRef}
+                  onClick={() => setShowVoice(prev => !prev)}
+                  className="h-9 px-3 flex items-center gap-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors"
+                  title="Voice selection"
+                >
+                  <Mic className="w-[18px] h-[18px]" />
+                  <span className="text-xs font-medium">{t(lng, "audioPlayer", "voice")}</span>
+                </button>
+                <button
+                  onClick={handleLangToggle}
+                  className={`h-9 px-3 flex items-center gap-1.5 rounded-full transition-colors
+                    ${mode === "bilingual"
+                      ? "text-indigo-600 hover:bg-indigo-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"
+                    }`}
+                >
+                  <Languages className="w-[18px] h-[18px]" />
+                  <span className="text-xs font-medium">{t(lng, "audioPlayer", "languageToggle")}</span>
+                </button>
+                <button
+                  onClick={stopPlayback}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-200/50 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center px-6 py-4">
+              <h3 className="text-sm font-semibold text-gray-900">{statusLabel}</h3>
+            </div>
+          )}
         </div>
       </div>
     </>
