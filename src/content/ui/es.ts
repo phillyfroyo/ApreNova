@@ -217,7 +217,7 @@ feedback: {
     placeholder: "¿En qué estás pensando?",
     optionalEmail: "Correo (para seguimiento)",
     cancel: "Cancelar",
-    send: "Enviar Comentario",
+    send: "Enviar",
     bug: "🐛 Error",
     suggestion: "💡 Sugerencia",
     other: "✏️ Otro",

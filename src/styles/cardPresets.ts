@@ -25,9 +25,9 @@ export const cardPresets = {
       "bg-neutral-50 border border-neutral-200 shadow-sm p-6 rounded-3xl",
   },
   feedback: {
-    base: "rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col",
-    header: "bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-center p-5 rounded-t-2xl",
-    body: "bg-white p-6 flex flex-col gap-4 overflow-y-auto flex-1",
-    footer: "bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100 rounded-b-2xl",
+    base: "rounded-2xl shadow-2xl max-w-lg md:max-w-2xl lg:max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col",
+    header: "bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-center p-5 md:p-7 rounded-t-2xl",
+    body: "bg-white p-6 md:p-8 flex flex-col gap-4 md:gap-5 overflow-y-auto flex-1",
+    footer: "bg-gray-50 px-6 md:px-8 py-4 md:py-5 flex justify-between gap-3 border-t border-gray-100 rounded-b-2xl",
   },
 };

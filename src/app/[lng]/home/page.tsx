@@ -104,7 +104,7 @@ export default function OnboardingHome() {
       <OnboardingProgress currentStep={2} totalSteps={3} lang={typedLang} />
 
       {/* Avatar Menu for Unauthenticated Users */}
-      <div ref={menuRef} className="absolute top-4 right-4 text-sm z-50">
+      <div ref={menuRef} className="fixed bottom-4 left-4 text-sm z-50">
         <div
           className="cursor-pointer rounded-full overflow-hidden w-8 h-8 border-2 border-white/50 shadow-sm"
           onClick={() => setMenuOpen((prev) => !prev)}
@@ -121,11 +121,11 @@ export default function OnboardingHome() {
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -5 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
+              exit={{ opacity: 0, y: 5 }}
               transition={{ duration: 0.15 }}
-              className="mt-2 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-44 absolute right-0"
+              className="mb-2 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-44 absolute bottom-full left-0"
             >
               {session?.user ? (
                 <div className="text-sm text-gray-600 mb-2 truncate">
