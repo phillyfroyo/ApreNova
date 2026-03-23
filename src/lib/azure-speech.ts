@@ -14,19 +14,21 @@ import type {
 } from '@/types/azure-tts';
 
 // Voice configuration for different languages and speeds
-const VOICE_CONFIG: VoiceConfig = {
+// Uses BrianMultilingualNeural as default to match audiobook player,
+// enabling cache sharing between audiobook and per-line TTS features
+export const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
-    normal: 'es-MX-DaliaNeural',
-    slow: 'es-MX-DaliaNeural'
+    normal: 'en-US-BrianMultilingualNeural',
+    slow: 'en-US-BrianMultilingualNeural'
   },
   'en-US': {
-    normal: 'en-US-AndrewMultilingualNeural',
-    slow: 'en-US-AndrewMultilingualNeural'
+    normal: 'en-US-BrianMultilingualNeural',
+    slow: 'en-US-BrianMultilingualNeural'
   }
 };
 
 // Rate multipliers for different speeds
-const SPEED_RATES = {
+export const SPEED_RATES: Record<string, number> = {
   normal: 1.0,
   slow: 0.7
 };
@@ -120,13 +122,17 @@ export class AzureSpeechService {
   }
 
   /**
-   * Generate unique hash for cache key
+   * Resolve the actual voice name for a request (used by cache key generation)
    */
-  public generateCacheKey(request: TTSRequest): string {
-    const voicePart = request.voice || 'default';
-    const ratePart = request.rate ?? 'default';
-    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}`;
-    return createHash('sha256').update(content).digest('hex');
+  public static resolveVoice(request: TTSRequest): string {
+    return request.voice || VOICE_CONFIG[request.language][request.speed];
+  }
+
+  /**
+   * Resolve the actual rate for a request
+   */
+  public static resolveRate(request: TTSRequest): number {
+    return request.rate ?? SPEED_RATES[request.speed];
   }
 
   /**

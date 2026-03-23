@@ -81,28 +81,18 @@ export async function POST(request: NextRequest) {
     const cacheService = getTTSCacheService();
 
     switch (action) {
-      case 'cleanup':
-        const deletedCount = await cacheService.cleanup({
-          maxAge: params.maxAge || 30 * 24 * 60 * 60 * 1000, // 30 days
-          maxSize: params.maxSize || 5 * 1024 * 1024 * 1024, // 5GB
-          maxFiles: params.maxFiles || 10000
-        });
-        return createSuccessResponse({ action, deletedCount });
-
       case 'clear-cache':
         await cacheService.clearAll();
-        return createSuccessResponse({ action, result: 'Cache cleared' });
+        return createSuccessResponse({ action, result: 'R2 cache cleared' });
 
       case 'health-check':
         const speechService = getAzureSpeechService();
         const isHealthy = await speechService.testConnection();
         return createSuccessResponse({ action, healthy: isHealthy });
 
-      case 'preload-story':
-        // Pre-generate TTS for an entire story
-        const { storySlug, level } = params;
-        // Implementation would depend on story content structure
-        return createSuccessResponse({ action, storySlug, level, result: 'Not implemented' });
+      case 'cache-stats':
+        const stats = await cacheService.getCacheStats();
+        return createSuccessResponse({ action, stats });
 
       default:
         return createErrorResponse('Unknown admin action', 400);

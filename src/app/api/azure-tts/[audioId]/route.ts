@@ -1,10 +1,8 @@
 // src/app/api/azure-tts/[audioId]/route.ts
 import { NextRequest } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { getTTSCacheService } from '@/lib/tts-cache';
+import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getRateLimiter, getClientIdentifier, createRateLimitHeaders } from '@/lib/rate-limiter';
-import { 
+import {
   validateAudioId,
   createValidationErrorResponse,
   createErrorResponse,
@@ -12,16 +10,29 @@ import {
   ValidationError
 } from '@/lib/validation';
 
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+const BUCKET = process.env.R2_BUCKET_NAME || '';
+
+function getR2Client(): S3Client {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    },
+  });
+}
+
 /**
  * GET /api/azure-tts/[audioId]
- * Retrieve cached TTS audio file and metadata
+ * Retrieve cached TTS audio (redirect) or metadata from R2
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
-    // Await params in Next.js 15
     const { audioId: rawAudioId } = await params;
 
     // Rate limiting
@@ -57,90 +68,56 @@ export async function GET(
       return createErrorResponse('Invalid audio ID format', 400);
     }
 
-    // Check if requesting metadata or audio file
-    const format = new URL(request.url).searchParams.get('format');
     const includeMetadata = new URL(request.url).searchParams.get('metadata') === 'true';
+    const format = new URL(request.url).searchParams.get('format');
 
-    const cacheService = getTTSCacheService();
-    const audioPath = path.join(process.cwd(), 'public', 'cache', 'tts-audio', `${audioId}.mp3`);
-    const metadataPath = path.join(process.cwd(), 'cache', 'tts-metadata', `${audioId}.json`);
-
-    // Check if files exist
-    const [audioExists, metadataExists] = await Promise.all([
-      fs.access(audioPath).then(() => true).catch(() => false),
-      fs.access(metadataPath).then(() => true).catch(() => false)
-    ]);
-
-    if (!audioExists || !metadataExists) {
-      return createErrorResponse('Audio file not found', 404, 'AUDIO_NOT_FOUND');
-    }
-
-    // If requesting only metadata
+    // If requesting metadata, fetch from R2
     if (includeMetadata && format !== 'audio') {
       try {
-        const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-        const metadata = JSON.parse(metadataContent);
-        
-        // Update access time
-        metadata.accessedAt = Date.now();
-        await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+        const client = getR2Client();
+        const metaResponse = await client.send(
+          new GetObjectCommand({ Bucket: BUCKET, Key: `tts/${audioId}.meta.json` })
+        );
+        const metaBody = await metaResponse.Body?.transformToString();
+        if (!metaBody) {
+          return createErrorResponse('Audio file not found', 404, 'AUDIO_NOT_FOUND');
+        }
 
+        const metadata = JSON.parse(metaBody);
         return new Response(
           JSON.stringify({
             audioId,
-            audioUrl: `/cache/tts-audio/${audioId}.mp3`,
+            audioUrl: `${R2_PUBLIC_URL}/tts/${audioId}.mp3`,
             wordTimings: metadata.wordTimings,
             duration: metadata.duration,
             language: metadata.language,
             speed: metadata.speed,
             createdAt: metadata.createdAt,
-            accessedAt: metadata.accessedAt,
             cached: true
           }),
           {
             status: 200,
             headers: {
               'Content-Type': 'application/json',
-              'Cache-Control': 'public, max-age=2592000', // 30 days
+              'Cache-Control': 'public, max-age=2592000',
               ...createRateLimitHeaders(info)
             }
           }
         );
-      } catch (error) {
-        return createErrorResponse('Failed to read metadata', 500);
+      } catch {
+        return createErrorResponse('Audio file not found', 404, 'AUDIO_NOT_FOUND');
       }
     }
 
-    // Return audio file
-    try {
-      const audioBuffer = await fs.readFile(audioPath);
-      const stats = await fs.stat(audioPath);
-
-      // Update metadata access time
-      try {
-        const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-        const metadata = JSON.parse(metadataContent);
-        metadata.accessedAt = Date.now();
-        await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
-      } catch (error) {
-        // Don't fail the request if metadata update fails
-        console.warn('Failed to update metadata access time:', error);
+    // For audio requests, redirect to R2 public URL
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': `${R2_PUBLIC_URL}/tts/${audioId}.mp3`,
+        'Cache-Control': 'public, max-age=2592000',
+        ...createRateLimitHeaders(info)
       }
-
-      return new Response(new Uint8Array(audioBuffer), {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': stats.size.toString(),
-          'Cache-Control': 'public, max-age=2592000', // 30 days
-          'Accept-Ranges': 'bytes',
-          'Content-Disposition': `inline; filename="${audioId}.mp3"`,
-          ...createRateLimitHeaders(info)
-        }
-      });
-    } catch (error) {
-      return createErrorResponse('Failed to read audio file', 500);
-    }
+    });
 
   } catch (error) {
     console.error('Audio retrieval error:', error);
@@ -150,87 +127,58 @@ export async function GET(
 
 /**
  * HEAD /api/azure-tts/[audioId]
- * Check if audio file exists without downloading it
+ * Check if audio file exists in R2 without downloading it
  */
 export async function HEAD(
   request: NextRequest,
   { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
-    // Await params in Next.js 15
     const { audioId: rawAudioId } = await params;
 
-    // Validate audioId parameter
     let audioId: string;
     try {
       audioId = validateAudioId(rawAudioId);
-    } catch (error) {
+    } catch {
       return new Response(null, { status: 400 });
     }
 
-    const audioPath = path.join(process.cwd(), 'public', 'cache', 'tts-audio', `${audioId}.mp3`);
-    
     try {
-      const stats = await fs.stat(audioPath);
-      
+      const client = getR2Client();
+      const headResponse = await client.send(
+        new HeadObjectCommand({ Bucket: BUCKET, Key: `tts/${audioId}.mp3` })
+      );
+
       return new Response(null, {
         status: 200,
         headers: {
           'Content-Type': 'audio/mpeg',
-          'Content-Length': stats.size.toString(),
-          'Cache-Control': 'public, max-age=2592000',
-          'Last-Modified': stats.mtime.toUTCString(),
+          'Content-Length': (headResponse.ContentLength || 0).toString(),
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Last-Modified': headResponse.LastModified?.toUTCString() || '',
         }
       });
-    } catch (error) {
+    } catch {
       return new Response(null, { status: 404 });
     }
 
-  } catch (error) {
+  } catch {
     return new Response(null, { status: 500 });
   }
 }
 
 /**
  * DELETE /api/azure-tts/[audioId]
- * Delete cached audio file (admin only - would need authentication)
+ * Delete cached audio file (admin only)
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ audioId: string }> }
 ) {
   try {
-    // Await params in Next.js 15
     const { audioId: rawAudioId } = await params;
-
-    // TODO: Add authentication/authorization check here
-    // For now, return 403 as this should be admin-only
     return createErrorResponse('Forbidden: Admin access required', 403);
-
-    /*
-    // Future implementation:
-    let audioId: string;
-    try {
-      audioId = validateAudioId(rawAudioId);
-    } catch (error) {
-      if (error instanceof ValidationError) {
-        return createValidationErrorResponse(error);
-      }
-      return createErrorResponse('Invalid audio ID format', 400);
-    }
-
-    const audioPath = path.join(process.cwd(), 'public', 'cache', 'tts-audio', `${audioId}.mp3`);
-    const metadataPath = path.join(process.cwd(), 'cache', 'tts-metadata', `${audioId}.json`);
-
-    await Promise.all([
-      fs.unlink(audioPath).catch(() => {}),
-      fs.unlink(metadataPath).catch(() => {})
-    ]);
-
-    return createSuccessResponse({ deleted: true, audioId });
-    */
-
-  } catch (error) {
+  } catch {
     return createErrorResponse('Internal server error occurred during deletion', 500);
   }
 }

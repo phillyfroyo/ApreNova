@@ -1,381 +1,220 @@
 // src/lib/tts-cache.ts
-import { promises as fs } from 'fs';
-import path from 'path';
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createHash } from 'crypto';
-import type { 
-  TTSRequest, 
-  TTSResponse, 
-  TTSCacheEntry, 
-  CacheStats, 
-  CacheCleanupOptions,
-  WordTiming 
+import { VOICE_CONFIG, SPEED_RATES } from '@/lib/azure-speech';
+import type {
+  TTSRequest,
+  TTSResponse,
+  TTSCacheEntry,
+  CacheStats,
+  WordTiming
 } from '@/types/azure-tts';
 
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
+const BUCKET = process.env.R2_BUCKET_NAME || '';
+
+function createR2Client(): S3Client {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    },
+  });
+}
+
 export class TTSCacheService {
-  private cacheDir: string;
-  private metadataDir: string;
-  private maxAge: number = 30 * 24 * 60 * 60 * 1000; // 30 days
-  private maxFiles: number = 10000;
-  private maxSize: number = 5 * 1024 * 1024 * 1024; // 5GB
+  private client: S3Client;
 
-  constructor(baseCacheDir?: string) {
-    // Use public directory for serving cached audio files
-    this.cacheDir = baseCacheDir || path.join(process.cwd(), 'public', 'cache', 'tts-audio');
-    this.metadataDir = path.join(process.cwd(), 'cache', 'tts-metadata');
-    this.ensureCacheDirectories();
+  constructor() {
+    this.client = createR2Client();
   }
 
   /**
-   * Ensure cache directories exist
-   */
-  private async ensureCacheDirectories(): Promise<void> {
-    try {
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      await fs.mkdir(this.metadataDir, { recursive: true });
-    } catch (error) {
-      console.error('Failed to create cache directories:', error);
-    }
-  }
-
-  /**
-   * Generate cache key from request
+   * Generate cache key from request.
+   * Resolves voice and rate to actual values so that requests with explicit
+   * and default parameters produce the same key when the audio would be identical.
+   * Includes speakerName/stageDirection since they affect SSML output.
    */
   public generateCacheKey(request: TTSRequest): string {
-    const voicePart = request.voice || 'default';
-    const ratePart = request.rate ?? 'default';
-    const content = `${request.text}-${request.language}-${request.speed}-${voicePart}-${ratePart}`;
+    const voice = request.voice || VOICE_CONFIG[request.language][request.speed];
+    const rate = request.rate ?? SPEED_RATES[request.speed];
+    const speakerPart = request.speakerName || '';
+    const stagePart = request.stageDirection || '';
+    const content = `${request.text}-${request.language}-${request.speed}-${voice}-${rate}-${speakerPart}-${stagePart}`;
     return createHash('sha256').update(content).digest('hex');
   }
 
   /**
-   * Generate file paths for cached content
+   * Get R2 object keys and public URL for a cache entry
    */
-  private getCachePaths(cacheKey: string) {
-    const audioFile = path.join(this.cacheDir, `${cacheKey}.mp3`);
-    const metadataFile = path.join(this.metadataDir, `${cacheKey}.json`);
-    const publicUrl = `/cache/tts-audio/${cacheKey}.mp3`;
-    
-    return { audioFile, metadataFile, publicUrl };
+  private getR2Keys(cacheKey: string) {
+    return {
+      audioKey: `tts/${cacheKey}.mp3`,
+      metadataKey: `tts/${cacheKey}.meta.json`,
+      publicUrl: `${R2_PUBLIC_URL}/tts/${cacheKey}.mp3`,
+    };
   }
 
   /**
-   * Check if cached entry exists and is valid
+   * Check if cached entry exists in R2
    */
   public async isCached(request: TTSRequest): Promise<boolean> {
     try {
       const cacheKey = this.generateCacheKey(request);
-      const { audioFile, metadataFile } = this.getCachePaths(cacheKey);
-
-      // Check if both audio and metadata files exist
-      const [audioExists, metadataExists] = await Promise.all([
-        fs.access(audioFile).then(() => true).catch(() => false),
-        fs.access(metadataFile).then(() => true).catch(() => false)
-      ]);
-
-      if (!audioExists || !metadataExists) {
-        return false;
-      }
-
-      // Check if cache entry is still valid (not expired)
-      const metadata = await this.getMetadata(cacheKey);
-      if (!metadata) {
-        return false;
-      }
-
-      const now = Date.now();
-      const isExpired = (now - metadata.createdAt) > this.maxAge;
-      
-      if (isExpired) {
-        // Clean up expired entry
-        await this.deleteCacheEntry(cacheKey);
-        return false;
-      }
-
+      const { audioKey } = this.getR2Keys(cacheKey);
+      await this.client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: audioKey }));
       return true;
-    } catch (error) {
-      console.error('Error checking cache:', error);
+    } catch {
       return false;
     }
   }
 
   /**
-   * Get cached TTS response
+   * Get cached TTS response from R2
    */
   public async getCached(request: TTSRequest): Promise<TTSResponse | null> {
     try {
       const cacheKey = this.generateCacheKey(request);
-      const { publicUrl } = this.getCachePaths(cacheKey);
+      const { metadataKey, publicUrl } = this.getR2Keys(cacheKey);
 
-      const metadata = await this.getMetadata(cacheKey);
-      if (!metadata) {
-        return null;
-      }
+      const metaResponse = await this.client.send(
+        new GetObjectCommand({ Bucket: BUCKET, Key: metadataKey })
+      );
+      const metaBody = await metaResponse.Body?.transformToString();
+      if (!metaBody) return null;
 
-      // Update access time
-      metadata.accessedAt = Date.now();
-      await this.saveMetadata(cacheKey, metadata);
-
+      const metadata: TTSCacheEntry = JSON.parse(metaBody);
       return {
         audioUrl: publicUrl,
         wordTimings: metadata.wordTimings,
         duration: metadata.duration,
-        cached: true
+        cached: true,
       };
-    } catch (error) {
-      console.error('Error retrieving cached content:', error);
+    } catch {
       return null;
     }
   }
 
   /**
-   * Save TTS response to cache
+   * Save TTS response to R2 (audio + metadata)
    */
   public async saveToCache(
-    request: TTSRequest, 
-    audioBuffer: ArrayBuffer, 
-    wordTimings: WordTiming[], 
+    request: TTSRequest,
+    audioBuffer: ArrayBuffer,
+    wordTimings: WordTiming[],
     duration: number
   ): Promise<string> {
-    try {
-      await this.ensureCacheDirectories();
-      
-      const cacheKey = this.generateCacheKey(request);
-      const { audioFile, publicUrl } = this.getCachePaths(cacheKey);
+    const cacheKey = this.generateCacheKey(request);
+    const { audioKey, metadataKey, publicUrl } = this.getR2Keys(cacheKey);
 
-      // Save audio file
-      const buffer = Buffer.from(audioBuffer);
-      await fs.writeFile(audioFile, buffer);
+    const metadata: TTSCacheEntry = {
+      audioUrl: publicUrl,
+      wordTimings,
+      duration,
+      createdAt: Date.now(),
+      accessedAt: Date.now(),
+      language: request.language,
+      speed: request.speed,
+      textHash: createHash('md5').update(request.text).digest('hex'),
+    };
 
-      // Save metadata
-      const metadata: TTSCacheEntry = {
-        audioUrl: publicUrl,
-        wordTimings,
-        duration,
-        createdAt: Date.now(),
-        accessedAt: Date.now(),
-        language: request.language,
-        speed: request.speed,
-        textHash: createHash('md5').update(request.text).digest('hex')
-      };
+    // Upload audio and metadata in parallel
+    await Promise.all([
+      this.client.send(new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: audioKey,
+        Body: Buffer.from(audioBuffer),
+        ContentType: 'audio/mpeg',
+        CacheControl: 'public, max-age=31536000, immutable',
+      })),
+      this.client.send(new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: metadataKey,
+        Body: JSON.stringify(metadata),
+        ContentType: 'application/json',
+      })),
+    ]);
 
-      await this.saveMetadata(cacheKey, metadata);
-
-      // Trigger cleanup if needed
-      this.cleanupIfNeeded();
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error saving to cache:', error);
-      throw new Error('Failed to save to cache');
-    }
+    return publicUrl;
   }
 
   /**
-   * Get metadata for cache entry
-   */
-  private async getMetadata(cacheKey: string): Promise<TTSCacheEntry | null> {
-    try {
-      const { metadataFile } = this.getCachePaths(cacheKey);
-      const content = await fs.readFile(metadataFile, 'utf-8');
-      return JSON.parse(content);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Save metadata for cache entry
-   */
-  private async saveMetadata(cacheKey: string, metadata: TTSCacheEntry): Promise<void> {
-    try {
-      const { metadataFile } = this.getCachePaths(cacheKey);
-      await fs.writeFile(metadataFile, JSON.stringify(metadata, null, 2));
-    } catch (error) {
-      console.error('Error saving metadata:', error);
-    }
-  }
-
-  /**
-   * Delete cache entry
-   */
-  private async deleteCacheEntry(cacheKey: string): Promise<void> {
-    try {
-      const { audioFile, metadataFile } = this.getCachePaths(cacheKey);
-      
-      await Promise.all([
-        fs.unlink(audioFile).catch(() => {}), // Ignore errors if file doesn't exist
-        fs.unlink(metadataFile).catch(() => {})
-      ]);
-    } catch (error) {
-      console.error('Error deleting cache entry:', error);
-    }
-  }
-
-  /**
-   * Get cache statistics
+   * Get cache statistics from R2
    */
   public async getCacheStats(): Promise<CacheStats> {
     try {
-      const [audioFiles, metadataFiles] = await Promise.all([
-        fs.readdir(this.cacheDir).catch(() => []),
-        fs.readdir(this.metadataDir).catch(() => [])
-      ]);
-
+      let totalFiles = 0;
       let totalSize = 0;
       let oldestFile = Date.now();
       let newestFile = 0;
-      let totalRequests = 0;
-      let cacheHits = 0;
+      let continuationToken: string | undefined;
 
-      // Calculate total size and file timestamps
-      for (const file of audioFiles) {
-        try {
-          const filePath = path.join(this.cacheDir, file);
-          const stats = await fs.stat(filePath);
-          totalSize += stats.size;
-          
-          const fileTime = stats.mtime.getTime();
-          oldestFile = Math.min(oldestFile, fileTime);
-          newestFile = Math.max(newestFile, fileTime);
-        } catch (error) {
-          // Skip files that can't be accessed
-        }
-      }
+      do {
+        const response = await this.client.send(new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: 'tts/',
+          ContinuationToken: continuationToken,
+        }));
 
-      // Count cache hits from metadata
-      for (const file of metadataFiles) {
-        try {
-          const metadataPath = path.join(this.metadataDir, file);
-          const content = await fs.readFile(metadataPath, 'utf-8');
-          const metadata: TTSCacheEntry = JSON.parse(content);
-          
-          totalRequests++;
-          if (metadata.accessedAt > metadata.createdAt) {
-            cacheHits++;
+        for (const obj of response.Contents || []) {
+          if (obj.Key?.endsWith('.mp3')) {
+            totalFiles++;
+            totalSize += obj.Size || 0;
+            const lastModified = obj.LastModified?.getTime() || 0;
+            if (lastModified < oldestFile) oldestFile = lastModified;
+            if (lastModified > newestFile) newestFile = lastModified;
           }
-        } catch (error) {
-          // Skip invalid metadata files
         }
-      }
 
-      const hitRate = totalRequests > 0 ? cacheHits / totalRequests : 0;
+        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+      } while (continuationToken);
 
       return {
-        totalFiles: audioFiles.length,
+        totalFiles,
         totalSize,
-        oldestFile: oldestFile === Date.now() ? 0 : oldestFile,
+        oldestFile: totalFiles === 0 ? 0 : oldestFile,
         newestFile,
-        hitRate
+        hitRate: 0, // Not tracked in R2 — would require separate analytics
       };
     } catch (error) {
       console.error('Error getting cache stats:', error);
-      return {
-        totalFiles: 0,
-        totalSize: 0,
-        oldestFile: 0,
-        newestFile: 0,
-        hitRate: 0
-      };
+      return { totalFiles: 0, totalSize: 0, oldestFile: 0, newestFile: 0, hitRate: 0 };
     }
   }
 
   /**
-   * Clean up cache if needed
+   * Delete a single cache entry from R2
    */
-  private async cleanupIfNeeded(): Promise<void> {
-    try {
-      const stats = await this.getCacheStats();
-      
-      if (stats.totalFiles > this.maxFiles || stats.totalSize > this.maxSize) {
-        await this.cleanup({
-          maxAge: this.maxAge,
-          maxSize: this.maxSize,
-          maxFiles: this.maxFiles
-        });
-      }
-    } catch (error) {
-      console.error('Error during cache cleanup check:', error);
-    }
+  private async deleteCacheEntry(cacheKey: string): Promise<void> {
+    const { audioKey, metadataKey } = this.getR2Keys(cacheKey);
+    await Promise.all([
+      this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: audioKey })).catch(() => {}),
+      this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: metadataKey })).catch(() => {}),
+    ]);
   }
 
   /**
-   * Clean up old cache entries
-   */
-  public async cleanup(options: CacheCleanupOptions): Promise<number> {
-    try {
-      const metadataFiles = await fs.readdir(this.metadataDir);
-      const now = Date.now();
-      let deletedCount = 0;
-
-      // Get all cache entries with their metadata
-      const entries: Array<{ key: string; metadata: TTSCacheEntry }> = [];
-      
-      for (const file of metadataFiles) {
-        try {
-          const key = path.basename(file, '.json');
-          const metadata = await this.getMetadata(key);
-          if (metadata) {
-            entries.push({ key, metadata });
-          }
-        } catch (error) {
-          // Skip invalid entries
-        }
-      }
-
-      // Sort by last accessed time (oldest first)
-      entries.sort((a, b) => a.metadata.accessedAt - b.metadata.accessedAt);
-
-      // Delete expired entries
-      for (const entry of entries) {
-        const age = now - entry.metadata.createdAt;
-        if (age > options.maxAge) {
-          await this.deleteCacheEntry(entry.key);
-          deletedCount++;
-        }
-      }
-
-      // Delete oldest entries if we still exceed limits
-      const stats = await this.getCacheStats();
-      let remainingEntries = entries.slice(deletedCount);
-
-      if (stats.totalFiles > options.maxFiles) {
-        const excess = stats.totalFiles - options.maxFiles;
-        for (let i = 0; i < excess && i < remainingEntries.length; i++) {
-          await this.deleteCacheEntry(remainingEntries[i].key);
-          deletedCount++;
-        }
-      }
-
-      return deletedCount;
-    } catch (error) {
-      console.error('Error during cache cleanup:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Clear all cache entries
+   * Clear all cache entries from R2
    */
   public async clearAll(): Promise<void> {
     try {
-      const [audioFiles, metadataFiles] = await Promise.all([
-        fs.readdir(this.cacheDir).catch(() => []),
-        fs.readdir(this.metadataDir).catch(() => [])
-      ]);
+      let continuationToken: string | undefined;
+      do {
+        const response = await this.client.send(new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: 'tts/',
+          ContinuationToken: continuationToken,
+        }));
 
-      // Delete all audio files
-      await Promise.all(
-        audioFiles.map(file => 
-          fs.unlink(path.join(this.cacheDir, file)).catch(() => {})
-        )
-      );
+        const deletePromises = (response.Contents || []).map(obj =>
+          this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: obj.Key! })).catch(() => {})
+        );
+        await Promise.all(deletePromises);
 
-      // Delete all metadata files
-      await Promise.all(
-        metadataFiles.map(file => 
-          fs.unlink(path.join(this.metadataDir, file)).catch(() => {})
-        )
-      );
+        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+      } while (continuationToken);
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
@@ -389,7 +228,7 @@ export class TTSCacheService {
     responses: Array<{ audioBuffer: ArrayBuffer; wordTimings: WordTiming[]; duration: number }>
   ): Promise<string[]> {
     const urls: string[] = [];
-    
+
     for (let i = 0; i < requests.length; i++) {
       try {
         const url = await this.saveToCache(
@@ -401,15 +240,15 @@ export class TTSCacheService {
         urls.push(url);
       } catch (error) {
         console.error(`Error saving batch item ${i}:`, error);
-        urls.push(''); // Empty URL for failed saves
+        urls.push('');
       }
     }
-    
+
     return urls;
   }
 
   /**
-   * Preload cache for a story
+   * Check how many sentences are already cached for a story page
    */
   public async preloadStoryCache(
     storySlug: string,
@@ -422,8 +261,7 @@ export class TTSCacheService {
     let generated = 0;
 
     const requests: TTSRequest[] = [];
-    
-    // Generate requests for both languages and speeds
+
     for (const sentence of sentences) {
       for (const language of ['es-ES', 'en-US'] as const) {
         for (const speed of ['normal', 'slow'] as const) {
@@ -439,7 +277,6 @@ export class TTSCacheService {
       }
     }
 
-    // Check what's already cached
     for (const request of requests) {
       if (await this.isCached(request)) {
         cached++;
