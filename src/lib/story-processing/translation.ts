@@ -221,38 +221,6 @@ Maintain CEFR level complexity. Return ONLY the numbered translated lines.`;
       // Strip any remaining [N] prefixes
       translatedContentLines = stripLineNumberPrefixes(translatedContentLines);
 
-      // Repair mismatched quotation marks by comparing with source content lines
-      // Match all quote types: straight ", curly " ", and guillemets « »
-      const ALL_QUOTES_RE = /["\u201C\u201D\u00AB\u00BB]/g;
-      const OPEN_QUOTE_RE = /^["\u201C\u00AB]/;
-      const CLOSE_QUOTE_RE = /["\u201D\u00BB]\s*$/;
-      const sourceContentLinesForRepair = sourceLines.filter((l) => l.trim() !== "");
-      for (let i = 0; i < translatedContentLines.length && i < sourceContentLinesForRepair.length; i++) {
-        const src = sourceContentLinesForRepair[i];
-        let tgt = translatedContentLines[i];
-        if (!src || !tgt) continue;
-        const srcQuotes = (src.match(ALL_QUOTES_RE) || []).length;
-        const tgtQuotes = (tgt.match(ALL_QUOTES_RE) || []).length;
-        if (srcQuotes > 0) {
-          const srcTrimmed = src.trimStart();
-          const tgtTrimmed = tgt.trimStart();
-          // Check opening/closing positions regardless of total count
-          if (OPEN_QUOTE_RE.test(srcTrimmed) && !OPEN_QUOTE_RE.test(tgtTrimmed)) {
-            const openChar = srcTrimmed.match(OPEN_QUOTE_RE)![0];
-            const leadingSpace = tgt.match(/^(\s*)/)?.[1] || '';
-            tgt = leadingSpace + openChar + tgtTrimmed;
-          }
-          if (CLOSE_QUOTE_RE.test(src.trimEnd()) && !CLOSE_QUOTE_RE.test(tgt.trimEnd())) {
-            const closeChar = src.trimEnd().match(/(["\u201D\u00BB])\s*$/)![1];
-            tgt = tgt.trimEnd() + closeChar;
-          }
-          if (tgt !== translatedContentLines[i]) {
-            console.log(`[Translation] Repaired quotes on line ${i + 1}`);
-            translatedContentLines[i] = tgt;
-          }
-        }
-      }
-
       const translatedNonEmpty = translatedContentLines.filter(
         (l) => l.length > 0
       ).length;

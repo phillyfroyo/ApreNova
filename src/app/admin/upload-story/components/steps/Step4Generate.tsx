@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { StoryData } from "../../types";
-import { useRewritePipeline, scanLineAlignment } from "../../hooks/useRewritePipeline";
+import { useRewritePipeline, scanLineAlignment, scanQuoteMismatches } from "../../hooks/useRewritePipeline";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import { OriginalTextModal } from "../OriginalTextModal";
 import { cleanText } from "@/lib/admin/text-utils";
@@ -107,6 +107,11 @@ export function Step4Generate({
             // Line alignment detection (original vs rewrite)
             const alignmentWarnings = content?.status === "done" && content.mode !== "use-original" && content?.sourceText
               ? scanLineAlignment(originalText, content.sourceText)
+              : [];
+
+            // Quote mismatch detection (original vs rewrite)
+            const quoteMismatches = content?.status === "done" && content.mode !== "use-original" && content?.sourceText
+              ? scanQuoteMismatches(originalText, content.sourceText, level)
               : [];
 
             // Quick line mismatch check for card border coloring
@@ -482,6 +487,24 @@ export function Step4Generate({
                     </ul>
                   </div>
                 )}
+
+                {quoteMismatches.length > 0 && (
+                  <div className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-yellow-700 font-medium text-sm mb-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                      {quoteMismatches.length} quote mismatch{quoteMismatches.length > 1 ? "es" : ""} in rewrite
+                    </div>
+                    <ul className="space-y-1">
+                      {quoteMismatches.map((w, i) => (
+                        <li key={i} className="text-xs text-yellow-600">
+                          Ch {w.chapter}, line {w.line}: <code className="bg-yellow-100 px-1 rounded">{w.text}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -526,6 +549,15 @@ export function Step4Generate({
           leftText={originalText}
           rightTitle={`Rewritten (L${comparisonLevel})`}
           rightText={comparisonContent.sourceText}
+          quoteWarningsByChapter={(() => {
+            const warnings = scanQuoteMismatches(originalText, comparisonContent.sourceText, comparisonLevel);
+            const byChapter: Record<number, number[]> = {};
+            for (const w of warnings) {
+              if (!byChapter[w.chapter]) byChapter[w.chapter] = [];
+              byChapter[w.chapter].push(w.line - 1); // convert to 0-indexed
+            }
+            return Object.keys(byChapter).length > 0 ? byChapter : undefined;
+          })()}
           onSave={(edits) => {
             if (comparisonLevel === null) return;
             const current = storyData.levelContent[comparisonLevel];

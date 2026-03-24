@@ -333,38 +333,6 @@ IMPORTANT: Return ONLY the rewritten text. No explanations, no headers, no pream
       if (!isPoetry && contentParagraphCount > 0) {
         const parsedParagraphs = parseParagraphMarkers(rewrittenText, contentParagraphCount);
 
-        // Repair mismatched quotation marks by comparing with original paragraphs
-        // Match all quote types: straight ", curly " ", and guillemets « »
-        const ALL_QUOTES = /["\u201C\u201D\u00AB\u00BB]/g;
-        const OPEN_QUOTES = /^["\u201C\u00AB]/;
-        const CLOSE_QUOTES = /["\u201D\u00BB]\s*$/;
-        const contentSegments = segments.filter(s => s.type === 'content');
-        let repairCount = 0;
-        for (let i = 0; i < parsedParagraphs.length && i < contentSegments.length; i++) {
-          const original = contentSegments[i].text.trim();
-          let rewritten = parsedParagraphs[i];
-          const origQuotes = (original.match(ALL_QUOTES) || []).length;
-          if (origQuotes > 0) {
-            // Check if opening quote is missing (regardless of total count)
-            if (OPEN_QUOTES.test(original) && !OPEN_QUOTES.test(rewritten)) {
-              const openChar = original.match(OPEN_QUOTES)![0];
-              rewritten = openChar + rewritten;
-            }
-            // Check if closing quote is missing (regardless of total count)
-            if (CLOSE_QUOTES.test(original) && !CLOSE_QUOTES.test(rewritten)) {
-              const closeChar = original.match(/(["\u201D\u00BB])\s*$/)![1];
-              rewritten = rewritten.trimEnd() + closeChar;
-            }
-            if (rewritten !== parsedParagraphs[i]) {
-              repairCount++;
-              parsedParagraphs[i] = rewritten;
-            }
-          }
-        }
-        if (repairCount > 0) {
-          console.log(`[Rewrite] Repaired quotes in ${repairCount}/${parsedParagraphs.length} paragraphs`);
-        }
-
         rewrittenText = reassembleWithSpacing(segments, parsedParagraphs);
       }
 

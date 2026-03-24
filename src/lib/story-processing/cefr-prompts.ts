@@ -76,10 +76,10 @@ PARAGRAPH ALIGNMENT:
 - Never merge, skip, or reorder paragraph markers
 - Text within each paragraph flows naturally — no line breaks within paragraphs
 
-DIALOGUE PUNCTUATION:
-- Preserve ALL quotation marks ("...") — both opening and closing
-- Keep dialogue attribution (he said, she whispered) with the dialogue
-- Never convert direct speech to indirect speech`;
+DIALOGUE:
+- Preserve dialogue as direct speech when possible, but simplifying or merging dialogue is acceptable when it serves clarity at the target level
+- Maintain quotation marks around all direct speech
+- Keep dialogue attribution (he said, she whispered) with the dialogue`;
 
 // ============================================================================
 // POETRY STRUCTURE RULES
