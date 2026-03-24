@@ -1,72 +1,61 @@
 // src/components/StoryLayoutWithAzureTTS.tsx
 "use client";
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getTheme } from "@/components/storyThemes";
-import Link from "next/link";
-import { Menu, X, Volume2, Loader2, AlertCircle, Headphones, BookmarkPlus, Check, Turtle, MessageCircle, Languages, PenLine, ChevronLeft, ChevronRight } from "lucide-react";
-import Dropdown from "@/components/ui/Dropdown";
-import Button from "@/components/ui/Button";
-import UnifiedTranslator from "@/components/UnifiedTranslator";
-import StoryTutorChat from "@/components/StoryTutorChat";
-import { useSessionLogger } from '@/hooks/useSessionLogger';
-import { useAzureTTS } from '@/hooks/useAzureTTS';
-import { slugify } from '@/lib/stories';
-import { getStoryUrl } from "@/utils/getStoryUrl";
-import { getPrevNextPage as getPrevNextPageUtil, getNavigationUrl as getNavigationUrlUtil } from "@/utils/storyNavigation";
+import { useSessionLogger } from "@/hooks/useSessionLogger";
+import { useAzureTTS } from "@/hooks/useAzureTTS";
+import { getPrevNextPage as getPrevNextPageUtil } from "@/utils/storyNavigation";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { t } from "@/lib/t";
+import { getCEFRLabel, type CEFRCode } from "@/lib/cefr";
 import type { Language } from "@/types/i18n";
-import { t } from '@/lib/t';
-import { ALL_CEFR_LEVELS, getCEFRLabel, type CEFRCode } from "@/lib/cefr";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
+import {
+  StoryReaderProvider,
+  type StoryReaderContextValue,
+  type ActiveAudio,
+  type PoemNavInfo,
+  type StoryMapType,
+} from "@/contexts/StoryReaderContext";
 
-type ActiveAudio = {
-  index: number;
-  isPlaying: boolean;
-  isSlow: boolean;
-  progress: number;
-  duration: number;
-  currentWordIndex: number;
-};
+// Extracted hooks
+import { useWordSelection } from "@/hooks/useWordSelection";
+import { useStoryAudioPlayback } from "@/hooks/useStoryAudioPlayback";
+import { useGlobalClickHandler } from "@/hooks/useGlobalClickHandler";
 
-/** Poem info for anthology navigation */
-interface PoemNavInfo {
-  number: number;      // 1-based poem number
-  title: string;       // Poem title or Roman numeral
-  startPage: number;   // First page of this poem
-  endPage: number;     // Last page of this poem
-  pageCount: number;   // Total pages this poem spans
-}
+// Extracted components
+import TtsErrorDisplay from "./story-reader/TtsErrorDisplay";
+import StoryHeader from "./story-reader/StoryHeader";
+import NavigationButtons from "./story-reader/NavigationButtons";
+import ListenButton from "./story-reader/ListenButton";
+import StoryContent from "./story-reader/StoryContent";
+import StoryTutorPanel from "./story-reader/StoryTutorPanel";
+import SaveWordToast from "./story-reader/SaveWordToast";
+
+// ============================================================================
+// Props
+// ============================================================================
 
 interface StoryLayoutWithAzureTTSProps {
   sentences: StoryLine[];
-  /** Nested stanzas for poems - takes priority over sentences for rendering */
   stanzas?: StoryLine[][];
   initialLevel: string;
   storySlug: string;
   title: string;
-  storyMap: {
-    hasChapters: boolean;
-    chapters: {
-      chapter: number;
-      pages: number[];
-      title?: string;    // Chapter title (e.g., "Down the Rabbit-Hole")
-      subtitle?: string; // Optional subtitle
-      poems?: PoemNavInfo[];  // For anthologies: poem list for navigation
-    }[];
-    structureType?: "prose" | "anthology" | "epic" | "script";
-  };
+  storyMap: StoryMapType;
   isUserStory?: boolean;
   userStoryId?: string;
   availableLevels?: CEFRCode[];
-  /** Story type for special rendering (poems, scripts) */
   storyType?: string | null;
-  /** Detected/original CEFR level of the story */
   detectedLevel?: string | null;
-  /** Content structure type for navigation labels */
   structureType?: "prose" | "anthology" | "epic" | "script" | null;
 }
+
+// ============================================================================
+// Component
+// ============================================================================
 
 export default function StoryLayoutWithAzureTTS({
   sentences,
@@ -82,42 +71,28 @@ export default function StoryLayoutWithAzureTTS({
   detectedLevel,
   structureType,
 }: StoryLayoutWithAzureTTSProps) {
-  useSessionLogger('reading', storySlug);
+  useSessionLogger("reading", storySlug);
 
   const { data: session, status } = useSession();
   const isPremiumUser = session?.user?.isPremium;
 
-  // TTS Hook
+  // ── TTS hook ──────────────────────────────────────────────────────────────
   const {
-    playbackState,
-    playTTS,
-    playTTSSegment,
-    pause,
-    resume,
-    stop,
-    seekTo,
-    togglePlayback,
-    preCache,
-    createRequest,
-    getWordTimings
+    playbackState, playTTS, playTTSSegment, pause, resume, stop,
+    seekTo, togglePlayback, preCache, createRequest, getWordTimings,
   } = useAzureTTS({
     autoCache: true,
-    onWordUpdate: (word, index) => {
-      setActiveAudio(prev => prev ? { ...prev, currentWordIndex: index } : null);
+    onWordUpdate: (_word, index) => {
+      setActiveAudio((prev) => (prev ? { ...prev, currentWordIndex: index } : null));
     },
-    onPlaybackComplete: () => {
-      setActiveAudio(null);
-    },
+    onPlaybackComplete: () => setActiveAudio(null),
     onError: (error) => {
-      if (error.message.includes("sign in")) {
-        setTtsAuthError(true);
-      } else {
-        console.error('TTS Error:', error);
-        setTtsError(error.message);
-      }
-    }
+      if (error.message.includes("sign in")) setTtsAuthError(true);
+      else { console.error("TTS Error:", error); setTtsError(error.message); }
+    },
   });
 
+  // ── State ─────────────────────────────────────────────────────────────────
   const [activeAudio, setActiveAudio] = useState<ActiveAudio | null>(null);
   const [ttsError, setTtsError] = useState<string | null>(null);
   const [ttsAuthError, setTtsAuthError] = useState(false);
@@ -126,56 +101,26 @@ export default function StoryLayoutWithAzureTTS({
   const [isDragging, setIsDragging] = useState(false);
   const textRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Premium restrictions removed - all users get full translation features
-  const [translationMode, setTranslationMode] = useState<"free" | "premium">("premium");
-  const [premiumTriggers, setPremiumTriggers] = useState<Record<number, number>>({});
+  const [translationMode] = useState<"free" | "premium">("premium");
+  const [premiumTriggers] = useState<Record<number, number>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [isAnyDropdownOpen, setIsAnyDropdownOpen] = useState(false);
   const [showEmojiButtons, setShowEmojiButtons] = useState<Record<number, boolean>>({});
   const [activeTranslations, setActiveTranslations] = useState<Record<number, boolean>>({});
   const [wordSelections, setWordSelections] = useState<Record<number, { start: number; end: number } | null>>({});
-  // Track pending cross-line selection within a stanza: { stanzaIdx, lineIndex, wordIndex }
-  const [pendingStanzaSelection, setPendingStanzaSelection] = useState<{
-    stanzaIdx: number;
-    lineIndex: number;
-    wordIndex: number;
-  } | null>(null);
-  // Stanza-level state for poem emoji interactions
+  const [pendingStanzaSelection, setPendingStanzaSelection] = useState<{ stanzaIdx: number; lineIndex: number; wordIndex: number } | null>(null);
   const [showStanzaEmojis, setShowStanzaEmojis] = useState<Record<number, boolean>>({});
   const [activeStanzaLine, setActiveStanzaLine] = useState<Record<number, number>>({});
-  const [stanzaAITranslation, setStanzaAITranslation] = useState<Record<number, {
-    text: string;
-    loading: boolean;
-    isStatic?: boolean; // true if using pre-existing translation (no GPT call)
-    selectedWord?: string; // the word/phrase that was translated
-    authError?: boolean; // true if auth required (user not signed in)
-    enhancedTranslation?: {
-      contextTranslation?: string;
-      isDerivative?: boolean;
-      rootWord?: string;
-      rootTranslation?: string;
-      otherCommonTranslations?: Array<string | { translation: string; example?: { en: string; es: string } }>;
-      partOfSpeech?: string;
-      subject?: string;
-      subjectTranslation?: string;
-      derivatives?: Array<{ pos: string; word: string; translation: string; example?: { en: string; es: string } }>;
-      verbChart?: { tense: string; infinitive: string; conjugations: Record<string, string> };
-    };
-    otherTranslations?: Array<string | { translation: string; example?: { en: string; es: string } }>; // for phrases
-  }>>({});
+  const [stanzaAITranslation, setStanzaAITranslation] = useState<Record<number, any>>({});
   const [stanzaExampleMap, setStanzaExampleMap] = useState<Record<string, { english: string; spanish: string }>>({});
   const [visibleStanzaExamples, setVisibleStanzaExamples] = useState<Set<number>>(new Set());
-  const toggleStanzaExample = (i: number) => setVisibleStanzaExamples(prev => {
-    const next = new Set(prev);
-    if (next.has(i)) next.delete(i); else next.add(i);
-    return next;
-  });
+  const toggleStanzaExample = (i: number) =>
+    setVisibleStanzaExamples((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
   const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string; enrichedData?: any } | null>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
-  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' | 'exists' } | null>(null);
+  const [saveToast, setSaveToast] = useState<{ message: string; type: "success" | "error" | "exists" } | null>(null);
   const [savingWord, setSavingWord] = useState<number | null>(null);
   const [saveAuthLine, setSaveAuthLine] = useState<number | null>(null);
   const skipGlobalClickRef = useRef(false);
@@ -188,2529 +133,266 @@ export default function StoryLayoutWithAzureTTS({
   const tabMomentumRef = useRef(0);
   const openStoryTutor = useCallback(() => {
     setShouldRenderTutor(true);
-    _setIsStoryTutorOpen(prev => {
-      if (!prev) scrollYBeforeTutorRef.current = window.scrollY;
-      return true;
-    });
+    _setIsStoryTutorOpen((prev) => { if (!prev) scrollYBeforeTutorRef.current = window.scrollY; return true; });
   }, []);
   const closeStoryTutor = useCallback(() => {
     _setIsStoryTutorOpen(false);
-    // Keep chat mounted for 300ms so the slide-out animation shows content
     setTimeout(() => setShouldRenderTutor(false), 300);
-    // Only restore scroll on mobile where keyboard may have shifted viewport
     if (window.innerWidth < 1024) {
       const savedY = scrollYBeforeTutorRef.current;
       requestAnimationFrame(() => window.scrollTo(0, savedY));
     }
   }, []);
-  const [tutorContext, setTutorContext] = useState<{
-    lineIndex: number;
-    fullLine: string;
-    selectedText?: string;
-  } | null>(null);
+  const [tutorContext, setTutorContext] = useState<{ lineIndex: number; fullLine: string; selectedText?: string } | null>(null);
   const [preloadedMessages, setPreloadedMessages] = useState<any[] | null>(null);
   const hasPreloadedRef = useRef(false);
+  const handleMessagesUpdate = useCallback((newMessages: any[]) => setPreloadedMessages(newMessages), []);
 
-  // Callback to update preloaded messages when new messages are added
-  const handleMessagesUpdate = useCallback((newMessages: any[]) => {
-    setPreloadedMessages(newMessages);
-  }, []);
-
+  // ── Routing / derived values ──────────────────────────────────────────────
   const { lng } = useParams() ?? {};
   const typedLang = (lng as Language) ?? "es";
   const oppositeLang = typedLang === "en" ? "es" : "en";
-
-  // Helper function to get navigation labels based on structure type
-  // Returns translated label for "chapter" or "page" based on content structure
-  // Use storyMap.structureType if available (more reliable), fall back to prop
   const effectiveStructureType = storyMap.structureType || structureType;
 
   const getNavigationLabel = (type: "chapter" | "page"): string => {
-    if (effectiveStructureType === "anthology") {
-      return type === "chapter"
-        ? t(typedLang, "story", "collection")
-        : t(typedLang, "story", "poem");
-    }
-    if (effectiveStructureType === "epic") {
-      return type === "chapter"
-        ? t(typedLang, "story", "canto")
-        : t(typedLang, "story", "section");
-    }
-    if (effectiveStructureType === "script") {
-      return type === "chapter"
-        ? t(typedLang, "story", "act")
-        : t(typedLang, "story", "scene");
-    }
-    // Default: prose
+    if (effectiveStructureType === "anthology") return type === "chapter" ? t(typedLang, "story", "collection") : t(typedLang, "story", "poem");
+    if (effectiveStructureType === "epic") return type === "chapter" ? t(typedLang, "story", "canto") : t(typedLang, "story", "section");
+    if (effectiveStructureType === "script") return type === "chapter" ? t(typedLang, "story", "act") : t(typedLang, "story", "scene");
     return t(typedLang, "story", type);
   };
 
-  // For anthologies: determine current poem from page number
   const getCurrentPoem = (chapterNum: number, pageNum: number): PoemNavInfo | null => {
-    const chapter = storyMap.chapters.find(ch => ch.chapter === chapterNum);
+    const chapter = storyMap.chapters.find((ch) => ch.chapter === chapterNum);
     if (!chapter?.poems) return null;
-
-    // Find poem that contains this page
-    for (const poem of chapter.poems) {
-      if (pageNum >= poem.startPage && pageNum <= poem.endPage) {
-        return poem;
-      }
-    }
+    for (const poem of chapter.poems) { if (pageNum >= poem.startPage && pageNum <= poem.endPage) return poem; }
     return null;
   };
 
-  // Check if we should use poem-based navigation (anthologies with poem data)
   const usePoemNavigation = effectiveStructureType === "anthology";
-
   const pathname = usePathname() ?? "";
   const router = useRouter();
-
   const pathParts = pathname ? pathname.split("/") : [];
   const currentLevel = pathParts[4] || initialLevel || "l1";
-
-  // Handle different URL structures:
-  // System stories: /lng/stories/{slug}/{level}/ch1/page-1
-  // User stories:   /lng/my-stories/{id}/{level}/{chapter}/{page}
-  // Legacy streaming (redirects): /lng/my-stories/{id}/{level}/stream/{chapter}/{page}
   const isLegacyStreamingRoute = pathParts[5] === "stream";
   const rawChapter = isLegacyStreamingRoute ? pathParts[6] : pathParts[5];
   const rawPage = isLegacyStreamingRoute ? pathParts[7] : pathParts[6];
-
-  // Parse chapter number (handles both "ch1" format and plain "1" format)
   const currentChapter = rawChapter || "ch1";
   const currentPage = rawPage || "page-1";
+  const chapterNumber = currentChapter.startsWith("ch") ? parseInt(currentChapter.replace("ch", "")) : parseInt(currentChapter) || 1;
+  const pageNumber = currentPage.startsWith("page-") ? parseInt(currentPage.replace("page-", "")) : parseInt(currentPage) || 1;
 
-  const chapterNumber = currentChapter.startsWith("ch")
-    ? parseInt(currentChapter.replace("ch", ""))
-    : parseInt(currentChapter) || 1;
-  const pageNumber = currentPage.startsWith("page-")
-    ? parseInt(currentPage.replace("page-", ""))
-    : parseInt(currentPage) || 1;
-
-  // Helper function to generate navigation URLs
-  // Always uses unified reader path (no /stream/ segment)
   const getNavigationUrl = (level: string, chapter: number, page: number) => {
-    if (isUserStory && userStoryId) {
-      return `/${typedLang}/my-stories/${userStoryId}/${level}/${chapter}/${page}`;
-    }
+    if (isUserStory && userStoryId) return `/${typedLang}/my-stories/${userStoryId}/${level}/${chapter}/${page}`;
     return `/${typedLang}/stories/${storySlug}/${level}/ch${chapter}/page-${page}`;
   };
+  const getHomeUrl = () => isUserStory ? `/${typedLang}/my-stories` : `/${typedLang}/stories`;
 
-  // Helper for home navigation
-  const getHomeUrl = () => {
-    if (isUserStory) {
-      return `/${typedLang}/my-stories`;
-    }
-    return `/${typedLang}/stories`;
-  };
+  // ── Extracted hooks ───────────────────────────────────────────────────────
+  const {
+    handleWordSelectionChange, handleStanzaWordClick, handleManualTranslate,
+    handleClearSelection, handleTranslationData, handleTranslationStateChange,
+    hasSelectedWords, clearAllWordSelections, handleSaveWord,
+  } = useWordSelection({
+    wordSelections, setWordSelections, pendingStanzaSelection, setPendingStanzaSelection,
+    setShowEmojiButtons, setShowStanzaEmojis, setManualTranslateFunctions,
+    setClearSelectionFunctions, setTranslationData, setActiveTranslations,
+    clearSelectionFunctions, translationData, session,
+    setSaveToast, setSavingWord, setSaveAuthLine,
+    storySlug, currentLevel, oppositeLang,
+  });
 
-  // Disabled aggressive pre-caching to avoid rate limits
-  useEffect(() => {
-    console.log('Azure TTS ready for on-demand generation');
-  }, [sentences, typedLang, storySlug, currentChapter, currentPage]);
+  const { handlePlay, handleSeek, handleDrag } = useStoryAudioPlayback({
+    sentences, typedLang, storySlug, currentChapter, currentPage,
+    wordSelections, activeAudio, setActiveAudio, setTtsError, setLineWidths,
+    isDragging, setIsDragging, progressBarRef, textRefs,
+    pause, resume, stop, seekTo, createRequest, playTTSSegment, audioPlayer: useAudioPlayer(),
+  });
 
-  // Sync playback state with activeAudio
+  // Audio player context
+  const audioPlayer = useAudioPlayer();
+
+  useGlobalClickHandler({
+    menuOpen, setMenuOpen, isAnyDropdownOpen, activeAudio, setActiveAudio,
+    showEmojiButtons, setShowEmojiButtons, showStanzaEmojis, setShowStanzaEmojis,
+    setActiveStanzaLine, activeTranslations, setStanzaAITranslation,
+    setSaveAuthLine, skipGlobalClickRef, pause, hasSelectedWords, clearAllWordSelections,
+  });
+
+  // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (playbackState.isPlaying && activeAudio) {
-      setActiveAudio(prev => prev ? {
-        ...prev,
-        progress: playbackState.currentTime,
-        duration: playbackState.duration,
-        currentWordIndex: playbackState.currentWordIndex,
-        isPlaying: true
-      } : null);
+      setActiveAudio((prev) => prev ? { ...prev, progress: playbackState.currentTime, duration: playbackState.duration, currentWordIndex: playbackState.currentWordIndex, isPlaying: true } : null);
     } else if (!playbackState.isPlaying && activeAudio?.isPlaying) {
-      setActiveAudio(prev => prev ? { ...prev, isPlaying: false } : null);
+      setActiveAudio((prev) => (prev ? { ...prev, isPlaying: false } : null));
     }
   }, [playbackState.isPlaying, playbackState.currentTime, playbackState.duration, playbackState.currentWordIndex]);
-
-  const handleTranslationStateChange = useCallback((index: number, hasActive: boolean) => {
-    setActiveTranslations(prev => ({ ...prev, [index]: hasActive }));
-  }, []);
-
-  const handleWordSelectionChange = useCallback((index: number, selection: { start: number; end: number } | null) => {
-    setWordSelections(prev => ({ ...prev, [index]: selection }));
-
-    // Show emoji buttons for this specific line when words are selected
-    if (selection) {
-      setShowEmojiButtons(prev => ({ ...prev, [index]: true }));
-    }
-  }, []);
-
-  // Handle word click for cross-line stanza selection
-  // Preserves the nuanced highlight behavior from UnifiedTranslator:
-  // 1. First click: select single word
-  // 2. Click same single word again: deselect
-  // 3. Click outside current selection: expand
-  // 4. Click inside selection (not edges): shrink from right
-  // 5. Click at start edge when multi-word: shrink from left
-  const handleStanzaWordClick = useCallback((
-    stanzaIdx: number,
-    lineIndex: number,
-    wordIndex: number,
-    linesInStanza: { line: StoryLine; lineIndex: number }[]
-  ) => {
-    // Helper: convert (lineIdx, wordIdx) to global word index within stanza
-    const toGlobalIdx = (lineIdx: number, wordIdx: number): number => {
-      let globalIdx = 0;
-      for (const { line, lineIndex: li } of linesInStanza) {
-        const lineText = line[oppositeLang] || '';
-        const words = lineText.trimStart().split(/\s+/).filter(w => w);
-        if (li === lineIdx) {
-          return globalIdx + wordIdx;
-        }
-        globalIdx += words.length;
-      }
-      return globalIdx;
-    };
-
-    // Helper: convert global word index to (lineIdx, wordIdx)
-    const fromGlobalIdx = (globalIdx: number): { lineIdx: number; wordIdx: number } | null => {
-      let cumulative = 0;
-      for (const { line, lineIndex: li } of linesInStanza) {
-        const lineText = line[oppositeLang] || '';
-        const words = lineText.trimStart().split(/\s+/).filter(w => w);
-        if (globalIdx < cumulative + words.length) {
-          return { lineIdx: li, wordIdx: globalIdx - cumulative };
-        }
-        cumulative += words.length;
-      }
-      return null;
-    };
-
-    // Helper: get total word count for a line
-    const getWordCount = (line: StoryLine): number => {
-      const lineText = line[oppositeLang] || '';
-      return lineText.trimStart().split(/\s+/).filter(w => w).length;
-    };
-
-    // Helper: get total word count for entire stanza
-    const getTotalWords = (): number => {
-      return linesInStanza.reduce((sum, { line }) => sum + getWordCount(line), 0);
-    };
-
-    // Helper: build per-line selections from global range
-    const buildSelectionsFromGlobalRange = (globalStart: number, globalEnd: number): Record<number, { start: number; end: number } | null> => {
-      const newSelections: Record<number, { start: number; end: number } | null> = {};
-      let cumulative = 0;
-
-      for (const { line, lineIndex: li } of linesInStanza) {
-        const wordCount = getWordCount(line);
-        const lineStart = cumulative;
-        const lineEnd = cumulative + wordCount - 1;
-
-        if (globalEnd < lineStart || globalStart > lineEnd) {
-          // Line not in selection range
-          newSelections[li] = null;
-        } else {
-          // Line overlaps with selection
-          const localStart = Math.max(0, globalStart - lineStart);
-          const localEnd = Math.min(wordCount - 1, globalEnd - lineStart);
-          newSelections[li] = { start: localStart, end: localEnd };
-        }
-        cumulative += wordCount;
-      }
-      return newSelections;
-    };
-
-    // Helper: get current global selection range from wordSelections state
-    const getCurrentGlobalRange = (): { start: number; end: number } | null => {
-      let globalStart: number | null = null;
-      let globalEnd: number | null = null;
-      let cumulative = 0;
-
-      for (const { line, lineIndex: li } of linesInStanza) {
-        const wordCount = getWordCount(line);
-        const sel = wordSelections[li];
-        if (sel) {
-          const lineGlobalStart = cumulative + sel.start;
-          const lineGlobalEnd = cumulative + sel.end;
-          if (globalStart === null || lineGlobalStart < globalStart) {
-            globalStart = lineGlobalStart;
-          }
-          if (globalEnd === null || lineGlobalEnd > globalEnd) {
-            globalEnd = lineGlobalEnd;
-          }
-        }
-        cumulative += wordCount;
-      }
-
-      if (globalStart !== null && globalEnd !== null) {
-        return { start: globalStart, end: globalEnd };
-      }
-      return null;
-    };
-
-    // If clicking in a different stanza, reset and start new selection
-    if (pendingStanzaSelection && pendingStanzaSelection.stanzaIdx !== stanzaIdx) {
-      // Clear old selections from previous stanza
-      const clearedSelections: Record<number, { start: number; end: number } | null> = {};
-      linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
-
-      setPendingStanzaSelection({ stanzaIdx, lineIndex, wordIndex });
-      setWordSelections({ ...clearedSelections, [lineIndex]: { start: wordIndex, end: wordIndex } });
-      setShowStanzaEmojis({ [stanzaIdx]: true });
-      return;
-    }
-
-    // Get current global selection
-    const currentRange = getCurrentGlobalRange();
-    const clickedGlobalIdx = toGlobalIdx(lineIndex, wordIndex);
-
-    // If no current selection, start one
-    if (!currentRange) {
-      setPendingStanzaSelection({ stanzaIdx, lineIndex, wordIndex });
-      setWordSelections(prev => ({ ...prev, [lineIndex]: { start: wordIndex, end: wordIndex } }));
-      setShowStanzaEmojis({ [stanzaIdx]: true });
-      return;
-    }
-
-    const { start: globalStart, end: globalEnd } = currentRange;
-
-    // Same single word clicked again -> deselect
-    if (globalStart === clickedGlobalIdx && globalEnd === clickedGlobalIdx) {
-      const clearedSelections: Record<number, { start: number; end: number } | null> = {};
-      linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
-      setWordSelections(prev => ({ ...prev, ...clearedSelections }));
-      setPendingStanzaSelection(null);
-      setShowStanzaEmojis({});
-      return;
-    }
-
-    // Click outside current selection -> expand
-    if (clickedGlobalIdx < globalStart || clickedGlobalIdx > globalEnd) {
-      const newStart = Math.min(globalStart, clickedGlobalIdx);
-      const newEnd = Math.max(globalEnd, clickedGlobalIdx);
-      const newSelections = buildSelectionsFromGlobalRange(newStart, newEnd);
-      setWordSelections(prev => ({ ...prev, ...newSelections }));
-      setPendingStanzaSelection(null);
-      return;
-    }
-
-    // Click inside selection (not at edges) -> shrink from right
-    if (clickedGlobalIdx > globalStart && clickedGlobalIdx < globalEnd) {
-      const newSelections = buildSelectionsFromGlobalRange(globalStart, clickedGlobalIdx);
-      setWordSelections(prev => ({ ...prev, ...newSelections }));
-      setPendingStanzaSelection(null);
-      return;
-    }
-
-    // Click at start edge when multi-word -> shrink from left
-    if (clickedGlobalIdx === globalStart && globalStart !== globalEnd) {
-      const newSelections = buildSelectionsFromGlobalRange(globalStart + 1, globalEnd);
-      setWordSelections(prev => ({ ...prev, ...newSelections }));
-      setPendingStanzaSelection(null);
-      return;
-    }
-
-    // Fallback: deselect
-    const clearedSelections: Record<number, { start: number; end: number } | null> = {};
-    linesInStanza.forEach(({ lineIndex: li }) => { clearedSelections[li] = null; });
-    setWordSelections(prev => ({ ...prev, ...clearedSelections }));
-    setPendingStanzaSelection(null);
-  }, [pendingStanzaSelection, oppositeLang, wordSelections]);
-
-  const handleManualTranslate = useCallback((index: number, translateFn: () => void) => {
-    setManualTranslateFunctions(prev => ({ ...prev, [index]: translateFn }));
-  }, []);
-
-
-  const handleClearSelection = useCallback((index: number, clearFn: () => void) => {
-    setClearSelectionFunctions(prev => ({ ...prev, [index]: clearFn }));
-  }, []);
-
-  const handleTranslationData = useCallback((index: number, data: { word: string; translation: string; enrichedData?: any } | null) => {
-    setTranslationData(prev => ({ ...prev, [index]: data }));
-  }, []);
-
-  const handleSaveWord = useCallback(async (lineIndex: number, sentence: string, translatedSentence?: string) => {
-    // Require authentication
-    if (!session?.user) {
-      setSaveAuthLine(lineIndex);
-      return;
-    }
-
-    const selection = wordSelections[lineIndex];
-
-    // Must have a word selected
-    if (!selection) {
-      setSaveToast({ message: 'Select a word first', type: 'error' });
-      setTimeout(() => setSaveToast(null), 3000);
-      return;
-    }
-
-    setSavingWord(lineIndex);
-
-    try {
-      let word: string;
-      let translation: string;
-      let enrichedData: any = null;
-
-      const existingData = translationData[lineIndex];
-
-      if (existingData?.word && existingData?.translation && existingData.word !== existingData.translation) {
-        // Use existing translation (only if both word and translation are valid AND different)
-        word = existingData.word;
-        translation = existingData.translation;
-        enrichedData = existingData.enrichedData || null;
-      } else {
-        // Extract selected word and auto-translate
-        // Use trimStart() to match UnifiedTranslator's word tokenization
-        const words = sentence.trimStart().split(' ');
-        const selectedWords = words.slice(selection.start, selection.end + 1);
-        word = selectedWords.join(' ').replace(/[.,!?;:"\u201C\u201D\u2018\u2019()\u00BF\u00A1\u00AB\u00BB\u2026\u2014\u2013\-]/g, '').trim();
-
-        if (!word) {
-          setSaveToast({ message: 'No word selected', type: 'error' });
-          setSavingWord(null);
-          setTimeout(() => setSaveToast(null), 3000);
-          return;
-        }
-
-        // Auto-translate the word (translate FROM oppositeLang TO the user's language)
-        const isSingleWord = selectedWords.length === 1;
-        const targetLang = oppositeLang === 'es' ? 'en' : 'es';
-        const endpoint = isSingleWord
-          ? `/api/translate-word?lang=${targetLang}`
-          : `/api/translate-phrase?lang=${targetLang}`;
-
-        const translateRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            isSingleWord
-              ? { word, sentence, level: currentLevel }
-              : { phrase: word, sentence, level: currentLevel }
-          ),
-        });
-
-        if (!translateRes.ok) {
-          throw new Error('Failed to translate');
-        }
-
-        const translateData = await translateRes.json();
-        if (isSingleWord) {
-          // GPT sometimes returns contextTranslation in the source language instead of target.
-          // Detect this by checking if contextTranslation matches the input word.
-          const ctx = translateData.contextTranslation;
-          if (ctx && ctx.toLowerCase() !== word.toLowerCase()) {
-            translation = ctx;
-          } else if (translateData.rootWord) {
-            // rootWord is in the target language when contextTranslation is flipped
-            translation = translateData.rootWord;
-          } else {
-            translation = translateData.translation || ctx || word;
-          }
-        } else {
-          // Phrase endpoint returns { translations: { primary: "..." } }
-          translation = translateData.translations?.primary || translateData.translation || '';
-        }
-
-        if (!translation) {
-          throw new Error('Failed to get translation');
-        }
-
-        // Store enriched data for saving
-        if (isSingleWord && translateData) {
-          enrichedData = {
-            partOfSpeech: translateData.partOfSpeech,
-            derivatives: translateData.derivatives,
-            verbChart: translateData.verbChart,
-            isDerivative: translateData.isDerivative,
-            rootWord: translateData.rootWord,
-            rootTranslation: translateData.rootTranslation,
-            otherCommonTranslations: translateData.otherCommonTranslations,
-            subject: translateData.subject,
-            subjectTranslation: translateData.subjectTranslation,
-          };
-        }
-      }
-
-      // Save the word
-      const res = await fetch('/api/saved-words', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          word,
-          translation,
-          sourceSentence: sentence,
-          translatedSentence: translatedSentence || null,
-          storySlug,
-          enrichedData,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to save');
-      } else if (result.alreadySaved) {
-        setSaveToast({ message: 'Already saved!', type: 'exists' });
-      } else {
-        setSaveToast({ message: 'Word saved!', type: 'success' });
-      }
-    } catch (error) {
-      console.error('Error saving word:', error);
-      setSaveToast({ message: 'Failed to save word', type: 'error' });
-    } finally {
-      setSavingWord(null);
-      setTimeout(() => setSaveToast(null), 2500);
-    }
-  }, [translationData, wordSelections, storySlug, currentLevel, oppositeLang, session]);
-
-  // Helper function to check if any words are currently selected
-  const hasSelectedWords = useCallback(() => {
-    return Object.values(wordSelections).some(selection => selection !== null);
-  }, [wordSelections]);
-
-  // Helper function to clear all word selections
-  const clearAllWordSelections = useCallback(() => {
-    setWordSelections({});
-    // Directly clear internal selection in all UnifiedTranslator components
-    // so word de-highlight happens in the same React batch as save icon fade
-    Object.values(clearSelectionFunctions).forEach(clearFn => clearFn());
-  }, [clearSelectionFunctions]);
-
-  // Build dynamic page title - for anthologies, show poem info instead of page number
-  const dynamicPageTitle = (() => {
-    // Check for anthology with poem data
-    const currentChapter = storyMap.chapters.find(c => c.chapter === chapterNumber);
-    const hasPoems = usePoemNavigation && currentChapter?.poems && currentChapter.poems.length > 0;
-
-    if (hasPoems) {
-      const currentPoem = getCurrentPoem(chapterNumber, pageNumber);
-      if (currentPoem) {
-        const poemTitle = currentPoem.title.length > 30
-          ? `${currentPoem.title.substring(0, 30)}...`
-          : currentPoem.title;
-
-        // Show collection and poem info
-        if (storyMap.hasChapters) {
-          return `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${currentPoem.number}: ${poemTitle}`;
-        }
-        return `${getNavigationLabel("page")} ${currentPoem.number}: ${poemTitle}`;
-      }
-    }
-
-    // Default: Chapter X, Page Y or just Page Y
-    if (storyMap.hasChapters) {
-      return `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${pageNumber}`;
-    }
-    return `${getNavigationLabel("page")} ${pageNumber}`;
-  })();
-
-  // Calculate current page position within the story
-  let currentPagePosition = 0;
-  let totalPages = 0;
-  
-  for (const chapter of storyMap.chapters) {
-    for (const pg of chapter.pages) {
-      totalPages++;
-      if (chapter.chapter === chapterNumber && pg === pageNumber) {
-        currentPagePosition = totalPages;
-      }
-    }
-  }
-
-  // Premium restrictions removed - all users get full access
-  const readOnlyMode = false;
-
-  const theme = getTheme(storySlug);
-
-  // Build background style - prefer image over gradient over color
-  const backgroundStyle = theme.backgroundImage
-    ? { backgroundImage: `url('${theme.backgroundImage}')` }
-    : theme.backgroundGradient
-    ? { background: theme.backgroundGradient }
-    : { backgroundColor: theme.backgroundColor || "#f5f0e6" };
 
   const translationRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const [isFinalPage, setIsFinalPage] = useState(false);
 
-  // Audio player context for continuous playback
-  const audioPlayer = useAudioPlayer();
-
   useEffect(() => {
     const { next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
     setIsFinalPage(!next);
-
-    // Prefetch next page route so navigation is near-instant
-    if (next) {
-      router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
-    }
+    if (next) router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
   }, [chapterNumber, pageNumber, storyMap]);
 
-  // Register page content with audio player context (for cross-page navigation)
-  useEffect(() => {
-    audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber);
-  }, [sentences, chapterNumber, pageNumber]);
+  useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber); }, [sentences, chapterNumber, pageNumber]);
 
-  // Sentence highlighting for continuous playback
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => {
     const idx = audioPlayer.state.highlightedSentenceIndex;
-    if (idx !== null && sentenceRefs.current[idx]) {
-      sentenceRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (idx !== null && sentenceRefs.current[idx]) sentenceRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [audioPlayer.state.highlightedSentenceIndex]);
 
-  // Premium restrictions removed - translationMode is always "premium" for all users
-
-  // Intelligent pre-loading of chat history
   useEffect(() => {
     if (!session?.user || hasPreloadedRef.current) return;
-
-    // Wait 2 seconds to ensure user is actually reading
-    const preloadTimer = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
-        if (response.ok) {
-          const data = await response.json();
-          const messages = data.messages || [];
-
-          // Only store if user has history (optimization)
-          if (messages.length > 0) {
-            setPreloadedMessages(messages);
-            console.log(`✅ Pre-loaded ${messages.length} messages for ${storySlug}`);
-          }
-        }
+        const res = await fetch(`/api/story-tutor?storySlug=${encodeURIComponent(storySlug)}`);
+        if (res.ok) { const data = await res.json(); if (data.messages?.length > 0) setPreloadedMessages(data.messages); }
         hasPreloadedRef.current = true;
-      } catch (error) {
-        console.error('Pre-load failed:', error);
-        hasPreloadedRef.current = true; // Don't retry
-      }
-    }, 2000); // 2 second delay
-
-    return () => clearTimeout(preloadTimer);
+      } catch { hasPreloadedRef.current = true; }
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [session, storySlug]);
 
-  // Save bookmark and record page visit when page changes
   useEffect(() => {
     if (!session?.user) return;
-
-    const saveBookmark = async () => {
-      try {
-        await fetch('/api/story-bookmark', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storySlug,
-            level: currentLevel,
-            chapter: chapterNumber,
-            page: pageNumber,
-          }),
-        });
-        console.log(`📖 Bookmark saved: ${storySlug} - ${currentLevel} - Ch${chapterNumber} - Page${pageNumber}`);
-      } catch (error) {
-        console.error('Failed to save bookmark:', error);
-      }
-    };
-
-    const recordPageVisit = async () => {
-      try {
-        // Count words on this page (from the target language sentences)
-        const wordCount = sentences.reduce((total, s) => {
-          const text = s[oppositeLang] || '';
-          return total + text.split(/\s+/).filter(w => w.length > 0).length;
-        }, 0);
-
-        await fetch('/api/page-visit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storySlug,
-            level: currentLevel,
-            chapter: chapterNumber,
-            page: pageNumber,
-            wordCount,
-          }),
-        });
-        console.log(`📊 Page visit recorded: ${storySlug} - ${wordCount} words`);
-      } catch (error) {
-        console.error('Failed to record page visit:', error);
-      }
-    };
-
-    saveBookmark();
-    recordPageVisit();
+    fetch("/api/story-bookmark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storySlug, level: currentLevel, chapter: chapterNumber, page: pageNumber }) }).catch(() => {});
+    const wordCount = sentences.reduce((t, s) => t + (s[oppositeLang] || "").split(/\s+/).filter((w) => w.length > 0).length, 0);
+    fetch("/api/page-visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storySlug, level: currentLevel, chapter: chapterNumber, page: pageNumber, wordCount }) }).catch(() => {});
   }, [session, storySlug, currentLevel, chapterNumber, pageNumber, sentences, oppositeLang]);
 
-  // Enhanced TTS play function
-  // handlePlay: plays TTS for given text
-  // skipWordSelection: when true, don't apply wordSelections slicing (used for pre-extracted cross-line text)
-  const handlePlay = async (index: number, isSlow: boolean, text: string, skipWordSelection: boolean = false) => {
-    setTtsError(null);
-
-    // Mutual exclusion: stop continuous playback when per-sentence audio is triggered
-    if (audioPlayer.isPlaying || audioPlayer.state.status === "paused") {
-      audioPlayer.stopPlayback();
+  // ── Derived values ────────────────────────────────────────────────────────
+  const dynamicPageTitle = (() => {
+    const ch = storyMap.chapters.find((c) => c.chapter === chapterNumber);
+    const hasPoems = usePoemNavigation && ch?.poems && ch.poems.length > 0;
+    if (hasPoems) {
+      const poem = getCurrentPoem(chapterNumber, pageNumber);
+      if (poem) {
+        const pt = poem.title.length > 30 ? `${poem.title.substring(0, 30)}...` : poem.title;
+        return storyMap.hasChapters ? `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${poem.number}: ${pt}` : `${getNavigationLabel("page")} ${poem.number}: ${pt}`;
+      }
     }
+    return storyMap.hasChapters ? `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${pageNumber}` : `${getNavigationLabel("page")} ${pageNumber}`;
+  })();
 
-    // If clicking the same line and mode, toggle play/pause
-    if (activeAudio && activeAudio.index === index && activeAudio.isSlow === isSlow) {
-      if (activeAudio.isPlaying) {
-        pause();
-      } else {
-        resume();
-      }
-      return;
-    }
+  let currentPagePosition = 0;
+  let totalPages = 0;
+  for (const ch of storyMap.chapters) { for (const pg of ch.pages) { totalPages++; if (ch.chapter === chapterNumber && pg === pageNumber) currentPagePosition = totalPages; } }
 
-    // Stop any current playback
-    if (activeAudio) {
-      stop();
-      setActiveAudio(null);
-    }
+  const readOnlyMode = false;
+  const theme = getTheme(storySlug);
+  const backgroundStyle = theme.backgroundImage
+    ? { backgroundImage: `url('${theme.backgroundImage}')` }
+    : theme.backgroundGradient
+      ? { background: theme.backgroundGradient }
+      : { backgroundColor: theme.backgroundColor || "#f5f0e6" };
 
-    // Set loading state
-    setActiveAudio({
-      index,
-      isPlaying: false,
-      isSlow,
-      progress: 0,
-      duration: 0,
-      currentWordIndex: -1,
-    });
-
-    try {
-      // Get the full sentence data for speaker/stage direction info
-      const sentenceData = sentences[index];
-
-      // Determine language based on which text is being spoken
-      // If we're on /en/ route, we speak Spanish text (oppositeLang), so use Spanish voice
-      // If we're on /es/ route, we speak English text (oppositeLang), so use English voice
-      const isSpanishText = typedLang === "en"; // /en/ route = Spanish text being spoken
-      const language = isSpanishText ? "es-ES" : "en-US";
-      const speed = isSlow ? "slow" : "normal";
-
-      // Get stage direction in the appropriate language
-      const stageDirectionForTTS = isSpanishText
-        ? (sentenceData.stageDirectionEs || sentenceData.stageDirection)
-        : (sentenceData.stageDirectionEn || sentenceData.stageDirection);
-
-      const request = createRequest(
-        text,
-        language,
-        speed,
-        storySlug,
-        `${currentChapter}-${currentPage}-line${index + 1}`,
-        // Pass speaker name and stage direction for scripts
-        sentenceData.speaker,
-        stageDirectionForTTS
-      );
-
-      // Check if there's a word selection for this sentence (skip if text was pre-extracted)
-      const wordSelection = skipWordSelection ? undefined : wordSelections[index];
-
-      // Always use playTTSSegment which handles both word selection and slow speed comma logic
-      await playTTSSegment(request, wordSelection || undefined);
-
-      // Update line width for progress bar
-      const width = textRefs.current[index]?.offsetWidth || 0;
-      setLineWidths(prev => ({ ...prev, [index]: width }));
-
-    } catch (error) {
-      console.error('TTS playback failed:', error);
-      setActiveAudio(null);
-      // Fallback to browser speech synthesis
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = typedLang === "es" ? "es-ES" : "en-US";
-      utterance.rate = isSlow ? 0.7 : 1.0;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-    }
-  };
-
-  const handleSeek = useCallback((newTime: number) => {
-    seekTo(newTime);
-    if (activeAudio) {
-      setActiveAudio(prev => prev ? { ...prev, progress: newTime } : null);
-    }
-  }, [seekTo, activeAudio]);
-
-  const handleDrag = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!progressBarRef.current || !activeAudio?.duration) return;
-
-    const rect = progressBarRef.current.getBoundingClientRect();
-    let clientX: number;
-    
-    if ("touches" in e) {
-      clientX = e.touches[0].clientX;
-    } else {
-      clientX = e.clientX;
-    }
-
-    const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
-    const newTime = (offsetX / rect.width) * activeAudio.duration;
-    handleSeek(newTime);
-  }, [activeAudio, handleSeek]);
-
-  const handleGlobalMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    handleDrag(e);
-  }, [isDragging, handleDrag]);
-
-  const handleGlobalUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("mousemove", handleGlobalMove);
-    window.addEventListener("touchmove", handleGlobalMove, { passive: false });
-    window.addEventListener("mouseup", handleGlobalUp);
-    window.addEventListener("touchend", handleGlobalUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalMove);
-      window.removeEventListener("touchmove", handleGlobalMove);
-      window.removeEventListener("mouseup", handleGlobalUp);
-      window.removeEventListener("touchend", handleGlobalUp);
-    };
-  }, [handleGlobalMove, handleGlobalUp]);
-
-  // Global click handler with line-specific emoji toggle
-  useEffect(() => {
-    const handleGlobalClick = (e: MouseEvent) => {
-      // Skip if a control (e.g. save button) flagged to suppress this click
-      if (skipGlobalClickRef.current) {
-        skipGlobalClickRef.current = false;
-        return;
-      }
-
-      const rawTarget = e.target as Element;
-      // Resolve SVG elements to their HTML parent so closest() can traverse the HTML DOM
-      const target = (rawTarget instanceof SVGElement
-        ? rawTarget.closest('svg')?.parentElement ?? rawTarget
-        : rawTarget) as HTMLElement;
-
-      if (
-        target.tagName === 'BUTTON' ||
-        target.closest('button') ||
-        target.closest('[role="button"]') ||
-        target.closest('.dropdown') ||
-        target.closest('[data-dropdown]') ||
-        target.closest('[data-tooltip]') ||
-        target.hasAttribute('data-just-closed-translation')
-      ) {
-        return;
-      }
-
-      // For translator areas, only block clicks if actually clicking on text
-      const translatorElement = target.closest('[data-translator]');
-      if (translatorElement) {
-        // Check if we clicked on actual text content
-        if (target.nodeType === Node.TEXT_NODE ||
-            target.closest('[data-word]') ||
-            (target as HTMLElement).hasAttribute('data-word')) {
-          return;
-        }
-        // If clicked in empty space of translator, allow it to pass through
-      }
-
-      // Ignore all clicks inside the audio player bar (check bounds since it's fixed/overlay)
-      const audioBar = document.querySelector('[data-audio-player-bar]');
-      if (audioBar) {
-        const barRect = audioBar.getBoundingClientRect();
-        if (e.clientX >= barRect.left && e.clientX <= barRect.right &&
-            e.clientY >= barRect.top && e.clientY <= barRect.bottom) {
-          return;
-        }
-      }
-
-      if (menuOpen) {
-        setMenuOpen(false);
-        return;
-      }
-
-      if (isAnyDropdownOpen) {
-        return;
-      }
-
-      const hasActiveTranslations = Object.values(activeTranslations).some(Boolean);
-      if (hasActiveTranslations) {
-        // If clicking inside the tooltip card itself, don't close
-        if (target.closest('[data-tooltip]')) {
-          return;
-        }
-        // Clicking outside an active translation/auth card - dismiss it
-        clearAllWordSelections();
-        setShowEmojiButtons({});
-        setSaveAuthLine(null);
-        return;
-      }
-
-      if (activeAudio?.isPlaying) {
-        pause();
-        setActiveAudio(null);
-        setShowEmojiButtons({});
-        setShowStanzaEmojis({});
-        return;
-      }
-
-      const hasAnyEmojiButtons = Object.values(showEmojiButtons).some(Boolean);
-      const hasAnyStanzaEmojis = Object.values(showStanzaEmojis).some(Boolean);
-      if (activeAudio && !activeAudio.isPlaying && (hasAnyEmojiButtons || hasAnyStanzaEmojis)) {
-        setActiveAudio(null);
-        setShowEmojiButtons({});
-        setShowStanzaEmojis({});
-        return;
-      }
-
-      if (
-        target.hasAttribute('data-audio-control') ||
-        target.hasAttribute('data-translation-control') ||
-        target.closest('[data-audio-scrubber]') ||
-        target.closest('[data-audio-control]') ||
-        target.closest('[data-translation-control]')
-      ) {
-        return;
-      }
-
-      // Priority 1: If words are selected, deselect them first (keep emoji row open)
-      if (hasSelectedWords()) {
-        clearAllWordSelections();
-        return;
-      }
-
-      // Priority 2: Stanza-level detection for poems, or per-line for prose
-      const clickY = e.clientY;
-      const isPoemWithStanzas = !!document.querySelector('[data-stanza-number]');
-
-      if (isPoemWithStanzas) {
-        // Find which stanza was clicked
-        const allStanzas = document.querySelectorAll('[data-stanza-number]');
-        for (const stanzaEl of Array.from(allStanzas)) {
-          const rect = stanzaEl.getBoundingClientRect();
-          if (clickY >= rect.top && clickY < rect.bottom) {
-            const stanzaIdx = parseInt(stanzaEl.getAttribute('data-stanza-number') || '0') - 1;
-            const isAlreadyOpen = showStanzaEmojis[stanzaIdx];
-
-            // Find which line within stanza was clicked
-            const textEls = stanzaEl.querySelectorAll('[data-text-content]');
-            let clickedOnTextLine = false;
-            for (const textEl of Array.from(textEls)) {
-              const textRect = textEl.getBoundingClientRect();
-              if (clickY >= textRect.top && clickY < textRect.bottom) {
-                clickedOnTextLine = true;
-                const lineIndex = parseInt(textEl.getAttribute('data-text-content') || '-1');
-                if (lineIndex >= 0) {
-                  setActiveStanzaLine(prev => ({ ...prev, [stanzaIdx]: lineIndex }));
-                }
-                break;
-              }
-            }
-
-            if (clickedOnTextLine) {
-              // Clicked on a text line - open if not open, keep open if already open
-              if (!isAlreadyOpen) {
-                setShowStanzaEmojis({ [stanzaIdx]: true });
-              }
-            } else {
-              // Clicked on blank space within stanza - close if open
-              if (isAlreadyOpen) {
-                setShowStanzaEmojis({});
-                setStanzaAITranslation({});
-              }
-            }
-            return;
-          }
-        }
-        // Click was outside all stanzas — close all
-        setShowStanzaEmojis({});
-        setStanzaAITranslation({});
-        return;
-      }
-
-      // Per-line detection for prose/scripts
-      const allTextContents = document.querySelectorAll('[data-text-content]');
-
-      // Build array of line boundaries using the TEXT CONTENT position (not the container)
-      const lineBounds = Array.from(allTextContents).map((el) => {
-        const rect = (el as HTMLElement).getBoundingClientRect();
-        const index = parseInt(el.getAttribute('data-text-content') || '-1');
-        return {
-          element: el as HTMLElement,
-          top: rect.top,
-          bottom: rect.bottom,
-          index
-        };
-      });
-
-      // Check if click is directly on a text line
-      let clickedOnTextLine = false;
-      let clickedLineIndex = -1;
-
-      for (const line of lineBounds) {
-        if (clickY >= line.top && clickY < line.bottom) {
-          clickedOnTextLine = true;
-          clickedLineIndex = line.index;
-          break;
-        }
-      }
-
-      if (clickedOnTextLine && clickedLineIndex >= 0) {
-        // Clicked on a text line - open if not open, keep open if already open
-        const isAlreadyOpen = showEmojiButtons[clickedLineIndex];
-        if (!isAlreadyOpen) {
-          setShowEmojiButtons({ [clickedLineIndex]: true });
-        }
-      } else {
-        // Clicked on blank space - close any open emoji rows
-        const hasAnyOpen = Object.values(showEmojiButtons).some(Boolean);
-        if (hasAnyOpen) {
-          setShowEmojiButtons({});
-        }
-      }
-    };
-
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
-  }, [menuOpen, isAnyDropdownOpen, activeAudio, showEmojiButtons, showStanzaEmojis, activeTranslations, pause, hasSelectedWords, clearAllWordSelections]);
-
+  // ── renderProgressBar ─────────────────────────────────────────────────────
   const renderProgressBar = (audio: ActiveAudio) => {
     const percent = audio.duration > 0 ? (audio.progress / audio.duration) * 100 : 0;
-
     if (status === "loading") return null;
-
     return (
-      <div
-        ref={progressBarRef}
-        className="relative w-full h-[30px] select-none cursor-pointer flex items-center"
-        data-audio-scrubber
-        onMouseDown={(e: React.MouseEvent) => {
-          setIsDragging(true);
-          handleDrag(e.nativeEvent);
-        }}
-        onTouchStart={(e: React.TouchEvent) => {
-          setIsDragging(true);
-          handleDrag(e.nativeEvent);
-        }}
-      >
+      <div ref={progressBarRef} className="relative w-full h-[30px] select-none cursor-pointer flex items-center" data-audio-scrubber
+        onMouseDown={(e: React.MouseEvent) => { setIsDragging(true); handleDrag(e.nativeEvent); }}
+        onTouchStart={(e: React.TouchEvent) => { setIsDragging(true); handleDrag(e.nativeEvent); }}>
         <div className="w-full h-[6px] rounded bg-white/30 backdrop-blur-2xl border border-black/10 shadow-inner" />
-        <div
-          className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center"
-          style={{ left: `${percent}%` }}
-        >
+        <div className="absolute top-1/2 transform -translate-y-1/2 w-6 h-6 -ml-3 bg-transparent flex items-center justify-center" style={{ left: `${percent}%` }}>
           <div className="w-5 h-5 bg-white/20 backdrop-blur-md border border-black/10 rounded-full shadow-lg shadow-black/50 pointer-events-auto" />
         </div>
-        
-        
       </div>
     );
   };
 
+  // ── Context value ─────────────────────────────────────────────────────────
+  const contextValue: StoryReaderContextValue = {
+    sentences, stanzas, storySlug, title, storyMap, isUserStory, userStoryId,
+    availableLevels, storyType, detectedLevel, structureType,
+    typedLang, oppositeLang, currentLevel, chapterNumber, pageNumber,
+    currentChapter, currentPage, effectiveStructureType,
+    session, isPremiumUser,
+    activeAudio, setActiveAudio, ttsError, setTtsError, ttsAuthError, setTtsAuthError,
+    playbackState, playTTS, playTTSSegment, pause, resume, stop, seekTo,
+    togglePlayback, preCache, createRequest, getWordTimings,
+    lineWidths, setLineWidths, progressBarRef, isDragging, setIsDragging, textRefs,
+    menuOpen, setMenuOpen, activeDropdown, setActiveDropdown,
+    isAnyDropdownOpen, setIsAnyDropdownOpen,
+    showEmojiButtons, setShowEmojiButtons, showStanzaEmojis, setShowStanzaEmojis,
+    activeStanzaLine, setActiveStanzaLine,
+    wordSelections, setWordSelections, pendingStanzaSelection, setPendingStanzaSelection,
+    hasSelectedWords, clearAllWordSelections,
+    premiumTriggers, activeTranslations, setActiveTranslations, translationMode,
+    stanzaAITranslation, setStanzaAITranslation,
+    stanzaExampleMap, setStanzaExampleMap,
+    visibleStanzaExamples, toggleStanzaExample,
+    stanzaTranslationRefs, manualTranslateFunctions, setManualTranslateFunctions,
+    translationData, setTranslationData,
+    clearSelectionFunctions, setClearSelectionFunctions, translationRefs,
+    saveToast, setSaveToast, savingWord, setSavingWord,
+    saveAuthLine, setSaveAuthLine, skipGlobalClickRef,
+    isStoryTutorOpen, shouldRenderTutor, openStoryTutor, closeStoryTutor,
+    tutorContext, setTutorContext, preloadedMessages, handleMessagesUpdate,
+    scrollYBeforeTutorRef, tabOffsetY, tabDragRef, tabElRef, tabMomentumRef,
+    getNavigationUrl, getHomeUrl, getNavigationLabel, getCurrentPoem,
+    usePoemNavigation, dynamicPageTitle, currentPagePosition, totalPages,
+    isFinalPage, setIsFinalPage,
+    theme, backgroundStyle, readOnlyMode,
+    audioPlayer, sentenceRefs,
+    handlePlay, handleSeek, handleDrag,
+    handleTranslationStateChange, handleWordSelectionChange,
+    handleStanzaWordClick, handleManualTranslate, handleClearSelection,
+    handleTranslationData, handleSaveWord, renderProgressBar,
+  };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div
-      className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
-      style={backgroundStyle}
-    >
-      {/* TTS Auth Error Display - styled like translation bubble */}
-      {ttsAuthError && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow-lg max-w-sm">
-          <button
-            onClick={() => setTtsAuthError(false)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
-          >
-            ✕
-          </button>
-          <div className="text-sm pr-6">
-            <span className="text-gray-700">{t(typedLang, "translator", "audioSignInRequired")} </span>
-            <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
-              {t(typedLang, "translator", "signIn")}
-            </Link>
-            <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
-            <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
-              {t(typedLang, "translator", "createAccount")}
-            </Link>
-          </div>
+    <StoryReaderProvider value={contextValue}>
+      <div
+        className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
+        style={backgroundStyle}
+      >
+        <TtsErrorDisplay
+          ttsAuthError={ttsAuthError} ttsError={ttsError} typedLang={typedLang}
+          setTtsAuthError={setTtsAuthError} setTtsError={setTtsError}
+        />
+        <StoryHeader
+          typedLang={typedLang} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
+          setActiveDropdown={setActiveDropdown} setIsAnyDropdownOpen={setIsAnyDropdownOpen}
+          currentLevel={currentLevel} chapterNumber={chapterNumber} pageNumber={pageNumber}
+          storyMap={storyMap} availableLevels={availableLevels} detectedLevel={detectedLevel}
+          usePoemNavigation={usePoemNavigation} getNavigationUrl={getNavigationUrl}
+          getHomeUrl={getHomeUrl} getNavigationLabel={getNavigationLabel} getCurrentPoem={getCurrentPoem}
+        />
+        <NavigationButtons
+          chapterNumber={chapterNumber} pageNumber={pageNumber} storyMap={storyMap}
+          currentLevel={currentLevel} isStoryTutorOpen={isStoryTutorOpen}
+          audioPlayerIsVisible={audioPlayer.state.isVisible} getNavigationUrl={getNavigationUrl}
+        />
+        <ListenButton
+          typedLang={typedLang} session={session} audioPlayer={audioPlayer}
+          storySlug={storySlug} title={title} currentLevel={currentLevel}
+          chapterNumber={chapterNumber} pageNumber={pageNumber} sentences={sentences}
+          storyMap={storyMap} isUserStory={isUserStory} userStoryId={userStoryId}
+          currentPagePosition={currentPagePosition} setMenuOpen={setMenuOpen}
+          setTtsAuthError={setTtsAuthError} stop={stop} setActiveAudio={() => setActiveAudio(null)}
+        />
+
+        <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
+          <StoryContent />
+          <StoryTutorPanel
+            storySlug={storySlug} sentences={sentences} oppositeLang={oppositeLang}
+            isStoryTutorOpen={isStoryTutorOpen} shouldRenderTutor={shouldRenderTutor}
+            tutorContext={tutorContext} preloadedMessages={preloadedMessages}
+            backgroundImage={theme.backgroundImage}
+            tabElRef={tabElRef} tabOffsetY={tabOffsetY} tabDragRef={tabDragRef}
+            tabMomentumRef={tabMomentumRef} openStoryTutor={openStoryTutor}
+            closeStoryTutor={closeStoryTutor} setTutorContext={setTutorContext}
+            handleMessagesUpdate={handleMessagesUpdate}
+          />
+          <SaveWordToast toast={saveToast} />
         </div>
-      )}
-      {/* TTS Error Display - for non-auth errors */}
-      {ttsError && !ttsAuthError && (
-        <div className="fixed top-16 left-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center">
-          <AlertCircle className="mr-2 h-5 w-5" />
-          <span>{ttsError}</span>
-          <button
-            onClick={() => setTtsError(null)}
-            className="ml-auto text-red-500 hover:text-red-700"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
-
-      <header className="fixed top-4 left-4 z-50">
-        <button
-          className="p-2 rounded-full bg-[#f5f0e6] backdrop-blur-md border border-indigo-200 hover:bg-[#ede4d3] shadow-md transition-colors text-indigo-600"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </header>
-
-      {/* Menu and Navigation (same as original) */}
-      {menuOpen && (
-        <div className="fixed top-16 left-4 right-4 z-40 bg-[#f5f0e6]/95 backdrop-blur-md shadow-md rounded-xl p-4 space-y-4 border border-indigo-200">
-          <div className="flex flex-wrap gap-4">
-            <Dropdown
-              label={t(typedLang, "story", "navigate")}
-              variant="glass"
-              options={[{ label: t(typedLang, "story", "home"), value: "home" }]}
-              onSelect={(option) => {
-                if (option === "home") {
-                  router.push(getHomeUrl());
-                }
-              }}
-              onOpenChange={(isOpen) => {
-                setActiveDropdown(isOpen ? "navigate" : null);
-                setIsAnyDropdownOpen(isOpen);
-              }}
-            />
-            <Dropdown
-              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}${detectedLevel && currentLevel === detectedLevel ? (typedLang === "es" ? " (Original)" : " (Original)") : ""}`}
-              variant="glass"
-              options={ALL_CEFR_LEVELS.map((level) => {
-                const isAvailable = !availableLevels || availableLevels.includes(level);
-                const isOriginal = detectedLevel && level === detectedLevel;
-                const notAvailableText = typedLang === "es" ? "(no disponible)" : "(not available)";
-                const originalText = typedLang === "es" ? "(Original)" : "(Original)";
-
-                let label = getCEFRLabel(level, typedLang);
-                if (isOriginal) {
-                  label += ` ${originalText}`;
-                }
-                if (!isAvailable) {
-                  label += ` ${notAvailableText}`;
-                }
-
-                return {
-                  label,
-                  value: level,
-                  disabled: !isAvailable,
-                };
-              })}
-              onSelect={(selectedValue) => {
-                router.push(getNavigationUrl(selectedValue, chapterNumber, pageNumber));
-              }}
-              onOpenChange={(isOpen) => {
-                setActiveDropdown(isOpen ? "level" : null);
-                setIsAnyDropdownOpen(isOpen);
-              }}
-            />
-            {/* Chapter Dropdown – only if hasChapters */}
-            {storyMap.chapters.length > 1 && (
-              <Dropdown
-                label={`${getNavigationLabel("chapter")} ▾ ${chapterNumber}`}
-                variant="glass"
-                options={storyMap.chapters.map((ch) => ({
-                  // Show chapter title if available (e.g., "Chapter 1: Down the Rabbit-Hole")
-                  label: ch.title && ch.title !== `Chapter ${ch.chapter}`
-                    ? `${getNavigationLabel("chapter")} ${ch.chapter}: ${ch.title}`
-                    : `${getNavigationLabel("chapter")} ${ch.chapter}`,
-                  value: ch.chapter.toString(),
-                }))}
-                onSelect={(selectedValue) => {
-                  const selectedChapter = parseInt(selectedValue);
-                  const firstPage = storyMap.chapters.find((c) => c.chapter === selectedChapter)?.pages[0] || 1;
-                  router.push(getNavigationUrl(currentLevel, selectedChapter, firstPage));
-                }}
-                onOpenChange={(isOpen) => {
-                  setActiveDropdown(isOpen ? "chapter" : null);
-                  setIsAnyDropdownOpen(isOpen);
-                }}
-              />
-            )}
-
-            {/* Page/Poem Dropdown – content depends on structure type */}
-            {(() => {
-              const currentChapter = storyMap.chapters.find((c) => c.chapter === chapterNumber);
-              const hasPoems = usePoemNavigation && currentChapter?.poems && currentChapter.poems.length > 0;
-              const currentPoem = hasPoems ? getCurrentPoem(chapterNumber, pageNumber) : null;
-
-              if (hasPoems && currentChapter?.poems) {
-                // ANTHOLOGY: Show Poem dropdown instead of Page dropdown
-                const poemLabel = currentPoem
-                  ? `${getNavigationLabel("page")} ${currentPoem.number}: ${currentPoem.title.substring(0, 15)}${currentPoem.title.length > 15 ? '...' : ''}`
-                  : `${getNavigationLabel("page")} ▾`;
-
-                return (
-                  <Dropdown
-                    label={`${poemLabel} ▾`}
-                    variant="glass"
-                    options={currentChapter.poems.map((poem) => ({
-                      label: `${poem.number}. ${poem.title.substring(0, 25)}${poem.title.length > 25 ? '...' : ''}`,
-                      value: poem.number.toString(),
-                    }))}
-                    onSelect={(selectedValue) => {
-                      const selectedPoemNum = parseInt(selectedValue);
-                      const selectedPoem = currentChapter.poems?.find(p => p.number === selectedPoemNum);
-                      if (selectedPoem) {
-                        // Navigate to first page of selected poem
-                        router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPoem.startPage));
-                      }
-                    }}
-                    onOpenChange={(isOpen) => {
-                      setActiveDropdown(isOpen ? "page" : null);
-                      setIsAnyDropdownOpen(isOpen);
-                    }}
-                  />
-                );
-              }
-
-              // DEFAULT: Show Page dropdown
-              return (
-                <Dropdown
-                  label={`${getNavigationLabel("page")} ▾ ${pageNumber}`}
-                  variant="glass"
-                  options={
-                    (currentChapter?.pages || []).map((pg) => ({
-                      label: `${getNavigationLabel("page")} ${pg}`,
-                      value: pg.toString(),
-                    }))
-                  }
-                  onSelect={(selectedValue) => {
-                    const selectedPage = parseInt(selectedValue);
-                    router.push(getNavigationUrl(currentLevel, chapterNumber, selectedPage));
-                  }}
-                  onOpenChange={(isOpen) => {
-                    setActiveDropdown(isOpen ? "page" : null);
-                    setIsAnyDropdownOpen(isOpen);
-                  }}
-                />
-              );
-            })()}
-
-          </div>
-        </div>
-      )}
-
-      {/* Navigation buttons (same as original) */}
-      <div className={`fixed left-1/2 -translate-x-1/2 z-40 flex justify-center gap-2 ${isStoryTutorOpen ? 'hidden lg:flex' : ''} ${audioPlayer.state.isVisible ? 'hidden' : 'bottom-4'}`}>
-        {(() => {
-          const { prev, next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
-          const navBtn = (disabled: boolean) =>
-            `inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors ${
-              disabled
-                ? 'bg-[#ede4d3]/80 border-gray-200 text-gray-300 cursor-default'
-                : 'bg-[#f5f0e6] backdrop-blur-md border-indigo-200 text-indigo-600 hover:bg-[#ede4d3] shadow-md'
-            }`;
-
-          return (
-            <div className="flex items-center gap-3">
-              {prev ? (
-                <Link className={navBtn(false)} href={getNavigationUrl(currentLevel, prev.ch, prev.pg)}>
-                  <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
-                </Link>
-              ) : (
-                <span className={navBtn(true)}><ChevronLeft className="w-5 h-5" strokeWidth={1.5} /></span>
-              )}
-              {next ? (
-                <Link className={navBtn(false)} href={getNavigationUrl(currentLevel, next.ch, next.pg)}>
-                  <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
-                </Link>
-              ) : (
-                <span className={navBtn(true)}><ChevronRight className="w-5 h-5" strokeWidth={1.5} /></span>
-              )}
-            </div>
-          );
-        })()}
       </div>
-
-      {/* Listen button / badge + page count — scrolls with content */}
-      <div className="flex items-center justify-end gap-3 pr-4">
-        {audioPlayer.isPlaying || audioPlayer.state.status === "navigating" || audioPlayer.state.status === "paused" || audioPlayer.state.status === "loading" ? (
-          <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-full border border-indigo-200">
-            <Headphones className="w-4 h-4" />
-            {t(typedLang, "audioPlayer", "listening")}
-          </span>
-        ) : (
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              if (!session?.user) {
-                setTtsAuthError(true);
-              }
-              stop();
-              setActiveAudio(null);
-              audioPlayer.startContinuousPlayback({
-                storySlug,
-                storyTitle: title,
-                level: currentLevel,
-                chapter: chapterNumber,
-                page: pageNumber,
-                sentences,
-                storyMap,
-                isUserStory,
-                userStoryId,
-              });
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-colors"
-          >
-            <Headphones className="w-4 h-4" />
-            {t(typedLang, "audioPlayer", "listen")}
-          </button>
-        )}
-        <span className="text-sm text-gray-600">{currentPagePosition}</span>
-      </div>
-
-      <div className="flex justify-center mt-12 sm:mt-20 max-w-7xl mx-auto gap-10 flex-wrap lg:flex-nowrap relative overflow-hidden">
-        {/* Story Content - slides left when chat opens, centered by default */}
-        <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg px-4 transition-transform duration-300 ${
-          isStoryTutorOpen ? '-translate-x-full lg:-translate-x-[50%]' : 'translate-x-0 lg:translate-x-0 mx-auto'
-        }`}>
-          <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
-          <h2 className="text-lg sm:text-xl text-center mb-2 w-full">{dynamicPageTitle}</h2>
-
-
-          {/* Determine if this is poetry for tight line spacing */}
-          {(() => {
-            const isPoemType = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
-            const isScriptType = storyType === 'movie-script' || storyType === 'tv-script' || storyType === 'dialogue';
-
-            // Helper to render a single line
-            // When isInsideStanza=true, emoji row and static translation are handled at stanza level
-            // stanzaContext provides info for cross-line selection within stanzas
-            const renderLine = (
-              s: StoryLine,
-              lineIndex: number,
-              isInsideStanza: boolean = false,
-              stanzaContext?: {
-                stanzaIdx: number;
-                linesInStanza: { line: StoryLine; lineIndex: number }[];
-              }
-            ) => {
-              // Check if this is a stanza break (poem) - render as simple visual space
-              if (s.isStanzaBreak) {
-                return (
-                  <div
-                    key={lineIndex}
-                    className="w-full h-6"
-                    data-stanza-break={s.stanzaNumber}
-                    aria-hidden="true"
-                  />
-                );
-              }
-
-              // Check if this is an empty line (blank line in poem/text)
-              const isEmptyLine = !s.es?.trim() && !s.en?.trim();
-              if (isEmptyLine) {
-                return (
-                  <div
-                    key={lineIndex}
-                    className="w-full h-4"
-                    data-empty-line="true"
-                    aria-hidden="true"
-                  />
-                );
-              }
-
-              // Get stage direction text
-              const stageDirectionText = oppositeLang === 'es'
-                ? (s.stageDirectionEs || s.stageDirection)
-                : (s.stageDirectionEn || s.stageDirection);
-
-              // Stage-direction-only line
-              if (s.isStageDirectionOnly && stageDirectionText) {
-                return (
-                  <div key={lineIndex} className="my-4 w-full px-2 text-center" data-sentence-index={lineIndex}>
-                    <span className="italic text-gray-500 text-sm">
-                      ({stageDirectionText})
-                    </span>
-                  </div>
-                );
-              }
-
-              // Editorial note (poetry anthologies) - render in italics with muted color
-              if (s.isEditorialNote) {
-                const displayText = s[oppositeLang] || s.es || s.en;
-                return (
-                  <div key={lineIndex} className="my-4 w-full px-2" data-sentence-index={lineIndex}>
-                    <p className="italic text-gray-500 text-sm leading-relaxed">
-                      {displayText}
-                    </p>
-                  </div>
-                );
-              }
-
-              // Regular line - tight spacing for poems/stanzas
-              const lineSpacing = (isPoemType || isInsideStanza) ? "my-0" : "my-6";
-              const isHighlighted = audioPlayer.state.highlightedSentenceIndex === lineIndex;
-
-              return (
-                <div
-                  key={lineIndex}
-                  ref={el => { sentenceRefs.current[lineIndex] = el; }}
-                  className={`${lineSpacing} w-full relative transition-colors duration-300 ${isHighlighted ? 'bg-indigo-50 rounded-xl' : ''}`}
-                  data-sentence-index={lineIndex}
-                >
-                  {/* Speaker name for scripts */}
-                  {isScriptType && s.speaker && (
-                    <div className="px-2 mb-1">
-                      <span className="font-bold text-amber-700 text-sm uppercase tracking-wide">
-                        {s.speaker}
-                      </span>
-                      {s.speakerAnnotation && (
-                        <span className="font-normal text-gray-500 text-xs ml-1">
-                          {s.speakerAnnotation}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Inline stage direction for scripts */}
-                  {isScriptType && stageDirectionText && !s.isStageDirectionOnly && (
-                    <div className="px-2 mb-1">
-                      <span className="italic text-gray-500 text-sm">
-                        ({stageDirectionText})
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Emoji row: skip for stanza poems (handled at stanza level) - overlays space above line */}
-                  {!isInsideStanza && (
-                  <div className={`absolute left-0 right-0 -top-8 flex items-center gap-1 justify-start px-2 transition-opacity duration-200 z-10 ${
-                    showEmojiButtons[lineIndex] ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                  }`}>
-                      {/* Enhanced emoji buttons with loading states and selection indicators */}
-                      <button
-                        onClick={() => handlePlay(lineIndex, false, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                          playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow
-                            ? 'opacity-50 cursor-default'
-                            : ''
-                        } ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
-                        }`}
-                        data-audio-control="speaker"
-                        disabled={playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow}
-                        title={wordSelections[lineIndex] ? 'Play selected words' : 'Play full sentence'}
-                      >
-                        {playbackState.isLoading && activeAudio?.index === lineIndex && !activeAudio?.isSlow ? (
-                          <Loader2 className="animate-spin h-5 w-5" />
-                        ) : (
-                          <Volume2 className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handlePlay(lineIndex, true, s[oppositeLang])}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                          playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow
-                            ? 'opacity-50 cursor-default'
-                            : ''
-                        } ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
-                        }`}
-                        data-audio-control="turtle"
-                        disabled={playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow}
-                        title={wordSelections[lineIndex] ? 'Play selected words slowly' : 'Play full sentence slowly'}
-                      >
-                        {playbackState.isLoading && activeAudio?.index === lineIndex && activeAudio?.isSlow ? (
-                          <Loader2 className="animate-spin h-5 w-5" />
-                        ) : (
-                          <Turtle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                        )}
-                      </button>
-                      {/* Save word button - fades in/out with word selection (between 🐢 and 💬) */}
-                      <div className={`transition-all duration-200 ease-in-out overflow-hidden h-7 ${
-                        wordSelections[lineIndex] ? 'w-7' : 'w-0 delay-500'
-                      }`}>
-                        <button
-                          onClick={() => handleSaveWord(lineIndex, s[oppositeLang], s[typedLang])}
-                          onMouseDown={() => { skipGlobalClickRef.current = true; }}
-                          className={`inline-flex items-center justify-center w-7 h-7 transition-opacity duration-200 ease-in-out rounded ${
-                            wordSelections[lineIndex]
-                              ? `opacity-100 ${savingWord === lineIndex ? 'opacity-50' : ''}`
-                              : 'opacity-0 pointer-events-none'
-                          } ${translationData[lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
-                          data-translation-control="save"
-                          title={translationData[lineIndex] ? `Save "${translationData[lineIndex]!.word}" to vocabulary` : 'Save selected word to vocabulary'}
-                          disabled={savingWord === lineIndex || !wordSelections[lineIndex]}
-                        >
-                          {savingWord === lineIndex ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                          ) : (
-                            <BookmarkPlus className={`w-4 h-4 ${translationData[lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
-                          )}
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setTutorContext({
-                            lineIndex,
-                            fullLine: s[oppositeLang],
-                            selectedText: wordSelections[lineIndex]
-                              ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
-                              : undefined,
-                          });
-                          openStoryTutor();
-                        }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
-                        }`}
-                        title={wordSelections[lineIndex] ? 'Ask tutor about selection' : 'Ask tutor about this line'}
-                      >
-                        <MessageCircle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const selectedText = wordSelections[lineIndex]
-                            ? s[oppositeLang].trimStart().split(/\s+/).filter(w => w).slice(wordSelections[lineIndex]!.start, wordSelections[lineIndex]!.end + 1).join(' ')
-                            : s[oppositeLang];
-                          if (manualTranslateFunctions[lineIndex]) {
-                            manualTranslateFunctions[lineIndex]();
-                          }
-                        }}
-                        className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                          wordSelections[lineIndex] ? 'bg-blue-100' : 'bg-transparent delay-500'
-                        }`}
-                        data-translation-control="gpt"
-                        title="Translate"
-                      >
-                        <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${wordSelections[lineIndex] ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                      </button>
-                      {/* Pencil button for static translations */}
-                      <button
-                        onClick={() => {
-                          const el = translationRefs.current[lineIndex];
-                          if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                        }}
-                        className="inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded"
-                        data-translation-control="pencil"
-                        title="Toggle full line translation"
-                      >
-                        <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
-                      </button>
-                      {/* Audio playback progress bar - inline with emojis */}
-                      <div className="relative flex-1 flex items-center h-[30px] ml-3">
-                        {activeAudio?.index === lineIndex ? (
-                          <>
-                            {renderProgressBar(activeAudio)}
-                            <button
-                              onClick={() => {
-                                stop();
-                                setActiveAudio(null);
-                              }}
-                              className="ml-2 hover:scale-110 transition z-10"
-                              data-audio-control="close"
-                            >
-                              <X className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Text content - ensure consistent left alignment */}
-                  <div className={`w-full px-2 relative ${isScriptType && s.speaker ? 'pl-4' : ''}`} data-text-content={lineIndex}>
-                    <UnifiedTranslator
-                      sentence={s[oppositeLang]}
-                      staticTranslation={s[typedLang]}
-                      enabled={!isAnyDropdownOpen && !menuOpen}
-                      readOnlyMode={translationMode === "free"}
-                      autoTriggerAll={premiumTriggers[lineIndex] || false}
-                      onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
-                      onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
-                      onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
-                      onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
-                      onTranslationData={(data) => handleTranslationData(lineIndex, data)}
-                      sentenceIndex={lineIndex}
-                      contextSentences={sentences}
-                      parentHasSelection={!!wordSelections[lineIndex]}
-                      // Cross-line selection for stanzas: parent controls selection
-                      externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
-                      onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(
-                        stanzaContext.stanzaIdx,
-                        lineIndex,
-                        wordIdx,
-                        stanzaContext.linesInStanza
-                      ) : undefined}
-                    />
-                    {/* Save auth prompt - matches translation tooltip style */}
-                    {saveAuthLine === lineIndex && (
-                      <div className="mt-1 -ml-2 w-[calc(100%+16px)] bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative" data-tooltip>
-                        <button
-                          onClick={() => setSaveAuthLine(null)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
-                          data-translation-control="close"
-                        >
-                          ✕
-                        </button>
-                        <div className="text-sm pr-6">
-                          <span className="text-gray-700">{t(typedLang, "translator", "saveSignInRequired")} </span>
-                          <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
-                            {t(typedLang, "translator", "signIn")}
-                          </Link>
-                          <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
-                          <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
-                            {t(typedLang, "translator", "createAccount")}
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-                    {/* Per-line static translation: skip for stanza poems (handled at stanza level) */}
-                    {!isInsideStanza && (
-                    <div
-                      ref={el => { translationRefs.current[lineIndex] = el; }}
-                      className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-2 w-[calc(100%+16px)] relative"
-                    >
-                      <button
-                        onClick={() => {
-                          const el = translationRefs.current[lineIndex];
-                          if (el) el.classList.add("hidden");
-                        }}
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
-                        data-translation-control="close"
-                      >
-                        ✕
-                      </button>
-                      <span className="text-lg font-medium text-gray-900 pr-6" style={{ wordSpacing: '0.15em' }}>{s[typedLang]}</span>
-                    </div>
-                    )}
-                  </div>
-                </div>
-              );
-            };
-
-            // Helper to render stanza-level emoji row (replaces per-line emoji rows for poems)
-            const renderStanzaEmojiRow = (
-              stanzaIdx: number,
-              linesInStanza: { line: StoryLine; lineIndex: number }[],
-              stanza: StoryLine[]
-            ) => {
-              // Gather all lines with selections and build the complete selected text
-              const linesWithSelection = linesInStanza.filter(
-                ({ lineIndex }) => wordSelections[lineIndex]
-              );
-              const hasSelection = linesWithSelection.length > 0;
-              const targetLineIndex = activeStanzaLine[stanzaIdx] ?? linesInStanza[0]?.lineIndex ?? 0;
-
-              // Build the complete selected text across all lines
-              const getSelectedText = (): string => {
-                if (!hasSelection) return '';
-
-                const selectedParts: string[] = [];
-                console.log('[StanzaSelection] Building text from', linesWithSelection.length, 'lines with selections');
-                for (const { line, lineIndex } of linesWithSelection) {
-                  const sel = wordSelections[lineIndex];
-                  if (sel) {
-                    const lineText = line[oppositeLang] || '';
-                    const words = lineText.trimStart().split(/\s+/).filter(w => w);
-                    const selectedWords = words.slice(sel.start, sel.end + 1);
-                    console.log('[StanzaSelection] Line', lineIndex, ': sel=', sel, 'words=', selectedWords);
-                    selectedParts.push(selectedWords.join(' '));
-                  }
-                }
-                const result = selectedParts.join(' ');
-                console.log('[StanzaSelection] Complete text:', result);
-                return result;
-              };
-
-              // Check if any line in this stanza has active audio
-              const stanzaHasAudio = linesInStanza.some(({ lineIndex }) => activeAudio?.index === lineIndex);
-
-              const handleStanzaPlay = (isSlow: boolean) => {
-                console.log('[StanzaPlay] hasSelection:', hasSelection, 'linesWithSelection:', linesWithSelection.length);
-                if (hasSelection) {
-                  // Play all selected text across lines (skip word selection slicing - text is pre-extracted)
-                  const selectedText = getSelectedText();
-                  console.log('[StanzaPlay] Playing selected text:', selectedText);
-                  // Use first selected line's index for audio tracking
-                  handlePlay(linesWithSelection[0].lineIndex, isSlow, selectedText, true);
-                } else {
-                  // Play full stanza concatenated with period-space for natural TTS pauses
-                  const fullStanzaText = stanza
-                    .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
-                    .map(l => l[oppositeLang])
-                    .join('. ');
-                  handlePlay(linesInStanza[0].lineIndex, isSlow, fullStanzaText, true);
-                }
-              };
-
-              const handleStanzaTranslate = async () => {
-                console.log('[StanzaTranslate] hasSelection:', hasSelection, 'linesWithSelection:', linesWithSelection.length);
-
-                // Helper to check if a line is fully selected
-                const isLineFullySelected = (line: StoryLine, lineIndex: number): boolean => {
-                  const sel = wordSelections[lineIndex];
-                  if (!sel) return false;
-                  const lineText = line[oppositeLang] || '';
-                  const words = lineText.trimStart().split(/\s+/).filter(w => w);
-                  return sel.start === 0 && sel.end === words.length - 1;
-                };
-
-                // Helper to get static translation for selected lines
-                const getStaticTranslation = (): string => {
-                  return linesWithSelection
-                    .filter(({ line, lineIndex }) => isLineFullySelected(line, lineIndex))
-                    .map(({ line }) => line[typedLang] || '')
-                    .join('\n');
-                };
-
-                // Check if all selected lines are fully selected (use static translation)
-                const allLinesFullySelected = hasSelection &&
-                  linesWithSelection.every(({ line, lineIndex }) => isLineFullySelected(line, lineIndex));
-
-                // Determine what text we're about to translate
-                const getTextToTranslate = (): string => {
-                  if (!hasSelection) {
-                    // Full stanza
-                    return stanza
-                      .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
-                      .map(l => l[typedLang])
-                      .join('\n');
-                  } else if (allLinesFullySelected) {
-                    // Full line(s) selected
-                    return getStaticTranslation();
-                  } else {
-                    // Partial selection
-                    return getSelectedText().replace(/[.,!?;:()"]+/g, "");
-                  }
-                };
-
-                // Check if translation is already showing for the same content - toggle off
-                const existingTranslation = stanzaAITranslation[stanzaIdx];
-                if (existingTranslation && !existingTranslation.loading) {
-                  const textToTranslate = getTextToTranslate();
-                  const isStatic = !hasSelection || allLinesFullySelected;
-
-                  // For static translations, compare the text directly
-                  // For GPT translations, compare the selectedWord
-                  const isSameTranslation = isStatic
-                    ? existingTranslation.isStatic && existingTranslation.text === textToTranslate
-                    : !existingTranslation.isStatic && existingTranslation.selectedWord === textToTranslate;
-
-                  if (isSameTranslation) {
-                    // Toggle off - close the translation
-                    setStanzaAITranslation(prev => {
-                      const next = { ...prev };
-                      delete next[stanzaIdx];
-                      return next;
-                    });
-                    return;
-                  }
-                }
-
-                if (!hasSelection) {
-                  // No selection = full stanza → use static translation (no GPT)
-                  const staticTranslation = stanza
-                    .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
-                    .map(l => l[typedLang])
-                    .join('\n');
-                  setStanzaAITranslation(prev => ({
-                    ...prev,
-                    [stanzaIdx]: { text: staticTranslation, loading: false, isStatic: true }
-                  }));
-                } else if (allLinesFullySelected) {
-                  // Full line(s) selected → use static translation (no GPT)
-                  const staticTranslation = getStaticTranslation();
-                  setStanzaAITranslation(prev => ({
-                    ...prev,
-                    [stanzaIdx]: { text: staticTranslation, loading: false, isStatic: true }
-                  }));
-                } else {
-                  // Partial selection (less than full line) → call GPT with rich translation logic
-                  const selectedText = getSelectedText();
-                  const cleanText = selectedText.replace(/[.,!?;:()"]+/g, "");
-                  const wordCount = cleanText.split(/\s+/).filter(w => w).length;
-                  const isSingleWord = wordCount === 1;
-
-                  console.log('[StanzaTranslate] Partial selection, calling GPT:', { selectedText, cleanText, isSingleWord });
-                  setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: { text: '', loading: true, selectedWord: cleanText } }));
-
-                  // Build context from stanza
-                  const stanzaContext = stanza
-                    .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
-                    .map(l => l[oppositeLang])
-                    .join(' ');
-
-                  try {
-                    if (isSingleWord) {
-                      // Single word → use translate-word endpoint for rich info
-                      const res = await fetch(`/api/translate-word?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          word: cleanText,
-                          sentence: stanzaContext,
-                          level: currentLevel,
-                          context: { previous: '', current: stanzaContext, next: '' },
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.error) throw new Error(data.error);
-
-                      setStanzaAITranslation(prev => ({
-                        ...prev,
-                        [stanzaIdx]: {
-                          text: data.contextTranslation || data.translations?.[0] || '',
-                          loading: false,
-                          isStatic: false,
-                          selectedWord: cleanText,
-                          enhancedTranslation: data.contextTranslation ? {
-                            contextTranslation: data.contextTranslation,
-                            isDerivative: data.isDerivative,
-                            rootWord: data.rootWord,
-                            rootTranslation: data.rootTranslation,
-                            otherCommonTranslations: data.otherCommonTranslations,
-                            partOfSpeech: data.partOfSpeech,
-                            subject: data.subject,
-                            subjectTranslation: data.subjectTranslation,
-                            derivatives: data.derivatives,
-                            verbChart: data.verbChart,
-                          } : undefined,
-                        }
-                      }));
-                    } else {
-                      // Multi-word phrase → use translate-phrase endpoint
-                      const res = await fetch(`/api/translate-phrase?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          phrase: cleanText,
-                          sentence: stanzaContext,
-                          level: currentLevel,
-                          context: { previous: '', current: stanzaContext, next: '' },
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.error) throw new Error(data.error);
-
-                      const primaryTranslation = data.translations?.primary || data.translations?.[0] || '';
-                      const otherTranslations = data.translations?.otherCommonTranslations ||
-                        (Array.isArray(data.translations) ? data.translations.slice(1) : []);
-
-                      setStanzaAITranslation(prev => ({
-                        ...prev,
-                        [stanzaIdx]: {
-                          text: primaryTranslation,
-                          loading: false,
-                          isStatic: false,
-                          selectedWord: cleanText,
-                          otherTranslations: otherTranslations.length > 0 ? otherTranslations : undefined,
-                        }
-                      }));
-                    }
-                  } catch (err) {
-                    const isAuthError = err instanceof Error && err.message.includes('Authentication required');
-                    if (!isAuthError) {
-                      console.error('[StanzaTranslate] GPT error:', err);
-                    }
-                    setStanzaAITranslation(prev => ({
-                      ...prev,
-                      [stanzaIdx]: {
-                        text: isAuthError ? '' : 'Translation failed',
-                        loading: false,
-                        authError: isAuthError,
-                      }
-                    }));
-                  }
-                }
-              };
-
-              const isOpen = showStanzaEmojis[stanzaIdx];
-
-              return (
-                <div key={`stanza-emoji-${stanzaIdx}`}>
-                  {/* Stanza emoji row - overlays space above stanza, doesn't push content */}
-                  <div className={`absolute left-0 right-0 -top-8 flex items-center gap-1 justify-start px-2 transition-opacity duration-200 z-10 ${
-                    isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                  }`}>
-                    <button
-                      onClick={() => handleStanzaPlay(false)}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition relative rounded ${
-                        playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow
-                          ? 'opacity-50 cursor-default'
-                          : ''
-                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'}`}
-                      data-audio-control="speaker"
-                      disabled={playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow}
-                      title={hasSelection ? 'Play selected words' : 'Play full stanza'}
-                    >
-                      {playbackState.isLoading && stanzaHasAudio && !activeAudio?.isSlow ? (
-                        <Loader2 className="animate-spin h-5 w-5" />
-                      ) : (
-                        <Volume2 className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleStanzaPlay(true)}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                        playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow
-                          ? 'opacity-50 cursor-default'
-                          : ''
-                      } ${hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'}`}
-                      data-audio-control="turtle"
-                      disabled={playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow}
-                      title={hasSelection ? 'Play selected words slowly' : 'Play full stanza slowly'}
-                    >
-                      {playbackState.isLoading && stanzaHasAudio && activeAudio?.isSlow ? (
-                        <Loader2 className="animate-spin h-5 w-5" />
-                      ) : (
-                        <Turtle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                      )}
-                    </button>
-                    {/* Save word button - fades in/out with word selection */}
-                    <div className={`transition-all duration-200 ease-in-out overflow-hidden h-7 ${
-                      hasSelection ? 'w-7' : 'w-0 delay-500'
-                    }`}>
-                      <button
-                        onClick={() => {
-                          if (linesWithSelection.length > 0) {
-                            const { line, lineIndex } = linesWithSelection[0];
-                            handleSaveWord(lineIndex, line[oppositeLang], line[typedLang]);
-                          }
-                        }}
-                        onMouseDown={() => { skipGlobalClickRef.current = true; }}
-                        className={`inline-flex items-center justify-center w-7 h-7 transition-opacity duration-200 ease-in-out rounded ${
-                          hasSelection
-                            ? `opacity-100 ${savingWord !== null ? 'opacity-50' : ''}`
-                            : 'opacity-0 pointer-events-none'
-                        } ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'bg-green-100' : 'bg-blue-50'}`}
-                        data-translation-control="save"
-                        title="Save selected word to vocabulary"
-                        disabled={!hasSelection || savingWord !== null}
-                      >
-                        {savingWord !== null && linesWithSelection.some(l => l.lineIndex === savingWord) ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                        ) : (
-                          <BookmarkPlus className={`w-4 h-4 ${linesWithSelection.length > 0 && translationData[linesWithSelection[0].lineIndex] ? 'text-green-600' : 'text-blue-600'}`} />
-                        )}
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const stanzaText = stanza
-                          .filter(l => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
-                          .map(l => l[oppositeLang])
-                          .join('\n');
-                        // Get cross-line selected text
-                        const selectedText = hasSelection ? getSelectedText() : undefined;
-                        setTutorContext({
-                          lineIndex: targetLineIndex,
-                          fullLine: stanzaText,
-                          selectedText,
-                        });
-                        openStoryTutor();
-                      }}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                        hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
-                      }`}
-                      title={hasSelection ? 'Ask tutor about selection' : 'Ask tutor about this stanza'}
-                    >
-                      <MessageCircle className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={handleStanzaTranslate}
-                      className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${
-                        hasSelection ? 'bg-blue-100' : 'bg-transparent delay-500'
-                      }`}
-                      data-translation-control="translate"
-                      title={hasSelection ? 'Translate selection' : 'Translate full stanza'}
-                    >
-                      <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${hasSelection ? 'text-blue-600' : 'text-gray-700 delay-500'}`} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const el = stanzaTranslationRefs.current[stanzaIdx];
-                        if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-                      }}
-                      className="inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded"
-                      data-translation-control="pencil"
-                      title="Toggle stanza translation"
-                    >
-                      <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
-                    </button>
-                    {/* Audio progress bar */}
-                    <div className="relative flex-1 flex items-center h-[30px] ml-3">
-                      {stanzaHasAudio && activeAudio ? (
-                        <>
-                          {renderProgressBar(activeAudio)}
-                          <button
-                            onClick={() => {
-                              stop();
-                              setActiveAudio(null);
-                            }}
-                            className="ml-2 hover:scale-110 transition z-10"
-                            data-audio-control="close"
-                          >
-                            <X className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-
-            // Helper to fetch example sentences for stanza translations
-            const fetchStanzaExample = async (translation: string, selectedWord: string, stanza: StoryLine[]) => {
-              const isSpanishSource = oppositeLang === 'es';
-              const sourceWord = isSpanishSource ? selectedWord : translation;
-              const targetWord = isSpanishSource ? translation : selectedWord;
-
-              // Toggle off if already showing
-              if (stanzaExampleMap[translation]) {
-                setStanzaExampleMap(prev => {
-                  const updated = { ...prev };
-                  delete updated[translation];
-                  return updated;
-                });
-                return;
-              }
-
-              try {
-                const payload = {
-                  spanishWord: isSpanishSource ? sourceWord : targetWord,
-                  englishWord: isSpanishSource ? targetWord : sourceWord,
-                  originalSentence: stanza
-                    .filter((l: StoryLine) => !l.isStanzaBreak && (l[oppositeLang]?.trim()))
-                    .map((l: StoryLine) => l[oppositeLang])
-                    .join(' '),
-                  level: currentLevel,
-                };
-
-                const res = await fetch(`/api/example-sentence?lang=${oppositeLang === 'es' ? 'en' : 'es'}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(payload),
-                });
-
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
-
-                setStanzaExampleMap(prev => ({
-                  ...prev,
-                  [translation]: {
-                    english: data.english,
-                    spanish: data.spanish,
-                  },
-                }));
-              } catch (err) {
-                console.error('[StanzaExample] Failed to fetch example:', err);
-              }
-            };
-
-            // Helper to render stanza translations (appears below stanza text, doesn't push content)
-            const renderStanzaTranslations = (
-              stanzaIdx: number,
-              stanza: StoryLine[]
-            ) => {
-              const aiTranslation = stanzaAITranslation[stanzaIdx];
-              const showSpanishFirst = typedLang === 'en';
-
-              return (
-                <div key={`stanza-translations-${stanzaIdx}`}>
-                  {/* AI translation result (友 full stanza) - matches UnifiedTranslator bubble style */}
-                  {aiTranslation && (
-                    <div className="px-2 -mt-1">
-                      <div className="bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 -ml-[7px]">
-                        {aiTranslation.loading ? (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-semibold">{t(typedLang, "translator", "translating")}…</span>
-                            <span className="animate-pulse text-lg">🧠</span>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-left relative">
-                            {/* Enhanced single word translation with rich info */}
-                            {aiTranslation.enhancedTranslation ? (
-                              <>
-                                {aiTranslation.enhancedTranslation.partOfSpeech ? (() => {
-                                  const posMap: Record<string, string> = {
-                                    noun: 'sustantivo', verb: 'verbo', adjective: 'adjetivo',
-                                    adverb: 'adverbio', preposition: 'preposición', pronoun: 'pronombre',
-                                    conjunction: 'conjunción', determiner: 'determinante', 'auxiliary verb': 'verbo auxiliar', 'modal verb': 'verbo modal',
-                                  };
-                                  const tenseToEnglish: Record<string, string> = {
-                                    'Presente': 'present', 'Pretérito': 'simple past', 'Preterito': 'simple past',
-                                    'Imperfecto': 'imperfect', 'Futuro': 'future', 'Futuro Simple': 'simple future',
-                                    'Condicional': 'conditional', 'Presente Perfecto': 'present perfect',
-                                    'Pretérito Perfecto': 'present perfect', 'Pluscuamperfecto': 'past perfect',
-                                    'Pretérito Pluscuamperfecto': 'past perfect', 'Futuro Perfecto': 'future perfect',
-                                    'Subjuntivo Presente': 'present subjunctive', 'Subjuntivo Imperfecto': 'imperfect subjunctive',
-                                    'Imperativo': 'imperative', 'Presente Progresivo': 'present progressive',
-                                    'Pretérito Progresivo': 'past progressive',
-                                  };
-                                  const tenseToSpanish: Record<string, string> = {
-                                    'Present Simple': 'presente simple', 'Simple Present': 'presente simple',
-                                    'Past Simple': 'pasado simple', 'Simple Past': 'pasado simple',
-                                    'Present Continuous': 'presente continuo', 'Present Progressive': 'presente progresivo',
-                                    'Past Continuous': 'pasado continuo', 'Past Progressive': 'pasado progresivo',
-                                    'Present Perfect': 'presente perfecto', 'Past Perfect': 'pasado perfecto',
-                                    'Future Simple': 'futuro simple', 'Simple Future': 'futuro simple',
-                                    'Future': 'futuro', 'Conditional': 'condicional',
-                                    'Future Perfect': 'futuro perfecto', 'Imperative': 'imperativo',
-                                  };
-                                  const posLabel = typedLang === 'es'
-                                    ? (posMap[aiTranslation.enhancedTranslation!.partOfSpeech!] || aiTranslation.enhancedTranslation!.partOfSpeech)
-                                    : aiTranslation.enhancedTranslation!.partOfSpeech;
-                                  let tenseLabel = '';
-                                  const pos = aiTranslation.enhancedTranslation!.partOfSpeech!;
-                                  if (['verb', 'auxiliary verb', 'modal verb'].includes(pos) && aiTranslation.enhancedTranslation!.verbChart?.tense) {
-                                    const rawTense = aiTranslation.enhancedTranslation!.verbChart!.tense;
-                                    const tense = rawTense.replace(/, (modal verb|auxiliary verb)$/i, '').trim();
-                                    const nativeMap = typedLang === 'en' ? tenseToEnglish : tenseToSpanish;
-                                    const nativeTense = nativeMap[tense];
-                                    tenseLabel = nativeTense ? `, ${tense} (${nativeTense})` : `, ${tense}`;
-                                  }
-                                  return (
-                                    <p className="text-xs text-gray-500 italic mb-0.5">{posLabel}{tenseLabel}</p>
-                                  );
-                                })() : (
-                                  <p className="font-semibold">{t(typedLang, "translator", "translation")}:</p>
-                                )}
-                                <div className="text-lg font-medium text-gray-900" style={{ wordSpacing: '0.15em' }}>
-                                  {aiTranslation.enhancedTranslation.subject && !aiTranslation.selectedWord?.toLowerCase().startsWith(aiTranslation.enhancedTranslation.subject.toLowerCase()) && <span className="font-medium text-gray-500">{aiTranslation.enhancedTranslation.subject} </span>}
-                                  <span className="font-medium">{aiTranslation.selectedWord}</span> = {aiTranslation.enhancedTranslation.subjectTranslation && <span className="text-gray-500">{aiTranslation.enhancedTranslation.subjectTranslation} </span>}{aiTranslation.enhancedTranslation.contextTranslation}
-                                </div>
-
-                                {aiTranslation.enhancedTranslation.isDerivative && aiTranslation.enhancedTranslation.rootWord && (
-                                  <div className="mt-3">
-                                    <p className="font-semibold text-sm text-gray-700">{t(typedLang, "translator", "rootWord")}:</p>
-                                    <div className="text-sm text-gray-800">
-                                      <span className="font-medium">{aiTranslation.enhancedTranslation.rootWord}</span> = {aiTranslation.enhancedTranslation.rootTranslation}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {aiTranslation.enhancedTranslation.otherCommonTranslations && aiTranslation.enhancedTranslation.otherCommonTranslations.length > 0 && (
-                                  <>
-                                    <p className="font-normal mt-2">
-                                      <span className="font-bold italic text-gray-800">{aiTranslation.selectedWord}</span>
-                                      {" "}{t(typedLang, "translator", "otherCommonUses")}:
-                                    </p>
-                                    <ul className="list-disc list-inside">
-                                      {aiTranslation.enhancedTranslation.otherCommonTranslations.map((item, i) => {
-                                        const label = typeof item === 'string' ? item : item.translation;
-                                        const example = typeof item === 'object' && item !== null && 'example' in item ? item.example : null;
-                                        return (
-                                          <li key={i}>
-                                            {example ? (
-                                              <button
-                                                onClick={() => toggleStanzaExample(i)}
-                                                className="text-blue-600 hover:underline"
-                                              >
-                                                {label}
-                                              </button>
-                                            ) : (
-                                              <span className="text-gray-800">{label}</span>
-                                            )}
-                                            {example && visibleStanzaExamples.has(i) && (
-                                              <div className="ml-2 mt-1 text-sm">
-                                                {showSpanishFirst ? (
-                                                  <>
-                                                    <p className="text-gray-900">&quot;{example.es}&quot;</p>
-                                                    <p className="text-gray-600 italic">&quot;{example.en}&quot;</p>
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <p className="text-gray-900">&quot;{example.en}&quot;</p>
-                                                    <p className="text-gray-600 italic">&quot;{example.es}&quot;</p>
-                                                  </>
-                                                )}
-                                              </div>
-                                            )}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  </>
-                                )}
-
-                                {/* Derivatives / Word Family */}
-                                {aiTranslation.enhancedTranslation.derivatives && aiTranslation.enhancedTranslation.derivatives.length > 0 && (
-                                  <div className="mt-3 border-t pt-2">
-                                    <p className="font-semibold text-sm text-gray-700 mb-1">Word Family:</p>
-                                    <div className="space-y-2">
-                                      {aiTranslation.enhancedTranslation.derivatives.map((d, i) => (
-                                        <div key={i} className="text-sm">
-                                          <span className="text-gray-500 italic text-xs">({d.pos})</span>{' '}
-                                          <span className="font-medium">{d.word}</span>{' = '}
-                                          <span className="text-gray-800">{d.translation}</span>
-                                          {d.example && (
-                                            <div className="ml-4 mt-0.5 text-xs text-gray-500">
-                                              {showSpanishFirst ? (
-                                                <>
-                                                  <p>&quot;{d.example.es}&quot;</p>
-                                                  <p className="italic">&quot;{d.example.en}&quot;</p>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <p>&quot;{d.example.en}&quot;</p>
-                                                  <p className="italic">&quot;{d.example.es}&quot;</p>
-                                                </>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Verb Conjugation Chart - verbs only */}
-                                {aiTranslation.enhancedTranslation.verbChart && ['verb', 'auxiliary verb', 'modal verb'].includes(aiTranslation.enhancedTranslation.partOfSpeech || '') && (() => {
-                                  const vc = aiTranslation.enhancedTranslation.verbChart;
-                                  const conj = vc.conjugations;
-                                  const isSpanish = 'yo' in conj;
-                                  const pairs: [string, string][] = isSpanish
-                                    ? [['yo', 'nosotros'], ['tú', 'vosotros'], ['él/ella/usted', 'ellos/ellas/ustedes']]
-                                    : [['I', 'we'], ['you', 'you all'], ['he/she/it', 'they']];
-                                  const selWord = (aiTranslation.selectedWord || '').toLowerCase();
-                                  return (
-                                    <div className="mt-3 border-t pt-2">
-                                      <p className="font-semibold text-sm text-gray-700 mb-1">
-                                        {vc.infinitive} &mdash; {vc.tense}
-                                      </p>
-                                      <div className="overflow-x-auto">
-                                      <table className="text-sm w-full border-collapse border border-gray-200 min-w-[340px]">
-                                        <tbody>
-                                          {pairs.map(([left, right], i) => {
-                                            const leftForm = conj[left] || '';
-                                            const rightForm = conj[right] || '';
-                                            const leftMatch = leftForm.toLowerCase() === selWord;
-                                            const rightMatch = rightForm.toLowerCase() === selWord;
-                                            const rightLabel = right === 'vosotros' ? 'vosotros (Spain)' : right;
-                                            return (
-                                              <tr key={i} className="border-b border-gray-200 last:border-b-0">
-                                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (leftMatch ? " bg-yellow-100" : "")}>{left}</td>
-                                                <td className={"px-2 py-1.5 border-r border-gray-300" + (leftMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{leftForm}</td>
-                                                <td className={"text-gray-500 px-2 py-1.5 border-r border-gray-200" + (rightMatch ? " bg-yellow-100" : "")}>{rightLabel}</td>
-                                                <td className={"px-2 py-1.5" + (rightMatch ? " bg-yellow-100 text-gray-900 font-semibold" : " text-gray-900")}>{rightForm}</td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </>
-                            ) : aiTranslation.otherTranslations && aiTranslation.otherTranslations.length > 0 ? (
-                              /* Phrase translation with other meanings */
-                              <>
-                                <div className="text-lg font-medium text-gray-900 mt-1" style={{ wordSpacing: '0.15em' }}>
-                                  {aiTranslation.text}
-                                </div>
-                                <p className="font-normal mt-2">
-                                  <span className="font-bold italic text-gray-800">{aiTranslation.selectedWord}</span>
-                                  {" "}{t(typedLang, "translator", "otherCommonUses")}:
-                                </p>
-                                <ul className="list-disc list-inside">
-                                  {aiTranslation.otherTranslations.map((item, i) => {
-                                    const label = typeof item === 'string' ? item : item.translation;
-                                    const inlineExample = typeof item === 'object' && item !== null && 'example' in item ? item.example : null;
-                                    const fallbackExample = stanzaExampleMap[label];
-                                    return (
-                                      <li key={i}>
-                                        {inlineExample ? (
-                                          <button
-                                            onClick={() => toggleStanzaExample(i)}
-                                            className="text-blue-600 hover:underline"
-                                          >
-                                            {label}
-                                          </button>
-                                        ) : fallbackExample ? (
-                                          <button
-                                            onClick={() => toggleStanzaExample(i)}
-                                            className="text-blue-600 hover:underline"
-                                          >
-                                            {label}
-                                          </button>
-                                        ) : (
-                                          <button
-                                            onClick={() => fetchStanzaExample(label, aiTranslation.selectedWord || '', stanza)}
-                                            className="text-blue-600 hover:underline"
-                                          >
-                                            {label}
-                                          </button>
-                                        )}
-                                        {inlineExample && visibleStanzaExamples.has(i) && (
-                                          <div className="ml-2 mt-1 text-sm">
-                                            {showSpanishFirst ? (
-                                              <>
-                                                <p className="text-gray-900">&quot;{inlineExample.es}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{inlineExample.en}&quot;</p>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <p className="text-gray-900">&quot;{inlineExample.en}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{inlineExample.es}&quot;</p>
-                                              </>
-                                            )}
-                                          </div>
-                                        )}
-                                        {!inlineExample && fallbackExample && visibleStanzaExamples.has(i) && (
-                                          <div className="ml-2 mt-1 text-sm">
-                                            {showSpanishFirst ? (
-                                              <>
-                                                <p className="text-gray-900">&quot;{fallbackExample.spanish}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{fallbackExample.english}&quot;</p>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <p className="text-gray-900">&quot;{fallbackExample.english}&quot;</p>
-                                                <p className="text-gray-600 italic">&quot;{fallbackExample.spanish}&quot;</p>
-                                              </>
-                                            )}
-                                          </div>
-                                        )}
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </>
-                            ) : aiTranslation.authError ? (
-                              /* Auth required - show sign in prompt */
-                              <div className="text-sm pr-6 mt-1">
-                                <span className="text-gray-700">{t(typedLang, "translator", "signInRequired")} </span>
-                                <Link href={`/${typedLang}/auth/login`} className="text-indigo-600 hover:underline font-medium">
-                                  {t(typedLang, "translator", "signIn")}
-                                </Link>
-                                <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
-                                <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">
-                                  {t(typedLang, "translator", "createAccount")}
-                                </Link>
-                              </div>
-                            ) : (
-                              /* Simple translation (static or no extra info) */
-                              <div className="text-lg font-medium text-gray-900 mt-1 whitespace-pre-line pr-6" style={{ wordSpacing: '0.15em' }}>
-                                {aiTranslation.text}
-                              </div>
-                            )}
-
-                            <button
-                              onClick={() => setStanzaAITranslation(prev => {
-                                const next = { ...prev };
-                                delete next[stanzaIdx];
-                                return next;
-                              })}
-                              className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 text-sm"
-                              data-translation-control="close"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Static stanza translation (✍️ pencil) */}
-                  <div
-                    ref={el => { stanzaTranslationRefs.current[stanzaIdx] = el; }}
-                    className="hidden px-2 mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 -ml-[7px] relative"
-                  >
-                    <button
-                      onClick={() => {
-                        const el = stanzaTranslationRefs.current[stanzaIdx];
-                        if (el) el.classList.add("hidden");
-                      }}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
-                      data-translation-control="close"
-                    >
-                      ✕
-                    </button>
-                    <div className="text-lg font-medium text-gray-900 whitespace-pre-line pr-6" style={{ wordSpacing: '0.15em' }}>
-                      {stanza
-                        .filter(l => !l.isStanzaBreak && (l[typedLang]?.trim()))
-                        .map((line, idx) => (
-                          <p key={idx}>{line[typedLang]}</p>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            };
-
-            // NESTED STANZAS: Render stanzas with visual gaps between them
-            if (stanzas && stanzas.length > 0 && isPoemType) {
-              let globalLineIndex = 0;
-              return stanzas.map((stanza, stanzaIdx) => {
-                const stanzaStartIndex = globalLineIndex;
-                const linesInStanza = stanza.map((line) => {
-                  const currentIndex = globalLineIndex;
-                  globalLineIndex++;
-                  return { line, lineIndex: currentIndex };
-                });
-                return (
-                  <div
-                    key={`stanza-${stanzaIdx}`}
-                    className="w-full mb-6 relative"
-                    data-stanza-number={stanzaIdx + 1}
-                    data-stanza-start={stanzaStartIndex}
-                    data-stanza-end={globalLineIndex - 1}
-                  >
-                    {renderStanzaEmojiRow(stanzaIdx, linesInStanza, stanza)}
-                    {linesInStanza.map(({ line, lineIndex }) =>
-                      renderLine(line, lineIndex, true, { stanzaIdx, linesInStanza })
-                    )}
-                    {renderStanzaTranslations(stanzaIdx, stanza)}
-                  </div>
-                );
-              });
-            }
-
-            // FLAT SENTENCES: Use renderLine helper for prose, scripts, and legacy poem content
-            return sentences.map((s, i) => renderLine(s, i, false));
-          })()}
-
-          {/* Mark story as complete – shown on the last page below story text */}
-          {isFinalPage && (
-            <div className="flex justify-center w-full mt-8 mb-4">
-              <button
-                className="text-sm text-green-700 hover:underline"
-                onClick={() => {
-                  fetch('/api/mark-complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      storySlug,
-                      level: currentLevel,
-                      chapter: chapterNumber,
-                      page: pageNumber,
-                    }),
-                  }).then(() => alert(t(typedLang, "story", "markedComplete")));
-                }}
-              >
-                ✅ {t(typedLang, "story", "markComplete")}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* AI Story Tutor Chat Panel - slides in from right on all screen sizes */}
-        <div className={`fixed inset-y-0 lg:top-auto lg:bottom-0 lg:h-[calc(100vh-120px)] right-0 w-full lg:w-[400px] transition-transform duration-300 z-50 overflow-visible ${
-          isStoryTutorOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}>
-          {/* Tab handle - two-sided tab centered on panel left edge on mobile for object permanence;
-              on desktop, single tab fully outside the panel to the left.
-              Draggable vertically — pointer events distinguish drag from click. */}
-          <div
-            ref={tabElRef}
-            onPointerDown={(e) => {
-              // Cancel any ongoing momentum animation
-              cancelAnimationFrame(tabMomentumRef.current);
-              const now = performance.now();
-              tabDragRef.current = { startY: e.clientY, startOffset: tabOffsetY.current, moved: false, prevY: e.clientY, prevTime: now, velocityY: 0 };
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              const drag = tabDragRef.current;
-              if (!drag) return;
-              const dy = e.clientY - drag.startY;
-              if (Math.abs(dy) > 3) drag.moved = true;
-              if (!drag.moved) return;
-              // Track velocity from recent movement
-              const now = performance.now();
-              const dt = now - drag.prevTime;
-              if (dt > 0) {
-                drag.velocityY = (e.clientY - drag.prevY) / dt; // px/ms
-                drag.prevY = e.clientY;
-                drag.prevTime = now;
-              }
-              // Clamp so tab stays within the panel's visible area
-              const parentEl = tabElRef.current?.parentElement;
-              const parentH = parentEl ? parentEl.clientHeight : window.innerHeight;
-              const tabH = tabElRef.current?.offsetHeight ?? 40;
-              const maxOffset = parentH / 2 - tabH / 2 - 8;
-              const newOffset = Math.max(-maxOffset, Math.min(maxOffset, drag.startOffset + dy));
-              tabOffsetY.current = newOffset;
-              if (tabElRef.current) {
-                tabElRef.current.style.top = `calc(50% + ${newOffset}px)`;
-              }
-            }}
-            onPointerUp={(e) => {
-              const drag = tabDragRef.current;
-              tabDragRef.current = null;
-              if (drag && !drag.moved) {
-                // It was a tap/click, toggle the chat
-                e.preventDefault();
-                e.stopPropagation();
-                if (isStoryTutorOpen) {
-                  closeStoryTutor();
-                  setTutorContext(null);
-                } else {
-                  setTutorContext(null);
-                  openStoryTutor();
-                }
-              } else if (drag) {
-                // Decay velocity based on time since last move — if the user
-                // paused before releasing, the stale velocity shouldn't apply
-                const timeSinceLastMove = performance.now() - drag.prevTime;
-                const decayedVelocity = drag.velocityY * Math.max(0, 1 - timeSinceLastMove / 100);
-                if (Math.abs(decayedVelocity) <= 0.1) return;
-                // Momentum glide
-                let velocity = decayedVelocity * 16; // convert px/ms to px/frame (~16ms)
-                const friction = 0.92;
-                const animate = () => {
-                  velocity *= friction;
-                  if (Math.abs(velocity) < 0.5) return;
-                  const parentEl = tabElRef.current?.parentElement;
-                  const parentH = parentEl ? parentEl.clientHeight : window.innerHeight;
-                  const tabH = tabElRef.current?.offsetHeight ?? 40;
-                  const maxOffset = parentH / 2 - tabH / 2 - 8;
-                  const newOffset = Math.max(-maxOffset, Math.min(maxOffset, tabOffsetY.current + velocity));
-                  tabOffsetY.current = newOffset;
-                  if (tabElRef.current) {
-                    tabElRef.current.style.top = `calc(50% + ${newOffset}px)`;
-                  }
-                  tabMomentumRef.current = requestAnimationFrame(animate);
-                };
-                tabMomentumRef.current = requestAnimationFrame(animate);
-              }
-            }}
-            style={{ top: `calc(50% + ${tabOffsetY.current}px)` }}
-            className="absolute -translate-y-1/2 z-[100] flex cursor-pointer select-none touch-none left-0 -translate-x-1/2 lg:left-auto lg:right-full lg:translate-x-0"
-            title={isStoryTutorOpen ? "Close Story Tutor" : "Open Story Tutor"}
-            role="button"
-            tabIndex={0}
-          >
-            {/* Left face - visible from story side when chat is closed (clipped when open) */}
-            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-l-lg shadow-lg flex items-center justify-center lg:rounded-r-none">
-              <span className="text-gray-600 text-sm font-bold">||</span>
-            </div>
-            {/* Right face - visible from chat side when chat is open (clipped when closed) */}
-            <div className="bg-amber-100 hover:bg-amber-200 transition-colors duration-200 px-1.5 py-3 rounded-r-lg shadow-lg flex items-center justify-center lg:hidden">
-              <span className="text-gray-600 text-sm font-bold">||</span>
-            </div>
-          </div>
-          {shouldRenderTutor && (
-            <StoryTutorChat
-              storySlug={storySlug}
-              currentPageText={sentences.map(s => s[oppositeLang])}
-              onClose={() => {
-                closeStoryTutor();
-                setTutorContext(null);
-              }}
-              isOpen={isStoryTutorOpen}
-              initialContext={tutorContext}
-              preloadedMessages={preloadedMessages}
-              onMessagesUpdate={handleMessagesUpdate}
-              backgroundImage={theme.backgroundImage}
-            />
-          )}
-        </div>
-
-        {/* Save word toast notification */}
-        {saveToast && (
-          <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300 ${
-            saveToast.type === 'success' ? 'bg-green-500 text-white' :
-            saveToast.type === 'exists' ? 'bg-amber-500 text-white' :
-            'bg-red-500 text-white'
-          }`}>
-            {saveToast.type === 'success' && <Check className="w-4 h-4" />}
-            {saveToast.type === 'exists' && <BookmarkPlus className="w-4 h-4" />}
-            {saveToast.type === 'error' && <AlertCircle className="w-4 h-4" />}
-            <span className="text-sm font-medium">{saveToast.message}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    </StoryReaderProvider>
   );
 }
