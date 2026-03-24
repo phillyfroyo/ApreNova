@@ -216,7 +216,7 @@ feedback: {
     placeholder: "What's on your mind?",
     optionalEmail: "Email (for follow-up)",
     cancel: "Cancel",
-    send: "Send Feedback",
+    send: "Send",
     bug: "🐛 Bug",
     suggestion: "💡 Suggestion",
     other: "✏️ Other",

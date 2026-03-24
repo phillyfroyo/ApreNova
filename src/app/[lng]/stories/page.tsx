@@ -24,6 +24,7 @@ import UserStoryCard from "@/components/user-stories/UserStoryCard"
 import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal"
 import { useStoryUpload } from "@/contexts/StoryUploadContext"
 import { AppLayout } from '@/components/layout';
+import FeedbackModal from "@/components/FeedbackModal";
 
 type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1';
 
@@ -103,6 +104,7 @@ function StoriesPageContent() {
   const { lng } = useParams();
   const typedLang = lng as Language;
   const [showLangPrompt, setShowLangPrompt] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // URL-based story detail modal
   const storyParam = searchParams.get("story");
@@ -772,6 +774,26 @@ useEffect(() => {
         onUpdate={handleUserStoryUpdate}
         user={user}
       />
+{/* Feedback banner */}
+<div className="mt-8 mb-4 px-1 sm:px-4">
+  <div className="text-center py-6 px-4 bg-white/60 backdrop-blur-sm rounded-xl">
+    <p className="text-gray-600 text-sm">
+      {typedLang === "es"
+        ? "Somos nuevos y estamos agregando historias constantemente. Si tienes sugerencias de historias, comentarios generales o quieres reportar un error, "
+        : "We're new and constantly adding stories. If you have suggestions for stories to add, general feedback, or want to report a bug, "}
+      <button
+        onClick={() => setShowFeedback(true)}
+        className="text-indigo-600 hover:text-indigo-800 font-medium underline underline-offset-2"
+      >
+        {typedLang === "es" ? "nos encantaría saberlo" : "we'd love to hear from you"}
+      </button>
+      .
+    </p>
+  </div>
+</div>
+
+<FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} lng={typedLang} />
+
 {showLangPrompt && (
   <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl text-center space-y-6 max-w-sm w-full border border-white/50">
