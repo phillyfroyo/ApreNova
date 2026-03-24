@@ -340,7 +340,7 @@ export function Step5Translate({
             ? scanTranslationQuality(content.sourceText, content.translatedText, level)
             : [];
           const quoteWarnings = (hasTranslation && content?.sourceText)
-            ? scanQuoteMismatches(content.sourceText, content.translatedText, level)
+            ? scanQuoteMismatches(content.sourceText, content.translatedText, level, { strict: true })
             : [];
 
           // Detect duplicate chapter markers (corrupted data)
@@ -856,7 +856,7 @@ export function Step5Translate({
             const src = storyData.levelContent[translationComparisonLevel]?.sourceText || "";
             const trans = storyData.levelContent[translationComparisonLevel]?.translatedText || "";
             if (!src || !trans) return undefined;
-            const warnings = scanQuoteMismatches(src, trans, translationComparisonLevel);
+            const warnings = scanQuoteMismatches(src, trans, translationComparisonLevel, { strict: true });
             const byChapter: Record<number, number[]> = {};
             for (const w of warnings) {
               if (!byChapter[w.chapter]) byChapter[w.chapter] = [];

@@ -155,16 +155,19 @@ export function scanTranslationQuality(
 
 /**
  * Compare original and rewritten/translated text to detect quotation mark mismatches.
- * Counts total quote characters per content line in each chapter.
- * If the counts differ, flags it as a quote_mismatch warning.
+ *
+ * In lenient mode (rewrites): only flags odd quote counts or completely dropped dialogue.
+ * In strict mode (translations): flags any difference in quote count per line.
  */
 const ALL_QUOTE_CHARS = /["\u201C\u201D\u00AB\u00BB]/g;
 
 export function scanQuoteMismatches(
   originalText: string,
   comparisonText: string,
-  level: number
+  level: number,
+  options?: { strict?: boolean }
 ): ContentWarning[] {
+  const strict = options?.strict ?? false;
   if (!originalText || !comparisonText) return [];
   const warnings: ContentWarning[] = [];
 
@@ -219,21 +222,33 @@ export function scanQuoteMismatches(
       const origQuotes = (origLine.match(ALL_QUOTE_CHARS) || []).length;
       const compQuotes = (compLine.match(ALL_QUOTE_CHARS) || []).length;
 
-      // Flag if: (1) rewrite has odd quotes when original doesn't (broken/unpaired), or
-      //          (2) original has quotes but rewrite dropped them entirely
-      const hasOddQuotes = compQuotes > 0 && compQuotes % 2 !== 0 && origQuotes % 2 === 0;
-      const droppedDialogue = origQuotes > 0 && compQuotes === 0;
+      if (strict) {
+        // Translation mode: flag any quote count difference
+        if (origQuotes !== compQuotes) {
+          warnings.push({
+            level,
+            chapter: chapterNum,
+            line: (compContentToTotal[i] ?? i) + 1,
+            type: "quote_mismatch",
+            text: `${origQuotes} → ${compQuotes} quotes: "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`,
+          });
+        }
+      } else {
+        // Rewrite mode: only flag odd quotes (broken) or completely dropped dialogue
+        const hasOddQuotes = compQuotes > 0 && compQuotes % 2 !== 0 && origQuotes % 2 === 0;
+        const droppedDialogue = origQuotes > 0 && compQuotes === 0;
 
-      if (hasOddQuotes || droppedDialogue) {
-        warnings.push({
-          level,
-          chapter: chapterNum,
-          line: (compContentToTotal[i] ?? i) + 1,
-          type: "quote_mismatch",
-          text: hasOddQuotes
-            ? `Odd quotes (${compQuotes}): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`
-            : `Dialogue dropped (${origQuotes} → 0): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`,
-        });
+        if (hasOddQuotes || droppedDialogue) {
+          warnings.push({
+            level,
+            chapter: chapterNum,
+            line: (compContentToTotal[i] ?? i) + 1,
+            type: "quote_mismatch",
+            text: hasOddQuotes
+              ? `Odd quotes (${compQuotes}): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`
+              : `Dialogue dropped (${origQuotes} → 0): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`,
+          });
+        }
       }
     }
   }
