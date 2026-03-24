@@ -49,6 +49,7 @@ language: {
   loading: "Cargando...",
   continue: "Continuar",
   back: "Atrás",
+  newBadge: "Nuevo",
   readStory: "Léeme",
   readMore: "Leer más",
   readLess: "Leer menos",
@@ -622,6 +623,12 @@ storiesMetadata: {
     hook: "Acompaña a Tom Sawyer en un mundo de travesuras, amistad y aventuras inolvidables a lo largo del río Misisipi.",
     description: "Esta historia clásica sigue a Tom Sawyer, un niño ingenioso y aventurero que crece en un pequeño pueblo de la América del siglo XIX. Junto a su amigo Huck Finn, se ve envuelto en emocionantes aventuras, desde búsquedas de tesoros y exploraciones en cuevas hasta presenciar un crimen impactante.\n\nMuchas de las aventuras de esta historia están inspiradas en experiencias reales de la infancia de Mark Twain y de las personas que lo rodeaban. El propio Tom Sawyer es una combinación de varios niños que Twain conoció, lo que lo convierte en un personaje auténtico y lleno de vida.\n\nAunque fue escrita pensando en lectores jóvenes, la historia también invita a los adultos a redescubrir la imaginación, la curiosidad y el espíritu audaz de la infancia.",
   },
+  "the-wonderful-wizard-of-oz": {
+    title: "El Maravilloso Mago de Oz",
+    hook: "Dorothy lleva una vida monótona en las praderas de Kansas hasta que un torbellino la lleva a un viaje inesperado.",
+    description: "Esta historia clásica sigue a Dorothy, una niña que es llevada lejos de su hogar en Kansas hasta la mágica Tierra de Oz. En su camino para regresar a casa, conoce a compañeros inolvidables: un Espantapájaros en busca de un cerebro, un Hombre de Hojalata que anhela un corazón y un León Cobarde que desea encontrar valor.\n\nJuntos emprenden una aventura llena de desafíos, criaturas extrañas y poderosa magia, mientras descubren que aquello que buscan quizá siempre ha estado dentro de ellos.\n\nEscrita por L. Frank Baum, esta historia atemporal ha cautivado a lectores durante generaciones gracias a su mundo imaginativo, sus personajes memorables y su mensaje duradero sobre la amistad, el valor y la confianza en uno mismo.\n\nAunque fue escrita pensando en lectores jóvenes, la historia sigue conectando con personas de todas las edades por su calidez, su magia y sus temas universales.",
+  },
+
 
 
 

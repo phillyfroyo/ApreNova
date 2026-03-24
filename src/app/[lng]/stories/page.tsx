@@ -57,6 +57,16 @@ function hasReadableChapters(story: UserStory): boolean {
   return story.levels.some((level) => level.status === "READY");
 }
 
+const NEW_STORY_DAYS = 14;
+
+function isNewStory(addedAt?: string): boolean {
+  if (!addedAt) return false;
+  const added = new Date(addedAt);
+  const now = new Date();
+  const diffMs = now.getTime() - added.getTime();
+  return diffMs < NEW_STORY_DAYS * 24 * 60 * 60 * 1000;
+}
+
 // All theme tags combined into one list
 const ALL_THEME_TAGS: StoryTag[] = [
   "family", "friendship", "adventure", "mystery", "romance",
@@ -575,6 +585,8 @@ useEffect(() => {
                     title={getStoryTitle(typedLang, story.slug)}
                     image={story.image}
                     onClick={() => openDetailModal(story.slug)}
+                    isNew={isNewStory(story.addedAt)}
+                    newLabel={t(typedLang, "stories", "newBadge")}
                   />
                 );
               })}
@@ -623,6 +635,8 @@ useEffect(() => {
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
                         onClick={() => openDetailModal(story.slug)}
+                        isNew={isNewStory(story.addedAt)}
+                        newLabel={t(typedLang, "stories", "newBadge")}
                       />
                     );
                   })}
@@ -671,6 +685,8 @@ useEffect(() => {
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
                         onClick={() => openDetailModal(story.slug)}
+                        isNew={isNewStory(story.addedAt)}
+                        newLabel={t(typedLang, "stories", "newBadge")}
                       />
                     );
                   })}
@@ -719,6 +735,8 @@ useEffect(() => {
                         title={getStoryTitle(typedLang, story.slug)}
                         image={story.image}
                         onClick={() => openDetailModal(story.slug)}
+                        isNew={isNewStory(story.addedAt)}
+                        newLabel={t(typedLang, "stories", "newBadge")}
                       />
                     );
                   })}

@@ -411,6 +411,10 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
     entry += `\n    originalLevel: "${metadata.originalLevel}",`;
   }
 
+  // Always add addedAt with current date
+  const today = new Date().toISOString().split("T")[0];
+  entry += `\n    addedAt: "${today}",`;
+
   entry += `\n  },`;
 
   return entry;

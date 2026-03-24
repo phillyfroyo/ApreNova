@@ -278,6 +278,17 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["friendship","adventure","coming-of-age","humorous","nature","travel","historical","rural"],
     targetAudience: "all",
   },
+
+  {
+    slug: "the-wonderful-wizard-of-oz",
+    image: "/images/the-wonderful-wizard-of-oz-thumbnail-1030.jpeg",
+    levels: ["A1", "A2", "B1", "B2"],
+    type: "novel",
+    origin: { isOriginal: false, attribution: { author: { name: "L. Frank Baum", lifespan: "1856 – 1919" }, yearWritten: "1900", sourceEdition: { title: "The Wonderful Wizard of Oz", publicationYear: 1900, isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/55" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/55" }, region: "United States", genres: ["fairy tale", "children's literature"] } },
+    tags: ["friendship", "adventure", "fantasy", "heros-journey", "heartwarming"],
+    targetAudience: "all",
+    addedAt: "2026-03-24",
+  },
 ];
 
 export function getStoryUrl({
