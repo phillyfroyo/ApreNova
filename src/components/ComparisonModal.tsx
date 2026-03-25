@@ -34,6 +34,8 @@ export interface ComparisonModalProps {
   loadingError?: string;
   /** Per-chapter alignment issues (keyed by 1-based chapter number) */
   chapterAlignmentIssues?: Record<number, ChapterAlignmentResult>;
+  /** Per-chapter quote mismatch warnings: chapter number → array of 0-based content line indices */
+  quoteWarningsByChapter?: Record<number, number[]>;
 }
 
 // Parse chapter markers from text: "--- Chapter N ---" or "--- Chapter N: Title ---"
@@ -136,6 +138,7 @@ export function ComparisonModal({
   isLoading = false,
   loadingError,
   chapterAlignmentIssues,
+  quoteWarningsByChapter,
 }: ComparisonModalProps) {
   // DEBUG: Log what text the modal receives
   useEffect(() => {
@@ -227,6 +230,21 @@ export function ComparisonModal({
     if (!alignment) return new Set<number>();
     return new Set(alignment.contentVsBlankIssues.map(issue => issue.lineIndex));
   }, [liveAlignment]);
+
+  // Set of line indices with quote mismatches for the current chapter
+  const quoteWarningLineIndices = useMemo(() => {
+    if (!quoteWarningsByChapter) return new Set<number>();
+    const currentChapterNum = leftChapters[selectedChapter]?.number ?? selectedChapter + 1;
+    const lines = quoteWarningsByChapter[currentChapterNum];
+    return lines ? new Set(lines) : new Set<number>();
+  }, [quoteWarningsByChapter, leftChapters, selectedChapter]);
+
+  // Check if a chapter has quote warnings (for chapter pill styling)
+  const chapterHasQuoteWarnings = useCallback((chapterIdx: number): boolean => {
+    if (!quoteWarningsByChapter) return false;
+    const chapterNum = leftChapters[chapterIdx]?.number ?? chapterIdx + 1;
+    return (quoteWarningsByChapter[chapterNum]?.length ?? 0) > 0;
+  }, [quoteWarningsByChapter, leftChapters]);
 
   // Retranslate state
   const [showRetranslatePopover, setShowRetranslatePopover] = useState(false);
@@ -590,13 +608,14 @@ export function ComparisonModal({
     const canEditRight = canEditSide('right');
     const isBlankLine = !leftLine.trim() && !rightLine.trim();
     const isMisaligned = misalignedLineIndices.has(idx);
+    const hasQuoteWarning = quoteWarningLineIndices.has(idx);
 
     return (
       <div
         key={idx}
         data-row-idx={idx}
         className={`flex border-b ${isBlankLine ? 'border-gray-200' : 'border-gray-100'} group ${
-          isEditing ? 'bg-blue-50' : isMisaligned ? 'bg-amber-50 border-l-2 border-l-amber-400' : isBlankLine ? '' : 'hover:bg-gray-50'
+          isEditing ? 'bg-blue-50' : isMisaligned ? 'bg-amber-50 border-l-2 border-l-amber-400' : hasQuoteWarning ? 'bg-yellow-50 border-l-2 border-l-yellow-400' : isBlankLine ? '' : 'hover:bg-gray-50'
         }`}
       >
         {/* Line number + row actions */}
@@ -836,6 +855,26 @@ export function ComparisonModal({
                 <span className="text-white">{currentChapterAlignment.contentVsBlankIssues.length} misaligned row{currentChapterAlignment.contentVsBlankIssues.length !== 1 ? 's' : ''}</span>
               </button>
             )}
+            {quoteWarningLineIndices.size > 0 && (
+              <button
+                onClick={() => {
+                  // Scroll to first quote warning row
+                  const firstIdx = Array.from(quoteWarningLineIndices)[0];
+                  if (firstIdx !== undefined && scrollContainerRef.current) {
+                    const rows = scrollContainerRef.current.querySelectorAll('[data-row-idx]');
+                    const target = Array.from(rows).find(r => r.getAttribute('data-row-idx') === String(firstIdx));
+                    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="text-sm bg-yellow-500/80 hover:bg-yellow-500 px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Click to scroll to first quote mismatch"
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                <span className="text-white">{quoteWarningLineIndices.size} quote count issue{quoteWarningLineIndices.size !== 1 ? 's' : ''}</span>
+              </button>
+            )}
             {processingBadge && (
               <span className="text-sm bg-yellow-500/80 px-3 py-1 rounded-full animate-pulse flex items-center gap-2">
                 <span className="w-2 h-2 bg-white rounded-full animate-ping" />
@@ -909,6 +948,8 @@ export function ComparisonModal({
                 const chapterTitle = leftChapter?.title || rightChapter?.title || '';
                 const isSelected = selectedChapter === idx && viewMode === 'chapter';
                 const chapterHasAlignmentIssues = getChapterAlignment(idx)?.hasIssues;
+                const chapterHasQuotes = chapterHasQuoteWarnings(idx);
+                const chapterHasIssues = chapterHasAlignmentIssues || chapterHasQuotes;
 
                 return (
                   <button
@@ -920,16 +961,20 @@ export function ComparisonModal({
                     }}
                     className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap ${
                       isSelected
-                        ? chapterHasAlignmentIssues
-                          ? "bg-amber-500 text-white"
+                        ? chapterHasIssues
+                          ? chapterHasQuotes && !chapterHasAlignmentIssues
+                            ? "bg-yellow-500 text-white"
+                            : "bg-amber-500 text-white"
                           : "bg-indigo-500 text-white"
-                        : chapterHasAlignmentIssues
-                          ? "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100"
+                        : chapterHasIssues
+                          ? chapterHasQuotes && !chapterHasAlignmentIssues
+                            ? "bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100"
+                            : "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100"
                           : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                     }`}
                     title={chapterTitle || `Chapter ${chapterNum}`}
                   >
-                    {chapterHasAlignmentIssues && !isSelected && <span className="mr-1">&#9888;</span>}
+                    {chapterHasIssues && !isSelected && <span className="mr-1">&#9888;</span>}
                     {chapterNum === 0 ? 'Pre' : chapterNum}
                     {chapterTitle && <span className="ml-1 text-xs opacity-75 hidden sm:inline">({chapterTitle.slice(0, 15)}{chapterTitle.length > 15 ? '...' : ''})</span>}
                   </button>

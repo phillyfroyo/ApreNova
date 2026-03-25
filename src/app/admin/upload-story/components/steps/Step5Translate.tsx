@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import type { StoryData, ChunkError, TranslationErrorType } from "../../types";
 import { useTranslationPipeline } from "../../hooks/useTranslationPipeline";
-import { scanContentWarnings, scanTranslationQuality } from "../../hooks/useRewritePipeline";
+import { scanContentWarnings, scanTranslationQuality, scanQuoteMismatches } from "../../hooks/useRewritePipeline";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import { detectAlignmentIssues, type ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
 
@@ -339,6 +339,9 @@ export function Step5Translate({
           const qualityWarnings = (hasTranslation && content?.sourceText)
             ? scanTranslationQuality(content.sourceText, content.translatedText, level)
             : [];
+          const quoteWarnings = (hasTranslation && content?.sourceText)
+            ? scanQuoteMismatches(content.sourceText, content.translatedText, level, { strict: true })
+            : [];
 
           // Detect duplicate chapter markers (corrupted data)
           const detectDupeChapters = (text: string) => {
@@ -657,6 +660,24 @@ export function Step5Translate({
                 </div>
               )}
 
+              {quoteWarnings.length > 0 && (
+                <div className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-yellow-700 font-medium text-sm mb-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    {quoteWarnings.length} quote mismatch{quoteWarnings.length > 1 ? "es" : ""} in translation
+                  </div>
+                  <ul className="space-y-1">
+                    {quoteWarnings.map((w, i) => (
+                      <li key={`quote-${i}`} className="text-xs text-yellow-600">
+                        Ch {w.chapter}, line {w.line}: <code className="bg-yellow-100 px-1 rounded">{w.text}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Duplicate chapter warning */}
               {hasDupeChapters && (
                 <div className="mt-3 bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
@@ -831,6 +852,18 @@ export function Step5Translate({
           leftText={storyData.levelContent[translationComparisonLevel]?.sourceText || ""}
           rightTitle={`Translation (${storyData.sourceLanguage === 'en' ? 'ES' : 'EN'})`}
           rightText={storyData.levelContent[translationComparisonLevel]?.translatedText || ""}
+          quoteWarningsByChapter={(() => {
+            const src = storyData.levelContent[translationComparisonLevel]?.sourceText || "";
+            const trans = storyData.levelContent[translationComparisonLevel]?.translatedText || "";
+            if (!src || !trans) return undefined;
+            const warnings = scanQuoteMismatches(src, trans, translationComparisonLevel, { strict: true });
+            const byChapter: Record<number, number[]> = {};
+            for (const w of warnings) {
+              if (!byChapter[w.chapter]) byChapter[w.chapter] = [];
+              byChapter[w.chapter].push(w.line - 1);
+            }
+            return Object.keys(byChapter).length > 0 ? byChapter : undefined;
+          })()}
           onSave={saveTranslationFromModal}
           editableSide="both"
           headerGradient="bg-gradient-to-r from-blue-600 to-indigo-600"

@@ -220,6 +220,9 @@ export type StoryMetadata = {
   // Audio metadata
   audio?: AudioMetadata;
 
+  // Date story was added (ISO string, e.g. "2026-03-24") — used for "New" badge
+  addedAt?: string;
+
   // Reading time (simple version - or use processing.readingTimeByLevel)
   estimatedReadTime?: number;          // Minutes at native level
 };

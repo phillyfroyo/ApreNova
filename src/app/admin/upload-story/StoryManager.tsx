@@ -17,6 +17,7 @@ interface Story {
   isPremiumOnly: boolean;
   isArchived?: boolean;
   title: { en: string; es: string };
+  displayTitle: { en: string; es: string };
   description: { en: string; es: string };
   hook: { en: string; es: string };
   // Tagging fields
@@ -31,6 +32,7 @@ interface Story {
 interface EditingStory {
   slug: string;
   title: { en: string; es: string };
+  displayTitle: { en: string; es: string };
   description: { en: string; es: string };
   hook: { en: string; es: string };
   thumbnailPreview: string | null;
@@ -156,6 +158,7 @@ export default function StoryManager() {
     setEditingStory({
       slug: story.slug,
       title: { ...story.title },
+      displayTitle: { ...(story.displayTitle || { en: "", es: "" }) },
       description: { ...story.description },
       hook: { ...story.hook },
       thumbnailPreview: null,
@@ -557,6 +560,9 @@ export default function StoryManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: editingStory.title,
+          displayTitle: editingStory.displayTitle.en || editingStory.displayTitle.es
+            ? editingStory.displayTitle
+            : undefined,
           description: editingStory.description,
           hook: editingStory.hook,
           thumbnailBase64: editingStory.thumbnailPreview || undefined,
@@ -587,6 +593,7 @@ export default function StoryManager() {
             ? {
                 ...s,
                 title: editingStory.title,
+                displayTitle: editingStory.displayTitle,
                 description: editingStory.description,
                 type: editingStory.storyType,
                 origin,
@@ -948,6 +955,43 @@ export default function StoryManager() {
                             setEditingStory({
                               ...editingStory,
                               title: { ...editingStory.title, es: e.target.value },
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Display Title (short version for thumbnails) */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Display Title <span className="text-gray-400 font-normal">(short, shown under thumbnails)</span></label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">English</label>
+                        <input
+                          type="text"
+                          value={editingStory.displayTitle.en}
+                          placeholder={editingStory.title.en}
+                          onChange={(e) =>
+                            setEditingStory({
+                              ...editingStory,
+                              displayTitle: { ...editingStory.displayTitle, en: e.target.value },
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Spanish</label>
+                        <input
+                          type="text"
+                          value={editingStory.displayTitle.es}
+                          placeholder={editingStory.title.es}
+                          onChange={(e) =>
+                            setEditingStory({
+                              ...editingStory,
+                              displayTitle: { ...editingStory.displayTitle, es: e.target.value },
                             })
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"

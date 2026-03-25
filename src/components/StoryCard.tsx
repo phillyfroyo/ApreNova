@@ -10,6 +10,8 @@ type StoryCardProps = {
   title: string;
   image: string;
   onClick: () => void;
+  isNew?: boolean;
+  newLabel?: string;
 };
 
 export default function StoryCard({
@@ -17,6 +19,8 @@ export default function StoryCard({
   title,
   image,
   onClick,
+  isNew,
+  newLabel = "New",
 }: StoryCardProps) {
   return (
     <div
@@ -51,6 +55,25 @@ export default function StoryCard({
     sizes="140px"
     style={{ objectFit: "cover", borderRadius: "12px" }}
   />
+  {isNew && (
+    <span
+      style={{
+        position: "absolute",
+        top: "0",
+        right: "0",
+        background: "#22c55e",
+        color: "white",
+        fontSize: "0.7rem",
+        fontWeight: 600,
+        padding: "3px 10px",
+        borderBottomLeftRadius: "10px",
+        borderTopRightRadius: "12px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }}
+    >
+      {newLabel}
+    </span>
+  )}
 </div>
   <p
         style={{

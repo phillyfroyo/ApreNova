@@ -111,6 +111,7 @@ export interface GeneratedStoryContent {
 export interface StoryMetadataInput {
   slug: string;
   title: { en: string; es: string };
+  displayTitle?: { en: string; es: string };
   description: { en: string; es: string };
   hook?: { en: string; es: string };
   image?: string;
@@ -411,6 +412,10 @@ export function generateMetadataEntry(metadata: StoryMetadataInput): string {
     entry += `\n    originalLevel: "${metadata.originalLevel}",`;
   }
 
+  // Always add addedAt with current date
+  const today = new Date().toISOString().split("T")[0];
+  entry += `\n    addedAt: "${today}",`;
+
   entry += `\n  },`;
 
   return entry;
@@ -425,8 +430,10 @@ export function generateUITranslationEntry(
 ): string {
   const hook = metadata.hook?.[lang];
   const hookLine = hook ? `\n    hook: "${escapeJsString(hook)}",` : "";
+  const displayTitle = metadata.displayTitle?.[lang];
+  const displayTitleLine = displayTitle ? `\n    displayTitle: "${escapeJsString(displayTitle)}",` : "";
   return `  "${metadata.slug}": {
-    title: "${escapeJsString(lang === "en" ? metadata.title.en : metadata.title.es)}",${hookLine}
+    title: "${escapeJsString(lang === "en" ? metadata.title.en : metadata.title.es)}",${displayTitleLine}${hookLine}
     description: "${escapeJsString(lang === "en" ? metadata.description.en : metadata.description.es)}",
   },`;
 }

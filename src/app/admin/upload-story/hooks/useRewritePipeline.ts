@@ -14,7 +14,7 @@ export interface ContentWarning {
   level: number;
   chapter: number;    // 1-indexed
   line: number;       // 1-indexed
-  type: "error_marker" | "ai_refusal" | "translation_failed" | "short_translation";
+  type: "error_marker" | "ai_refusal" | "translation_failed" | "short_translation" | "quote_mismatch";
   text: string;       // The offending line
 }
 
@@ -146,6 +146,109 @@ export function scanTranslationQuality(
           type: "short_translation",
           text: `"${transLine}" ← "${srcLine.slice(0, 80)}${srcLine.length > 80 ? '...' : ''}"`,
         });
+      }
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * Compare original and rewritten/translated text to detect quotation mark mismatches.
+ *
+ * In lenient mode (rewrites): only flags odd quote counts or completely dropped dialogue.
+ * In strict mode (translations): flags any difference in quote count per line.
+ */
+const ALL_QUOTE_CHARS = /["\u201C\u201D\u00AB\u00BB]/g;
+
+export function scanQuoteMismatches(
+  originalText: string,
+  comparisonText: string,
+  level: number,
+  options?: { strict?: boolean }
+): ContentWarning[] {
+  const strict = options?.strict ?? false;
+  if (!originalText || !comparisonText) return [];
+  const warnings: ContentWarning[] = [];
+
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+
+  const origChapterParts = originalText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const compChapterParts = comparisonText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+
+  // Detect chapter numbers from divider lines
+  const chapterNums: number[] = [];
+  for (const line of originalText.split("\n")) {
+    const m = line.match(chapterDivider);
+    if (m) chapterNums.push(parseInt(m[1], 10));
+  }
+
+  const origOffset = origChapterParts[0]?.trim() === "" ? 1 : 0;
+  const compOffset = compChapterParts[0]?.trim() === "" ? 1 : 0;
+
+  const numChapters = Math.min(
+    origChapterParts.length - origOffset,
+    compChapterParts.length - compOffset
+  );
+
+  for (let chIdx = 0; chIdx < numChapters; chIdx++) {
+    const chapterNum = chapterNums[chIdx] || chIdx + 1;
+    let origLines = origChapterParts[chIdx + origOffset].split("\n");
+    let compLines = compChapterParts[chIdx + compOffset].split("\n");
+
+    // The chapter split leaves a leading empty line — strip it to match
+    // the comparison modal's chapter parsing which starts after the divider
+    if (origLines[0]?.trim() === "") origLines = origLines.slice(1);
+    if (compLines[0]?.trim() === "") compLines = compLines.slice(1);
+
+    // Build content-line-index → total-line-index mapping for comparison text
+    const compContentToTotal: number[] = [];
+    for (let j = 0; j < compLines.length; j++) {
+      if (compLines[j].trim().length > 0) {
+        compContentToTotal.push(j);
+      }
+    }
+
+    // Get content lines only (non-empty)
+    const origContent = origLines.filter(l => l.trim().length > 0);
+    const compContent = compLines.filter(l => l.trim().length > 0);
+
+    const compareCount = Math.min(origContent.length, compContent.length);
+
+    for (let i = 0; i < compareCount; i++) {
+      const origLine = origContent[i].trim();
+      const compLine = compContent[i].trim();
+
+      const origQuotes = (origLine.match(ALL_QUOTE_CHARS) || []).length;
+      const compQuotes = (compLine.match(ALL_QUOTE_CHARS) || []).length;
+
+      if (strict) {
+        // Translation mode: flag any quote count difference
+        if (origQuotes !== compQuotes) {
+          warnings.push({
+            level,
+            chapter: chapterNum,
+            line: (compContentToTotal[i] ?? i) + 1,
+            type: "quote_mismatch",
+            text: `${origQuotes} → ${compQuotes} quotes: "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`,
+          });
+        }
+      } else {
+        // Rewrite mode: only flag odd quotes (broken) or completely dropped dialogue
+        const hasOddQuotes = compQuotes > 0 && compQuotes % 2 !== 0 && origQuotes % 2 === 0;
+        const droppedDialogue = origQuotes > 0 && compQuotes === 0;
+
+        if (hasOddQuotes || droppedDialogue) {
+          warnings.push({
+            level,
+            chapter: chapterNum,
+            line: (compContentToTotal[i] ?? i) + 1,
+            type: "quote_mismatch",
+            text: hasOddQuotes
+              ? `Odd quotes (${compQuotes}): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`
+              : `Dialogue dropped (${origQuotes} → 0): "${compLine.slice(0, 80)}${compLine.length > 80 ? '...' : ''}"`,
+          });
+        }
       }
     }
   }
