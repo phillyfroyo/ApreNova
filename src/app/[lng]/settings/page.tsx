@@ -302,8 +302,10 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Early Adopter Banner */}
-            {userNumber != null && userNumber <= 100 && (
+            {/* Early Adopter Banner — show skeleton while loading to prevent layout shift */}
+            {userNumber === null ? (
+              <div className="rounded-xl bg-gray-100 p-4 mb-2 animate-pulse h-[68px]" />
+            ) : userNumber <= 100 ? (
               <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 mb-2 text-white">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-lg font-bold shrink-0">
@@ -319,7 +321,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Editable Fields */}
             <div className="space-y-4">
@@ -501,23 +503,31 @@ export default function SettingsPage() {
 
             {session.user.isPremium ? (
               <div className="mt-4">
-                <button
-                  onClick={openBillingPortal}
-                  disabled={loadingPortal}
-                  className="w-full flex items-center justify-between py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    {loadingPortal ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <CreditCard className="w-5 h-5" />
+                {userNumber != null && userNumber <= 100 ? (
+                  <p className="text-sm text-gray-500 text-center py-3">
+                    {t(typedLang, 'settings', 'earlyAdopterPremium')}
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      onClick={openBillingPortal}
+                      disabled={loadingPortal}
+                      className="w-full flex items-center justify-between py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        {loadingPortal ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <CreditCard className="w-5 h-5" />
+                        )}
+                        <span>{txt.manageSubscription}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    {billingError && (
+                      <p className="mt-2 text-sm text-amber-600 text-center">{billingError}</p>
                     )}
-                    <span>{txt.manageSubscription}</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                {billingError && (
-                  <p className="mt-2 text-sm text-amber-600 text-center">{billingError}</p>
+                  </>
                 )}
               </div>
             ) : (

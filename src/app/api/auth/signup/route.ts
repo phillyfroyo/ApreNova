@@ -44,6 +44,10 @@ export async function POST(req: Request) {
 
     const hashed = await hash(password, 10);
 
+    // Grant premium to first 100 users
+    const userCount = await prisma.user.count();
+    const isEarlyAdopter = userCount < 100;
+
     await prisma.user.create({
       data: {
         email: email.toLowerCase(),
@@ -51,6 +55,7 @@ export async function POST(req: Request) {
         nativeLanguage: nativeLanguage ?? null,
         name: name ?? null,
         updatedAt: new Date(),
+        ...(isEarlyAdopter && { isPremium: true }),
       },
     });
 

@@ -198,6 +198,7 @@ settings: {
   changeLevel: "Take the quiz to change your level",
   earlyAdopterTitle: "You're one of our first 100 users!",
   earlyAdopterMessage: "Thanks for being here from the start. You have free access as an early adopter.",
+  earlyAdopterPremium: "You have free premium access as one of our first 100 users. No subscription needed.",
   },
 
 stats: {
