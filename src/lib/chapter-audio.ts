@@ -5,6 +5,7 @@
 
 import { getAzureSpeechService, VOICE_CONFIG, SPEED_RATES } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
+import { toFolderName } from "@/lib/cefr";
 import type { TTSRequest, WordTiming } from "@/types/azure-tts";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 import type {
@@ -67,13 +68,16 @@ export async function loadChapterContent(
   level: string,
   chapter: number
 ): Promise<PageLines[]> {
+  // Convert CEFR level (A1, A2, etc.) to folder name (l1, l2, etc.)
+  const folderLevel = toFolderName(level);
+
   // Dynamic import of the story content module
   let levelContent: any;
   try {
-    const mod = await import(`@/content/${storySlug}/${level}/index.ts`);
+    const mod = await import(`@/content/${storySlug}/${folderLevel}/index.ts`);
     levelContent = mod.default || mod.levelContent;
   } catch {
-    const mod = await import(`@/content/${storySlug}/${level}/content.ts`);
+    const mod = await import(`@/content/${storySlug}/${folderLevel}/content.ts`);
     levelContent = mod.default || mod.levelContent;
   }
 
