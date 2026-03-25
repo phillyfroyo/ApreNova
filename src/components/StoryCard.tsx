@@ -59,17 +59,16 @@ export default function StoryCard({
     <span
       style={{
         position: "absolute",
-        top: "8px",
-        left: "8px",
-        background: "linear-gradient(135deg, #6366f1, #a855f7)",
+        top: "0",
+        right: "0",
+        background: "#22c55e",
         color: "white",
-        fontSize: "0.625rem",
-        fontWeight: 700,
-        padding: "2px 8px",
-        borderRadius: "9999px",
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        fontSize: "0.7rem",
+        fontWeight: 600,
+        padding: "3px 10px",
+        borderBottomLeftRadius: "10px",
+        borderTopRightRadius: "12px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
       }}
     >
       {newLabel}

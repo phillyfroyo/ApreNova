@@ -89,6 +89,7 @@ function serializeAttribution(attr: StoryAttribution): string {
 
 interface UpdateStoryRequest {
   title?: { en: string; es: string };
+  displayTitle?: { en: string; es: string };
   description?: { en: string; es: string };
   hook?: { en: string; es: string };
   thumbnailBase64?: string;
@@ -111,7 +112,7 @@ export async function PATCH(
   try {
     const { slug } = await params;
     const body: UpdateStoryRequest = await req.json();
-    const { title, description, hook, thumbnailBase64, backgroundBase64, deleteCurrentThumbnail, deleteCurrentBackground } = body;
+    const { title, displayTitle, description, hook, thumbnailBase64, backgroundBase64, deleteCurrentThumbnail, deleteCurrentBackground } = body;
 
     const results: string[] = [];
     const errors: string[] = [];
@@ -189,16 +190,18 @@ export async function PATCH(
       }
     }
 
-    // Update UI translation files if title, description, or hook provided
-    if (title || description || hook) {
+    // Update UI translation files if title, description, hook, or displayTitle provided
+    if (title || description || hook || displayTitle) {
       // Helper to build the entry string for a given language
       const buildEntry = (lang: "en" | "es") => {
         const t = escapeJsString(title?.[lang] || "");
+        const dt = displayTitle?.[lang] ? escapeJsString(displayTitle[lang]) : "";
         const h = escapeJsString(hook?.[lang] || "");
         const d = escapeJsString(description?.[lang] || "");
+        const displayTitleLine = dt ? `\n    displayTitle: "${dt}",` : "";
         const hookLine = h ? `\n    hook: "${h}",` : "";
         return `"${slug}": {
-    title: "${t}",${hookLine}
+    title: "${t}",${displayTitleLine}${hookLine}
     description: "${d}",
   }`;
       };

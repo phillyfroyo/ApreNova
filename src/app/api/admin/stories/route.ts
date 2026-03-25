@@ -27,6 +27,10 @@ export async function GET() {
           en: enMeta?.title || story.slug,
           es: esMeta?.title || story.slug,
         },
+        displayTitle: {
+          en: enMeta?.displayTitle || "",
+          es: esMeta?.displayTitle || "",
+        },
         description: {
           en: enMeta?.description || "",
           es: esMeta?.description || "",

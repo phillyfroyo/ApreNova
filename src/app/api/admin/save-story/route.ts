@@ -42,6 +42,7 @@ interface LevelContent {
 interface SaveStoryRequest {
   slug: string;
   title: { en: string; es: string };
+  displayTitle?: { en: string; es: string };
   description: { en: string; es: string };
   hook?: { en: string; es: string };
   levels: LevelContent[];
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     const {
       slug,
       title,
+      displayTitle,
       description,
       hook,
       levels,
@@ -273,6 +275,7 @@ export async function POST(req: NextRequest) {
     const metadata: StoryMetadataInput = {
       slug,
       title,
+      displayTitle: displayTitle || undefined,
       description,
       hook: hook || undefined,
       image: thumbnailImagePath || undefined, // Use the saved thumbnail path

@@ -188,6 +188,11 @@ export function getStoryTitle(lang: Language, slug: string): string {
   return (translations as any)[lang]?.storiesMetadata?.[slug]?.title ?? slug;
 }
 
+export function getStoryDisplayTitle(lang: Language, slug: string): string {
+  const meta = (translations as any)[lang]?.storiesMetadata?.[slug];
+  return meta?.displayTitle ?? meta?.title ?? slug;
+}
+
 export function getStoryDescription(lang: Language, slug: string): string {
   return (translations as any)[lang]?.storiesMetadata?.[slug]?.description ?? "";
 }
@@ -267,6 +272,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/64317" } } },
     tags: ["romance", "urban", "tragedy", "love"],
     targetAudience: "all",
+    addedAt: "2026-03-17",
   },
 
   {
@@ -277,6 +283,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: false, attribution: { author: { name: "Mark Twain", lifespan: "1835-1910", note: "Mark Twain is the pen name of Samuel Langhorne Clemens." }, yearWritten: "c. 1876", yearFirstPublished: 1876, sourceEdition: { title: "The Adventures of Tom Sawyer", isPublicDomain: true, publicDomainNote: "Published before 1928 and author died over 70 years ago.", url: "https://www.gutenberg.org/ebooks/74" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/74" }, region: "United States", genres: ["novel", "children's literature"] } },
     tags: ["friendship","adventure","coming-of-age","humorous","nature","travel","historical","rural"],
     targetAudience: "all",
+    addedAt: "2026-03-22",
   },
 
   {
@@ -285,7 +292,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     levels: ["A1", "A2", "B1", "B2"],
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "L. Frank Baum", lifespan: "1856 – 1919" }, yearWritten: "1900", sourceEdition: { title: "The Wonderful Wizard of Oz", publicationYear: 1900, isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/55" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/55" }, region: "United States", genres: ["fairy tale", "children's literature"] } },
-    tags: ["friendship", "adventure", "fantasy", "heros-journey", "heartwarming"],
+    tags: ["friendship","adventure","fantasy","heros-journey","heartwarming"],
     targetAudience: "all",
     addedAt: "2026-03-24",
   },

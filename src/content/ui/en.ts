@@ -619,11 +619,13 @@ storiesMetadata: {
   },
   "the-adventures-of-tom-sawyer": {
     title: "The Adventures of Tom Sawyer",
+    displayTitle: "Tom Sawyer",
     hook: "Join Tom Sawyer in a world of mischief, friendship, and unforgettable adventures along the Mississippi River.",
     description: "This classic story follows Tom Sawyer, a clever and adventurous boy growing up in a small town in 19th-century America. Alongside his friend Huck Finn, he gets caught up in exciting escapades—from treasure hunts and cave explorations to witnessing a shocking crime.\n\nMany of the adventures in this story were inspired by real experiences from Mark Twain’s childhood and the lives of those around him. Tom Sawyer himself is a blend of several boys Twain knew, making him a vivid and authentic character.\n\nAlthough written with young readers in mind, the story also invites adults to rediscover the imagination, curiosity, and bold spirit of childhood.",
   },
   "the-wonderful-wizard-of-oz": {
     title: "The Wonderful Wizard of Oz",
+    displayTitle: "The Wizard of Oz",
     hook: "Dorothy lives a dull life on the Kansas prairie until a whirlwind takes her on an unexpected journey.",
     description: "This classic story follows Dorothy, a young girl swept away from her home in Kansas to the magical Land of Oz. As she journeys to find her way back, she meets unforgettable companions—a Scarecrow in search of a brain, a Tin Woodman longing for a heart, and a Cowardly Lion seeking courage.\n\nTogether, they embark on an adventure filled with challenges, strange creatures, and powerful magic, all while discovering that the qualities they seek may have been within them all along.\n\nWritten by L. Frank Baum, this timeless tale has captivated readers for generations with its imaginative world, memorable characters, and enduring message about friendship, courage, and believing in oneself.\n\nAlthough written with young readers in mind, the story continues to resonate with audiences of all ages through its warmth, wonder, and universal themes.",
   },
