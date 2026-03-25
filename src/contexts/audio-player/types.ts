@@ -11,9 +11,12 @@ export type AudioPlayerStatus =
   | "playing"
   | "paused"
   | "loading"
+  | "generating"
   | "navigating"
   | "error"
   | "finished";
+
+export type PlaybackMode = "chapter" | "legacy";
 
 export type AudioLanguageMode = "target-only" | "bilingual";
 
@@ -29,22 +32,21 @@ export interface AudioPlayerPosition {
   userStoryId?: string;
 }
 
-export interface VoiceSelection {
-  'en-US': string;
-  'es-ES': string;
-}
-
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
   position: AudioPlayerPosition | null;
   mode: AudioLanguageMode;
+  playbackMode: PlaybackMode;
   currentPageSentences: StoryLine[];
   storyMap: StoryMapForNav | null;
   isVisible: boolean;
   highlightedSentenceIndex: number | null;
   error: string | null;
-  voiceSelection: VoiceSelection;
   playbackRate: number;
+  // Chapter mode fields
+  chapterCurrentTime: number;
+  chapterDuration: number;
+  chapterGenerationProgress: { sentencesComplete: number; sentencesTotal: number } | null;
 }
 
 export interface StartPlaybackOptions {
@@ -73,30 +75,14 @@ export interface AudioPlayerContextType {
   nextPage: () => void;
   prevPage: () => void;
   isPlaying: boolean;
-  setVoice: (language: 'en-US' | 'es-ES', voiceId: string) => void;
   setPlaybackRate: (rate: number) => void;
+  seekToTime: (time: number) => void;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-export const AVAILABLE_VOICES: Record<'en-US' | 'es-ES', { id: string; label: string }[]> = {
-  'en-US': [
-    { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
-    { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
-  ],
-  'es-ES': [
-    { id: 'en-US-BrianMultilingualNeural', label: 'Brian' },
-    { id: 'en-US-AvaMultilingualNeural', label: 'Ava' },
-  ],
-};
-
 export const AVAILABLE_SPEEDS = [0.7, 1.0];
-
-export const DEFAULT_VOICES: VoiceSelection = {
-  'en-US': 'en-US-BrianMultilingualNeural',
-  'es-ES': 'en-US-BrianMultilingualNeural',
-};
 
 export const DEFAULT_PLAYBACK_RATE = 1.0;

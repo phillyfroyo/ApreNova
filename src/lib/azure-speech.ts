@@ -13,13 +13,11 @@ import type {
   TTSError 
 } from '@/types/azure-tts';
 
-// Voice configuration for different languages and speeds
-// Uses BrianMultilingualNeural as default to match audiobook player,
-// enabling cache sharing between audiobook and per-line TTS features
+// Voice configuration: Brian for English, Ava for Spanish
 export const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
-    normal: 'en-US-BrianMultilingualNeural',
-    slow: 'en-US-BrianMultilingualNeural'
+    normal: 'en-US-AvaMultilingualNeural',
+    slow: 'en-US-AvaMultilingualNeural'
   },
   'en-US': {
     normal: 'en-US-BrianMultilingualNeural',

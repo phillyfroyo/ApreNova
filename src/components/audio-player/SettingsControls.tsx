@@ -1,7 +1,7 @@
 // src/components/audio-player/SettingsControls.tsx
 "use client";
 
-import { Languages, Gauge, Turtle, Mic, X } from "lucide-react";
+import { Languages, Gauge, Turtle, X } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 
@@ -10,16 +10,14 @@ interface SettingsControlsProps {
   playbackRate: number;
   isBilingual: boolean;
   onSpeedToggle: () => void;
-  onVoiceToggle: () => void;
   onLangToggle: () => void;
   onClose: () => void;
-  voiceButtonRef: React.RefObject<HTMLButtonElement | null>;
   /** "mobile" renders icon+label stacked; "desktop" renders inline with text */
   variant: "mobile" | "desktop";
 }
 
 export default function SettingsControls({
-  lng, playbackRate, isBilingual, onSpeedToggle, onVoiceToggle, onLangToggle, onClose, voiceButtonRef, variant,
+  lng, playbackRate, isBilingual, onSpeedToggle, onLangToggle, onClose, variant,
 }: SettingsControlsProps) {
   if (variant === "desktop") {
     return (
@@ -27,10 +25,6 @@ export default function SettingsControls({
         <button onClick={onSpeedToggle} className="h-9 px-3 flex items-center gap-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors" title="Toggle playback speed">
           {playbackRate === 1.0 ? <Gauge className="w-[18px] h-[18px]" /> : <Turtle className="w-[18px] h-[18px]" />}
           <span className="text-xs font-medium">{t(lng, "audioPlayer", "speed")}</span>
-        </button>
-        <button ref={voiceButtonRef} onClick={onVoiceToggle} className="h-9 px-3 flex items-center gap-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors" title="Voice selection">
-          <Mic className="w-[18px] h-[18px]" />
-          <span className="text-xs font-medium">{t(lng, "audioPlayer", "voice")}</span>
         </button>
         <button onClick={onLangToggle} className={`h-9 px-3 flex items-center gap-1.5 rounded-full transition-colors ${isBilingual ? "text-indigo-600 hover:bg-indigo-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"}`}>
           <Languages className="w-[18px] h-[18px]" />
@@ -49,10 +43,6 @@ export default function SettingsControls({
       <button onClick={onSpeedToggle} className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors" title="Toggle playback speed">
         {playbackRate === 1.0 ? <Gauge className="w-[22px] h-[22px]" /> : <Turtle className="w-[22px] h-[22px]" />}
         <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "speed")}</span>
-      </button>
-      <button ref={voiceButtonRef} onClick={onVoiceToggle} className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors" title="Voice selection">
-        <Mic className="w-[22px] h-[22px]" />
-        <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "voice")}</span>
       </button>
       <button onClick={onLangToggle} className={`flex-1 flex flex-col items-center gap-1 transition-colors ${isBilingual ? "text-indigo-600" : "text-gray-700"}`}>
         <Languages className="w-[22px] h-[22px]" />

@@ -1,27 +1,9 @@
 // src/contexts/audio-player/storage.ts
-import type { AudioLanguageMode, AudioPlayerPosition, VoiceSelection } from "./types";
-import { DEFAULT_VOICES, DEFAULT_PLAYBACK_RATE } from "./types";
+import type { AudioLanguageMode, AudioPlayerPosition } from "./types";
+import { DEFAULT_PLAYBACK_RATE } from "./types";
 
-const VOICE_STORAGE_KEY = 'cuentana_voice_selection';
 const SPEED_STORAGE_KEY = 'cuentana_playback_speed';
 const STORAGE_KEY = "cuentana_audio_player";
-
-export function loadVoiceSelection(): VoiceSelection {
-  try {
-    const stored = localStorage.getItem(VOICE_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return { ...DEFAULT_VOICES, ...parsed };
-    }
-  } catch (e) {}
-  return { ...DEFAULT_VOICES };
-}
-
-export function saveVoiceSelection(voices: VoiceSelection) {
-  try {
-    localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(voices));
-  } catch (e) {}
-}
 
 export function loadPlaybackRate(): number {
   try {
