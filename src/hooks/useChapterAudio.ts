@@ -49,6 +49,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const metadataRef = useRef<ChapterAudioMetadata | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   const lastSentenceIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
@@ -116,6 +117,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   // ---- Load chapter audio and start playback ----
   const loadAndPlay = useCallback(async (request: ChapterAudioRequest) => {
+    // Abort any in-flight request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
     // Stop any existing audio
     if (audioRef.current) {
       audioRef.current.pause();
@@ -125,6 +131,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     lastPageRef.current = -1;
     setMetadata(null);
     metadataRef.current = null;
+
+    const abortController = new AbortController();
+    abortRef.current = abortController;
 
     setState({
       status: "loading",
@@ -142,6 +151,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(request),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -187,6 +197,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         throw new Error("No audio URL received from server");
       }
 
+      // Check if cancelled during generation
+      if (abortController.signal.aborted) return;
+
       // Store metadata
       setMetadata(chapterMetadata);
       metadataRef.current = chapterMetadata;
@@ -218,6 +231,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
 
     } catch (err: any) {
+      // Ignore abort errors — these are intentional cancellations
+      if (err.name === "AbortError") return;
+
       setState(prev => ({
         ...prev,
         status: "error",
@@ -245,6 +261,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, [state.status]);
 
   const stop = useCallback(() => {
+    // Abort any in-flight fetch
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -343,6 +364,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
