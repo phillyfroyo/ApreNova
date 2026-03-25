@@ -338,7 +338,7 @@ useEffect(() => {
     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
       activeFilterCount > 0
         ? "bg-purple-600 text-white"
-        : "bg-white/80 text-gray-700 hover:bg-white"
+        : "bg-white text-gray-700 hover:bg-gray-50"
     }`}
   >
     <span>🏷️</span>
@@ -351,7 +351,7 @@ useEffect(() => {
   <UploadStoryButton />
   <Link
     href={`/${typedLang}/my-stories`}
-    className="px-3 py-1.5 bg-white/80 hover:bg-white text-purple-600 rounded-full text-sm font-medium transition-all flex items-center gap-1.5"
+    className="px-3 py-1.5 bg-white hover:bg-gray-50 text-purple-600 rounded-full text-sm font-medium transition-all flex items-center gap-1.5"
   >
     <span>📚</span>
     {typedLang === "es" ? "Mis Historias" : "My Stories"}
