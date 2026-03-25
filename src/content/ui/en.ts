@@ -50,6 +50,9 @@ stories: {
   continue: "Continue",
   back: "Back",
   newBadge: "New",
+  rightsPublicDomain: "The original text is in the public domain. This educational adaptation © Cuentana.",
+  rightsLicensed: "This work is used under license. This educational adaptation © Cuentana.",
+  rightsOriginal: "Original content © Cuentana.",
   readStory: "Read Me",
   readMore: "Read more",
   readLess: "Read less",
@@ -195,6 +198,7 @@ settings: {
   changeLevel: "Take the quiz to change your level",
   earlyAdopterTitle: "You're one of our first 100 users!",
   earlyAdopterMessage: "Thanks for being here from the start. You have free access as an early adopter.",
+  earlyAdopterPremium: "You have free premium access as one of our first 100 users. No subscription needed.",
   },
 
 stats: {
@@ -589,11 +593,13 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "The Last Word",
-    description: "Join Maya as she battles her fears of public speaking and discovers her inner strength.",
+    hook: "A girl who can barely speak in class is asked to read a poem on stage in front of the entire school.",
+    description: "Maya freezes during a history presentation and wishes she could disappear. Then her Spanish teacher announces a poetry project — performed live, on stage, in front of everyone. There's no way out. But late one night, a blank page pulls something unexpected out of her: a poem about birds, about her dog, about Saturday mornings with her dad — and about the silence he left behind.",
   },
   "diego-unplugged": {
     title: "Diego Unplugged",
-    description: "A young man's journey of self-discovery when he disconnects from the digital world.",
+    hook: "A teenager drops his phone out a window and is forced to survive a month without it.",
+    description: "Diego never goes anywhere without his phone. Not to the kitchen, not to bed, not even across the street. Then one summer evening, it slips from his hands and shatters on the sidewalk two stories below. His parents won't pay for the repair. It will take a month of work to save up. At first, the silence is unbearable. Food tastes like nothing, music falls flat, and his hands keep reaching for something that isn't there. But slowly, the world starts to get louder — in ways he never expected.",
   },
   "el-viaje-magico": {
     title: "The Magic Journey",
@@ -605,7 +611,7 @@ storiesMetadata: {
   },
   "my-day-3": {
     title: "My Day",
-    hook: "Follow a typical day from morning to night.",
+    hook: "A simple poem about the rhythm of an ordinary day — from dawn to dusk.",
     description: "",
   },
   "poems-by-emily-dickinson-complete": {

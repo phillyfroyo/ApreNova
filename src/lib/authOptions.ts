@@ -118,6 +118,19 @@ export const authOptions: AuthOptions = {
 }
   },
 
+  events: {
+    // Grant premium to first 100 users (Google OAuth signups)
+    createUser: async ({ user }) => {
+      const userCount = await prisma.user.count();
+      if (userCount <= 100) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isPremium: true },
+        });
+      }
+    },
+  },
+
   session: {
     strategy: "jwt" as SessionStrategy,
     maxAge: 30 * 24 * 60 * 60, // 30 days
