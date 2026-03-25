@@ -594,11 +594,13 @@ storiesMetadata: {
   },
   "the-last-word": {
     title: "La Última Palabra",
-    description: "Acompaña a Maya mientras enfrenta sus miedos de hablar en público y descubre su fuerza interior.",
+    hook: "Una chica que apenas puede hablar en clase debe leer un poema en el escenario frente a toda la escuela.",
+    description: "Maya se paraliza durante una presentación de historia y desea desaparecer. Entonces su maestra de español anuncia un proyecto de poesía — en vivo, en el escenario, frente a todos. No hay escapatoria. Pero una noche, una hoja en blanco saca algo inesperado de ella: un poema sobre los pájaros, sobre su perro, sobre las mañanas de sábado con su papá — y sobre el silencio que él dejó.",
   },
   "diego-unplugged": {
     title: "Diego Desconectado",
-    description: "El viaje de autodescubrimiento de un joven cuando se desconecta del mundo digital.",
+    hook: "Un adolescente deja caer su teléfono por la ventana y tiene que sobrevivir un mes sin él.",
+    description: "Diego nunca va a ningún lado sin su teléfono. Ni a la cocina, ni a la cama, ni siquiera al cruzar la calle. Entonces, una noche de verano, se le resbala de las manos y se estrella contra la acera dos pisos más abajo. Sus padres no van a pagar la reparación. Le tomará un mes de trabajo ahorrar lo suficiente. Al principio, el silencio es insoportable. La comida no tiene sabor, la música suena plana, y sus manos siguen buscando algo que ya no está. Pero poco a poco, el mundo empieza a sonar más fuerte — de maneras que nunca esperó.",
   },
   "el-viaje-magico": {
     title: "El Viaje Mágico",
@@ -610,7 +612,7 @@ storiesMetadata: {
   },
   "my-day-3": {
     title: "Mi Día",
-    hook: "Sigue un día típico de la mañana a la noche.",
+    hook: "Un poema sencillo sobre el ritmo de un día común — del amanecer al atardecer.",
     description: "",
   },
   "poems-by-emily-dickinson-complete": {

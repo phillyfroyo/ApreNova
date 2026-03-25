@@ -254,6 +254,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     targetAudience: "all",
     structureType: "anthology",
+    tags: []
   },
   {
     slug: "poems-by-emily-dickinson-complete",

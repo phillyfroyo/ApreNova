@@ -507,6 +507,15 @@ export default function StoryDetailModal({
                 {hasAttribution && attribution && (
                   <AttributionSection attribution={attribution} lang={typedLang} />
                 )}
+
+                {/* Rights statement for original works */}
+                {!hasAttribution && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 italic">
+                      {t(typedLang, "stories", "rightsOriginal")}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
