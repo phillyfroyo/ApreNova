@@ -18,7 +18,7 @@ export default function StanzaEmojiRow({ stanzaIdx, stanza, linesInStanza }: Sta
     savingWord, translationData, skipGlobalClickRef,
     showStanzaEmojis, stanzaTranslationRefs,
     stanzaAITranslation, setStanzaAITranslation,
-    handlePlay, handleSaveWord, openStoryTutor, setTutorContext,
+    handlePlay, handleSaveWord, handleTranslationData, openStoryTutor, setTutorContext,
     stop, setActiveAudio, renderProgressBar,
   } = useStoryReader();
 
@@ -100,15 +100,20 @@ export default function StanzaEmojiRow({ stanzaIdx, stanza, linesInStanza }: Sta
           });
           const data = await res.json();
           if (data.error) throw new Error(data.error);
+          const translation = data.contextTranslation || data.translations?.[0] || "";
+          const enrichedData = data.contextTranslation ? {
+            contextTranslation: data.contextTranslation, isDerivative: data.isDerivative, rootWord: data.rootWord,
+            rootTranslation: data.rootTranslation, otherCommonTranslations: data.otherCommonTranslations,
+            partOfSpeech: data.partOfSpeech, subject: data.subject, subjectTranslation: data.subjectTranslation,
+            derivatives: data.derivatives, verbChart: data.verbChart,
+          } : undefined;
           setStanzaAITranslation(prev => ({ ...prev, [stanzaIdx]: {
-            text: data.contextTranslation || data.translations?.[0] || "", loading: false, isStatic: false, selectedWord: cleanText,
-            enhancedTranslation: data.contextTranslation ? {
-              contextTranslation: data.contextTranslation, isDerivative: data.isDerivative, rootWord: data.rootWord,
-              rootTranslation: data.rootTranslation, otherCommonTranslations: data.otherCommonTranslations,
-              partOfSpeech: data.partOfSpeech, subject: data.subject, subjectTranslation: data.subjectTranslation,
-              derivatives: data.derivatives, verbChart: data.verbChart,
-            } : undefined,
+            text: translation, loading: false, isStatic: false, selectedWord: cleanText,
+            enhancedTranslation: enrichedData,
           } }));
+          if (linesWithSelection.length > 0) {
+            handleTranslationData(linesWithSelection[0].lineIndex, { word: cleanText, translation, enrichedData });
+          }
         } else {
           const res = await fetch(`/api/translate-phrase?lang=${targetLang}`, {
             method: "POST", headers: { "Content-Type": "application/json" },
@@ -122,6 +127,9 @@ export default function StanzaEmojiRow({ stanzaIdx, stanza, linesInStanza }: Sta
             text: primary, loading: false, isStatic: false, selectedWord: cleanText,
             otherTranslations: others.length > 0 ? others : undefined,
           } }));
+          if (linesWithSelection.length > 0) {
+            handleTranslationData(linesWithSelection[0].lineIndex, { word: cleanText, translation: primary });
+          }
         }
       } catch (err) {
         const isAuth = err instanceof Error && err.message.includes("Authentication required");

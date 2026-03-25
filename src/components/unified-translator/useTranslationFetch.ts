@@ -126,7 +126,7 @@ export function useTranslationFetch({
   // Manual trigger ref pattern — avoids stale closures while keeping stable callback identity
   const triggerRef = useRef<() => void>(() => {});
 
-  const createTrigger = (startIdx: number | null, endIdx: number | null) => {
+  const createTrigger = (startIdx: number | null, endIdx: number | null, setSelection?: (start: number | null, end: number | null) => void) => {
     triggerRef.current = () => {
       if (translations.length > 0 || !!enhancedTranslation || loading || error) {
         setTranslations([]);
@@ -152,11 +152,13 @@ export function useTranslationFetch({
         }
       } else {
         if (staticTranslation) {
+          setSelection?.(0, words.length - 1);
           setTranslations([staticTranslation]);
           setEnhancedTranslation(null);
         } else if (!authSession?.user) {
           setAuthError(true);
         } else {
+          setSelection?.(0, words.length - 1);
           setLoading(true);
           fetchTranslation(0, words.length - 1);
         }

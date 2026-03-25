@@ -48,7 +48,7 @@ export default function UnifiedTranslator({
   });
 
   // Keep manual trigger in sync with current selection state
-  createTrigger(startIdx, endIdx);
+  createTrigger(startIdx, endIdx, setSelection);
 
   // ---- Cleanup helper ----
   const clearAll = useCallback(() => {

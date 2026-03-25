@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1024,
       temperature: 0.3,
       messages: [
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log cost (fire-and-forget)
-    logAnthropicCost("translate-word", "claude-sonnet-4-20250514", message.usage, { userId: session.user.id });
+    logAnthropicCost("translate-word", "claude-sonnet-4-6", message.usage, { userId: session.user.id });
 
     const reply = message.content[0]?.type === "text" ? message.content[0].text : "";
     console.log("Claude raw reply:", reply);
