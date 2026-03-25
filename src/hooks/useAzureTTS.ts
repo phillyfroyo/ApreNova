@@ -36,7 +36,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
   const wordTimingsRef = useRef<WordTiming[]>([]);
   const currentRequestRef = useRef<string | null>(null);
   const isPausedRef = useRef(false);
-  const playbackRateRef = useRef(1.0);
   const optionsRef = useRef(options);
 
   // Update options ref when options change
@@ -123,13 +122,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
         segmentText = selectedWords.join(' ') + ',';
       }
       
-      console.log('🐢 Generating segment TTS:', {
-        originalText: request.text,
-        selectedWords,
-        speed: request.speed,
-        segmentText
-      });
-      
       // Create new request for just the selected words
       const segmentRequest = {
         ...request,
@@ -145,12 +137,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
       const words = request.text.split(' ');
       const slowText = words.join(', ') + ',';
       
-      console.log('🐢 Generating slow full sentence TTS:', {
-        originalText: request.text,
-        speed: request.speed,
-        slowText
-      });
-      
       const slowRequest = {
         ...request,
         text: slowText
@@ -160,10 +146,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     }
     
     // Regular full sentence playback
-    console.log('▶️ Generating normal full sentence TTS:', {
-      text: request.text,
-      speed: request.speed
-    });
     return playTTS(request);
   }, []);
 
@@ -352,16 +334,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
   }, []);
 
   /**
-   * Set playback rate (applies immediately to current audio and future audio)
-   */
-  const setPlaybackRate = useCallback((rate: number) => {
-    playbackRateRef.current = rate;
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
-    }
-  }, []);
-
-  /**
    * Toggle play/pause
    */
   const togglePlayback = useCallback(() => {
@@ -423,7 +395,6 @@ export function useAzureTTS(options: UseTTSOptions = {}) {
     stop,
     seekTo,
     togglePlayback,
-    setPlaybackRate,
     
     // Utilities
     generateTTS,
