@@ -13,15 +13,15 @@ import type {
   TTSError 
 } from '@/types/azure-tts';
 
-// Voice configuration: Brian for English, Ava for Spanish
+// Voice configuration: Ava for English, Brian for Spanish
 export const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
-    normal: 'en-US-AvaMultilingualNeural',
-    slow: 'en-US-AvaMultilingualNeural'
-  },
-  'en-US': {
     normal: 'en-US-BrianMultilingualNeural',
     slow: 'en-US-BrianMultilingualNeural'
+  },
+  'en-US': {
+    normal: 'en-US-AvaMultilingualNeural',
+    slow: 'en-US-AvaMultilingualNeural'
   }
 };
 
