@@ -195,7 +195,13 @@ function AttributionSection({
         {rights && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-xs text-gray-500 italic">
-              {rights.displayStatement}
+              {rights.originalWorkStatus === "public-domain"
+                ? t(lang, "stories", "rightsPublicDomain")
+                : rights.originalWorkStatus === "licensed"
+                ? t(lang, "stories", "rightsLicensed")
+                : rights.originalWorkStatus === "original"
+                ? t(lang, "stories", "rightsOriginal")
+                : rights.displayStatement}
             </p>
             {rights.provenanceNote && (
               <p className="text-xs text-gray-400 mt-1">
@@ -500,6 +506,15 @@ export default function StoryDetailModal({
                 {/* Full Attribution Section for non-original works */}
                 {hasAttribution && attribution && (
                   <AttributionSection attribution={attribution} lang={typedLang} />
+                )}
+
+                {/* Rights statement for original works */}
+                {!hasAttribution && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 italic">
+                      {t(typedLang, "stories", "rightsOriginal")}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
