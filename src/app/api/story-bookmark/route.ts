@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
         level: bookmark.level,
         chapter: bookmark.chapter,
         page: bookmark.page,
+        audioTime: bookmark.audioTime,
+        audioMode: bookmark.audioMode,
+        audioSpeed: bookmark.audioSpeed,
       },
     });
   } catch (error) {
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { storySlug, level, chapter, page } = body;
+    const { storySlug, level, chapter, page, audioTime, audioMode, audioSpeed } = body;
 
     if (!storySlug || !level || chapter === undefined || page === undefined) {
       return NextResponse.json(
@@ -67,6 +70,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // If audio fields are provided, save them. If not (reading bookmark),
+    // clear audio bookmark so stale audio positions don't persist.
+    const isAudioBookmark = audioTime !== undefined;
 
     const bookmark = await prisma.storyBookmark.upsert({
       where: {
@@ -79,6 +86,9 @@ export async function POST(req: NextRequest) {
         level,
         chapter,
         page,
+        audioTime: isAudioBookmark ? audioTime : null,
+        audioMode: isAudioBookmark ? (audioMode || null) : null,
+        audioSpeed: isAudioBookmark ? (audioSpeed || null) : null,
         updatedAt: new Date(),
       },
       create: {
@@ -87,6 +97,9 @@ export async function POST(req: NextRequest) {
         level,
         chapter,
         page,
+        audioTime: isAudioBookmark ? audioTime : null,
+        audioMode: isAudioBookmark ? (audioMode || null) : null,
+        audioSpeed: isAudioBookmark ? (audioSpeed || null) : null,
         updatedAt: new Date(),
       },
     });

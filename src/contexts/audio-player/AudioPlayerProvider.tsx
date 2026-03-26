@@ -175,6 +175,33 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   stateRef.current = state;
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
   const wasPlayingBeforeNavRef = useRef(false);
+  const pendingSeekTimeRef = useRef<number | null>(null);
+
+  // ---- Audio bookmark persistence ----
+  const saveAudioBookmark = useCallback(async () => {
+    const s = stateRef.current;
+    if (s.playbackMode !== "chapter" || !s.position) return;
+    const audioTime = chapterAudio.state.currentTime;
+    if (!audioTime || audioTime <= 0) return;
+
+    try {
+      await fetch("/api/story-bookmark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storySlug: s.position.storySlug,
+          level: s.position.level,
+          chapter: s.position.chapter,
+          page: s.position.page,
+          audioTime,
+          audioMode: getChapterAudioMode(s.mode),
+          audioSpeed: s.playbackRate === 0.7 ? "slow" : "normal",
+        }),
+      });
+    } catch (e) {
+      console.error("[AudioBookmark] Failed to save:", e);
+    }
+  }, [chapterAudio.state.currentTime]);
 
   // ---- Sync chapter audio state into our state ----
   useEffect(() => {
@@ -197,6 +224,31 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       } else if (cs.status === "playing" && prev.status !== "playing") {
         updates.status = "playing";
         updates.chapterGenerationProgress = null;
+
+        // Perform pending seek after audio starts playing (e.g., resuming from audio bookmark)
+        if (pendingSeekTimeRef.current !== null) {
+          const seekTime = pendingSeekTimeRef.current;
+          pendingSeekTimeRef.current = null;
+
+          if (seekTime === -1) {
+            // Sentinel: seek to the start of the current page
+            const pos = stateRef.current.position;
+            if (pos && chapterAudio.metadata?.pageBoundaries) {
+              const pageBoundary = chapterAudio.metadata.pageBoundaries.find(b => b.pageNumber === pos.page);
+              if (pageBoundary) {
+                requestAnimationFrame(() => {
+                  chapterAudio.seekToTime(pageBoundary.startTime);
+                  chapterAudio.resetSentenceTracking();
+                });
+              }
+            }
+          } else {
+            requestAnimationFrame(() => {
+              chapterAudio.seekToTime(seekTime);
+              chapterAudio.resetSentenceTracking();
+            });
+          }
+        }
       } else if (cs.status === "paused" && prev.status !== "paused" && prev.status !== "navigating") {
         updates.status = "paused";
       } else if (cs.status === "error") {
@@ -284,25 +336,47 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   // ==== Public Actions ====
 
-  const startContinuousPlayback = useCallback((options: StartPlaybackOptions) => {
+  const startContinuousPlayback = useCallback(async (options: StartPlaybackOptions) => {
     stopTTS();
     chapterAudio.stop();
+    pendingSeekTimeRef.current = null;
+
+    const s = stateRef.current;
+    const chapterMode = getChapterAudioMode(s.mode);
+    const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
+
+    // Check for existing audio bookmark for this story
+    let bookmarkChapter = options.chapter;
+    let bookmarkPage = options.page;
+    let bookmarkAudioTime: number | null = null;
+
+    try {
+      const res = await fetch(`/api/story-bookmark?storySlug=${encodeURIComponent(options.storySlug)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const bm = data.bookmark;
+        if (bm?.audioTime != null && bm.level === options.level) {
+          // Audio bookmark exists for same level — resume from there
+          bookmarkChapter = bm.chapter;
+          bookmarkPage = bm.page;
+          bookmarkAudioTime = bm.audioTime;
+        }
+      }
+    } catch {
+      // Bookmark fetch failed — start from current position
+    }
 
     const position: AudioPlayerPosition = {
       storySlug: options.storySlug,
       storyTitle: options.storyTitle,
       level: options.level,
-      chapter: options.chapter,
-      page: options.page,
+      chapter: bookmarkChapter,
+      page: bookmarkPage,
       sentenceIndex: options.sentenceIndex ?? 0,
       currentLanguage: "target",
       isUserStory: options.isUserStory,
       userStoryId: options.userStoryId,
     };
-
-    const s = stateRef.current;
-    const chapterMode = getChapterAudioMode(s.mode);
-    const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
 
     setState(prev => ({
       ...prev,
@@ -321,13 +395,29 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     persistState(position, s.mode);
 
-    // Start chapter audio generation + playback
+    // Navigate to the bookmarked page if different from current
+    if (bookmarkChapter !== options.chapter || bookmarkPage !== options.page) {
+      const url = getNavigationUrl(
+        lng, options.storySlug, options.level,
+        bookmarkChapter, bookmarkPage,
+        options.isUserStory, options.userStoryId
+      );
+      router.push(url);
+    }
+
+    pendingSeekTimeRef.current = null;
+
+    // Start chapter audio generation + playback.
+    // initialSeekTime: exact audio position from bookmark
+    // initialPage: seek to page start when no audio bookmark
     chapterAudio.loadAndPlay({
       storySlug: options.storySlug,
       level: options.level,
-      chapter: options.chapter,
+      chapter: bookmarkChapter,
       mode: chapterMode,
       speed,
+      initialSeekTime: bookmarkAudioTime ?? undefined,
+      initialPage: bookmarkAudioTime === null ? bookmarkPage : undefined,
     });
 
     // Media Session API
@@ -336,17 +426,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       navigator.mediaSession.setActionHandler("play", () => resumePlayback());
       navigator.mediaSession.setActionHandler("pause", () => pausePlayback());
     }
-  }, [stopTTS, chapterAudio]);
+  }, [stopTTS, chapterAudio, lng, router]);
 
   const pausePlayback = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      saveAudioBookmark();
       chapterAudio.pause();
     } else {
       pauseTTS();
     }
     setState(prev => ({ ...prev, status: "paused" }));
-  }, [pauseTTS, chapterAudio]);
+  }, [pauseTTS, chapterAudio, saveAudioBookmark]);
 
   const resumePlayback = useCallback(() => {
     const s = stateRef.current;
@@ -360,6 +451,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [resumeTTS, chapterAudio]);
 
   const stopPlayback = useCallback(() => {
+    saveAudioBookmark();
     stopTTS();
     chapterAudio.stop();
     pendingNavigationRef.current = null;
@@ -377,7 +469,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapterDuration: 0,
       chapterGenerationProgress: null,
     }));
-  }, [stopTTS, chapterAudio]);
+  }, [stopTTS, chapterAudio, saveAudioBookmark]);
 
   const toggleMode = useCallback(() => {
     setState(prev => {

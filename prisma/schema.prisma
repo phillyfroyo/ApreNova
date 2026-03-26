@@ -72,14 +72,17 @@ model SessionLog {
 }
 
 model StoryBookmark {
-  id        String   @id @default(cuid())
-  userId    String
-  storySlug String
-  level     String
-  chapter   Int
-  page      Int
-  updatedAt DateTime
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  storySlug  String
+  level      String
+  chapter    Int
+  page       Int
+  audioTime  Float?   // Seconds into chapter audio (null = no audio bookmark)
+  audioMode  String?  // Chapter audio mode when bookmarked (e.g., "en", "es", "bilingual-en")
+  audioSpeed String?  // Audio speed when bookmarked ("normal" or "slow")
+  updatedAt  DateTime
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storySlug])
   @@index([userId])

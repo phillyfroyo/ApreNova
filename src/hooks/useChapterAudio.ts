@@ -149,7 +149,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, []);
 
   // ---- Load chapter audio and start playback ----
-  const loadAndPlay = useCallback(async (request: ChapterAudioRequest) => {
+  const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number }) => {
     // Abort any in-flight request
     if (abortRef.current) {
       abortRef.current.abort();
@@ -255,14 +255,34 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
 
+      // Seek to initial position before playing (e.g., resuming from bookmark or page start)
+      if (request.initialSeekTime && request.initialSeekTime > 0) {
+        audio.currentTime = request.initialSeekTime;
+      } else if (request.initialPage && chapterMetadata) {
+        // Seek to the start of a specific page
+        const pageBoundary = chapterMetadata.pageBoundaries.find(b => b.pageNumber === request.initialPage);
+        if (pageBoundary && pageBoundary.startTime > 0) {
+          audio.currentTime = pageBoundary.startTime;
+        }
+      }
+
       await audio.play();
       startSyncLoop();
+
+      // Determine the correct starting page from the seek position
+      const startPage = request.initialSeekTime
+        ? (chapterMetadata!.pageBoundaries.findLast(b => b.startTime <= (request.initialSeekTime || 0))?.pageNumber
+          ?? chapterMetadata!.pageBoundaries[0]?.pageNumber ?? 0)
+        : request.initialPage
+          ? request.initialPage
+          : (chapterMetadata!.pageBoundaries[0]?.pageNumber || 0);
+
       setState(prev => ({
         ...prev,
         status: "playing",
         duration: chapterMetadata!.totalDuration,
         progress: null,
-        currentPage: chapterMetadata!.pageBoundaries[0]?.pageNumber || 0,
+        currentPage: startPage,
       }));
 
     } catch (err: any) {
