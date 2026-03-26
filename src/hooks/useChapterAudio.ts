@@ -50,6 +50,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const metadataRef = useRef<ChapterAudioMetadata | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastTimeUpdateRef = useRef(0);
   const optionsRef = useRef(options);
   const lastSentenceIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
@@ -89,13 +91,22 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     return boundaries[0].pageNumber;
   }, []);
 
-  // ---- Time update handler ----
-  const handleTimeUpdate = useCallback(() => {
+  // ---- High-precision time sync via requestAnimationFrame ----
+  const syncPlayback = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || audio.paused) {
+      rafRef.current = null;
+      return;
+    }
 
     const currentTime = audio.currentTime;
-    setState(prev => ({ ...prev, currentTime }));
+
+    // Throttle currentTime state updates to ~4x/sec (progress bar doesn't need 60fps)
+    const now = performance.now();
+    if (now - lastTimeUpdateRef.current > 250) {
+      lastTimeUpdateRef.current = now;
+      setState(prev => ({ ...prev, currentTime }));
+    }
 
     // Find current sentence
     const sentenceIdx = findSentenceAtTime(currentTime);
@@ -113,7 +124,21 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       setState(prev => ({ ...prev, currentPage: page }));
       optionsRef.current.onPageChange?.(page);
     }
+
+    rafRef.current = requestAnimationFrame(syncPlayback);
   }, [findSentenceAtTime, findPageAtTime]);
+
+  const startSyncLoop = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(syncPlayback);
+  }, [syncPlayback]);
+
+  const stopSyncLoop = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
 
   // ---- Load chapter audio and start playback ----
   const loadAndPlay = useCallback(async (request: ChapterAudioRequest) => {
@@ -208,20 +233,22 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
-      audio.addEventListener("timeupdate", handleTimeUpdate);
       audio.addEventListener("loadedmetadata", () => {
         setState(prev => ({ ...prev, duration: audio.duration }));
       });
       audio.addEventListener("ended", () => {
+        stopSyncLoop();
         setState(prev => ({ ...prev, status: "finished", currentSentence: null }));
         optionsRef.current.onPlaybackComplete?.();
       });
       audio.addEventListener("error", () => {
+        stopSyncLoop();
         setState(prev => ({ ...prev, status: "error", error: "Audio playback failed" }));
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
 
       await audio.play();
+      startSyncLoop();
       setState(prev => ({
         ...prev,
         status: "playing",
@@ -242,23 +269,25 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
       optionsRef.current.onError?.(err instanceof Error ? err : new Error(err.message));
     }
-  }, [handleTimeUpdate]);
+  }, [startSyncLoop, stopSyncLoop]);
 
   // ---- Playback controls ----
 
   const play = useCallback(() => {
     if (audioRef.current && state.status === "paused") {
       audioRef.current.play();
+      startSyncLoop();
       setState(prev => ({ ...prev, status: "playing" }));
     }
-  }, [state.status]);
+  }, [state.status, startSyncLoop]);
 
   const pause = useCallback(() => {
     if (audioRef.current && state.status === "playing") {
       audioRef.current.pause();
+      stopSyncLoop();
       setState(prev => ({ ...prev, status: "paused" }));
     }
-  }, [state.status]);
+  }, [state.status, stopSyncLoop]);
 
   const stop = useCallback(() => {
     // Abort any in-flight fetch
@@ -266,6 +295,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       abortRef.current.abort();
       abortRef.current = null;
     }
+    stopSyncLoop();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -283,7 +313,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       progress: null,
       error: null,
     });
-  }, []);
+  }, [stopSyncLoop]);
 
   const seekToTime = useCallback((time: number) => {
     if (audioRef.current) {
@@ -364,6 +394,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       if (abortRef.current) {
         abortRef.current.abort();
         abortRef.current = null;
