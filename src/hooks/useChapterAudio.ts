@@ -120,6 +120,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const sentenceIdx = findSentenceAtTime(currentTime + LOOKAHEAD_SEC);
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = sentenceIdx;
+      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
