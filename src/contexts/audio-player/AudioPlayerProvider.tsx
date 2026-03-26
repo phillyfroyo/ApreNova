@@ -71,9 +71,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onPageChange: (pageNumber) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
-        // Update position and navigate to the new page
+        // Pause audio during page transition — resume only if was playing
+        wasPlayingBeforeNavRef.current = s.status === "playing";
+        chapterAudio.pause();
         setState(prev => ({
           ...prev,
+          status: "navigating",
           highlightedSentenceIndex: null,
           position: prev.position ? { ...prev.position, page: pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
         }));
@@ -171,6 +174,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const stateRef = useRef(state);
   stateRef.current = state;
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
+  const wasPlayingBeforeNavRef = useRef(false);
 
   // ---- Sync chapter audio state into our state ----
   useEffect(() => {
@@ -193,7 +197,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       } else if (cs.status === "playing" && prev.status !== "playing") {
         updates.status = "playing";
         updates.chapterGenerationProgress = null;
-      } else if (cs.status === "paused" && prev.status !== "paused") {
+      } else if (cs.status === "paused" && prev.status !== "paused" && prev.status !== "navigating") {
         updates.status = "paused";
       } else if (cs.status === "error") {
         updates.status = "error";
@@ -475,8 +479,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const s = stateRef.current;
     setState(prev => ({ ...prev, currentPageSentences: sentences }));
 
-    // In chapter mode, just update sentences for highlighting — audio keeps playing
-    if (s.playbackMode === "chapter") return;
+    // In chapter mode: resume audio after page navigation completes (only if was playing)
+    if (s.playbackMode === "chapter") {
+      if (s.status === "navigating") {
+        // Reset tracking so the first sentence on the new page triggers highlighting
+        chapterAudio.resetSentenceTracking();
+        if (wasPlayingBeforeNavRef.current) {
+          chapterAudio.play();
+          setState(prev => ({ ...prev, status: "playing" }));
+        } else {
+          setState(prev => ({ ...prev, status: "paused" }));
+        }
+      }
+      return;
+    }
 
     // Legacy mode: resume playback after page navigation
     if (s.status === "navigating" && pendingNavigationRef.current) {

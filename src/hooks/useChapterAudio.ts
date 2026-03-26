@@ -282,20 +282,20 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Playback controls ----
 
   const play = useCallback(() => {
-    if (audioRef.current && state.status === "paused") {
+    if (audioRef.current && !audioRef.current.ended) {
       audioRef.current.play();
       startSyncLoop();
       setState(prev => ({ ...prev, status: "playing" }));
     }
-  }, [state.status, startSyncLoop]);
+  }, [startSyncLoop]);
 
   const pause = useCallback(() => {
-    if (audioRef.current && state.status === "playing") {
+    if (audioRef.current) {
       audioRef.current.pause();
       stopSyncLoop();
       setState(prev => ({ ...prev, status: "paused" }));
     }
-  }, [state.status, stopSyncLoop]);
+  }, [stopSyncLoop]);
 
   const stop = useCallback(() => {
     // Abort any in-flight fetch
@@ -323,11 +323,36 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     });
   }, [stopSyncLoop]);
 
+  // After seeking, manually update highlight/page state (RAF loop may be stopped when paused)
+  const syncAfterSeek = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const currentTime = audio.currentTime;
+    setState(prev => ({ ...prev, currentTime }));
+
+    const sentenceIdx = findSentenceAtTime(currentTime + 0.4); // same lookahead
+    if (sentenceIdx !== -1) {
+      lastSentenceIdxRef.current = sentenceIdx;
+      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
+      setState(prev => ({ ...prev, currentSentence: timing }));
+      optionsRef.current.onSentenceChange?.(timing);
+    }
+
+    const page = findPageAtTime(currentTime);
+    if (page !== lastPageRef.current) {
+      lastPageRef.current = page;
+      setState(prev => ({ ...prev, currentPage: page }));
+      optionsRef.current.onPageChange?.(page);
+    }
+  }, [findSentenceAtTime, findPageAtTime]);
+
   const seekToTime = useCallback((time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.max(0, Math.min(time, audioRef.current.duration || 0));
+      syncAfterSeek();
     }
-  }, []);
+  }, [syncAfterSeek]);
 
   // ---- Sentence-level seeking ----
 
@@ -338,8 +363,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const target = timings.find(t => t.pageNumber === pageNumber && t.lineIndex === lineIndex);
     if (target) {
       audioRef.current.currentTime = target.startTime;
+      syncAfterSeek();
     }
-  }, []);
+  }, [syncAfterSeek]);
 
   const seekToPage = useCallback((pageNumber: number) => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -348,8 +374,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const target = boundaries.find(b => b.pageNumber === pageNumber);
     if (target) {
       audioRef.current.currentTime = target.startTime;
+      syncAfterSeek();
     }
-  }, []);
+  }, [syncAfterSeek]);
 
   const skipForwardSentence = useCallback(() => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -359,8 +386,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const nextIdx = currentIdx + 1;
     if (nextIdx < timings.length) {
       audioRef.current.currentTime = timings[nextIdx].startTime;
+      syncAfterSeek();
     }
-  }, []);
+  }, [syncAfterSeek]);
 
   const skipBackSentence = useCallback(() => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -375,7 +403,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       const prevIdx = Math.max(0, currentIdx - 1);
       audioRef.current.currentTime = timings[prevIdx].startTime;
     }
-  }, []);
+    syncAfterSeek();
+  }, [syncAfterSeek]);
 
   const skipForwardPage = useCallback(() => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -386,8 +415,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const nextIdx = currentBoundaryIdx + 1;
     if (nextIdx < boundaries.length) {
       audioRef.current.currentTime = boundaries[nextIdx].startTime;
+      syncAfterSeek();
     }
-  }, []);
+  }, [syncAfterSeek]);
 
   const skipBackPage = useCallback(() => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -397,6 +427,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const currentBoundaryIdx = boundaries.findIndex(b => b.pageNumber === currentPage);
     const prevIdx = Math.max(0, currentBoundaryIdx - 1);
     audioRef.current.currentTime = boundaries[prevIdx].startTime;
+    syncAfterSeek();
+  }, [syncAfterSeek]);
+
+  // Reset sentence tracking so the next sync fires onSentenceChange even if
+  // the sentence index hasn't changed (e.g., after page navigation)
+  const resetSentenceTracking = useCallback(() => {
+    lastSentenceIdxRef.current = -1;
   }, []);
 
   // ---- Cleanup ----
@@ -431,5 +468,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     skipBackSentence,
     skipForwardPage,
     skipBackPage,
+    resetSentenceTracking,
   };
 }
