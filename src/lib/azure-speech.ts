@@ -341,13 +341,12 @@ export class AzureSpeechService {
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
 
-        // Bookmark before each sentence
-        ssmlBody += `<bookmark mark="s_${i}"/>`;
-
-        // Inter-sentence silence (not before first)
+        // Inter-sentence silence THEN bookmark — so the bookmark timestamp
+        // lands right when speech is about to start, not before the silence
         if (i > 0) {
           ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
         }
+        ssmlBody += `<bookmark mark="s_${i}"/>`;
 
         // Voice/language switch if needed
         const needsLangTag = seg.voice !== voice || seg.contentLang !== ssmlLang.substring(0, 2);

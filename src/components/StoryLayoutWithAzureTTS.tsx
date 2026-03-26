@@ -239,10 +239,47 @@ export default function StoryLayoutWithAzureTTS({
   useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber); }, [sentences, chapterNumber, pageNumber]);
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastScrolledStanzaRef = useRef<number | null>(null);
+
+  // Scroll an element into view. On mobile (< 768px), position at upper quarter
+  // of viewport to keep text above the audio player bar. On desktop, center as usual.
+  const scrollToElement = (el: Element) => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      const rect = el.getBoundingClientRect();
+      const targetY = window.scrollY + rect.top - window.innerHeight * 0.25;
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    } else {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
   useEffect(() => {
     const idx = audioPlayer.state.highlightedSentenceIndex;
-    if (idx !== null && sentenceRefs.current[idx]) sentenceRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [audioPlayer.state.highlightedSentenceIndex]);
+    if (idx === null) return;
+
+    const isPoemType = storyType === "poem" || storyType === "song-lyrics" || storyType === "epic";
+
+    if (isPoemType && sentences[idx]?.stanzaNumber) {
+      // Poetry: only scroll when stanza changes
+      const currentStanza = sentences[idx].stanzaNumber!;
+      if (currentStanza === lastScrolledStanzaRef.current) return;
+      lastScrolledStanzaRef.current = currentStanza;
+
+      // Scroll to the stanza container (first line of the stanza)
+      const stanzaEl = document.querySelector(`[data-stanza-number="${currentStanza}"]`);
+      if (stanzaEl) {
+        scrollToElement(stanzaEl);
+      } else if (sentenceRefs.current[idx]) {
+        scrollToElement(sentenceRefs.current[idx]!);
+      }
+    } else {
+      // Prose/scripts: scroll per line as before
+      if (sentenceRefs.current[idx]) {
+        scrollToElement(sentenceRefs.current[idx]!);
+      }
+    }
+  }, [audioPlayer.state.highlightedSentenceIndex, storyType, sentences]);
 
   useEffect(() => {
     if (!session?.user || hasPreloadedRef.current) return;

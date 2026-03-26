@@ -58,6 +58,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   optionsRef.current = options;
 
   // ---- Binary search for current sentence by time ----
+  // During gaps between sentences, returns the NEXT sentence index so the
+  // highlight jumps ahead during the silence rather than lagging behind.
   const findSentenceAtTime = useCallback((time: number): number => {
     const timings = metadataRef.current?.sentenceTimings;
     if (!timings || timings.length === 0) return -1;
@@ -76,7 +78,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
     }
 
-    return -1; // in a silence gap between sentences
+    // In a gap between sentences — return the next sentence (lo) so the
+    // highlight moves ahead during the silence before the next line starts
+    if (lo < timings.length) return lo;
+
+    return -1; // past the end
   }, []);
 
   const findPageAtTime = useCallback((time: number): number => {
@@ -108,11 +114,12 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       setState(prev => ({ ...prev, currentTime }));
     }
 
-    // Find current sentence
-    const sentenceIdx = findSentenceAtTime(currentTime);
+    // Lookahead: check slightly ahead of actual playback position so the
+    // highlight appears during the silence gap before the next sentence starts.
+    const LOOKAHEAD_SEC = 0.4; // 400ms lookahead
+    const sentenceIdx = findSentenceAtTime(currentTime + LOOKAHEAD_SEC);
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = sentenceIdx;
-      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
