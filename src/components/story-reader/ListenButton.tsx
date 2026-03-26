@@ -65,6 +65,7 @@ export default function ListenButton({
             setMenuOpen(false);
             if (!session?.user) {
               setTtsAuthError(true);
+              return;
             }
             stop();
             setActiveAudio(null);
