@@ -240,6 +240,12 @@ export default function StoryLayoutWithAzureTTS({
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastScrolledStanzaRef = useRef<number | null>(null);
+  const skipNextScrollRef = useRef(false);
+
+  // After page navigation, skip the first scroll since the page is already at the top
+  useEffect(() => {
+    skipNextScrollRef.current = true;
+  }, [pageNumber]);
 
   // Scroll an element into view. On mobile (< 768px), position at upper quarter
   // of viewport to keep text above the audio player bar. On desktop, center as usual.
@@ -257,6 +263,12 @@ export default function StoryLayoutWithAzureTTS({
   useEffect(() => {
     const idx = audioPlayer.state.highlightedSentenceIndex;
     if (idx === null) return;
+
+    // Skip scroll on first highlight after page navigation
+    if (skipNextScrollRef.current) {
+      skipNextScrollRef.current = false;
+      return;
+    }
 
     const isPoemType = storyType === "poem" || storyType === "song-lyrics" || storyType === "epic";
 

@@ -482,14 +482,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     // In chapter mode: resume audio after page navigation completes (only if was playing)
     if (s.playbackMode === "chapter") {
       if (s.status === "navigating") {
-        // Reset tracking so the first sentence on the new page triggers highlighting
         chapterAudio.resetSentenceTracking();
-        if (wasPlayingBeforeNavRef.current) {
-          chapterAudio.play();
-          setState(prev => ({ ...prev, status: "playing" }));
-        } else {
-          setState(prev => ({ ...prev, status: "paused" }));
+
+        // Pre-set highlight to the first sentence on the new page before resuming audio
+        // so the highlight is visible immediately when the page renders
+        const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
+        if (firstSentence) {
+          setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
         }
+
+        // Wait for DOM paint before resuming audio so text is visible first
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (wasPlayingBeforeNavRef.current) {
+              chapterAudio.play();
+              setState(prev => ({ ...prev, status: "playing" }));
+            } else {
+              setState(prev => ({ ...prev, status: "paused" }));
+            }
+          });
+        });
       }
       return;
     }
