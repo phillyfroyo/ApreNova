@@ -81,7 +81,7 @@ export default function StoryLine({
   return (
     <div
       ref={(el) => { sentenceRefs.current[lineIndex] = el; }}
-      className={`${lineSpacing} w-full relative transition-colors duration-100 ${isHighlighted ? "bg-indigo-50 rounded-xl" : ""}`}
+      className={`${lineSpacing} w-full relative rounded-xl ${isHighlighted ? "bg-indigo-50" : ""}`}
       data-sentence-index={lineIndex}
     >
       {/* Speaker name (scripts) */}

@@ -116,7 +116,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
     // Lookahead: check slightly ahead of actual playback position so the
     // highlight appears during the silence gap before the next sentence starts.
-    const LOOKAHEAD_SEC = 0.4; // 400ms lookahead
+    const LOOKAHEAD_SEC = 0.55; // 550ms lookahead
     const sentenceIdx = findSentenceAtTime(currentTime + LOOKAHEAD_SEC);
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = sentenceIdx;
