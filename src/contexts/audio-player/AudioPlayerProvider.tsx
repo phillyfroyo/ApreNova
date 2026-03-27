@@ -71,12 +71,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onPageChange: (pageNumber) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
-        // Pause audio during page transition — resume only if was playing
-        wasPlayingBeforeNavRef.current = s.status === "playing";
-        chapterAudio.pause();
+        // Audio keeps playing continuously — just update position and navigate.
+        // The sync loop will highlight the correct line on the new page.
         setState(prev => ({
           ...prev,
-          status: "navigating",
           highlightedSentenceIndex: null,
           position: prev.position ? { ...prev.position, page: pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
         }));
@@ -531,7 +529,21 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const nextPage = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      // Manual nav: pause audio, navigate, resume after page renders
+      if (!s.position || !s.storyMap) return;
+      const { next } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
+      if (!next) return;
+      wasPlayingBeforeNavRef.current = s.status === "playing";
+      chapterAudio.pause();
+      // Seek to the next page's start time
       chapterAudio.skipForwardPage();
+      setState(prev => ({
+        ...prev,
+        status: "navigating",
+        highlightedSentenceIndex: null,
+        position: prev.position ? { ...prev.position, chapter: next.ch, page: next.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
+      }));
+      router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, next.ch, next.pg, s.position.isUserStory, s.position.userStoryId));
       return;
     }
     // Legacy
@@ -550,7 +562,21 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const prevPage = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      // Manual nav: pause audio, navigate, resume after page renders
+      if (!s.position || !s.storyMap) return;
+      const { prev: prevPg } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
+      if (!prevPg) return;
+      wasPlayingBeforeNavRef.current = s.status === "playing";
+      chapterAudio.pause();
+      // Seek to the previous page's start time
       chapterAudio.skipBackPage();
+      setState(prev => ({
+        ...prev,
+        status: "navigating",
+        highlightedSentenceIndex: null,
+        position: prev.position ? { ...prev.position, chapter: prevPg.ch, page: prevPg.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
+      }));
+      router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, prevPg.ch, prevPg.pg, s.position.isUserStory, s.position.userStoryId));
       return;
     }
     // Legacy
@@ -571,33 +597,25 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const s = stateRef.current;
     setState(prev => ({ ...prev, currentPageSentences: sentences }));
 
-    // In chapter mode: resume audio after page navigation completes (only if was playing)
+    // In chapter mode
     if (s.playbackMode === "chapter") {
+      chapterAudio.resetSentenceTracking();
+      // Manual nav: resume after page renders (status is "navigating")
       if (s.status === "navigating") {
-        chapterAudio.resetSentenceTracking();
-
-        // Pre-set highlight to the first sentence on the new page before resuming audio
-        // so the highlight is visible immediately when the page renders
         const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
         if (firstSentence) {
           setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
         }
-
-        // Wait for DOM paint (highlight + page content visible) before resuming audio
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (wasPlayingBeforeNavRef.current) {
-              setState(prev => ({ ...prev, status: "playing" }));
-              // One more frame to let "playing" state render before audio starts
-              requestAnimationFrame(() => {
-                chapterAudio.play();
-              });
-            } else {
-              setState(prev => ({ ...prev, status: "paused" }));
-            }
-          });
-        });
+        if (wasPlayingBeforeNavRef.current) {
+          setState(prev => ({ ...prev, status: "playing" }));
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            chapterAudio.play();
+          }));
+        } else {
+          setState(prev => ({ ...prev, status: "paused" }));
+        }
       }
+      // Natural page turn: audio keeps playing, sync loop handles highlighting
       return;
     }
 
