@@ -454,7 +454,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [resumeTTS, chapterAudio]);
 
   const stopPlayback = useCallback(() => {
-    saveAudioBookmark();
+    // Clear audio bookmark so reading bookmark takes precedence on next play
+    const s = stateRef.current;
+    if (s.playbackMode === "chapter" && s.position) {
+      fetch("/api/story-bookmark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storySlug: s.position.storySlug,
+          level: s.position.level,
+          chapter: s.position.chapter,
+          page: s.position.page,
+        }),
+      }).catch(() => {});
+    }
     stopTTS();
     chapterAudio.stop();
     pendingNavigationRef.current = null;
