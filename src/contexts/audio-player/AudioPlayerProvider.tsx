@@ -583,12 +583,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
         }
 
-        // Wait for DOM paint before resuming audio so text is visible first
+        // Wait for DOM paint (highlight + page content visible) before resuming audio
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (wasPlayingBeforeNavRef.current) {
-              chapterAudio.play();
               setState(prev => ({ ...prev, status: "playing" }));
+              // One more frame to let "playing" state render before audio starts
+              requestAnimationFrame(() => {
+                chapterAudio.play();
+              });
             } else {
               setState(prev => ({ ...prev, status: "paused" }));
             }

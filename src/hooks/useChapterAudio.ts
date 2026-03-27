@@ -266,9 +266,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         }
       }
 
-      await audio.play();
-      startSyncLoop();
-
       // Determine the correct starting page from the seek position
       const startPage = request.initialSeekTime
         ? (chapterMetadata!.pageBoundaries.findLast(b => b.startTime <= (request.initialSeekTime || 0))?.pageNumber
@@ -277,6 +274,17 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           ? request.initialPage
           : (chapterMetadata!.pageBoundaries[0]?.pageNumber || 0);
 
+      // Pre-fire the first sentence highlight before audio starts
+      const startTime = audio.currentTime;
+      const firstSentenceIdx = findSentenceAtTime(startTime + 0.55);
+      if (firstSentenceIdx !== -1) {
+        lastSentenceIdxRef.current = firstSentenceIdx;
+        const timing = chapterMetadata!.sentenceTimings[firstSentenceIdx];
+        setState(prev => ({ ...prev, currentSentence: timing }));
+        optionsRef.current.onSentenceChange?.(timing);
+      }
+
+      // Set state to playing, then wait for React to render before starting audio
       setState(prev => ({
         ...prev,
         status: "playing",
@@ -284,6 +292,15 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         progress: null,
         currentPage: startPage,
       }));
+
+      // Wait for UI to render (player bar + highlight) before playing audio
+      await new Promise<void>(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+
+      if (abortController.signal.aborted) return;
+      await audio.play();
+      startSyncLoop();
 
     } catch (err: any) {
       // Ignore abort errors — these are intentional cancellations

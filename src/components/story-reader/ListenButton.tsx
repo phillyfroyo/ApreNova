@@ -10,6 +10,7 @@ import type { StoryMapType } from "@/contexts/StoryReaderContext";
 interface ListenButtonProps {
   typedLang: Language;
   session: any;
+  sessionStatus?: "loading" | "authenticated" | "unauthenticated";
   audioPlayer: any;
   storySlug: string;
   title: string;
@@ -30,6 +31,7 @@ interface ListenButtonProps {
 export default function ListenButton({
   typedLang,
   session,
+  sessionStatus,
   audioPlayer,
   storySlug,
   title,
@@ -63,10 +65,11 @@ export default function ListenButton({
         <button
           onClick={() => {
             setMenuOpen(false);
-            if (!session?.user) {
+            if (!session?.user && sessionStatus !== "loading") {
               setTtsAuthError(true);
               return;
             }
+            if (sessionStatus === "loading") return;
             stop();
             setActiveAudio(null);
             audioPlayer.startContinuousPlayback({

@@ -419,7 +419,7 @@ export default function StoryLayoutWithAzureTTS({
           audioPlayerIsVisible={audioPlayer.state.isVisible} getNavigationUrl={getNavigationUrl}
         />
         <ListenButton
-          typedLang={typedLang} session={session} audioPlayer={audioPlayer}
+          typedLang={typedLang} session={session} sessionStatus={status} audioPlayer={audioPlayer}
           storySlug={storySlug} title={title} currentLevel={currentLevel}
           chapterNumber={chapterNumber} pageNumber={pageNumber} sentences={sentences}
           storyMap={storyMap} isUserStory={isUserStory} userStoryId={userStoryId}
