@@ -22,10 +22,8 @@ export interface ChapterSSMLSegment {
   ssmlLang: string;
   contentLang: string; // "en" or "es" — the language of the text content
   breakBeforeMs?: number;
-  breakAfterMs?: number;
   speakerName?: string;
   stageDirection?: string;
-  isPageTurn?: boolean; // whispered page turn announcement
 }
 
 export interface ChapterSynthesisResult {
@@ -350,36 +348,26 @@ export class AzureSpeechService {
         }
         ssmlBody += `<bookmark mark="s_${i}"/>`;
 
-        // Voice/language switch if needed (never nest <voice> — causes Azure error)
-        const needsLangTag = !seg.isPageTurn && (seg.voice !== voice || seg.contentLang !== ssmlLang.substring(0, 2));
+        // Check if content language differs from document language (use <lang> tag, never nested <voice>)
+        const needsLangTag = false; // Azure rejects nested <voice> — use <lang> tags only
         const segLang = LOCALE_MAP[seg.language] || seg.language;
 
         let content = "";
 
-        if (seg.isPageTurn) {
-          // Whispered page turn announcement
-          content += `<prosody rate="1.1" volume="x-soft">${this.escapeXML(seg.text)}</prosody>`;
-        } else {
-          // Speaker name (for scripts)
-          if (seg.speakerName) {
-            content += `<emphasis level="moderate">${this.escapeXML(seg.speakerName)}</emphasis><break time="300ms"/>`;
-          }
-
-          // Stage direction (for scripts)
-          if (seg.stageDirection) {
-            content += `<prosody volume="soft" rate="medium">${this.escapeXML(seg.stageDirection)}</prosody><break time="200ms"/>`;
-          }
-
-          // Main text
-          content += `<prosody rate="${seg.rate}" volume="medium">${this.escapeXML(seg.text)}</prosody>`;
+        // Speaker name (for scripts)
+        if (seg.speakerName) {
+          content += `<emphasis level="moderate">${this.escapeXML(seg.speakerName)}</emphasis><break time="300ms"/>`;
         }
 
+        // Stage direction (for scripts)
+        if (seg.stageDirection) {
+          content += `<prosody volume="soft" rate="medium">${this.escapeXML(seg.stageDirection)}</prosody><break time="200ms"/>`;
+        }
+
+        // Main text
+        content += `<prosody rate="${seg.rate}" volume="medium">${this.escapeXML(seg.text)}</prosody>`;
+
         if (needsLangTag) {
-          // Switch voice inline if different from the document voice
-          ssmlBody += `<voice name="${seg.voice}"><lang xml:lang="${segLang}">${content}</lang></voice>`;
-        } else if (seg.isPageTurn) {
-          // Page turn: always wrap with lang tag to ensure correct pronunciation
-          // (document lang may differ from the page turn's native language)
           ssmlBody += `<lang xml:lang="${segLang}">${content}</lang>`;
         } else {
           const voiceLang = seg.voice.substring(0, 2);
@@ -391,17 +379,15 @@ export class AzureSpeechService {
           }
         }
 
-        // Break after (used for page turn announcements)
-        if (seg.breakAfterMs) {
-          ssmlBody += `<break time="${seg.breakAfterMs}ms"/>`;
-        }
       }
 
       // End bookmark to capture total duration
       ssmlBody += `<bookmark mark="s_end"/>`;
 
+      // Add timestamp to bust Azure server-side SSML cache
       const ssml = `
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${LOCALE_MAP[ssmlLang] || ssmlLang}">
+          <!-- gen:${Date.now()} -->
           <voice name="${voice}">
             ${ssmlBody}
           </voice>

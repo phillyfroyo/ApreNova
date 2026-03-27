@@ -128,7 +128,7 @@ export class TTSCacheService {
         Key: audioKey,
         Body: Buffer.from(audioBuffer),
         ContentType: 'audio/mpeg',
-        CacheControl: 'public, max-age=31536000, immutable',
+        CacheControl: 'public, max-age=86400',
       })),
       this.client.send(new PutObjectCommand({
         Bucket: BUCKET,
@@ -304,7 +304,7 @@ export class TTSCacheService {
     return {
       audioKey: `${cacheKey}.mp3`,
       metadataKey: `${cacheKey}.meta.json`,
-      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3`,
+      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3?v=${Date.now()}`,
     };
   }
 
@@ -354,7 +354,7 @@ export class TTSCacheService {
         Key: audioKey,
         Body: audioBuffer,
         ContentType: 'audio/mpeg',
-        CacheControl: 'public, max-age=31536000, immutable',
+        CacheControl: 'public, max-age=86400',
       })),
       this.client.send(new PutObjectCommand({
         Bucket: BUCKET,

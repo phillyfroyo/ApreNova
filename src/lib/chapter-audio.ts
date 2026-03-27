@@ -85,10 +85,8 @@ interface SpeechPlanEntry {
   pageNumber: number;
   lineIndex: number;
   breakBeforeMs: number;
-  breakAfterMs?: number;
   speakerName?: string;
   stageDirection?: string;
-  isPageTurn?: boolean; // whispered page turn announcement
 }
 
 /**
@@ -126,32 +124,8 @@ export function buildSpeechPlan(
 
   const config = getLanguageConfig();
   let isFirst = true;
-  let lastPageNumber = -1;
-
-  // Determine native language for page turn whisper
-  // mode "es" or "bilingual-en" = en/ user (native English, learning Spanish)
-  // mode "en" or "bilingual-es" = es/ user (native Spanish, learning English)
-  const nativeLang = (mode === "es" || mode === "bilingual-en")
-    ? { lang: "en-US" as const, voice: VOICE_CONFIG["en-US"].normal, langKey: "en" as const, text: "Turning page" }
-    : { lang: "es-ES" as const, voice: VOICE_CONFIG["es-ES"].normal, langKey: "es" as const, text: "Pasando página" };
 
   for (const page of pages) {
-    // Insert page turn whisper at page boundaries (not before the first page)
-    if (lastPageNumber !== -1 && page.pageNumber !== lastPageNumber) {
-      entries.push({
-        text: nativeLang.text,
-        language: nativeLang.lang,
-        voice: nativeLang.voice,
-        rate: 1.0,
-        langKey: nativeLang.langKey,
-        pageNumber: page.pageNumber,
-        lineIndex: -1, // not a real line
-        breakBeforeMs: 1600, // pause after last word of previous page
-        breakAfterMs: 1200,  // pause after "turning page" before next page starts
-        isPageTurn: true,
-      });
-    }
-
     for (let lineIdx = 0; lineIdx < page.lines.length; lineIdx++) {
       const line = page.lines[lineIdx];
 
@@ -196,7 +170,6 @@ export function buildSpeechPlan(
         }
       }
     }
-    lastPageNumber = page.pageNumber;
   }
 
   return entries;
@@ -229,7 +202,7 @@ export async function generateChapterAudio(
 
   // 3. Build speech plan
   const plan = buildSpeechPlan(pages, request.mode, request.speed);
-  const totalSentences = plan.filter(e => !e.isPageTurn).length;
+  const totalSentences = plan.length;
 
   onProgress?.({ status: "generating", sentencesComplete: 0, sentencesTotal: totalSentences });
 
@@ -243,10 +216,8 @@ export async function generateChapterAudio(
     ssmlLang: LOCALE_MAP[entry.language] || entry.language,
     contentLang: entry.langKey,
     breakBeforeMs: entry.breakBeforeMs,
-    breakAfterMs: entry.breakAfterMs,
     speakerName: entry.speakerName,
     stageDirection: entry.stageDirection,
-    isPageTurn: entry.isPageTurn,
   }));
 
   // 5. Single Azure TTS call with bookmarks
@@ -263,30 +234,27 @@ export async function generateChapterAudio(
     const entry = plan[i];
     const timing = result.sentenceTimings[i];
 
-    // Skip page turn announcements from sentence timings (not highlightable)
-    if (!entry.isPageTurn) {
-      sentenceTimings.push({
-        pageNumber: entry.pageNumber,
-        lineIndex: entry.lineIndex,
-        language: entry.langKey,
+    sentenceTimings.push({
+      pageNumber: entry.pageNumber,
+      lineIndex: entry.lineIndex,
+      language: entry.langKey,
+      startTime: timing.startTime,
+      endTime: timing.endTime,
+      text: entry.text,
+      wordTimings: timing.wordTimings,
+    });
+
+    // Page boundaries
+    const existing = pageBoundaryMap.get(entry.pageNumber);
+    if (existing) {
+      existing.endTime = timing.endTime;
+      existing.sentenceCount++;
+    } else {
+      pageBoundaryMap.set(entry.pageNumber, {
         startTime: timing.startTime,
         endTime: timing.endTime,
-        text: entry.text,
-        wordTimings: timing.wordTimings,
+        sentenceCount: 1,
       });
-
-      // Page boundaries (only from real content, not page turn announcements)
-      const existing = pageBoundaryMap.get(entry.pageNumber);
-      if (existing) {
-        existing.endTime = timing.endTime;
-        existing.sentenceCount++;
-      } else {
-        pageBoundaryMap.set(entry.pageNumber, {
-          startTime: timing.startTime,
-          endTime: timing.endTime,
-          sentenceCount: 1,
-        });
-      }
     }
   }
 
