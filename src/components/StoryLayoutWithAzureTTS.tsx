@@ -236,7 +236,7 @@ export default function StoryLayoutWithAzureTTS({
     if (next) router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
   }, [chapterNumber, pageNumber, storyMap]);
 
-  useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber); }, [sentences, chapterNumber, pageNumber]);
+  useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber, storySlug, currentLevel); }, [sentences, chapterNumber, pageNumber, storySlug, currentLevel]);
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastScrolledStanzaRef = useRef<number | null>(null);
@@ -263,6 +263,11 @@ export default function StoryLayoutWithAzureTTS({
   useEffect(() => {
     const idx = audioPlayer.state.highlightedSentenceIndex;
     if (idx === null) return;
+
+    // Only scroll if the audio is playing content for this exact page
+    const pos = audioPlayer.state.position;
+    if (!pos || pos.storySlug !== storySlug || pos.level !== currentLevel
+      || pos.chapter !== chapterNumber || pos.page !== pageNumber) return;
 
     // Skip scroll on first highlight after page navigation
     if (skipNextScrollRef.current) {

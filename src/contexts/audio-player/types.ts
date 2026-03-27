@@ -69,7 +69,7 @@ export interface AudioPlayerContextType {
   resumePlayback: () => void;
   stopPlayback: () => void;
   toggleMode: () => void;
-  registerPageContent: (sentences: StoryLine[], chapter: number, page: number) => void;
+  registerPageContent: (sentences: StoryLine[], chapter: number, page: number, storySlug?: string, level?: string) => void;
   skipForward: () => void;
   skipBack: () => void;
   nextPage: () => void;

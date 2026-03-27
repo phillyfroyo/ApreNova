@@ -71,20 +71,23 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onPageChange: (pageNumber) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
-        // Audio keeps playing continuously — just update position and navigate.
-        // The sync loop will highlight the correct line on the new page.
+        // Update audio position
         setState(prev => ({
           ...prev,
           highlightedSentenceIndex: null,
           position: prev.position ? { ...prev.position, page: pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
         }));
 
-        const url = getNavigationUrl(
-          lng, s.position.storySlug, s.position.level,
-          s.position.chapter, pageNumber,
-          s.position.isUserStory, s.position.userStoryId
-        );
-        router.push(url);
+        // Only navigate if the user is still viewing the same story/level
+        const view = currentViewRef.current;
+        if (view && view.storySlug === s.position.storySlug && view.level === s.position.level) {
+          const url = getNavigationUrl(
+            lng, s.position.storySlug, s.position.level,
+            s.position.chapter, pageNumber,
+            s.position.isUserStory, s.position.userStoryId
+          );
+          router.push(url);
+        }
       }
     },
     onPlaybackComplete: () => {
@@ -174,6 +177,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
   const wasPlayingBeforeNavRef = useRef(false);
   const pendingSeekTimeRef = useRef<number | null>(null);
+  // Tracks the story/level currently rendered — set by registerPageContent
+  const currentViewRef = useRef<{ storySlug: string; level: string; chapter: number; page: number } | null>(null);
 
   // ---- Audio bookmark persistence ----
   const saveAudioBookmark = useCallback(async () => {
@@ -593,11 +598,52 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [stopTTS, lng, router, chapterAudio]);
 
   // ---- Content Registration (called by StoryLayoutWithAzureTTS on mount) ----
-  const registerPageContent = useCallback((sentences: StoryLine[], chapter: number, page: number) => {
+  const registerPageContent = useCallback((sentences: StoryLine[], chapter: number, page: number, storySlug?: string, level?: string) => {
     const s = stateRef.current;
     setState(prev => ({ ...prev, currentPageSentences: sentences }));
 
-    // In chapter mode
+    // Track what's currently rendered
+    if (storySlug && level) {
+      currentViewRef.current = { storySlug, level, chapter, page };
+    }
+
+    // In chapter mode: check if user navigated away from the audio's story/level
+    if (s.playbackMode === "chapter" && s.position && storySlug && level) {
+      const sameStory = s.position.storySlug === storySlug;
+      const sameLevel = s.position.level === level;
+
+      if (!sameStory || !sameLevel) {
+        // Different story or different level — stop + close player, save bookmark
+        saveAudioBookmark();
+        chapterAudio.stop();
+        persistState(null, s.mode);
+        setState(prev => ({
+          ...prev,
+          status: "idle",
+          position: null,
+          isVisible: false,
+          highlightedSentenceIndex: null,
+          error: null,
+          currentPageSentences: sentences,
+          storyMap: null,
+          chapterCurrentTime: 0,
+          chapterDuration: 0,
+          chapterGenerationProgress: null,
+        }));
+        return;
+      }
+
+      const samePage = s.position.chapter === chapter && s.position.page === page;
+      if (!samePage && s.status !== "navigating") {
+        // Different page/chapter of same story+level — pause, keep player open
+        saveAudioBookmark();
+        chapterAudio.pause();
+        setState(prev => ({ ...prev, status: "paused", highlightedSentenceIndex: null }));
+        return;
+      }
+    }
+
+    // In chapter mode (continued — same page or navigating)
     if (s.playbackMode === "chapter") {
       chapterAudio.resetSentenceTracking();
       // Manual nav: resume after page renders (status is "navigating")

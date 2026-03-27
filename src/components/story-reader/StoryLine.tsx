@@ -29,7 +29,7 @@ export default function StoryLine({
   isScriptType,
 }: StoryLineProps) {
   const {
-    typedLang, oppositeLang, audioPlayer,
+    typedLang, oppositeLang, audioPlayer, chapterNumber, pageNumber, currentLevel, storySlug,
     showEmojiButtons, wordSelections, activeAudio, playbackState,
     savingWord, translationData, manualTranslateFunctions, skipGlobalClickRef,
     saveAuthLine, setSaveAuthLine,
@@ -76,7 +76,12 @@ export default function StoryLine({
   }
 
   const lineSpacing = isPoemType || isInsideStanza ? "my-0" : "my-6";
-  const isHighlighted = audioPlayer.state.highlightedSentenceIndex === lineIndex;
+  const pos = audioPlayer.state.position;
+  const isAudioOnThisPage = pos?.storySlug === storySlug
+    && pos?.level === currentLevel
+    && pos?.chapter === chapterNumber
+    && pos?.page === pageNumber;
+  const isHighlighted = isAudioOnThisPage && audioPlayer.state.highlightedSentenceIndex === lineIndex;
 
   return (
     <div
