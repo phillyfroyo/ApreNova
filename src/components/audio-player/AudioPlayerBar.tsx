@@ -84,10 +84,12 @@ export default function AudioPlayerBar() {
       case "loading": return t(lng, "stories", "loading");
       case "generating": {
         const p = state.chapterGenerationProgress;
-        const { sectionLabel, lineUnit } = getLoadingLabels(storyMeta?.type);
+        const { sectionLabel, lineUnit } = getLoadingLabels(storyMeta?.type, lng);
         const section = position ? `${sectionLabel} ${position.chapter}` : sectionLabel;
-        return p ? `Preparing ${section} | ${lineUnit} ${p.sentencesComplete}/${p.sentencesTotal}` : `Preparing ${section}...`;
+        const preparing = t(lng, "audioPlayer", "preparing");
+        return p ? `${preparing} ${section} | ${lineUnit} ${p.sentencesComplete}/${p.sentencesTotal}` : `${preparing} ${section}...`;
       }
+      case "ready": return t(lng, "audioPlayer", "startListening");
       case "navigating": return t(lng, "audioPlayer", "turningPage");
       case "finished": return t(lng, "audioPlayer", "storyComplete");
       case "error": return state.error || "Error";
@@ -104,7 +106,7 @@ export default function AudioPlayerBar() {
     return base;
   })();
   const isTransport = status !== "finished";
-  const transportDisabled = status === "loading" || status === "navigating" || status === "generating";
+  const transportDisabled = status === "loading" || status === "navigating" || status === "generating" || status === "ready";
 
   const handleClick = () => {
     setMinimized(prev => !prev);
@@ -150,12 +152,15 @@ export default function AudioPlayerBar() {
 
   return (
     <>
-      {/* Chapter generation loading overlay */}
-      {status === "generating" && position && (
+      {/* Chapter generation loading overlay — shown during generation and when ready to play */}
+      {(status === "generating" || status === "ready") && position && (
         <ChapterLoadingOverlay
           chapterNumber={position.chapter}
           progress={state.chapterGenerationProgress}
           storyType={storyMeta?.type}
+          isReady={status === "ready"}
+          lng={lng}
+          onStartListening={resumePlayback}
           onCancel={stopPlayback}
         />
       )}

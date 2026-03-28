@@ -461,7 +461,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const currentStatus = s.playbackMode === "chapter"
       ? (statusOverrideRef.current ?? chapterAudio.state.status)
       : s.status;
-    if (currentStatus !== "paused" || !s.position) return;
+    if ((currentStatus !== "paused" && currentStatus !== "ready") || !s.position) return;
     if (s.playbackMode === "chapter") {
       setStatusOverride(null); // clear override, hook's "playing" flows through
       chapterAudio.play();

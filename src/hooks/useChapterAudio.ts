@@ -14,7 +14,7 @@ import type {
 // ============================================================================
 
 export interface ChapterAudioState {
-  status: "idle" | "loading" | "generating" | "playing" | "paused" | "error" | "finished";
+  status: "idle" | "loading" | "generating" | "ready" | "playing" | "paused" | "error" | "finished";
   currentTime: number;
   duration: number;
   currentSentence: SentenceTiming | null;
@@ -284,23 +284,14 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         optionsRef.current.onSentenceChange?.(timing);
       }
 
-      // Set state to playing, then wait for React to render before starting audio
+      // Audio is loaded and ready — wait for user to click "Start Listening"
       setState(prev => ({
         ...prev,
-        status: "playing",
+        status: "ready",
         duration: chapterMetadata!.totalDuration,
         progress: null,
         currentPage: startPage,
       }));
-
-      // Wait for UI to render (player bar + highlight) before playing audio
-      await new Promise<void>(resolve => {
-        requestAnimationFrame(() => requestAnimationFrame(resolve));
-      });
-
-      if (abortController.signal.aborted) return;
-      await audio.play();
-      startSyncLoop();
 
     } catch (err: any) {
       // Ignore abort errors — these are intentional cancellations

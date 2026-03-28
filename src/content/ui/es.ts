@@ -663,6 +663,17 @@ audioPlayer: {
   readBothLanguages: "Leer ambos idiomas",
   on: "SÍ",
   off: "NO",
+  preparing: "Preparando",
+  checkingCache: "Verificando caché...",
+  cancel: "Cancelar",
+  startListening: "Comenzar a escuchar",
+  collection: "Colección",
+  chapter: "Capítulo",
+  line: "línea",
+  paragraph: "párrafo",
+  firstGenLine1: "¡Felicidades! Eres el primero en solicitar el audio de este {section}.",
+  firstGenLine2: "Una vez cargado, tú (y todos los demás usuarios) tendrán reproducción instantánea.",
+  firstGenLine3: "¡Gracias por abrir el camino para todos!",
 },
 };
 

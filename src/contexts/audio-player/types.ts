@@ -12,6 +12,7 @@ export type AudioPlayerStatus =
   | "paused"
   | "loading"
   | "generating"
+  | "ready"
   | "navigating"
   | "error"
   | "finished";
