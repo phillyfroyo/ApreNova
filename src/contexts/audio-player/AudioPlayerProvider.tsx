@@ -264,8 +264,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
     }
 
-    // Note: navigating override is cleared in registerPageContent after a paint frame.
-    // Do NOT clear it here — the effect can fire before the spinner is painted.
+    // Clear redundant overrides once the hook's status matches.
+    // "navigating" is NOT cleared here — registerPageContent handles that after a paint frame.
+    // "playing" override is cleared once the hook confirms it's playing.
+    const override = statusOverrideRef.current;
+    if (override && override !== "navigating" && cs.status === override) {
+      setStatusOverride(null);
+    }
   }, [chapterAudio.state]);
 
   // ---- Helper: determine ChapterAudioMode ----
@@ -678,14 +683,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         navigatingToPageRef.current = null;
         const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
 
-        // Ensure the "navigating" spinner is painted before resuming.
-        // Without this, fast prefetched pages cause set/clear in the same React batch.
+        // Set highlight eagerly; sync loop will confirm on its first frame.
+        if (firstSentence) {
+          setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
+        }
+
+        // Delay resume by one frame so the "navigating" spinner paints before clearing.
         requestAnimationFrame(() => {
-          if (firstSentence) {
-            setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
-          }
           if (nav.shouldResume) {
-            setStatusOverride(null);
+            setStatusOverride("playing");
             chapterAudio.play();
           } else {
             setStatusOverride(null);
