@@ -12,7 +12,7 @@ import type { Language } from "@/types/i18n";
 import TransportControls from "./TransportControls";
 import SettingsControls from "./SettingsControls";
 import ToastNotification from "./ToastNotification";
-import ChapterLoadingOverlay from "./ChapterLoadingOverlay";
+import ChapterLoadingOverlay, { getLoadingLabels } from "./ChapterLoadingOverlay";
 import { useDragToMinimize } from "./useDragToMinimize";
 import { useBottomNavDetection } from "./useBottomNavDetection";
 
@@ -44,6 +44,7 @@ export default function AudioPlayerBar() {
   const { status, position, mode, currentPageSentences, highlightedSentenceIndex, playbackRate, playbackMode, chapterCurrentTime, chapterDuration } = state;
 
   const isChapterMode = playbackMode === "chapter";
+  const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
 
   // Compute progress — time-based for chapter mode, sentence-based for legacy
   let progressBar: number;
@@ -83,7 +84,9 @@ export default function AudioPlayerBar() {
       case "loading": return t(lng, "stories", "loading");
       case "generating": {
         const p = state.chapterGenerationProgress;
-        return p ? `Preparing chapter... ${p.sentencesComplete}/${p.sentencesTotal}` : "Preparing chapter...";
+        const { sectionLabel, lineUnit } = getLoadingLabels(storyMeta?.type);
+        const section = position ? `${sectionLabel} ${position.chapter}` : sectionLabel;
+        return p ? `Preparing ${section} | ${lineUnit} ${p.sentencesComplete}/${p.sentencesTotal}` : `Preparing ${section}...`;
       }
       case "navigating": return t(lng, "audioPlayer", "turningPage");
       case "finished": return t(lng, "audioPlayer", "storyComplete");
@@ -145,8 +148,6 @@ export default function AudioPlayerBar() {
   const fadeOut = 1 - Math.min(1, progress * 2.5);
   const fadeIn = Math.max(0, (progress - 0.5) * 2);
 
-  const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
-
   return (
     <>
       {/* Chapter generation loading overlay */}
@@ -154,6 +155,7 @@ export default function AudioPlayerBar() {
         <ChapterLoadingOverlay
           chapterNumber={position.chapter}
           progress={state.chapterGenerationProgress}
+          storyType={storyMeta?.type}
           onCancel={stopPlayback}
         />
       )}
