@@ -237,7 +237,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapterDuration: cs.duration,
       chapterGenerationProgress: cs.status === "generating" && cs.progress
         ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-        : (cs.status !== "generating" ? null : prev.chapterGenerationProgress),
+        : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
     }));
 
     // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
