@@ -38,7 +38,7 @@ export default function TransportControls({
         <button onClick={onSkipBack} disabled={transportDisabled} className="w-9 h-9 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 disabled:text-gray-300 disabled:hover:bg-transparent transition-colors" aria-label="Previous sentence">
           <SkipBack className="w-[18px] h-[18px]" fill="currentColor" />
         </button>
-        <button onClick={onPlayPause} disabled={transportDisabled} className="w-11 h-11 flex items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-default shadow-md shadow-indigo-200 transition-colors" aria-label={isPlaying ? "Pause" : "Play"}>
+        <button onClick={onPlayPause} disabled={transportDisabled} className={`w-11 h-11 flex items-center justify-center rounded-full text-white shadow-md shadow-indigo-200 ${transportDisabled ? "bg-gray-300 cursor-default" : "bg-indigo-600 hover:bg-indigo-700"}`} aria-label={isPlaying ? "Pause" : "Play"}>
           {transportDisabled ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : isPlaying ? (
@@ -72,7 +72,7 @@ export default function TransportControls({
       </button>
       <button
         onClick={onPlayPause} disabled={transportDisabled}
-        className={`flex items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-default shadow-md shadow-indigo-200 ${transitionClass}`}
+        className={`flex items-center justify-center rounded-full text-white shadow-md shadow-indigo-200 ${transportDisabled ? "bg-gray-300 cursor-default" : "bg-indigo-600 hover:bg-indigo-700"}`}
         style={{ width: `${playBtnSize}px`, height: `${playBtnSize}px` }}
         aria-label={isPlaying ? "Pause" : "Play"}
       >

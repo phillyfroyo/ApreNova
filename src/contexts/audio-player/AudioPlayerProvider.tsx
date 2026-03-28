@@ -11,7 +11,7 @@ import type { Language } from "@/types/i18n";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 import type { TTSLanguage } from "@/types/azure-tts";
 import type { ChapterAudioMode } from "@/types/chapter-audio";
-import type { AudioPlayerState, AudioPlayerContextType, StartPlaybackOptions, AudioPlayerPosition } from "./types";
+import type { AudioPlayerState, AudioPlayerStatus, AudioPlayerContextType, StartPlaybackOptions, AudioPlayerPosition } from "./types";
 import { DEFAULT_PLAYBACK_RATE } from "./types";
 import { loadPlaybackRate, savePlaybackRate, persistState } from "./storage";
 import { getContentSentences } from "./helpers";
@@ -71,14 +71,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onPageChange: (pageNumber) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
-        // Update audio position
+        navigatingToPageRef.current = { page: pageNumber, shouldResume: true };
+        chapterAudio.pauseSilently();
+        setStatusOverride("navigating"); // Synchronous ref + re-render trigger
+
         setState(prev => ({
           ...prev,
           highlightedSentenceIndex: null,
           position: prev.position ? { ...prev.position, page: pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
         }));
 
-        // Only navigate if the user is still viewing the same story/level
         const view = currentViewRef.current;
         if (view && view.storySlug === s.position.storySlug && view.level === s.position.level) {
           const url = getNavigationUrl(
@@ -93,29 +95,30 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onPlaybackComplete: () => {
       const s = stateRef.current;
       if (s.playbackMode !== "chapter" || !s.storyMap || !s.position) {
-        setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null }));
+        setStatusOverride("finished");
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
         return;
       }
 
-      // Check if there's a next chapter
-      // Find the last page of the current chapter to determine if we need to advance
       const currentChapter = s.storyMap.chapters.find(c => c.chapter === s.position!.chapter);
       if (!currentChapter) {
-        setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null }));
+        setStatusOverride("finished");
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
         return;
       }
 
       const nextChapter = s.storyMap.chapters.find(c => c.chapter === s.position!.chapter + 1);
       if (!nextChapter) {
-        setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null }));
+        setStatusOverride("finished");
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
         return;
       }
 
-      // Auto-advance to next chapter
+      // Auto-advance to next chapter — clear override so hook's loading/generating flows through
+      setStatusOverride(null);
       const nextPage = nextChapter.pages[0];
       setState(prev => ({
         ...prev,
-        status: "loading",
         highlightedSentenceIndex: null,
         position: prev.position ? {
           ...prev.position,
@@ -147,7 +150,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     },
     onError: (error) => {
       console.error("[AudioPlayer] Chapter audio error:", error);
-      setState(prev => ({ ...prev, status: "error", error: error.message }));
+      setStatusOverride("error");
+      setState(prev => ({ ...prev, error: error.message }));
     },
   });
 
@@ -174,8 +178,21 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // ---- Status override for chapter mode ----
+  // In chapter mode, useChapterAudio.state.status is the source of truth for audio
+  // lifecycle (loading/generating/playing/paused/error/finished). The provider only
+  // needs to overlay transient states like "navigating" and "idle".
+  // We use a ref (synchronous reads in callbacks) paired with state (triggers re-renders).
+  const [statusOverride, setStatusOverrideState] = useState<AudioPlayerStatus | null>(null);
+  const statusOverrideRef = useRef<AudioPlayerStatus | null>(null);
+  const setStatusOverride = useCallback((status: AudioPlayerStatus | null) => {
+    statusOverrideRef.current = status;
+    setStatusOverrideState(status);
+  }, []);
+
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
-  const wasPlayingBeforeNavRef = useRef(false);
+  const navigatingToPageRef = useRef<{ page: number; shouldResume: boolean } | null>(null);
   const pendingSeekTimeRef = useRef<number | null>(null);
   // Tracks the story/level currently rendered — set by registerPageContent
   const currentViewRef = useRef<{ storySlug: string; level: string; chapter: number; page: number } | null>(null);
@@ -206,61 +223,49 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [chapterAudio.state.currentTime]);
 
-  // ---- Sync chapter audio state into our state ----
+  // ---- Sync chapter audio data (NOT status) into provider state ----
+  // Status is now derived via effectiveStatus; this effect only syncs progress bar
+  // data and handles pending seeks.
   useEffect(() => {
     if (stateRef.current.playbackMode !== "chapter") return;
 
     const cs = chapterAudio.state;
 
-    setState(prev => {
-      const updates: Partial<AudioPlayerState> = {
-        chapterCurrentTime: cs.currentTime,
-        chapterDuration: cs.duration,
-      };
+    setState(prev => ({
+      ...prev,
+      chapterCurrentTime: cs.currentTime,
+      chapterDuration: cs.duration,
+      chapterGenerationProgress: cs.status === "generating" && cs.progress
+        ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
+        : (cs.status !== "generating" ? null : prev.chapterGenerationProgress),
+    }));
 
-      // Map chapter audio status to our status
-      if (cs.status === "generating") {
-        updates.status = "generating";
-        updates.chapterGenerationProgress = cs.progress
-          ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-          : null;
-      } else if (cs.status === "playing" && prev.status !== "playing") {
-        updates.status = "playing";
-        updates.chapterGenerationProgress = null;
+    // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
+    if (cs.status === "playing" && pendingSeekTimeRef.current !== null) {
+      const seekTime = pendingSeekTimeRef.current;
+      pendingSeekTimeRef.current = null;
 
-        // Perform pending seek after audio starts playing (e.g., resuming from audio bookmark)
-        if (pendingSeekTimeRef.current !== null) {
-          const seekTime = pendingSeekTimeRef.current;
-          pendingSeekTimeRef.current = null;
-
-          if (seekTime === -1) {
-            // Sentinel: seek to the start of the current page
-            const pos = stateRef.current.position;
-            if (pos && chapterAudio.metadata?.pageBoundaries) {
-              const pageBoundary = chapterAudio.metadata.pageBoundaries.find(b => b.pageNumber === pos.page);
-              if (pageBoundary) {
-                requestAnimationFrame(() => {
-                  chapterAudio.seekToTime(pageBoundary.startTime);
-                  chapterAudio.resetSentenceTracking();
-                });
-              }
-            }
-          } else {
+      if (seekTime === -1) {
+        const pos = stateRef.current.position;
+        if (pos && chapterAudio.metadata?.pageBoundaries) {
+          const pageBoundary = chapterAudio.metadata.pageBoundaries.find(b => b.pageNumber === pos.page);
+          if (pageBoundary) {
             requestAnimationFrame(() => {
-              chapterAudio.seekToTime(seekTime);
+              chapterAudio.seekToTime(pageBoundary.startTime);
               chapterAudio.resetSentenceTracking();
             });
           }
         }
-      } else if (cs.status === "paused" && prev.status !== "paused" && prev.status !== "navigating") {
-        updates.status = "paused";
-      } else if (cs.status === "error") {
-        updates.status = "error";
-        updates.error = cs.error;
+      } else {
+        requestAnimationFrame(() => {
+          chapterAudio.seekToTime(seekTime);
+          chapterAudio.resetSentenceTracking();
+        });
       }
+    }
 
-      return { ...prev, ...updates };
-    });
+    // Note: navigating override is cleared in registerPageContent after a paint frame.
+    // Do NOT clear it here — the effect can fire before the spinner is painted.
   }, [chapterAudio.state]);
 
   // ---- Helper: determine ChapterAudioMode ----
@@ -381,9 +386,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       userStoryId: options.userStoryId,
     };
 
+    // Clear override so hook's loading → generating → playing flows through naturally
+    setStatusOverride(null);
+
     setState(prev => ({
       ...prev,
-      status: "loading",
       playbackMode: "chapter",
       position,
       storyMap: options.storyMap,
@@ -435,22 +442,28 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
       saveAudioBookmark();
-      chapterAudio.pause();
+      chapterAudio.pause(); // hook sets its own status to "paused" → flows through effectiveStatus
+      setStatusOverride(null); // clear any override so hook status is visible
     } else {
       pauseTTS();
+      setState(prev => ({ ...prev, status: "paused" }));
     }
-    setState(prev => ({ ...prev, status: "paused" }));
   }, [pauseTTS, chapterAudio, saveAudioBookmark]);
 
   const resumePlayback = useCallback(() => {
     const s = stateRef.current;
-    if (s.status !== "paused" || !s.position) return;
+    // For chapter mode, check hook's status directly; for legacy, check provider state
+    const currentStatus = s.playbackMode === "chapter"
+      ? (statusOverrideRef.current ?? chapterAudio.state.status)
+      : s.status;
+    if (currentStatus !== "paused" || !s.position) return;
     if (s.playbackMode === "chapter") {
+      setStatusOverride(null); // clear override, hook's "playing" flows through
       chapterAudio.play();
     } else {
       resumeTTS();
+      setState(prev => ({ ...prev, status: "playing" }));
     }
-    setState(prev => ({ ...prev, status: "playing" }));
   }, [resumeTTS, chapterAudio]);
 
   const stopPlayback = useCallback(() => {
@@ -470,11 +483,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
     stopTTS();
     chapterAudio.stop();
+    setStatusOverride("idle");
     pendingNavigationRef.current = null;
+    navigatingToPageRef.current = null;
     persistState(null, stateRef.current.mode);
     setState(prev => ({
       ...prev,
-      status: "idle",
       position: null,
       isVisible: false,
       highlightedSentenceIndex: null,
@@ -547,17 +561,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const nextPage = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
-      // Manual nav: pause audio, navigate, resume after page renders
       if (!s.position || !s.storyMap) return;
       const { next } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!next) return;
-      wasPlayingBeforeNavRef.current = s.status === "playing";
-      chapterAudio.pause();
-      // Seek to the next page's start time
+      const wasPlaying = chapterAudio.state.status === "playing";
+      navigatingToPageRef.current = { page: next.pg, shouldResume: wasPlaying };
+      chapterAudio.pauseSilently();
       chapterAudio.skipForwardPage();
+      setStatusOverride("navigating");
       setState(prev => ({
         ...prev,
-        status: "navigating",
         highlightedSentenceIndex: null,
         position: prev.position ? { ...prev.position, chapter: next.ch, page: next.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
       }));
@@ -580,17 +593,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const prevPage = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
-      // Manual nav: pause audio, navigate, resume after page renders
       if (!s.position || !s.storyMap) return;
       const { prev: prevPg } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!prevPg) return;
-      wasPlayingBeforeNavRef.current = s.status === "playing";
-      chapterAudio.pause();
-      // Seek to the previous page's start time
+      const wasPlaying = chapterAudio.state.status === "playing";
+      navigatingToPageRef.current = { page: prevPg.pg, shouldResume: wasPlaying };
+      chapterAudio.pauseSilently();
       chapterAudio.skipBackPage();
+      setStatusOverride("navigating");
       setState(prev => ({
         ...prev,
-        status: "navigating",
         highlightedSentenceIndex: null,
         position: prev.position ? { ...prev.position, chapter: prevPg.ch, page: prevPg.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
       }));
@@ -629,10 +641,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         // Different story or different level — stop + close player, save bookmark
         saveAudioBookmark();
         chapterAudio.stop();
+        setStatusOverride("idle");
         persistState(null, s.mode);
         setState(prev => ({
           ...prev,
-          status: "idle",
           position: null,
           isVisible: false,
           highlightedSentenceIndex: null,
@@ -647,11 +659,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
 
       const samePage = s.position.chapter === chapter && s.position.page === page;
-      if (!samePage && s.status !== "navigating") {
+      const isNavigating = navigatingToPageRef.current !== null;
+      if (!samePage && !isNavigating) {
         // Different page/chapter of same story+level — pause, keep player open
         saveAudioBookmark();
-        chapterAudio.pause();
-        setState(prev => ({ ...prev, status: "paused", highlightedSentenceIndex: null }));
+        chapterAudio.pause(); // hook sets "paused"
+        setStatusOverride(null);
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
         return;
       }
     }
@@ -659,22 +673,25 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     // In chapter mode (continued — same page or navigating)
     if (s.playbackMode === "chapter") {
       chapterAudio.resetSentenceTracking();
-      // Manual nav: resume after page renders (status is "navigating")
-      if (s.status === "navigating") {
+      const nav = navigatingToPageRef.current;
+      if (nav && nav.page === page) {
+        navigatingToPageRef.current = null;
         const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
-        if (firstSentence) {
-          setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
-        }
-        if (wasPlayingBeforeNavRef.current) {
-          setState(prev => ({ ...prev, status: "playing" }));
-          requestAnimationFrame(() => requestAnimationFrame(() => {
+
+        // Ensure the "navigating" spinner is painted before resuming.
+        // Without this, fast prefetched pages cause set/clear in the same React batch.
+        requestAnimationFrame(() => {
+          if (firstSentence) {
+            setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
+          }
+          if (nav.shouldResume) {
+            setStatusOverride(null);
             chapterAudio.play();
-          }));
-        } else {
-          setState(prev => ({ ...prev, status: "paused" }));
-        }
+          } else {
+            setStatusOverride(null);
+          }
+        });
       }
-      // Natural page turn: audio keeps playing, sync loop handles highlighting
       return;
     }
 
@@ -696,19 +713,30 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [playSentence, handleSentenceComplete]);
 
+  // ---- Derive effective status ----
+  // In chapter mode: override (navigating/idle/finished/error) takes priority,
+  // otherwise the hook's audio lifecycle status is the source of truth.
+  // In legacy mode: provider state.status is used directly.
+  const effectiveStatus: AudioPlayerStatus = (() => {
+    if (statusOverride) return statusOverride;
+    if (state.playbackMode === "chapter") return chapterAudio.state.status as AudioPlayerStatus;
+    return state.status;
+  })();
+
   // ---- Auto-hide after finish ----
   useEffect(() => {
-    if (state.status === "finished") {
+    if (effectiveStatus === "finished") {
       const timer = setTimeout(() => {
-        setState(prev => ({ ...prev, isVisible: false, status: "idle", position: null, highlightedSentenceIndex: null }));
+        setStatusOverride("idle");
+        setState(prev => ({ ...prev, isVisible: false, position: null, highlightedSentenceIndex: null }));
         persistState(null, state.mode);
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [state.status, state.mode]);
+  }, [effectiveStatus, state.mode]);
 
   const value: AudioPlayerContextType = {
-    state,
+    state: { ...state, status: effectiveStatus },
     startContinuousPlayback,
     pausePlayback,
     resumePlayback,
@@ -719,7 +747,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     skipBack,
     nextPage,
     prevPage,
-    isPlaying: state.status === "playing",
+    isPlaying: effectiveStatus === "playing",
     setPlaybackRate,
     seekToTime,
   };

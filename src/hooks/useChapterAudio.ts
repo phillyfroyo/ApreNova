@@ -334,6 +334,16 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, [stopSyncLoop]);
 
+  // Pause audio and stop sync loop without setting status — used during page
+  // navigation so the provider can go straight to "navigating" without a
+  // visible "paused" flash.
+  const pauseSilently = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      stopSyncLoop();
+    }
+  }, [stopSyncLoop]);
+
   const stop = useCallback(() => {
     // Abort any in-flight fetch
     if (abortRef.current) {
@@ -497,6 +507,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     loadAndPlay,
     play,
     pause,
+    pauseSilently,
     stop,
     seekToTime,
     seekToSentence,

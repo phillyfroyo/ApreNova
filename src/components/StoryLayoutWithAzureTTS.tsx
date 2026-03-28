@@ -236,6 +236,23 @@ export default function StoryLayoutWithAzureTTS({
     if (next) router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
   }, [chapterNumber, pageNumber, storyMap]);
 
+  // Prefetch next page early when audio reaches ~75% through this page's sentences
+  const hasPrefetchedNextRef = useRef(false);
+  useEffect(() => { hasPrefetchedNextRef.current = false; }, [pageNumber]);
+  useEffect(() => {
+    if (hasPrefetchedNextRef.current) return;
+    const idx = audioPlayer.state.highlightedSentenceIndex;
+    if (idx === null) return;
+    const contentCount = sentences.filter(s => !s.isStanzaBreak && ((s.es && s.es.trim()) || (s.en && s.en.trim()))).length;
+    if (contentCount > 0 && idx >= Math.floor(contentCount * 0.75)) {
+      const { next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
+      if (next) {
+        hasPrefetchedNextRef.current = true;
+        router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
+      }
+    }
+  }, [audioPlayer.state.highlightedSentenceIndex, sentences, chapterNumber, pageNumber, storyMap, currentLevel]);
+
   useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber, storySlug, currentLevel); }, [sentences, chapterNumber, pageNumber, storySlug, currentLevel]);
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -296,7 +313,8 @@ export default function StoryLayoutWithAzureTTS({
         scrollToElement(sentenceRefs.current[idx]!);
       }
     }
-  }, [audioPlayer.state.highlightedSentenceIndex, storyType, sentences]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sentences is stable per page; skipNextScrollRef guards page changes
+  }, [audioPlayer.state.highlightedSentenceIndex, storyType]);
 
   useEffect(() => {
     if (!session?.user || hasPreloadedRef.current) return;
