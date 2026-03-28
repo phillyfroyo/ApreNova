@@ -152,13 +152,14 @@ export default function AudioPlayerBar() {
 
   return (
     <>
-      {/* Chapter generation loading overlay — shown during generation and when ready to play */}
-      {(status === "generating" || status === "ready") && position && (
+      {/* Chapter generation loading overlay — shown during generation, ready, or error */}
+      {(status === "generating" || status === "ready" || status === "error") && position && (
         <ChapterLoadingOverlay
           chapterNumber={position.chapter}
           progress={state.chapterGenerationProgress}
           storyType={storyMeta?.type}
           isReady={status === "ready"}
+          isError={status === "error"}
           lng={lng}
           onStartListening={resumePlayback}
           onCancel={stopPlayback}

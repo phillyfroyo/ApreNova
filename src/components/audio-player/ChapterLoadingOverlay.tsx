@@ -1,7 +1,7 @@
 // src/components/audio-player/ChapterLoadingOverlay.tsx
 "use client";
 
-import { Loader2, Play } from "lucide-react";
+import { Loader2, Play, AlertCircle } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 import type { StoryType } from "@/types/story";
@@ -34,19 +34,43 @@ interface ChapterLoadingOverlayProps {
   progress: { sentencesComplete: number; sentencesTotal: number } | null;
   storyType?: StoryType;
   isReady?: boolean;
+  isError?: boolean;
   lng: Language;
   onStartListening: () => void;
   onCancel: () => void;
 }
 
 export default function ChapterLoadingOverlay({
-  chapterNumber, progress, storyType, isReady = false, lng, onStartListening, onCancel,
+  chapterNumber, progress, storyType, isReady = false, isError = false, lng, onStartListening, onCancel,
 }: ChapterLoadingOverlayProps) {
   const pct = progress && progress.sentencesTotal > 0
     ? Math.round((progress.sentencesComplete / progress.sentencesTotal) * 100)
     : 0;
 
   const { sectionLabel, lineUnit } = getLoadingLabels(storyType, lng);
+
+  // Error state — simple modal with message and close button
+  if (isError) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-xl px-8 py-6 max-w-sm w-full mx-4 text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {t(lng, "audioPlayer", "errorTitle")}
+          </h3>
+          <p className="text-base text-gray-600 leading-relaxed mb-6">
+            {t(lng, "audioPlayer", "errorMessage")}
+          </p>
+          <button
+            onClick={onCancel}
+            className="px-6 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors"
+          >
+            {t(lng, "audioPlayer", "errorClose")}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -65,7 +89,7 @@ export default function ChapterLoadingOverlay({
             <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
               <div
                 className="h-full bg-indigo-500 rounded-full transition-[width] duration-300 ease-out"
-                style={{ width: `${isReady ? 100 : pct}%` }}
+                style={{ width: `${pct}%` }}
               />
             </div>
           </>
@@ -75,7 +99,7 @@ export default function ChapterLoadingOverlay({
 
         {/* First-generation message */}
         {progress && (
-          <div className="text-sm text-gray-400 leading-relaxed mb-4 space-y-3">
+          <div className="text-base text-gray-900 leading-relaxed mb-4 space-y-5">
             <p>{t(lng, "audioPlayer", "firstGenLine1", { section: sectionLabel.toLowerCase() })}</p>
             <p>{t(lng, "audioPlayer", "firstGenLine2")}</p>
             <p>{t(lng, "audioPlayer", "firstGenLine3")}</p>

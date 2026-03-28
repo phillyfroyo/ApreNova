@@ -673,6 +673,9 @@ audioPlayer: {
   firstGenLine1: "Congratulations! You're the first to request this {section}'s audio.",
   firstGenLine2: "After it loads, you (and all other users) will have instant playback.",
   firstGenLine3: "Thanks for paving the way for everyone!",
+  errorTitle: "We're sorry, something went wrong",
+  errorMessage: "We couldn't load the audio. Please refresh the page and try again.",
+  errorClose: "Close",
 },
 };
 

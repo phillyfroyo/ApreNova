@@ -178,6 +178,50 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       error: null,
     });
 
+    // Safety timeout — scales once we know chapter size from first progress event.
+    // Starts at 60s (covers cache check + short chapters), then resets to
+    // 30s base + 1s per sentence segment once sentencesTotal is known.
+    const abortOnTimeout = () => {
+      abortController.abort();
+      setState(prev => ({
+        ...prev,
+        status: "error",
+        error: "Audio generation timed out. Please try again.",
+        progress: null,
+      }));
+      optionsRef.current.onError?.(new Error("Audio generation timed out"));
+    };
+    let timeoutId = setTimeout(abortOnTimeout, 60_000);
+
+    // Artificial progress: tick sentencesComplete toward ~50% while Azure synthesizes.
+    // Kept conservative so it jumps forward to 100% on completion rather than stalling near the top.
+    let progressIntervalId: ReturnType<typeof setInterval> | null = null;
+    let simulatedComplete = 0;
+    const startSimulatedProgress = (total: number) => {
+      if (progressIntervalId) return;
+      const target = Math.floor(total * 0.5);
+      // Spread ticks evenly across estimated wait time (rough: 1s per sentence)
+      const intervalMs = Math.max(500, (total * 1_000) / Math.max(target, 1));
+      progressIntervalId = setInterval(() => {
+        if (simulatedComplete >= target) {
+          clearInterval(progressIntervalId!);
+          progressIntervalId = null;
+          return;
+        }
+        simulatedComplete++;
+        setState(prev => ({
+          ...prev,
+          progress: { status: "generating", sentencesComplete: simulatedComplete, sentencesTotal: total },
+        }));
+      }, intervalMs);
+    };
+    const stopSimulatedProgress = () => {
+      if (progressIntervalId) {
+        clearInterval(progressIntervalId);
+        progressIntervalId = null;
+      }
+    };
+
     try {
       // Fetch chapter audio with streaming progress
       const response = await fetch("/api/azure-tts/chapter", {
@@ -197,6 +241,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       const decoder = new TextDecoder();
       let audioUrl = "";
       let chapterMetadata: ChapterAudioMetadata | null = null;
+      let wasCached = false;
       let buffer = "";
 
       while (true) {
@@ -212,19 +257,41 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           const data = JSON.parse(line);
 
           if (data.type === "progress") {
-            setState(prev => ({
-              ...prev,
-              status: "generating",
-              progress: data,
-            }));
+            // First progress event: scale timeout and start simulated counter
+            if (data.sentencesTotal && data.sentencesComplete === 0) {
+              clearTimeout(timeoutId);
+              const scaled = Math.min(30_000 + data.sentencesTotal * 1_000, 180_000);
+              timeoutId = setTimeout(abortOnTimeout, scaled);
+              startSimulatedProgress(data.sentencesTotal);
+              // Set initial state — after this, simulated interval drives progress
+              setState(prev => ({
+                ...prev,
+                status: "generating",
+                progress: { status: "generating", sentencesComplete: 0, sentencesTotal: data.sentencesTotal },
+              }));
+            }
+            // Ignore subsequent server progress events — simulated progress is driving the UI
           } else if (data.type === "complete") {
+            stopSimulatedProgress();
             audioUrl = data.audioUrl;
             chapterMetadata = data.metadata;
+            wasCached = !!data.cached;
+            // Snap progress to 100% immediately
+            if (data.metadata?.totalSentences) {
+              const total = data.metadata.totalSentences;
+              setState(prev => ({
+                ...prev,
+                progress: { status: "complete", sentencesComplete: total, sentencesTotal: total },
+              }));
+            }
           } else if (data.type === "error") {
             throw new Error(data.error);
           }
         }
       }
+
+      clearTimeout(timeoutId);
+      stopSimulatedProgress();
 
       if (!audioUrl || !chapterMetadata) {
         throw new Error("No audio URL received from server");
@@ -284,17 +351,33 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         optionsRef.current.onSentenceChange?.(timing);
       }
 
-      // Audio is loaded and ready — wait for user to click "Start Listening"
-      setState(prev => ({
-        ...prev,
-        status: "ready",
-        duration: chapterMetadata!.totalDuration,
-        progress: null,
-        currentPage: startPage,
-      }));
+      if (wasCached) {
+        // Audio was already in Cloudflare — skip modal and play immediately
+        await audio.play();
+        startSyncLoop();
+        setState(prev => ({
+          ...prev,
+          status: "playing",
+          duration: chapterMetadata!.totalDuration,
+          progress: null,
+          currentPage: startPage,
+        }));
+      } else {
+        // Freshly generated — snap progress to 100%, wait for "Start Listening"
+        const total = chapterMetadata!.totalSentences;
+        setState(prev => ({
+          ...prev,
+          status: "ready",
+          duration: chapterMetadata!.totalDuration,
+          progress: { status: "complete" as const, sentencesComplete: total, sentencesTotal: total },
+          currentPage: startPage,
+        }));
+      }
 
     } catch (err: any) {
-      // Ignore abort errors — these are intentional cancellations
+      clearTimeout(timeoutId);
+      stopSimulatedProgress();
+      // Ignore abort errors — these are intentional cancellations (user cancel or timeout already handled)
       if (err.name === "AbortError") return;
 
       setState(prev => ({

@@ -674,6 +674,9 @@ audioPlayer: {
   firstGenLine1: "¡Felicidades! Eres el primero en solicitar el audio de este {section}.",
   firstGenLine2: "Una vez cargado, tú (y todos los demás usuarios) tendrán reproducción instantánea.",
   firstGenLine3: "¡Gracias por abrir el camino para todos!",
+  errorTitle: "Lo sentimos, algo salió mal",
+  errorMessage: "No pudimos cargar el audio. Por favor, actualiza la página e inténtalo de nuevo.",
+  errorClose: "Cerrar",
 },
 };
 
