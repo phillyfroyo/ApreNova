@@ -159,9 +159,22 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   // ---- Get current sentence position (for resuming after variant reload) ----
   const getCurrentPosition = useCallback((): { pageNumber: number; lineIndex: number } | null => {
+    // Prefer the tracked ref (set by the sync loop)
     const st = currentSentenceRef.current;
-    return st ? { pageNumber: st.pageNumber, lineIndex: st.lineIndex } : null;
-  }, []);
+    if (st) return { pageNumber: st.pageNumber, lineIndex: st.lineIndex };
+
+    // Fallback: derive position from current audio time + metadata
+    const time = audioRef.current?.currentTime ?? 0;
+    const timings = metadataRef.current?.sentenceTimings;
+    if (time > 0 && timings && timings.length > 0) {
+      const idx = findSentenceAtTime(time);
+      if (idx >= 0 && idx < timings.length) {
+        return { pageNumber: timings[idx].pageNumber, lineIndex: timings[idx].lineIndex };
+      }
+    }
+
+    return null;
+  }, [findSentenceAtTime]);
 
   // ---- Load chapter audio and start playback ----
   const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number; seekToPosition?: { pageNumber: number; lineIndex: number } }) => {
@@ -275,7 +288,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
             // First progress event: scale timeout and start simulated counter
             if (data.sentencesTotal && data.sentencesComplete === 0) {
               clearTimeout(timeoutId);
-              const scaled = Math.min(30_000 + data.sentencesTotal * 1_000, 180_000);
+              // Scale timeout: 30s base + 2s per segment, capped at 5 minutes.
+              // Slow-speed and bilingual variants produce more chunks with more overhead.
+              const scaled = Math.min(30_000 + data.sentencesTotal * 2_000, 300_000);
               timeoutId = setTimeout(abortOnTimeout, scaled);
               startSimulatedProgress(data.sentencesTotal);
               // Set initial state — after this, simulated interval drives progress

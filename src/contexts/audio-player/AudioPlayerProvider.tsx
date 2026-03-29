@@ -658,6 +658,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const isActive = s.position && s.playbackMode === "chapter" &&
       (hookStatus === "playing" || hookStatus === "paused");
     if (isActive) {
+      // Capture position before stop clears refs
       const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
       const chapterMode = getChapterAudioMode(newMode);
       const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
@@ -665,7 +666,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       chapterAudio.stop();
       setStatusOverride(null);
-      // Defer label — only shown if generation is actually needed (cache miss)
       pendingGenerationLabelRef.current = label;
       setState(prev => ({
         ...prev,
@@ -695,6 +695,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const isActive = s.position && s.playbackMode === "chapter" &&
       (hookStatus === "playing" || hookStatus === "paused");
     if (isActive) {
+      // Capture position before stop clears refs
       const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
       const chapterMode = getChapterAudioMode(s.mode);
       const speed = rate === 0.7 ? "slow" as const : "normal" as const;
@@ -702,7 +703,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       chapterAudio.stop();
       setStatusOverride(null);
-      // Defer label — only shown if generation is actually needed (cache miss)
       pendingGenerationLabelRef.current = label;
       setState(prev => ({
         ...prev,
