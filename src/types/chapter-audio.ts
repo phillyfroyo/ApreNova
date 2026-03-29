@@ -58,6 +58,8 @@ export interface ChapterAudioMetadata {
   variant: ChapterAudioRequest;
   totalDuration: number;
   totalSentences: number;
+  totalCharacters: number;          // total characters sent to Azure TTS
+  generationDurationMs: number;     // wall-clock time for synthesis (excludes cache hits)
   sentenceTimings: SentenceTiming[];
   pageBoundaries: PageBoundary[];
   generatedAt: number;

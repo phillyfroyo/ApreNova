@@ -25,20 +25,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Rate limit (2 req/min — chapter gen is heavy)
-    const rateLimiter = getRateLimiter("batch");
-    const clientId = getClientIdentifier(request);
-    const rateResult = rateLimiter.isAllowed(clientId);
-    if (!rateResult.allowed) {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          ...createRateLimitHeaders(rateResult.info),
-        },
-      });
-    }
-
     // Parse and validate request
     const body = await request.json();
     const { storySlug, level, chapter, mode, speed } = body;
@@ -61,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     const chapterRequest: ChapterAudioRequest = { storySlug, level, chapter, mode, speed };
 
-    // Quick check: if already cached, return immediately (no streaming needed)
+    // Quick check: if already cached, return immediately (no rate limit needed)
     const cache = getTTSCacheService();
     const cached = await cache.getChapterCached(chapterRequest);
     if (cached) {
@@ -72,10 +58,23 @@ export async function POST(request: NextRequest) {
           headers: {
             "Content-Type": "application/x-ndjson",
             "Cache-Control": "no-cache",
-            ...createRateLimitHeaders(rateResult.info),
           },
         }
       );
+    }
+
+    // Rate limit only actual generation (2 req/min — chapter gen is heavy)
+    const rateLimiter = getRateLimiter("batch");
+    const clientId = getClientIdentifier(request);
+    const rateResult = rateLimiter.isAllowed(clientId);
+    if (!rateResult.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          ...createRateLimitHeaders(rateResult.info),
+        },
+      });
     }
 
     // Stream NDJSON progress

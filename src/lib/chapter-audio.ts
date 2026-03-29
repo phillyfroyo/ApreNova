@@ -6,8 +6,8 @@
 import { getAzureSpeechService, VOICE_CONFIG, NATIVE_VOICE, SPEED_RATES } from "./azure-speech";
 import type { ChapterSSMLSegment } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
+import { prisma } from "@/lib/prisma";
 import { toFolderName } from "@/lib/cefr";
-import type { WordTiming } from "@/types/azure-tts";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 import type {
   ChapterAudioRequest,
@@ -15,7 +15,6 @@ import type {
   ChapterAudioMetadata,
   SentenceTiming,
   PageBoundary,
-  TTSSpeechSegment,
   ChapterGenerationProgress,
 } from "@/types/chapter-audio";
 
@@ -179,12 +178,16 @@ export function buildSpeechPlan(
 // Chunking — split speech plan to stay under Azure's 10-minute limit
 // ============================================================================
 
-// Azure TTS rejects SSML that produces >600s of audio. We conservatively cap
-// each chunk at ~MAX_CHUNK_SEGMENTS sentences so no single synthesis exceeds
-// the limit. At ~4s average per sentence, 120 segments ≈ 8 min of audio.
+// Azure TTS rejects SSML that produces >600s of audio. We cap each chunk by
+// estimated character count rather than segment count, since line/paragraph
+// length varies hugely across story types (short story lines vs novel paragraphs).
+// At ~15 chars/sec audio (normal speed) and a 500s target (safety margin under 600s):
+//   Normal: ~7,500 chars per chunk
+//   Slow (0.7x rate → ~10.5 chars/sec): ~5,250 chars per chunk
 // Azure also limits SSML to 50 <voice> elements — in bilingual mode every
 // segment alternates voices, so we must also cap voice switches per chunk.
-const MAX_CHUNK_SEGMENTS = 120;
+const MAX_CHUNK_CHARS_NORMAL = 7500;
+const MAX_CHUNK_CHARS_SLOW = 5250;
 const MAX_VOICE_ELEMENTS = 49; // Azure allows max 50; keep 1 headroom
 
 function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
@@ -229,11 +232,17 @@ export async function generateChapterAudio(
 
   // 3. Build speech plan
   const plan = buildSpeechPlan(pages, request.mode, request.speed);
+  if (plan.length === 0) {
+    throw new Error(`No speakable content found for ${request.storySlug}/${request.level} chapter ${request.chapter}`);
+  }
   const totalSentences = plan.length;
+  const totalCharacters = plan.reduce((sum, entry) => sum + entry.text.length, 0);
+  const generationStartTime = Date.now();
 
   onProgress?.({ status: "generating", sentencesComplete: 0, sentencesTotal: totalSentences });
 
-  // 4. Split plan into chunks (respecting both segment count and voice element limits)
+  // 4. Split plan into chunks (respecting character count and voice element limits)
+  const maxChunkChars = request.speed === "slow" ? MAX_CHUNK_CHARS_SLOW : MAX_CHUNK_CHARS_NORMAL;
   const chunks: SpeechPlanEntry[][] = [];
   let chunkStart = 0;
 
@@ -241,14 +250,19 @@ export async function generateChapterAudio(
     let voiceCount = 0;
     let lastVoice: string | null = null;
     let chunkEnd = chunkStart;
+    let chunkChars = 0;
 
-    while (chunkEnd < plan.length && (chunkEnd - chunkStart) < MAX_CHUNK_SEGMENTS) {
+    while (chunkEnd < plan.length) {
       const entry = plan[chunkEnd];
+      // Check voice element limit
       if (entry.voice !== lastVoice) {
         if (voiceCount >= MAX_VOICE_ELEMENTS) break;
         voiceCount++;
         lastVoice = entry.voice;
       }
+      // Check character limit (always include at least one segment per chunk)
+      if (chunkChars + entry.text.length > maxChunkChars && chunkEnd > chunkStart) break;
+      chunkChars += entry.text.length;
       chunkEnd++;
     }
 
@@ -267,8 +281,6 @@ export async function generateChapterAudio(
   const allSentenceTimings: SentenceTiming[] = [];
   const pageBoundaryMap = new Map<number, { startTime: number; endTime: number; sentenceCount: number }>();
   let timeOffset = 0;
-  let planOffset = 0;
-
   for (let c = 0; c < chunks.length; c++) {
     const chunk = chunks[c];
     const ssmlSegments = toSSMLSegments(chunk);
@@ -312,7 +324,6 @@ export async function generateChapterAudio(
     }
 
     timeOffset += result.totalDuration;
-    planOffset += chunk.length;
   }
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
@@ -327,18 +338,37 @@ export async function generateChapterAudio(
       sentenceCount: data.sentenceCount,
     }));
 
+  const generationDurationMs = Date.now() - generationStartTime;
+
   const metadata: ChapterAudioMetadata = {
     variant: request,
     totalDuration: timeOffset,
     totalSentences: allSentenceTimings.length,
+    totalCharacters,
+    generationDurationMs,
     sentenceTimings: allSentenceTimings,
     pageBoundaries,
     generatedAt: Date.now(),
     sentenceHashes: [],
-    version: 2,
+    version: 3,
   };
 
-  // 7. Upload concatenated audio to R2
+  // 7. Record generation stats in database (non-blocking)
+  prisma.ttsGenerationStat.create({
+    data: {
+      storySlug: request.storySlug,
+      level: request.level,
+      chapter: request.chapter,
+      mode: request.mode,
+      speed: request.speed,
+      totalCharacters,
+      totalSentences,
+      generationDurationMs,
+      audioDurationMs: Math.round(timeOffset * 1000),
+    },
+  }).catch((err) => console.error("[chapter-audio] Failed to record generation stats:", err));
+
+  // 8. Upload concatenated audio to R2
   onProgress?.({ status: "uploading", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
   const audioUrl = await cache.saveChapterAudio(request, Buffer.concat(audioBuffers), metadata);
 

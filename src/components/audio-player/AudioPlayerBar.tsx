@@ -13,8 +13,10 @@ import TransportControls from "./TransportControls";
 import SettingsControls from "./SettingsControls";
 import ToastNotification from "./ToastNotification";
 import ChapterLoadingOverlay, { getLoadingLabels } from "./ChapterLoadingOverlay";
+import SettingsPicker from "./SettingsPicker";
 import { useDragToMinimize } from "./useDragToMinimize";
 import { useBottomNavDetection } from "./useBottomNavDetection";
+import { savePlaybackRate, saveLanguageMode } from "@/contexts/audio-player/storage";
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -24,6 +26,7 @@ export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
     skipForward, skipBack, nextPage, prevPage, setPlaybackRate, seekToTime,
+    confirmAndPlay, dismissPicker,
   } = useAudioPlayer();
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
@@ -107,6 +110,7 @@ export default function AudioPlayerBar() {
   })();
   const isTransport = status !== "finished";
   const transportDisabled = status === "loading" || status === "navigating" || status === "generating" || status === "ready";
+  const settingsDisabled = status === "loading" || status === "navigating";
 
   const handleClick = () => {
     setMinimized(prev => !prev);
@@ -152,6 +156,24 @@ export default function AudioPlayerBar() {
 
   return (
     <>
+      {/* Settings picker — shown when variant is not cached, before generation starts */}
+      {state.pendingPlayback && (
+        <SettingsPicker
+          lng={lng}
+          initialSpeed={playbackRate}
+          initialMode={mode}
+          cacheStatus={state.pendingPlayback.cacheStatus}
+          onConfirm={(newSpeed, newMode) => {
+            // Persist selections to localStorage
+            savePlaybackRate(newSpeed);
+            saveLanguageMode(newMode);
+            // Start playback with chosen settings
+            confirmAndPlay(newMode, newSpeed);
+          }}
+          onDismiss={dismissPicker}
+        />
+      )}
+
       {/* Chapter generation loading overlay — shown during generation, ready, error, or variant reload */}
       {(status === "generating" || status === "ready" || status === "error" || (status === "loading" && state.generationLabel)) && position && (
         <ChapterLoadingOverlay
@@ -281,7 +303,7 @@ export default function AudioPlayerBar() {
             onLangToggle={handleLangToggle}
             onClose={stopPlayback}
             variant="mobile"
-            disabled={transportDisabled}
+            disabled={settingsDisabled}
           />
         </div>
 
@@ -333,7 +355,7 @@ export default function AudioPlayerBar() {
                 onLangToggle={handleLangToggle}
                 onClose={stopPlayback}
                 variant="desktop"
-                disabled={transportDisabled}
+                disabled={settingsDisabled}
               />
             </div>
           ) : (

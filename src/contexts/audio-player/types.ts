@@ -33,6 +33,25 @@ export interface AudioPlayerPosition {
   userStoryId?: string;
 }
 
+export interface VariantCacheStatus {
+  target: { normal: boolean; slow: boolean };
+  bilingual: { normal: boolean; slow: boolean };
+  estimates: {
+    targetNormal: number | null;
+    targetSlow: number | null;
+    bilingualNormal: number | null;
+    bilingualSlow: number | null;
+  };
+}
+
+export interface PendingPlayback {
+  options: StartPlaybackOptions;
+  resolvedChapter: number;
+  resolvedPage: number;
+  bookmarkAudioTime: number | null;
+  cacheStatus: VariantCacheStatus;
+}
+
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
   position: AudioPlayerPosition | null;
@@ -50,6 +69,8 @@ export interface AudioPlayerState {
   chapterGenerationProgress: { sentencesComplete: number; sentencesTotal: number } | null;
   /** Label shown in the loading overlay — null means default "Preparing Chapter/Section X" */
   generationLabel: string | null;
+  /** When set, the settings picker is shown before playback starts */
+  pendingPlayback: PendingPlayback | null;
 }
 
 export interface StartPlaybackOptions {
@@ -80,6 +101,8 @@ export interface AudioPlayerContextType {
   isPlaying: boolean;
   setPlaybackRate: (rate: number) => void;
   seekToTime: (time: number) => void;
+  confirmAndPlay: (modeOverride?: AudioLanguageMode, speedOverride?: number) => void;
+  dismissPicker: () => void;
 }
 
 // ============================================================================

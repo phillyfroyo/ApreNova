@@ -405,3 +405,31 @@ model AlgorithmTestResult {
 
   @@index([fileId, createdAt])
 }
+
+// ============================================================================
+// TTS GENERATION STATS
+// Tracks character count and wall-clock generation time per chapter audio
+// variant, used to estimate generation time for uncached variants.
+// ============================================================================
+
+model TtsGenerationStat {
+  id                  String   @id @default(cuid())
+
+  // What was generated
+  storySlug           String
+  level               String
+  chapter             Int
+  mode                String   // "en", "es", "bilingual-en", "bilingual-es"
+  speed               String   // "normal", "slow"
+
+  // Measurements
+  totalCharacters     Int      // characters sent to Azure TTS
+  totalSentences      Int
+  generationDurationMs Int     // wall-clock synthesis time
+  audioDurationMs     Int      // resulting audio length
+
+  createdAt           DateTime @default(now())
+
+  @@index([mode, speed])
+  @@index([createdAt])
+}
