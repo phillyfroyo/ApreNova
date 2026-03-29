@@ -48,6 +48,8 @@ export interface AudioPlayerState {
   chapterCurrentTime: number;
   chapterDuration: number;
   chapterGenerationProgress: { sentencesComplete: number; sentencesTotal: number } | null;
+  /** Label shown in the loading overlay — null means default "Preparing Chapter/Section X" */
+  generationLabel: string | null;
 }
 
 export interface StartPlaybackOptions {

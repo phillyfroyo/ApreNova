@@ -170,6 +170,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     chapterCurrentTime: 0,
     chapterDuration: 0,
     chapterGenerationProgress: null,
+    generationLabel: null,
   });
 
   useEffect(() => {
@@ -237,7 +238,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapterDuration: cs.duration,
       chapterGenerationProgress: cs.status === "generating" && cs.progress
         ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-        : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
+        : cs.status === "ready" && cs.progress
+          ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
+          : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
+      // Clear variant generation label once audio is playing
+      generationLabel: (cs.status === "playing" || cs.status === "ready") ? null : prev.generationLabel,
     }));
 
     // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
@@ -406,6 +411,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapterCurrentTime: 0,
       chapterDuration: 0,
       chapterGenerationProgress: null,
+      generationLabel: null,
     }));
 
     persistState(position, s.mode);
@@ -503,21 +509,82 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapterCurrentTime: 0,
       chapterDuration: 0,
       chapterGenerationProgress: null,
+      generationLabel: null,
     }));
   }, [stopTTS, chapterAudio, saveAudioBookmark]);
 
   const toggleMode = useCallback(() => {
+    const s = stateRef.current;
+    const newMode = s.mode === "target-only" ? "bilingual" : "target-only";
+
     setState(prev => {
-      const newMode = prev.mode === "target-only" ? "bilingual" : "target-only";
       if (prev.position) persistState(prev.position, newMode);
       return { ...prev, mode: newMode };
     });
-  }, []);
+
+    // If actively playing/paused in chapter mode, reload with new mode
+    const hookStatus = chapterAudio.state.status;
+    const isActive = s.position && s.playbackMode === "chapter" &&
+      (hookStatus === "playing" || hookStatus === "paused");
+    if (isActive) {
+      const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
+      const chapterMode = getChapterAudioMode(newMode);
+      const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
+      const label = newMode === "bilingual" ? "Preparing EN + ES" : "Preparing Audio";
+
+      chapterAudio.stop();
+      setStatusOverride(null);
+      setState(prev => ({
+        ...prev,
+        generationLabel: label,
+        chapterGenerationProgress: null,
+      }));
+
+      chapterAudio.loadAndPlay({
+        storySlug: s.position!.storySlug,
+        level: s.position!.level,
+        chapter: s.position!.chapter,
+        mode: chapterMode,
+        speed,
+        seekToPosition,
+      });
+    }
+  }, [chapterAudio, lng, oppositeLang]);
 
   const setPlaybackRate = useCallback((rate: number) => {
     savePlaybackRate(rate);
+
+    const s = stateRef.current;
     setState(prev => ({ ...prev, playbackRate: rate }));
-  }, []);
+
+    // If actively playing/paused in chapter mode, reload with new speed
+    const hookStatus = chapterAudio.state.status;
+    const isActive = s.position && s.playbackMode === "chapter" &&
+      (hookStatus === "playing" || hookStatus === "paused");
+    if (isActive) {
+      const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
+      const chapterMode = getChapterAudioMode(s.mode);
+      const speed = rate === 0.7 ? "slow" as const : "normal" as const;
+      const label = rate === 0.7 ? "Preparing Slow Mode" : "Preparing Normal Speed";
+
+      chapterAudio.stop();
+      setStatusOverride(null);
+      setState(prev => ({
+        ...prev,
+        generationLabel: label,
+        chapterGenerationProgress: null,
+      }));
+
+      chapterAudio.loadAndPlay({
+        storySlug: s.position!.storySlug,
+        level: s.position!.level,
+        chapter: s.position!.chapter,
+        mode: chapterMode,
+        speed,
+        seekToPosition,
+      });
+    }
+  }, [chapterAudio, lng, oppositeLang]);
 
   const seekToTime = useCallback((time: number) => {
     if (stateRef.current.playbackMode === "chapter") {

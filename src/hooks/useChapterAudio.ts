@@ -55,6 +55,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const optionsRef = useRef(options);
   const lastSentenceIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
+  const currentSentenceRef = useRef<SentenceTiming | null>(null);
   optionsRef.current = options;
 
   // ---- Binary search for current sentence by time ----
@@ -121,6 +122,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = sentenceIdx;
       const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
+      currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
@@ -148,8 +150,19 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, []);
 
+  // ---- Get current playback time (for resuming after variant reload) ----
+  const getCurrentTime = useCallback((): number => {
+    return audioRef.current?.currentTime ?? 0;
+  }, []);
+
+  // ---- Get current sentence position (for resuming after variant reload) ----
+  const getCurrentPosition = useCallback((): { pageNumber: number; lineIndex: number } | null => {
+    const st = currentSentenceRef.current;
+    return st ? { pageNumber: st.pageNumber, lineIndex: st.lineIndex } : null;
+  }, []);
+
   // ---- Load chapter audio and start playback ----
-  const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number }) => {
+  const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number; seekToPosition?: { pageNumber: number; lineIndex: number } }) => {
     // Abort any in-flight request
     if (abortRef.current) {
       abortRef.current.abort();
@@ -323,7 +336,15 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       });
 
       // Seek to initial position before playing (e.g., resuming from bookmark or page start)
-      if (request.initialSeekTime && request.initialSeekTime > 0) {
+      if (request.seekToPosition && chapterMetadata) {
+        // Variant reload: find the same sentence by content position (pageNumber + lineIndex)
+        const target = chapterMetadata.sentenceTimings.find(
+          t => t.pageNumber === request.seekToPosition!.pageNumber && t.lineIndex === request.seekToPosition!.lineIndex
+        );
+        if (target) {
+          audio.currentTime = target.startTime;
+        }
+      } else if (request.initialSeekTime && request.initialSeekTime > 0) {
         audio.currentTime = request.initialSeekTime;
       } else if (request.initialPage && chapterMetadata) {
         // Seek to the start of a specific page
@@ -334,12 +355,14 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
 
       // Determine the correct starting page from the seek position
-      const startPage = request.initialSeekTime
-        ? (chapterMetadata!.pageBoundaries.findLast(b => b.startTime <= (request.initialSeekTime || 0))?.pageNumber
-          ?? chapterMetadata!.pageBoundaries[0]?.pageNumber ?? 0)
-        : request.initialPage
-          ? request.initialPage
-          : (chapterMetadata!.pageBoundaries[0]?.pageNumber || 0);
+      const startPage = request.seekToPosition
+        ? request.seekToPosition.pageNumber
+        : request.initialSeekTime
+          ? (chapterMetadata!.pageBoundaries.findLast(b => b.startTime <= (request.initialSeekTime || 0))?.pageNumber
+            ?? chapterMetadata!.pageBoundaries[0]?.pageNumber ?? 0)
+          : request.initialPage
+            ? request.initialPage
+            : (chapterMetadata!.pageBoundaries[0]?.pageNumber || 0);
 
       // Pre-fire the first sentence highlight before audio starts
       const startTime = audio.currentTime;
@@ -431,6 +454,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
+    currentSentenceRef.current = null;
     setMetadata(null);
     metadataRef.current = null;
     setState({
@@ -591,5 +615,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     skipForwardPage,
     skipBackPage,
     resetSentenceTracking,
+    getCurrentPosition,
+    getCurrentTime,
   };
 }

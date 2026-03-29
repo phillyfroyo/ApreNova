@@ -152,8 +152,8 @@ export default function AudioPlayerBar() {
 
   return (
     <>
-      {/* Chapter generation loading overlay — shown during generation, ready, or error */}
-      {(status === "generating" || status === "ready" || status === "error") && position && (
+      {/* Chapter generation loading overlay — shown during generation, ready, error, or variant reload */}
+      {(status === "generating" || status === "ready" || status === "error" || (status === "loading" && state.generationLabel)) && position && (
         <ChapterLoadingOverlay
           chapterNumber={position.chapter}
           progress={state.chapterGenerationProgress}
@@ -163,6 +163,7 @@ export default function AudioPlayerBar() {
           lng={lng}
           onStartListening={resumePlayback}
           onCancel={stopPlayback}
+          label={state.generationLabel}
         />
       )}
 
@@ -280,6 +281,7 @@ export default function AudioPlayerBar() {
             onLangToggle={handleLangToggle}
             onClose={stopPlayback}
             variant="mobile"
+            disabled={transportDisabled}
           />
         </div>
 
@@ -331,6 +333,7 @@ export default function AudioPlayerBar() {
                 onLangToggle={handleLangToggle}
                 onClose={stopPlayback}
                 variant="desktop"
+                disabled={transportDisabled}
               />
             </div>
           ) : (

@@ -38,10 +38,12 @@ interface ChapterLoadingOverlayProps {
   lng: Language;
   onStartListening: () => void;
   onCancel: () => void;
+  /** Override the title — e.g. "Preparing Slow Mode". Falls back to default section label. */
+  label?: string | null;
 }
 
 export default function ChapterLoadingOverlay({
-  chapterNumber, progress, storyType, isReady = false, isError = false, lng, onStartListening, onCancel,
+  chapterNumber, progress, storyType, isReady = false, isError = false, lng, onStartListening, onCancel, label,
 }: ChapterLoadingOverlayProps) {
   const pct = progress && progress.sentencesTotal > 0
     ? Math.round((progress.sentencesComplete / progress.sentencesTotal) * 100)
@@ -77,7 +79,7 @@ export default function ChapterLoadingOverlay({
       <div className="bg-white rounded-2xl shadow-xl px-8 py-6 max-w-sm w-full mx-4 text-center">
         {/* Header */}
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {t(lng, "audioPlayer", "preparing")} {sectionLabel} {chapterNumber}
+          {label || `${t(lng, "audioPlayer", "preparing")} ${sectionLabel} ${chapterNumber}`}
         </h3>
 
         {/* Progress bar + line counter */}

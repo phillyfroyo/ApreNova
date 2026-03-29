@@ -36,17 +36,20 @@ export interface ChapterSynthesisResult {
   }[];
 }
 
-// Voice configuration: Ava for English, Brian for Spanish
+// Brian reads all story text (target language). Ava reads native language (bilingual only).
 export const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
     normal: 'en-US-BrianMultilingualNeural',
     slow: 'en-US-BrianMultilingualNeural'
   },
   'en-US': {
-    normal: 'en-US-AvaMultilingualNeural',
-    slow: 'en-US-AvaMultilingualNeural'
+    normal: 'en-US-BrianMultilingualNeural',
+    slow: 'en-US-BrianMultilingualNeural'
   }
 };
+
+/** Ava — only used for the native language in bilingual mode */
+export const NATIVE_VOICE = 'en-US-AvaMultilingualNeural';
 
 // Rate multipliers for different speeds
 export const SPEED_RATES: Record<string, number> = {
@@ -331,27 +334,39 @@ export class AzureSpeechService {
    */
   public async generateChapterBuffer(segments: ChapterSSMLSegment[]): Promise<ChapterSynthesisResult> {
     try {
-      // Build a single SSML document with bookmarks between sentences
-      const voice = segments[0]?.voice || VOICE_CONFIG["en-US"].normal;
-      const ssmlLang = segments[0]?.ssmlLang || "en-US";
-
       const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
+      const docLang = LOCALE_MAP[segments[0]?.ssmlLang || "en-US"] || segments[0]?.ssmlLang || "en-US";
 
+      // Build SSML body with per-segment <voice> tags to support multiple voices
+      // (e.g., Brian for Spanish, Ava for English in bilingual mode).
+      // Group consecutive same-voice segments to minimize <voice> tag switches.
       let ssmlBody = "";
+      let currentVoice: string | null = null;
+
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
 
-        // Inter-sentence silence THEN bookmark — so the bookmark timestamp
-        // lands right when speech is about to start, not before the silence
+        // Close previous voice group if voice changed
+        if (currentVoice && currentVoice !== seg.voice) {
+          ssmlBody += `</voice>`;
+          currentVoice = null;
+        }
+
+        // Inter-sentence silence (placed outside <voice> tags during a switch,
+        // or inside when voice stays the same)
         if (i > 0) {
           ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
         }
+
+        // Open new voice group if needed
+        if (currentVoice !== seg.voice) {
+          ssmlBody += `<voice name="${seg.voice}">`;
+          currentVoice = seg.voice;
+        }
+
         ssmlBody += `<bookmark mark="s_${i}"/>`;
 
-        // Check if content language differs from document language (use <lang> tag, never nested <voice>)
-        const needsLangTag = false; // Azure rejects nested <voice> — use <lang> tags only
         const segLang = LOCALE_MAP[seg.language] || seg.language;
-
         let content = "";
 
         // Speaker name (for scripts)
@@ -367,18 +382,19 @@ export class AzureSpeechService {
         // Main text
         content += `<prosody rate="${seg.rate}" volume="medium">${this.escapeXML(seg.text)}</prosody>`;
 
-        if (needsLangTag) {
+        // Wrap in <lang> if voice's native language differs from content language
+        const voiceLang = seg.voice.substring(0, 2);
+        const contentLang = seg.contentLang;
+        if (voiceLang !== contentLang) {
           ssmlBody += `<lang xml:lang="${segLang}">${content}</lang>`;
         } else {
-          const voiceLang = seg.voice.substring(0, 2);
-          const contentLang = seg.contentLang;
-          if (voiceLang !== contentLang) {
-            ssmlBody += `<lang xml:lang="${segLang}">${content}</lang>`;
-          } else {
-            ssmlBody += content;
-          }
+          ssmlBody += content;
         }
+      }
 
+      // Close final voice group
+      if (currentVoice) {
+        ssmlBody += `</voice>`;
       }
 
       // End bookmark to capture total duration
@@ -386,11 +402,9 @@ export class AzureSpeechService {
 
       // Add timestamp to bust Azure server-side SSML cache
       const ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${LOCALE_MAP[ssmlLang] || ssmlLang}">
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${docLang}">
           <!-- gen:${Date.now()} -->
-          <voice name="${voice}">
-            ${ssmlBody}
-          </voice>
+          ${ssmlBody}
         </speak>
       `.trim();
 

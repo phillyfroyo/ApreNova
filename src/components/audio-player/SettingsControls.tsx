@@ -14,19 +14,21 @@ interface SettingsControlsProps {
   onClose: () => void;
   /** "mobile" renders icon+label stacked; "desktop" renders inline with text */
   variant: "mobile" | "desktop";
+  /** Disable speed/lang toggles (e.g. during generation) */
+  disabled?: boolean;
 }
 
 export default function SettingsControls({
-  lng, playbackRate, isBilingual, onSpeedToggle, onLangToggle, onClose, variant,
+  lng, playbackRate, isBilingual, onSpeedToggle, onLangToggle, onClose, variant, disabled,
 }: SettingsControlsProps) {
   if (variant === "desktop") {
     return (
       <div className="flex-1 flex items-center justify-end gap-1">
-        <button onClick={onSpeedToggle} className="h-9 px-3 flex items-center gap-1.5 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 transition-colors" title="Toggle playback speed">
+        <button onClick={onSpeedToggle} disabled={disabled} className={`h-9 px-3 flex items-center gap-1.5 rounded-full transition-colors ${disabled ? "opacity-40 cursor-not-allowed" : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"}`} title="Toggle playback speed">
           {playbackRate === 1.0 ? <Gauge className="w-[18px] h-[18px]" /> : <Turtle className="w-[18px] h-[18px]" />}
           <span className="text-xs font-medium">{t(lng, "audioPlayer", "speed")}</span>
         </button>
-        <button onClick={onLangToggle} className={`h-9 px-3 flex items-center gap-1.5 rounded-full transition-colors ${isBilingual ? "text-indigo-600 hover:bg-indigo-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"}`}>
+        <button onClick={onLangToggle} disabled={disabled} className={`h-9 px-3 flex items-center gap-1.5 rounded-full transition-colors ${disabled ? "opacity-40 cursor-not-allowed" : isBilingual ? "text-indigo-600 hover:bg-indigo-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/50"}`}>
           <Languages className="w-[18px] h-[18px]" />
           <span className="text-xs font-medium">{t(lng, "audioPlayer", "languageToggle")}</span>
         </button>
@@ -40,11 +42,11 @@ export default function SettingsControls({
   // Mobile variant — stacked icon + label
   return (
     <div className="flex pb-2 pt-2">
-      <button onClick={onSpeedToggle} className="flex-1 flex flex-col items-center gap-1 text-gray-700 transition-colors" title="Toggle playback speed">
+      <button onClick={onSpeedToggle} disabled={disabled} className={`flex-1 flex flex-col items-center gap-1 transition-colors ${disabled ? "opacity-40 cursor-not-allowed" : "text-gray-700"}`} title="Toggle playback speed">
         {playbackRate === 1.0 ? <Gauge className="w-[22px] h-[22px]" /> : <Turtle className="w-[22px] h-[22px]" />}
         <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "speed")}</span>
       </button>
-      <button onClick={onLangToggle} className={`flex-1 flex flex-col items-center gap-1 transition-colors ${isBilingual ? "text-indigo-600" : "text-gray-700"}`}>
+      <button onClick={onLangToggle} disabled={disabled} className={`flex-1 flex flex-col items-center gap-1 transition-colors ${disabled ? "opacity-40 cursor-not-allowed" : isBilingual ? "text-indigo-600" : "text-gray-700"}`}>
         <Languages className="w-[22px] h-[22px]" />
         <span className="text-[11px] font-medium">{t(lng, "audioPlayer", "languageToggle")}</span>
       </button>

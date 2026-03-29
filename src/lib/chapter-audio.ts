@@ -3,7 +3,7 @@
 // document with bookmark markers, synthesizes once via Azure TTS, and stores
 // the chapter file + timing metadata in R2.
 
-import { getAzureSpeechService, VOICE_CONFIG, SPEED_RATES } from "./azure-speech";
+import { getAzureSpeechService, VOICE_CONFIG, NATIVE_VOICE, SPEED_RATES } from "./azure-speech";
 import type { ChapterSSMLSegment } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
 import { toFolderName } from "@/lib/cefr";
@@ -112,12 +112,12 @@ export function buildSpeechPlan(
       case "bilingual-en":
         return {
           primary: { lang: "es-ES" as const, voice: VOICE_CONFIG["es-ES"].normal, langKey: "es" as const },
-          secondary: { lang: "en-US" as const, voice: VOICE_CONFIG["en-US"].normal, langKey: "en" as const },
+          secondary: { lang: "en-US" as const, voice: NATIVE_VOICE, langKey: "en" as const },
         };
       case "bilingual-es":
         return {
           primary: { lang: "en-US" as const, voice: VOICE_CONFIG["en-US"].normal, langKey: "en" as const },
-          secondary: { lang: "es-ES" as const, voice: VOICE_CONFIG["es-ES"].normal, langKey: "es" as const },
+          secondary: { lang: "es-ES" as const, voice: NATIVE_VOICE, langKey: "es" as const },
         };
     }
   };
@@ -176,13 +176,37 @@ export function buildSpeechPlan(
 }
 
 // ============================================================================
+// Chunking — split speech plan to stay under Azure's 10-minute limit
+// ============================================================================
+
+// Azure TTS rejects SSML that produces >600s of audio. We conservatively cap
+// each chunk at ~MAX_CHUNK_SEGMENTS sentences so no single synthesis exceeds
+// the limit. At ~4s average per sentence, 120 segments ≈ 8 min of audio.
+const MAX_CHUNK_SEGMENTS = 120;
+
+function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
+  const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
+  return entries.map((entry) => ({
+    text: entry.text,
+    language: entry.language,
+    voice: entry.voice,
+    rate: entry.rate,
+    ssmlLang: LOCALE_MAP[entry.language] || entry.language,
+    contentLang: entry.langKey,
+    breakBeforeMs: entry.breakBeforeMs,
+    speakerName: entry.speakerName,
+    stageDirection: entry.stageDirection,
+  }));
+}
+
+// ============================================================================
 // Main entry point
 // ============================================================================
 
 /**
- * Generate chapter-level audio as a single SSML synthesis with bookmark timing.
- * Checks chapter cache first. On miss, generates the full chapter in one Azure
- * TTS call with <bookmark> markers for exact sentence timing.
+ * Generate chapter-level audio with bookmark timing. Splits long chapters into
+ * chunks to stay under Azure's 10-minute-per-synthesis limit, then concatenates
+ * the resulting audio buffers and merges timing metadata.
  */
 export async function generateChapterAudio(
   request: ChapterAudioRequest,
@@ -206,58 +230,74 @@ export async function generateChapterAudio(
 
   onProgress?.({ status: "generating", sentencesComplete: 0, sentencesTotal: totalSentences });
 
-  // 4. Convert plan to SSML segments
-  const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
-  const ssmlSegments: ChapterSSMLSegment[] = plan.map((entry) => ({
-    text: entry.text,
-    language: entry.language,
-    voice: entry.voice,
-    rate: entry.rate,
-    ssmlLang: LOCALE_MAP[entry.language] || entry.language,
-    contentLang: entry.langKey,
-    breakBeforeMs: entry.breakBeforeMs,
-    speakerName: entry.speakerName,
-    stageDirection: entry.stageDirection,
-  }));
+  // 4. Split plan into chunks
+  const chunks: SpeechPlanEntry[][] = [];
+  for (let i = 0; i < plan.length; i += MAX_CHUNK_SEGMENTS) {
+    const chunk = plan.slice(i, i + MAX_CHUNK_SEGMENTS);
+    // First entry of a continuation chunk shouldn't have a break (it's the start of a new synthesis)
+    if (i > 0 && chunk.length > 0) {
+      chunk[0] = { ...chunk[0], breakBeforeMs: 0 };
+    }
+    chunks.push(chunk);
+  }
 
-  // 5. Single Azure TTS call with bookmarks
+  // 5. Synthesize each chunk, concatenate buffers and merge timings
   const speech = getAzureSpeechService();
-  const result = await speech.generateChapterBuffer(ssmlSegments);
+  const audioBuffers: Buffer[] = [];
+  const allSentenceTimings: SentenceTiming[] = [];
+  const pageBoundaryMap = new Map<number, { startTime: number; endTime: number; sentenceCount: number }>();
+  let timeOffset = 0;
+  let planOffset = 0;
+
+  for (let c = 0; c < chunks.length; c++) {
+    const chunk = chunks[c];
+    const ssmlSegments = toSSMLSegments(chunk);
+
+    const result = await speech.generateChapterBuffer(ssmlSegments);
+    audioBuffers.push(Buffer.from(result.buffer));
+
+    // Build sentence timings with accumulated offset
+    for (let i = 0; i < chunk.length; i++) {
+      const entry = chunk[i];
+      const timing = result.sentenceTimings[i];
+      const startTime = timing.startTime + timeOffset;
+      const endTime = timing.endTime + timeOffset;
+
+      allSentenceTimings.push({
+        pageNumber: entry.pageNumber,
+        lineIndex: entry.lineIndex,
+        language: entry.langKey,
+        startTime,
+        endTime,
+        text: entry.text,
+        wordTimings: timing.wordTimings.map(wt => ({
+          ...wt,
+          startTime: wt.startTime + timeOffset,
+          endTime: wt.endTime + timeOffset,
+        })),
+      });
+
+      // Page boundaries
+      const existing = pageBoundaryMap.get(entry.pageNumber);
+      if (existing) {
+        existing.endTime = endTime;
+        existing.sentenceCount++;
+      } else {
+        pageBoundaryMap.set(entry.pageNumber, {
+          startTime,
+          endTime,
+          sentenceCount: 1,
+        });
+      }
+    }
+
+    timeOffset += result.totalDuration;
+    planOffset += chunk.length;
+  }
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 
-  // 6. Build metadata from bookmark-based timings
-  const sentenceTimings: SentenceTiming[] = [];
-  const pageBoundaryMap = new Map<number, { startTime: number; endTime: number; sentenceCount: number }>();
-
-  for (let i = 0; i < plan.length; i++) {
-    const entry = plan[i];
-    const timing = result.sentenceTimings[i];
-
-    sentenceTimings.push({
-      pageNumber: entry.pageNumber,
-      lineIndex: entry.lineIndex,
-      language: entry.langKey,
-      startTime: timing.startTime,
-      endTime: timing.endTime,
-      text: entry.text,
-      wordTimings: timing.wordTimings,
-    });
-
-    // Page boundaries
-    const existing = pageBoundaryMap.get(entry.pageNumber);
-    if (existing) {
-      existing.endTime = timing.endTime;
-      existing.sentenceCount++;
-    } else {
-      pageBoundaryMap.set(entry.pageNumber, {
-        startTime: timing.startTime,
-        endTime: timing.endTime,
-        sentenceCount: 1,
-      });
-    }
-  }
-
+  // 6. Build final metadata
   const pageBoundaries: PageBoundary[] = Array.from(pageBoundaryMap.entries())
     .sort(([a], [b]) => a - b)
     .map(([pageNumber, data]) => ({
@@ -269,18 +309,18 @@ export async function generateChapterAudio(
 
   const metadata: ChapterAudioMetadata = {
     variant: request,
-    totalDuration: result.totalDuration,
-    totalSentences: sentenceTimings.length,
-    sentenceTimings,
+    totalDuration: timeOffset,
+    totalSentences: allSentenceTimings.length,
+    sentenceTimings: allSentenceTimings,
     pageBoundaries,
     generatedAt: Date.now(),
-    sentenceHashes: [], // no per-sentence caching with single-SSML approach
+    sentenceHashes: [],
     version: 2,
   };
 
-  // 7. Upload to R2
+  // 7. Upload concatenated audio to R2
   onProgress?.({ status: "uploading", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
-  const audioUrl = await cache.saveChapterAudio(request, Buffer.from(result.buffer), metadata);
+  const audioUrl = await cache.saveChapterAudio(request, Buffer.concat(audioBuffers), metadata);
 
   onProgress?.({ status: "complete", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 
