@@ -82,6 +82,10 @@ export default function StoryLine({
     && pos?.chapter === chapterNumber
     && pos?.page === pageNumber;
   const isHighlighted = isAudioOnThisPage && audioPlayer.state.highlightedSentenceIndex === lineIndex;
+  const isBilingualMode = audioPlayer.state.mode === "bilingual";
+  const highlightedLang = audioPlayer.state.highlightedLanguage;
+  const isTargetHighlighted = isHighlighted && (!isBilingualMode || highlightedLang === oppositeLang);
+  const isNativeHighlighted = isHighlighted && isBilingualMode && highlightedLang === typedLang;
 
   return (
     <div
@@ -116,23 +120,33 @@ export default function StoryLine({
 
       {/* Text content */}
       <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""}`} data-text-content={lineIndex}>
-        <UnifiedTranslator
-          sentence={s[oppositeLang]}
-          staticTranslation={s[typedLang]}
-          enabled={!isAnyDropdownOpen && !menuOpen}
-          readOnlyMode={translationMode === "free"}
-          autoTriggerAll={premiumTriggers[lineIndex] || false}
-          onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
-          onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
-          onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
-          onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
-          onTranslationData={(data) => handleTranslationData(lineIndex, data)}
-          sentenceIndex={lineIndex}
-          contextSentences={sentences}
-          parentHasSelection={!!wordSelections[lineIndex]}
-          externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
-          onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(stanzaContext.stanzaIdx, lineIndex, wordIdx, stanzaContext.linesInStanza) : undefined}
-        />
+        {/* Target language (always shown) */}
+        <div className={`rounded-lg ${isBilingualMode && isTargetHighlighted ? "bg-indigo-100 px-1 -mx-1" : ""}`}>
+          <UnifiedTranslator
+            sentence={s[oppositeLang]}
+            staticTranslation={s[typedLang]}
+            enabled={!isAnyDropdownOpen && !menuOpen}
+            readOnlyMode={translationMode === "free"}
+            autoTriggerAll={premiumTriggers[lineIndex] || false}
+            onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
+            onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
+            onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
+            onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
+            onTranslationData={(data) => handleTranslationData(lineIndex, data)}
+            sentenceIndex={lineIndex}
+            contextSentences={sentences}
+            parentHasSelection={!!wordSelections[lineIndex]}
+            externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
+            onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(stanzaContext.stanzaIdx, lineIndex, wordIdx, stanzaContext.linesInStanza) : undefined}
+          />
+        </div>
+
+        {/* Native language (bilingual mode only) */}
+        {isBilingualMode && s[typedLang]?.trim() && (
+          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg ${isNativeHighlighted ? "bg-indigo-100 px-1 -mx-1" : ""}`}>
+            <p className="text-sm text-gray-400 leading-relaxed">{s[typedLang]}</p>
+          </div>
+        )}
 
         {/* Save auth prompt */}
         {saveAuthLine === lineIndex && (

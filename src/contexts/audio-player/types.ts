@@ -61,6 +61,7 @@ export interface AudioPlayerState {
   storyMap: StoryMapForNav | null;
   isVisible: boolean;
   highlightedSentenceIndex: number | null;
+  highlightedLanguage: "en" | "es" | null;
   error: string | null;
   playbackRate: number;
   // Chapter mode fields

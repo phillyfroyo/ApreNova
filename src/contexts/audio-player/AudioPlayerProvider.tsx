@@ -64,7 +64,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position) {
         if (timing.pageNumber === s.position.page) {
-          setState(prev => ({ ...prev, highlightedSentenceIndex: timing.lineIndex }));
+          setState(prev => ({ ...prev, highlightedSentenceIndex: timing.lineIndex, highlightedLanguage: timing.language }));
         }
       }
     },
@@ -77,7 +77,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
         setState(prev => ({
           ...prev,
-          highlightedSentenceIndex: null,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
           position: prev.position ? { ...prev.position, page: pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
         }));
 
@@ -97,21 +97,21 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const s = stateRef.current;
       if (s.playbackMode !== "chapter" || !s.storyMap || !s.position) {
         setStatusOverride("finished");
-        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null, highlightedLanguage: null }));
         return;
       }
 
       const currentChapter = s.storyMap.chapters.find(c => c.chapter === s.position!.chapter);
       if (!currentChapter) {
         setStatusOverride("finished");
-        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null, highlightedLanguage: null }));
         return;
       }
 
       const nextChapter = s.storyMap.chapters.find(c => c.chapter === s.position!.chapter + 1);
       if (!nextChapter) {
         setStatusOverride("finished");
-        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null, highlightedLanguage: null }));
         return;
       }
 
@@ -158,7 +158,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setStatusOverride(null);
         setState(prev => ({
           ...prev,
-          highlightedSentenceIndex: null,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
           position: prev.position ? {
             ...prev.position,
             chapter: nextChapter.chapter,
@@ -187,7 +187,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setStatusOverride("idle");
         setState(prev => ({
           ...prev,
-          highlightedSentenceIndex: null,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
           pendingPlayback: {
             options: nextOptions,
             resolvedChapter: nextChapter.chapter,
@@ -200,7 +200,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       } catch (err) {
         console.error("[AudioPlayer] Auto-advance error:", err);
         setStatusOverride("finished");
-        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null, highlightedLanguage: null }));
       }
     },
     onError: (error) => {
@@ -219,7 +219,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     currentPageSentences: [],
     storyMap: null,
     isVisible: false,
-    highlightedSentenceIndex: null,
+    highlightedSentenceIndex: null, highlightedLanguage: null,
     error: null,
     playbackRate: DEFAULT_PLAYBACK_RATE,
     chapterCurrentTime: 0,
@@ -405,15 +405,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (!storyMap) { setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null })); return; }
+    if (!storyMap) { setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null, highlightedLanguage: null })); return; }
     const { next } = getPrevNextPage(position.chapter, position.page, storyMap);
-    if (!next) { setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null })); return; }
+    if (!next) { setState(prev => ({ ...prev, status: "finished", highlightedSentenceIndex: null, highlightedLanguage: null })); return; }
 
     pendingNavigationRef.current = { chapter: next.ch, page: next.pg };
     setState(prev => ({
       ...prev,
       status: "navigating",
-      highlightedSentenceIndex: null,
+      highlightedSentenceIndex: null, highlightedLanguage: null,
       position: prev.position ? { ...prev.position, chapter: next.ch, page: next.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
     }));
     router.push(getNavigationUrl(lng, position.storySlug, position.level, next.ch, next.pg, position.isUserStory, position.userStoryId));
@@ -460,7 +460,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       currentPageSentences: options.sentences,
       isVisible: true,
       error: null,
-      highlightedSentenceIndex: null,
+      highlightedSentenceIndex: null, highlightedLanguage: null,
       chapterCurrentTime: 0,
       chapterDuration: 0,
       chapterGenerationProgress: null,
@@ -632,7 +632,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       ...prev,
       position: null,
       isVisible: false,
-      highlightedSentenceIndex: null,
+      highlightedSentenceIndex: null, highlightedLanguage: null,
       error: null,
       currentPageSentences: [],
       storyMap: null,
@@ -778,7 +778,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       setStatusOverride("navigating");
       setState(prev => ({
         ...prev,
-        highlightedSentenceIndex: null,
+        highlightedSentenceIndex: null, highlightedLanguage: null,
         position: prev.position ? { ...prev.position, chapter: next.ch, page: next.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
       }));
       router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, next.ch, next.pg, s.position.isUserStory, s.position.userStoryId));
@@ -791,7 +791,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (!next) return;
     pendingNavigationRef.current = { chapter: next.ch, page: next.pg };
     setState(prev => ({
-      ...prev, status: "navigating", highlightedSentenceIndex: null,
+      ...prev, status: "navigating", highlightedSentenceIndex: null, highlightedLanguage: null,
       position: prev.position ? { ...prev.position, chapter: next.ch, page: next.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
     }));
     router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, next.ch, next.pg, s.position.isUserStory, s.position.userStoryId));
@@ -810,7 +810,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       setStatusOverride("navigating");
       setState(prev => ({
         ...prev,
-        highlightedSentenceIndex: null,
+        highlightedSentenceIndex: null, highlightedLanguage: null,
         position: prev.position ? { ...prev.position, chapter: prevPg.ch, page: prevPg.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
       }));
       router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, prevPg.ch, prevPg.pg, s.position.isUserStory, s.position.userStoryId));
@@ -823,7 +823,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (!prevPg) return;
     pendingNavigationRef.current = { chapter: prevPg.ch, page: prevPg.pg };
     setState(st => ({
-      ...st, status: "navigating", highlightedSentenceIndex: null,
+      ...st, status: "navigating", highlightedSentenceIndex: null, highlightedLanguage: null,
       position: st.position ? { ...st.position, chapter: prevPg.ch, page: prevPg.pg, sentenceIndex: 0, currentLanguage: "target" } : null,
     }));
     router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, prevPg.ch, prevPg.pg, s.position.isUserStory, s.position.userStoryId));
@@ -854,7 +854,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
           ...prev,
           position: null,
           isVisible: false,
-          highlightedSentenceIndex: null,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
           error: null,
           currentPageSentences: sentences,
           storyMap: null,
@@ -872,7 +872,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         saveAudioBookmark();
         chapterAudio.pause(); // hook sets "paused"
         setStatusOverride(null);
-        setState(prev => ({ ...prev, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, highlightedSentenceIndex: null, highlightedLanguage: null }));
         return;
       }
     }
@@ -936,7 +936,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (effectiveStatus === "finished") {
       const timer = setTimeout(() => {
         setStatusOverride("idle");
-        setState(prev => ({ ...prev, isVisible: false, position: null, highlightedSentenceIndex: null }));
+        setState(prev => ({ ...prev, isVisible: false, position: null, highlightedSentenceIndex: null, highlightedLanguage: null }));
         persistState(null, state.mode);
       }, 5000);
       return () => clearTimeout(timer);
