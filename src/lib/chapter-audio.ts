@@ -182,7 +182,10 @@ export function buildSpeechPlan(
 // Azure TTS rejects SSML that produces >600s of audio. We conservatively cap
 // each chunk at ~MAX_CHUNK_SEGMENTS sentences so no single synthesis exceeds
 // the limit. At ~4s average per sentence, 120 segments ≈ 8 min of audio.
+// Azure also limits SSML to 50 <voice> elements — in bilingual mode every
+// segment alternates voices, so we must also cap voice switches per chunk.
 const MAX_CHUNK_SEGMENTS = 120;
+const MAX_VOICE_ELEMENTS = 49; // Azure allows max 50; keep 1 headroom
 
 function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
   const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
@@ -230,15 +233,32 @@ export async function generateChapterAudio(
 
   onProgress?.({ status: "generating", sentencesComplete: 0, sentencesTotal: totalSentences });
 
-  // 4. Split plan into chunks
+  // 4. Split plan into chunks (respecting both segment count and voice element limits)
   const chunks: SpeechPlanEntry[][] = [];
-  for (let i = 0; i < plan.length; i += MAX_CHUNK_SEGMENTS) {
-    const chunk = plan.slice(i, i + MAX_CHUNK_SEGMENTS);
-    // First entry of a continuation chunk shouldn't have a break (it's the start of a new synthesis)
-    if (i > 0 && chunk.length > 0) {
+  let chunkStart = 0;
+
+  while (chunkStart < plan.length) {
+    let voiceCount = 0;
+    let lastVoice: string | null = null;
+    let chunkEnd = chunkStart;
+
+    while (chunkEnd < plan.length && (chunkEnd - chunkStart) < MAX_CHUNK_SEGMENTS) {
+      const entry = plan[chunkEnd];
+      if (entry.voice !== lastVoice) {
+        if (voiceCount >= MAX_VOICE_ELEMENTS) break;
+        voiceCount++;
+        lastVoice = entry.voice;
+      }
+      chunkEnd++;
+    }
+
+    const chunk = plan.slice(chunkStart, chunkEnd);
+    // First entry of a continuation chunk shouldn't have a break (start of new synthesis)
+    if (chunkStart > 0 && chunk.length > 0) {
       chunk[0] = { ...chunk[0], breakBeforeMs: 0 };
     }
     chunks.push(chunk);
+    chunkStart = chunkEnd;
   }
 
   // 5. Synthesize each chunk, concatenate buffers and merge timings

@@ -195,6 +195,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
   const navigatingToPageRef = useRef<{ page: number; shouldResume: boolean } | null>(null);
   const pendingSeekTimeRef = useRef<number | null>(null);
+  // Deferred label for variant reloads — applied only once generation actually starts
+  const pendingGenerationLabelRef = useRef<string | null>(null);
   // Tracks the story/level currently rendered — set by registerPageContent
   const currentViewRef = useRef<{ storySlug: string; level: string; chapter: number; page: number } | null>(null);
 
@@ -241,9 +243,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         : cs.status === "ready" && cs.progress
           ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
           : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
-      // Clear variant generation label once audio is playing
-      generationLabel: (cs.status === "playing" || cs.status === "ready") ? null : prev.generationLabel,
+      // Apply deferred variant-reload label once generation starts (not during loading/cache check);
+      // clear once audio is playing or ready
+      generationLabel: (cs.status === "playing" || cs.status === "ready") ? null
+        : cs.status === "generating" && pendingGenerationLabelRef.current
+          ? pendingGenerationLabelRef.current
+          : prev.generationLabel,
     }));
+
+    // Clear pending generation label ref after it's been applied or is no longer needed
+    if (cs.status === "generating" || cs.status === "playing" || cs.status === "ready") {
+      pendingGenerationLabelRef.current = null;
+    }
 
     // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
     if (cs.status === "playing" && pendingSeekTimeRef.current !== null) {
@@ -534,9 +545,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       chapterAudio.stop();
       setStatusOverride(null);
+      // Defer label — only shown if generation is actually needed (cache miss)
+      pendingGenerationLabelRef.current = label;
       setState(prev => ({
         ...prev,
-        generationLabel: label,
+        generationLabel: null,
         chapterGenerationProgress: null,
       }));
 
@@ -569,9 +582,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       chapterAudio.stop();
       setStatusOverride(null);
+      // Defer label — only shown if generation is actually needed (cache miss)
+      pendingGenerationLabelRef.current = label;
       setState(prev => ({
         ...prev,
-        generationLabel: label,
+        generationLabel: null,
         chapterGenerationProgress: null,
       }));
 

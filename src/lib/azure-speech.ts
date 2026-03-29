@@ -352,16 +352,15 @@ export class AzureSpeechService {
           currentVoice = null;
         }
 
-        // Inter-sentence silence (placed outside <voice> tags during a switch,
-        // or inside when voice stays the same)
-        if (i > 0) {
-          ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
-        }
-
-        // Open new voice group if needed
+        // Open new voice group if needed (before break, so break is always inside a <voice>)
         if (currentVoice !== seg.voice) {
           ssmlBody += `<voice name="${seg.voice}">`;
           currentVoice = seg.voice;
+        }
+
+        // Inter-sentence silence (always inside a <voice> tag)
+        if (i > 0) {
+          ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
         }
 
         ssmlBody += `<bookmark mark="s_${i}"/>`;
@@ -392,13 +391,13 @@ export class AzureSpeechService {
         }
       }
 
+      // End bookmark to capture total duration (must be inside a <voice> tag)
+      ssmlBody += `<bookmark mark="s_end"/>`;
+
       // Close final voice group
       if (currentVoice) {
         ssmlBody += `</voice>`;
       }
-
-      // End bookmark to capture total duration
-      ssmlBody += `<bookmark mark="s_end"/>`;
 
       // Add timestamp to bust Azure server-side SSML cache
       const ssml = `
