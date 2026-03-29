@@ -49,6 +49,8 @@ export interface PendingPlayback {
   resolvedChapter: number;
   resolvedPage: number;
   bookmarkAudioTime: number | null;
+  seekToPosition?: { pageNumber: number; lineIndex: number };
+  wasPlaying?: boolean;
   cacheStatus: VariantCacheStatus;
 }
 

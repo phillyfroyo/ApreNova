@@ -429,6 +429,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     bookmarkAudioTime: number | null,
     modeOverride?: AudioLanguageMode,
     speedOverride?: number,
+    seekToPosition?: { pageNumber: number; lineIndex: number },
   ) => {
     const s = stateRef.current;
     const effectiveMode = modeOverride ?? s.mode;
@@ -488,8 +489,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       chapter: resolvedChapter,
       mode: chapterMode,
       speed,
-      initialSeekTime: bookmarkAudioTime ?? undefined,
-      initialPage: bookmarkAudioTime === null ? resolvedPage : undefined,
+      seekToPosition,
+      initialSeekTime: !seekToPosition ? (bookmarkAudioTime ?? undefined) : undefined,
+      initialPage: !seekToPosition && bookmarkAudioTime === null ? resolvedPage : undefined,
     });
 
     if ("mediaSession" in navigator) {
@@ -568,16 +570,24 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const confirmAndPlay = useCallback((modeOverride?: AudioLanguageMode, speedOverride?: number) => {
     const pending = stateRef.current.pendingPlayback;
     if (!pending) return;
-    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride);
+    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition);
   }, [beginPlayback]);
 
   const dismissPicker = useCallback(() => {
+    const s = stateRef.current;
+    const pending = s.pendingPlayback;
+    const midPlayback = pending?.seekToPosition != null;
     setState(prev => ({
       ...prev,
       pendingPlayback: null,
-      isVisible: false,
+      // If picker was shown mid-playback, keep player visible
+      isVisible: midPlayback ? prev.isVisible : false,
     }));
-  }, []);
+    // Only resume if audio was actually playing when the picker opened
+    if (midPlayback && pending?.wasPlaying) {
+      chapterAudio.play();
+    }
+  }, [chapterAudio]);
 
   const pausePlayback = useCallback(() => {
     const s = stateRef.current;
@@ -643,81 +653,164 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }));
   }, [stopTTS, chapterAudio, saveAudioBookmark]);
 
-  const toggleMode = useCallback(() => {
+  const toggleMode = useCallback(async () => {
     const s = stateRef.current;
     const newMode = s.mode === "target-only" ? "bilingual" : "target-only";
-    saveLanguageMode(newMode);
 
-    setState(prev => {
-      if (prev.position) persistState(prev.position, newMode);
-      return { ...prev, mode: newMode };
-    });
-
-    // If actively playing/paused in chapter mode, reload with new mode
+    // If actively playing/paused in chapter mode, check cache before changing mode
     const hookStatus = chapterAudio.state.status;
     const isActive = s.position && s.playbackMode === "chapter" &&
       (hookStatus === "playing" || hookStatus === "paused");
+
+    if (!isActive) {
+      // No audio playing — just update the preference
+      saveLanguageMode(newMode);
+      setState(prev => {
+        if (prev.position) persistState(prev.position, newMode);
+        return { ...prev, mode: newMode };
+      });
+      return;
+    }
+
     if (isActive) {
-      // Capture position before stop clears refs
-      const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
+      const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
       const chapterMode = getChapterAudioMode(newMode);
       const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
-      const label = newMode === "bilingual" ? "Preparing EN + ES" : "Preparing Audio";
 
-      chapterAudio.stop();
-      setStatusOverride(null);
-      pendingGenerationLabelRef.current = label;
-      setState(prev => ({
-        ...prev,
-        generationLabel: null,
-        chapterGenerationProgress: null,
-      }));
+      // Check cache for the new variant
+      const targetMode = getChapterAudioMode("target-only");
+      const bilingualMode = getChapterAudioMode("bilingual");
+      const defaultEstimates = { targetNormal: null, targetSlow: null, bilingualNormal: null, bilingualSlow: null };
+      let cacheStatus = { target: { normal: false, slow: false }, bilingual: { normal: false, slow: false }, estimates: defaultEstimates };
+      let isCached = false;
+      try {
+        const cacheRes = await fetch(
+          `/api/azure-tts/chapter-cache-status?storySlug=${encodeURIComponent(s.position!.storySlug)}&level=${encodeURIComponent(s.position!.level)}&chapter=${s.position!.chapter}&targetMode=${targetMode}&bilingualMode=${bilingualMode}`
+        );
+        if (cacheRes.ok) {
+          cacheStatus = await cacheRes.json();
+          const modeStatus = newMode === "bilingual" ? cacheStatus.bilingual : cacheStatus.target;
+          isCached = speed === "slow" ? modeStatus.slow : modeStatus.normal;
+        }
+      } catch { /* show picker on failure */ }
 
-      chapterAudio.loadAndPlay({
-        storySlug: s.position!.storySlug,
-        level: s.position!.level,
-        chapter: s.position!.chapter,
-        mode: chapterMode,
-        speed,
-        seekToPosition,
-      });
+      if (isCached) {
+        // Cached — apply mode change and reload immediately
+        saveLanguageMode(newMode);
+        setState(prev => {
+          if (prev.position) persistState(prev.position, newMode);
+          return { ...prev, mode: newMode };
+        });
+        chapterAudio.stop();
+        setStatusOverride(null);
+        chapterAudio.loadAndPlay({
+          storySlug: s.position!.storySlug,
+          level: s.position!.level,
+          chapter: s.position!.chapter,
+          mode: chapterMode,
+          speed,
+          seekToPosition: seekPos,
+        });
+      } else {
+        // Not cached — pause and show picker (mode stays unchanged until user confirms)
+        const wasPlaying = hookStatus === "playing";
+        if (wasPlaying) chapterAudio.pause();
+        setState(prev => ({
+          ...prev,
+          pendingPlayback: {
+            options: {
+              storySlug: s.position!.storySlug,
+              storyTitle: s.position!.storyTitle,
+              level: s.position!.level,
+              chapter: s.position!.chapter,
+              page: s.position!.page,
+              isUserStory: s.position!.isUserStory,
+              userStoryId: s.position!.userStoryId,
+              storyMap: s.storyMap!,
+              sentences: s.currentPageSentences,
+            },
+            resolvedChapter: s.position!.chapter,
+            resolvedPage: s.position!.page,
+            bookmarkAudioTime: null,
+            seekToPosition: seekPos,
+            wasPlaying,
+            cacheStatus,
+          },
+        }));
+      }
     }
   }, [chapterAudio, lng, oppositeLang]);
 
-  const setPlaybackRate = useCallback((rate: number) => {
+  const setPlaybackRate = useCallback(async (rate: number) => {
     savePlaybackRate(rate);
 
     const s = stateRef.current;
     setState(prev => ({ ...prev, playbackRate: rate }));
 
-    // If actively playing/paused in chapter mode, reload with new speed
+    // If actively playing/paused in chapter mode, check cache before reloading
     const hookStatus = chapterAudio.state.status;
     const isActive = s.position && s.playbackMode === "chapter" &&
       (hookStatus === "playing" || hookStatus === "paused");
     if (isActive) {
-      // Capture position before stop clears refs
-      const seekToPosition = chapterAudio.getCurrentPosition() ?? undefined;
+      const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
       const chapterMode = getChapterAudioMode(s.mode);
       const speed = rate === 0.7 ? "slow" as const : "normal" as const;
-      const label = rate === 0.7 ? "Preparing Slow Mode" : "Preparing Normal Speed";
 
-      chapterAudio.stop();
-      setStatusOverride(null);
-      pendingGenerationLabelRef.current = label;
-      setState(prev => ({
-        ...prev,
-        generationLabel: null,
-        chapterGenerationProgress: null,
-      }));
+      // Check cache for the new variant
+      const targetMode = getChapterAudioMode("target-only");
+      const bilingualMode = getChapterAudioMode("bilingual");
+      const defaultEstimates = { targetNormal: null, targetSlow: null, bilingualNormal: null, bilingualSlow: null };
+      let cacheStatus = { target: { normal: false, slow: false }, bilingual: { normal: false, slow: false }, estimates: defaultEstimates };
+      let isCached = false;
+      try {
+        const cacheRes = await fetch(
+          `/api/azure-tts/chapter-cache-status?storySlug=${encodeURIComponent(s.position!.storySlug)}&level=${encodeURIComponent(s.position!.level)}&chapter=${s.position!.chapter}&targetMode=${targetMode}&bilingualMode=${bilingualMode}`
+        );
+        if (cacheRes.ok) {
+          cacheStatus = await cacheRes.json();
+          const modeStatus = s.mode === "bilingual" ? cacheStatus.bilingual : cacheStatus.target;
+          isCached = speed === "slow" ? modeStatus.slow : modeStatus.normal;
+        }
+      } catch { /* show picker on failure */ }
 
-      chapterAudio.loadAndPlay({
-        storySlug: s.position!.storySlug,
-        level: s.position!.level,
-        chapter: s.position!.chapter,
-        mode: chapterMode,
-        speed,
-        seekToPosition,
-      });
+      if (isCached) {
+        chapterAudio.stop();
+        setStatusOverride(null);
+        chapterAudio.loadAndPlay({
+          storySlug: s.position!.storySlug,
+          level: s.position!.level,
+          chapter: s.position!.chapter,
+          mode: chapterMode,
+          speed,
+          seekToPosition: seekPos,
+        });
+      } else {
+        // Pause playback and show settings picker
+        const wasPlaying = hookStatus === "playing";
+        if (wasPlaying) chapterAudio.pause();
+        setState(prev => ({
+          ...prev,
+          pendingPlayback: {
+            options: {
+              storySlug: s.position!.storySlug,
+              storyTitle: s.position!.storyTitle,
+              level: s.position!.level,
+              chapter: s.position!.chapter,
+              page: s.position!.page,
+              isUserStory: s.position!.isUserStory,
+              userStoryId: s.position!.userStoryId,
+              storyMap: s.storyMap!,
+              sentences: s.currentPageSentences,
+            },
+            resolvedChapter: s.position!.chapter,
+            resolvedPage: s.position!.page,
+            bookmarkAudioTime: null,
+            seekToPosition: seekPos,
+            wasPlaying,
+            cacheStatus,
+          },
+        }));
+      }
     }
   }, [chapterAudio, lng, oppositeLang]);
 
