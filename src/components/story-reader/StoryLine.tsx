@@ -90,7 +90,7 @@ export default function StoryLine({
   return (
     <div
       ref={(el) => { sentenceRefs.current[lineIndex] = el; }}
-      className={`${lineSpacing} w-full relative rounded-xl ${isHighlighted ? "bg-indigo-50" : ""}`}
+      className={`${lineSpacing} w-full relative rounded-xl ${isHighlighted && !isBilingualMode ? "bg-indigo-50" : ""}`}
       data-sentence-index={lineIndex}
     >
       {/* Speaker name (scripts) */}
@@ -119,9 +119,9 @@ export default function StoryLine({
       )}
 
       {/* Text content */}
-      <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""}`} data-text-content={lineIndex}>
+      <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""} ${isHighlighted && isBilingualMode ? "bg-indigo-50 rounded-xl" : ""}`} data-text-content={lineIndex}>
         {/* Target language (always shown) */}
-        <div className={`rounded-lg ${isBilingualMode && isTargetHighlighted ? "bg-indigo-100 px-1 -mx-1" : ""}`}>
+        <div className={`rounded-lg ${isBilingualMode && isTargetHighlighted ? "bg-indigo-100 px-2 -mx-2" : ""}`}>
           <UnifiedTranslator
             sentence={s[oppositeLang]}
             staticTranslation={s[typedLang]}
@@ -143,7 +143,7 @@ export default function StoryLine({
 
         {/* Native language (bilingual mode only) */}
         {isBilingualMode && s[typedLang]?.trim() && (
-          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg ${isNativeHighlighted ? "bg-indigo-100 px-1 -mx-1" : ""}`}>
+          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg ${isNativeHighlighted ? "bg-indigo-100 px-2 -mx-2" : ""}`}>
             <p className="text-sm text-gray-400 leading-relaxed">{s[typedLang]}</p>
           </div>
         )}
