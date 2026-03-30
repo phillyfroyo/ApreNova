@@ -117,9 +117,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const lookahead = lookaheadRef.current;
     const sentenceIdx = findSentenceAtTime(currentTime + lookahead);
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
-      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
-      console.log(`[sync] t=${currentTime.toFixed(3)} lookahead=${lookahead} → idx=${sentenceIdx} start=${timing.startTime.toFixed(3)} end=${timing.endTime.toFixed(3)} lang=${timing.language}`);
       lastSentenceIdxRef.current = sentenceIdx;
+      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
       currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);

@@ -81,17 +81,13 @@ export default function StoryLine({
     && pos?.level === currentLevel
     && pos?.chapter === chapterNumber
     && pos?.page === pageNumber;
-  const isHighlighted = isAudioOnThisPage && audioPlayer.state.highlightedSentenceIndex === lineIndex;
   const isAudioActive = isAudioOnThisPage && audioPlayer.state.isVisible;
   const isBilingualMode = isAudioActive && audioPlayer.state.mode === "bilingual";
-  const highlightedLang = audioPlayer.state.highlightedLanguage;
-  const isTargetHighlighted = isHighlighted && (!isBilingualMode || highlightedLang === oppositeLang);
-  const isNativeHighlighted = isHighlighted && isBilingualMode && highlightedLang === typedLang;
 
   return (
     <div
       ref={(el) => { sentenceRefs.current[lineIndex] = el; }}
-      className={`${lineSpacing} w-full relative rounded-xl ${isHighlighted && !isBilingualMode ? "bg-indigo-50" : ""}`}
+      className={`${lineSpacing} w-full relative rounded-xl`}
       data-sentence-index={lineIndex}
     >
       {/* Speaker name (scripts) */}
@@ -120,9 +116,9 @@ export default function StoryLine({
       )}
 
       {/* Text content */}
-      <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""} ${isHighlighted && isBilingualMode ? "bg-indigo-50 rounded-xl" : ""}`} data-text-content={lineIndex}>
+      <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""}`} data-text-content={lineIndex}>
         {/* Target language (always shown) */}
-        <div className={`rounded-lg ${isBilingualMode && isTargetHighlighted ? "bg-indigo-100 px-2 -mx-2" : ""}`}>
+        <div className="rounded-lg" data-target-line>
           <UnifiedTranslator
             sentence={s[oppositeLang]}
             staticTranslation={s[typedLang]}
@@ -144,7 +140,7 @@ export default function StoryLine({
 
         {/* Native language (bilingual mode only) */}
         {isBilingualMode && s[typedLang]?.trim() && (
-          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg ${isNativeHighlighted ? "bg-indigo-100 px-2 -mx-2" : ""}`}>
+          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg`} data-native-line>
             <p className="text-sm text-gray-400 leading-relaxed">{s[typedLang]}</p>
           </div>
         )}

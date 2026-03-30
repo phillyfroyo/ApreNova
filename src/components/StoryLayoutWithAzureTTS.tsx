@@ -256,6 +256,7 @@ export default function StoryLayoutWithAzureTTS({
   useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber, storySlug, currentLevel); }, [sentences, chapterNumber, pageNumber, storySlug, currentLevel]);
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
+  useEffect(() => { audioPlayer.registerSentenceElements(sentenceRefs); }, []);
   const lastScrolledStanzaRef = useRef<number | null>(null);
   const skipNextScrollRef = useRef(false);
 

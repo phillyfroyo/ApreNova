@@ -61,11 +61,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // ---- Chapter audio instance ----
   const chapterAudio = useChapterAudio({
     onSentenceChange: (timing) => {
-      // Update highlighted sentence for the current page
+      // DOM-direct highlight — bypasses React render for instant transitions
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position) {
         if (timing.pageNumber === s.position.page) {
-          setState(prev => ({ ...prev, highlightedSentenceIndex: timing.lineIndex, highlightedLanguage: timing.language }));
+          applyHighlight(timing.lineIndex, timing.language);
         }
       }
     },
@@ -242,6 +242,78 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const pendingGenerationLabelRef = useRef<string | null>(null);
   // Tracks the story/level currently rendered — set by registerPageContent
   const currentViewRef = useRef<{ storySlug: string; level: string; chapter: number; page: number } | null>(null);
+  // DOM-direct highlight: refs to sentence line elements, registered by StoryLayout
+  const sentenceElementsRef = useRef<React.MutableRefObject<(HTMLDivElement | null)[]> | null>(null);
+  const lastHighlightRef = useRef<{ lineIndex: number; language: "en" | "es" | null } | null>(null);
+
+  // ---- DOM-direct highlight manipulation (bypasses React render for instant transitions) ----
+  const applyHighlight = useCallback((lineIndex: number, language: "en" | "es") => {
+    const prev = lastHighlightRef.current;
+    const refs = sentenceElementsRef.current?.current;
+    if (!refs) return;
+
+    // Clear previous highlight
+    if (prev) {
+      const prevEl = refs[prev.lineIndex];
+      if (prevEl) {
+        prevEl.classList.remove("audio-highlight");
+        prevEl.querySelector("[data-target-line]")?.classList.remove("audio-highlight-target");
+        prevEl.querySelector("[data-native-line]")?.classList.remove("audio-highlight-native");
+        // Clear bilingual outer highlight
+        const textContent = prevEl.querySelector("[data-text-content]") as HTMLElement | null;
+        if (textContent) textContent.classList.remove("audio-highlight-bilingual");
+      }
+    }
+
+    // Apply new highlight
+    const el = refs[lineIndex];
+    if (el) {
+      const s = stateRef.current;
+      const isBilingual = s.mode === "bilingual" && s.isVisible;
+
+      if (isBilingual) {
+        // Bilingual: highlight the specific sub-line + outer container
+        const textContent = el.querySelector("[data-text-content]") as HTMLElement | null;
+        if (textContent) textContent.classList.add("audio-highlight-bilingual");
+
+        const oppLang = lng === "en" ? "es" : "en";
+        if (language === oppLang) {
+          el.querySelector("[data-target-line]")?.classList.add("audio-highlight-target");
+        } else {
+          el.querySelector("[data-native-line]")?.classList.add("audio-highlight-native");
+        }
+      } else {
+        // Normal: highlight the whole line
+        el.classList.add("audio-highlight");
+      }
+    }
+
+    // Auto-scroll when the highlighted line changes (not just language within same line)
+    if (el && (!prev || prev.lineIndex !== lineIndex)) {
+      const isMobile = window.innerWidth < 768;
+      const rect = el.getBoundingClientRect();
+      const targetY = window.scrollY + rect.top - window.innerHeight * (isMobile ? 0.25 : 0.35);
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    }
+
+    lastHighlightRef.current = { lineIndex, language };
+  }, [lng]);
+
+  const clearHighlight = useCallback(() => {
+    const prev = lastHighlightRef.current;
+    const refs = sentenceElementsRef.current?.current;
+    if (prev && refs) {
+      const el = refs[prev.lineIndex];
+      if (el) {
+        el.classList.remove("audio-highlight");
+        el.querySelector("[data-target-line]")?.classList.remove("audio-highlight-target");
+        el.querySelector("[data-native-line]")?.classList.remove("audio-highlight-native");
+        const textContent = el.querySelector("[data-text-content]") as HTMLElement | null;
+        if (textContent) textContent.classList.remove("audio-highlight-bilingual");
+      }
+    }
+    lastHighlightRef.current = null;
+  }, []);
 
   // ---- Audio bookmark persistence ----
   const saveAudioBookmark = useCallback(async () => {
@@ -947,9 +1019,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         navigatingToPageRef.current = null;
         const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
 
-        // Set highlight eagerly; sync loop will confirm on its first frame.
+        // Set highlight eagerly via DOM; sync loop will confirm on its first frame.
         if (firstSentence) {
-          setState(prev => ({ ...prev, highlightedSentenceIndex: firstSentence.lineIndex }));
+          applyHighlight(firstSentence.lineIndex, firstSentence.language);
         }
 
         // Delay resume by one frame so the "navigating" spinner paints before clearing.
@@ -993,6 +1065,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     return state.status;
   })();
 
+  // ---- Clear DOM highlight when not actively playing ----
+  useEffect(() => {
+    if (effectiveStatus !== "playing") {
+      clearHighlight();
+    }
+  }, [effectiveStatus, clearHighlight]);
+
   // ---- Auto-hide after finish ----
   useEffect(() => {
     if (effectiveStatus === "finished") {
@@ -1022,6 +1101,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     seekToTime,
     confirmAndPlay,
     dismissPicker,
+    registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => {
+      sentenceElementsRef.current = refs;
+    },
   };
 
   return (

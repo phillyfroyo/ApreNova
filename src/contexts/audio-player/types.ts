@@ -114,6 +114,7 @@ export interface AudioPlayerContextType {
   seekToTime: (time: number) => void;
   confirmAndPlay: (modeOverride?: AudioLanguageMode, speedOverride?: number) => void;
   dismissPicker: () => void;
+  registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => void;
 }
 
 // ============================================================================
