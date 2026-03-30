@@ -28,7 +28,8 @@ export interface ChapterSSMLSegment {
 
 export interface ChapterSynthesisResult {
   buffer: ArrayBuffer;
-  totalDuration: number;
+  totalDuration: number;        // from bookmark offsets — accurate for sentence timing within chunk
+  bufferDuration: number;       // from actual audio byte count — accurate for chunk concatenation offset
   sentenceTimings: {
     startTime: number;
     endTime: number;
@@ -438,7 +439,12 @@ export class AzureSpeechService {
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               const audioData = result.audioData;
-              const totalDuration = (bookmarkOffsets.get("s_end") ?? 0) || audioData.byteLength * 8 / 192000;
+              // Bookmark-based duration: accurate for relative sentence timing within this chunk
+              const bookmarkDuration = bookmarkOffsets.get("s_end") ?? 0;
+              // Buffer-based duration: matches actual MP3 byte length (48kHz 192kbps mono)
+              const bufferDuration = (audioData.byteLength * 8) / 192000;
+              // Use bookmark duration for sentence timing, fall back to buffer if no bookmarks
+              const totalDuration = bookmarkDuration || bufferDuration;
 
               // Build sentence timings from bookmark offsets
               const sentenceTimings: { startTime: number; endTime: number; wordTimings: WordTiming[] }[] = [];
@@ -458,6 +464,7 @@ export class AzureSpeechService {
               resolve({
                 buffer: audioData,
                 totalDuration,
+                bufferDuration,
                 sentenceTimings,
               });
             } else {

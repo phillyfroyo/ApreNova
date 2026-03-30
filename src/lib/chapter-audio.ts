@@ -323,7 +323,9 @@ export async function generateChapterAudio(
       }
     }
 
-    timeOffset += result.totalDuration;
+    // Use buffer-based duration for offset accumulation — matches actual MP3 byte
+    // length of concatenated audio, preventing cumulative drift across chunks.
+    timeOffset += result.bufferDuration;
   }
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
