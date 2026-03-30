@@ -83,11 +83,11 @@ export default function LanguageSelectPage() {
   const buttonContent = {
     spanish: {
       label: "Español",
-      desc: "Quiero aprender inglés",
+      desc: "Estoy aprendiendo inglés",
     },
     english: {
       label: "English",
-      desc: "I want to learn Spanish",
+      desc: "I am learning Spanish",
     },
   };
 
