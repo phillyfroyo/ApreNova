@@ -207,9 +207,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     });
 
     // Safety timeout — scales once we know chapter size from first progress event.
-    // Starts at 60s (covers cache check + short chapters), then resets to
-    // 30s base + 1s per sentence segment once sentencesTotal is known.
+    // Starts at 90s (covers cache check + first chunk for long chapters), then
+    // resets to 30s base + 2s per segment once sentencesTotal is known.
+    const loadStartTime = Date.now();
+    let timeoutMs = 90_000;
     const abortOnTimeout = () => {
+      const elapsed = Math.round((Date.now() - loadStartTime) / 1000);
+      console.error(`[ChapterAudio] Timeout after ${elapsed}s (limit was ${Math.round(timeoutMs / 1000)}s)`);
       abortController.abort();
       setState(prev => ({
         ...prev,
@@ -219,7 +223,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
       optionsRef.current.onError?.(new Error("Audio generation timed out"));
     };
-    let timeoutId = setTimeout(abortOnTimeout, 60_000);
+    let timeoutId = setTimeout(abortOnTimeout, timeoutMs);
 
     // Artificial progress: tick sentencesComplete toward ~50% while Azure synthesizes.
     // Kept conservative so it jumps forward to 100% on completion rather than stalling near the top.
@@ -288,10 +292,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
             // First progress event: scale timeout and start simulated counter
             if (data.sentencesTotal && data.sentencesComplete === 0) {
               clearTimeout(timeoutId);
-              // Scale timeout: 30s base + 2s per segment, capped at 5 minutes.
-              // Slow-speed and bilingual variants produce more chunks with more overhead.
-              const scaled = Math.min(30_000 + data.sentencesTotal * 2_000, 300_000);
-              timeoutId = setTimeout(abortOnTimeout, scaled);
+              // Scale timeout: 60s base + 3s per segment, no cap.
+              // Novel chapters can have 300+ segments; slow/bilingual variants need extra time.
+              timeoutMs = 60_000 + data.sentencesTotal * 3_000;
+              console.log(`[ChapterAudio] ${data.sentencesTotal} segments — timeout set to ${Math.round(timeoutMs / 1000)}s`);
+              timeoutId = setTimeout(abortOnTimeout, timeoutMs);
               startSimulatedProgress(data.sentencesTotal);
               // Set initial state — after this, simulated interval drives progress
               setState(prev => ({
