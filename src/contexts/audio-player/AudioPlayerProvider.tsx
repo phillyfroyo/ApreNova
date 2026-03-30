@@ -694,78 +694,87 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (isActive) {
-      const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
-      const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
+    // Immediately pause and show loading state
+    const wasPlaying = hookStatus === "playing";
+    const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
+    chapterAudio.pause();
+    setStatusOverride("loading");
 
-      const { isCached, cacheStatus } = await fetchCacheStatus(
-        s.position!.storySlug, s.position!.level, s.position!.chapter, newMode, speed
-      );
+    const speed = s.playbackRate === 0.7 ? "slow" as const : "normal" as const;
+    const { isCached, cacheStatus } = await fetchCacheStatus(
+      s.position!.storySlug, s.position!.level, s.position!.chapter, newMode, speed
+    );
 
-      if (isCached) {
-        saveLanguageMode(newMode);
-        setState(prev => {
-          if (prev.position) persistState(prev.position, newMode);
-          return { ...prev, mode: newMode };
-        });
-        chapterAudio.stop();
-        setStatusOverride(null);
-        chapterAudio.loadAndPlay({
-          storySlug: s.position!.storySlug,
-          level: s.position!.level,
-          chapter: s.position!.chapter,
-          mode: getChapterAudioMode(newMode),
-          speed,
-          seekToPosition: seekPos,
-        });
-      } else {
-        const wasPlaying = hookStatus === "playing";
-        if (wasPlaying) chapterAudio.pause();
-        setState(prev => ({
-          ...prev,
-          pendingPlayback: buildPendingFromPosition(s, cacheStatus, seekPos, wasPlaying),
-        }));
-      }
+    if (isCached) {
+      saveLanguageMode(newMode);
+      setState(prev => {
+        if (prev.position) persistState(prev.position, newMode);
+        return { ...prev, mode: newMode };
+      });
+      chapterAudio.stop();
+      setStatusOverride(null);
+      chapterAudio.loadAndPlay({
+        storySlug: s.position!.storySlug,
+        level: s.position!.level,
+        chapter: s.position!.chapter,
+        mode: getChapterAudioMode(newMode),
+        speed,
+        seekToPosition: seekPos,
+      });
+    } else {
+      setStatusOverride(null);
+      setState(prev => ({
+        ...prev,
+        pendingPlayback: buildPendingFromPosition(s, cacheStatus, seekPos, wasPlaying),
+      }));
     }
   }, [chapterAudio, lng, oppositeLang]);
 
   const setPlaybackRate = useCallback(async (rate: number) => {
-    savePlaybackRate(rate);
-
     const s = stateRef.current;
-    setState(prev => ({ ...prev, playbackRate: rate }));
 
-    // If actively playing/paused in chapter mode, check cache before reloading
+    // If actively playing/paused in chapter mode, check cache before changing rate
     const hookStatus = chapterAudio.state.status;
     const isActive = s.position && s.playbackMode === "chapter" &&
       (hookStatus === "playing" || hookStatus === "paused");
-    if (isActive) {
-      const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
-      const speed = rate === 0.7 ? "slow" as const : "normal" as const;
 
-      const { isCached, cacheStatus } = await fetchCacheStatus(
-        s.position!.storySlug, s.position!.level, s.position!.chapter, s.mode, speed
-      );
+    if (!isActive) {
+      // No audio playing — just update the preference
+      savePlaybackRate(rate);
+      setState(prev => ({ ...prev, playbackRate: rate }));
+      return;
+    }
 
-      if (isCached) {
-        chapterAudio.stop();
-        setStatusOverride(null);
-        chapterAudio.loadAndPlay({
-          storySlug: s.position!.storySlug,
-          level: s.position!.level,
-          chapter: s.position!.chapter,
-          mode: getChapterAudioMode(s.mode),
-          speed,
-          seekToPosition: seekPos,
-        });
-      } else {
-        const wasPlaying = hookStatus === "playing";
-        if (wasPlaying) chapterAudio.pause();
-        setState(prev => ({
-          ...prev,
-          pendingPlayback: buildPendingFromPosition(s, cacheStatus, seekPos, wasPlaying),
-        }));
-      }
+    // Immediately pause and show loading state
+    const wasPlaying = hookStatus === "playing";
+    const seekPos = chapterAudio.getCurrentPosition() ?? undefined;
+    chapterAudio.pause();
+    setStatusOverride("loading");
+
+    const speed = rate === 0.7 ? "slow" as const : "normal" as const;
+    const { isCached, cacheStatus } = await fetchCacheStatus(
+      s.position!.storySlug, s.position!.level, s.position!.chapter, s.mode, speed
+    );
+
+    if (isCached) {
+      savePlaybackRate(rate);
+      setState(prev => ({ ...prev, playbackRate: rate }));
+      chapterAudio.stop();
+      setStatusOverride(null);
+      chapterAudio.loadAndPlay({
+        storySlug: s.position!.storySlug,
+        level: s.position!.level,
+        chapter: s.position!.chapter,
+        mode: getChapterAudioMode(s.mode),
+        speed,
+        seekToPosition: seekPos,
+      });
+    } else {
+      setStatusOverride(null);
+      setState(prev => ({
+        ...prev,
+        pendingPlayback: buildPendingFromPosition(s, cacheStatus, seekPos, wasPlaying),
+      }));
     }
   }, [chapterAudio, lng, oppositeLang]);
 

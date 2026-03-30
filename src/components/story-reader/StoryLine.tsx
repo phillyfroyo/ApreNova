@@ -82,7 +82,8 @@ export default function StoryLine({
     && pos?.chapter === chapterNumber
     && pos?.page === pageNumber;
   const isHighlighted = isAudioOnThisPage && audioPlayer.state.highlightedSentenceIndex === lineIndex;
-  const isBilingualMode = audioPlayer.state.mode === "bilingual";
+  const isAudioActive = isAudioOnThisPage && audioPlayer.state.isVisible;
+  const isBilingualMode = isAudioActive && audioPlayer.state.mode === "bilingual";
   const highlightedLang = audioPlayer.state.highlightedLanguage;
   const isTargetHighlighted = isHighlighted && (!isBilingualMode || highlightedLang === oppositeLang);
   const isNativeHighlighted = isHighlighted && isBilingualMode && highlightedLang === typedLang;
