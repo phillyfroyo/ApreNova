@@ -56,11 +56,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const lastSentenceIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
   const currentSentenceRef = useRef<SentenceTiming | null>(null);
+  const lookaheadRef = useRef(0.15); // default lookahead in seconds, can be adjusted externally
   optionsRef.current = options;
 
   // ---- Binary search for current sentence by time ----
-  // During gaps between sentences, returns the NEXT sentence index so the
-  // highlight jumps ahead during the silence rather than lagging behind.
   const findSentenceAtTime = useCallback((time: number): number => {
     const timings = metadataRef.current?.sentenceTimings;
     if (!timings || timings.length === 0) return -1;
@@ -79,8 +78,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
     }
 
-    // In a gap between sentences — return the next sentence (lo) so the
-    // highlight moves ahead during the silence before the next line starts
+    // In a gap — return the next sentence so the highlight transitions
+    // during silence rather than lagging into the next sentence's audio
     if (lo < timings.length) return lo;
 
     return -1; // past the end
@@ -115,13 +114,12 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       setState(prev => ({ ...prev, currentTime }));
     }
 
-    // No lookahead — highlight switches exactly when the audio reaches the next
-    // sentence's start time, keeping it aligned with what the user hears.
-    const LOOKAHEAD_SEC = 0;
-    const sentenceIdx = findSentenceAtTime(currentTime + LOOKAHEAD_SEC);
+    const lookahead = lookaheadRef.current;
+    const sentenceIdx = findSentenceAtTime(currentTime + lookahead);
     if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
-      lastSentenceIdxRef.current = sentenceIdx;
       const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
+      console.log(`[sync] t=${currentTime.toFixed(3)} lookahead=${lookahead} → idx=${sentenceIdx} start=${timing.startTime.toFixed(3)} end=${timing.endTime.toFixed(3)} lang=${timing.language}`);
+      lastSentenceIdxRef.current = sentenceIdx;
       currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
@@ -386,7 +384,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
       // Pre-fire the first sentence highlight before audio starts
       const startTime = audio.currentTime;
-      const firstSentenceIdx = findSentenceAtTime(startTime + 0.55);
+      const firstSentenceIdx = findSentenceAtTime(startTime + lookaheadRef.current);
       if (firstSentenceIdx !== -1) {
         lastSentenceIdxRef.current = firstSentenceIdx;
         const timing = chapterMetadata!.sentenceTimings[firstSentenceIdx];
@@ -637,5 +635,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     resetSentenceTracking,
     getCurrentPosition,
     getCurrentTime,
+    setLookahead: (sec: number) => { lookaheadRef.current = sec; },
   };
 }

@@ -54,6 +54,8 @@ export default function ListenButton({
     audioPlayer.state.status === "paused" ||
     audioPlayer.state.status === "loading";
 
+  const isSessionLoading = sessionStatus === "loading";
+
   return (
     <div className="flex items-center justify-end gap-3 pr-4">
       {isListening ? (
@@ -63,13 +65,13 @@ export default function ListenButton({
         </span>
       ) : (
         <button
+          disabled={isSessionLoading}
           onClick={() => {
             setMenuOpen(false);
-            if (!session?.user && sessionStatus !== "loading") {
+            if (!session?.user) {
               setTtsAuthError(true);
               return;
             }
-            if (sessionStatus === "loading") return;
             stop();
             setActiveAudio(null);
             audioPlayer.startContinuousPlayback({
@@ -84,7 +86,11 @@ export default function ListenButton({
               userStoryId,
             });
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-colors"
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+            isSessionLoading
+              ? "text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed"
+              : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
+          }`}
         >
           <Headphones className="w-4 h-4" />
           {t(typedLang, "audioPlayer", "listen")}

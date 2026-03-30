@@ -473,6 +473,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const chapterMode = getChapterAudioMode(effectiveMode);
     const speed = effectiveRate === 0.7 ? "slow" as const : "normal" as const;
 
+    // Bilingual mode needs less lookahead (highlights were jumping ahead);
+    // normal mode needs more (highlights were lagging behind)
+    chapterAudio.setLookahead(effectiveMode === "bilingual" ? 0 : 0.15);
+
     const position: AudioPlayerPosition = {
       storySlug: options.storySlug,
       storyTitle: options.storyTitle,
@@ -707,6 +711,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     if (isCached) {
       saveLanguageMode(newMode);
+      chapterAudio.setLookahead(newMode === "bilingual" ? 0 : 0.15);
       setState(prev => {
         if (prev.position) persistState(prev.position, newMode);
         return { ...prev, mode: newMode };
