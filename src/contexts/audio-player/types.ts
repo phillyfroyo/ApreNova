@@ -49,10 +49,18 @@ export interface PendingPlayback {
   resolvedChapter: number;
   resolvedPage: number;
   bookmarkAudioTime: number | null;
+  /** Set when picker was triggered mid-playback (toggle mode/speed). Used to resume at same position. */
   seekToPosition?: { pageNumber: number; lineIndex: number };
+  /** Whether audio was playing (vs paused) when the picker opened. Only relevant when seekToPosition is set. */
   wasPlaying?: boolean;
   cacheStatus: VariantCacheStatus;
 }
+
+export const DEFAULT_CACHE_STATUS: VariantCacheStatus = {
+  target: { normal: false, slow: false },
+  bilingual: { normal: false, slow: false },
+  estimates: { targetNormal: null, targetSlow: null, bilingualNormal: null, bilingualSlow: null },
+};
 
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
