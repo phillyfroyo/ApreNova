@@ -323,12 +323,14 @@ export async function generateChapterAudio(
       }
     }
 
-    // Use buffer-based duration for offset accumulation — matches actual MP3 byte
-    // length of concatenated audio, preventing cumulative drift across chunks.
+    console.log(`[chapter-audio] chunk ${c+1}/${chunks.length}: bookmarkDuration=${result.totalDuration.toFixed(3)}s bufferDuration=${result.bufferDuration.toFixed(3)}s diff=${(result.bufferDuration - result.totalDuration).toFixed(3)}s timeOffset=${timeOffset.toFixed(3)}s`);
+    // Use buffer-based duration for offset accumulation
     timeOffset += result.bufferDuration;
   }
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
+
+  const concatenatedBuffer = Buffer.concat(audioBuffers);
 
   // 6. Build final metadata
   const pageBoundaries: PageBoundary[] = Array.from(pageBoundaryMap.entries())
@@ -372,7 +374,7 @@ export async function generateChapterAudio(
 
   // 8. Upload concatenated audio to R2
   onProgress?.({ status: "uploading", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
-  const audioUrl = await cache.saveChapterAudio(request, Buffer.concat(audioBuffers), metadata);
+  const audioUrl = await cache.saveChapterAudio(request, concatenatedBuffer, metadata);
 
   onProgress?.({ status: "complete", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 

@@ -1,7 +1,7 @@
 // src/components/story-reader/ListenButton.tsx
 "use client";
 
-import { Headphones } from "lucide-react";
+import { Headphones, Loader2 } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
@@ -92,7 +92,7 @@ export default function ListenButton({
               : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
           }`}
         >
-          <Headphones className="w-4 h-4" />
+          {isSessionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
           {t(typedLang, "audioPlayer", "listen")}
         </button>
       )}
