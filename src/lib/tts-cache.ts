@@ -128,13 +128,14 @@ export class TTSCacheService {
         Key: audioKey,
         Body: Buffer.from(audioBuffer),
         ContentType: 'audio/mpeg',
-        CacheControl: 'public, max-age=86400',
+        CacheControl: 'public, max-age=31536000, immutable',
       })),
       this.client.send(new PutObjectCommand({
         Bucket: BUCKET,
         Key: metadataKey,
         Body: JSON.stringify(metadata),
         ContentType: 'application/json',
+        CacheControl: 'public, max-age=31536000, immutable',
       })),
     ]);
 
@@ -221,6 +222,32 @@ export class TTSCacheService {
     }
   }
 
+  /** Clear all chapter-level audio from R2 */
+  public async clearChapterAudio(): Promise<number> {
+    let count = 0;
+    try {
+      let continuationToken: string | undefined;
+      do {
+        const response = await this.client.send(new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: 'chapter-audio/',
+          ContinuationToken: continuationToken,
+        }));
+
+        const deletePromises = (response.Contents || []).map(obj => {
+          count++;
+          return this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: obj.Key! })).catch(() => {});
+        });
+        await Promise.all(deletePromises);
+
+        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+      } while (continuationToken);
+    } catch (error) {
+      console.error('Error clearing chapter audio cache:', error);
+    }
+    return count;
+  }
+
   /**
    * Batch save multiple TTS responses
    */
@@ -304,7 +331,7 @@ export class TTSCacheService {
     return {
       audioKey: `${cacheKey}.mp3`,
       metadataKey: `${cacheKey}.meta.json`,
-      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3?v=${Date.now()}`,
+      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3`,
     };
   }
 
@@ -354,13 +381,14 @@ export class TTSCacheService {
         Key: audioKey,
         Body: audioBuffer,
         ContentType: 'audio/mpeg',
-        CacheControl: 'public, max-age=86400',
+        CacheControl: 'public, max-age=31536000, immutable',
       })),
       this.client.send(new PutObjectCommand({
         Bucket: BUCKET,
         Key: metadataKey,
         Body: JSON.stringify(metadata),
         ContentType: 'application/json',
+        CacheControl: 'public, max-age=31536000, immutable',
       })),
     ]);
 

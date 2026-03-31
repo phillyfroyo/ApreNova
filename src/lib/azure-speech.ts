@@ -400,10 +400,8 @@ export class AzureSpeechService {
         ssmlBody += `</voice>`;
       }
 
-      // Add timestamp to bust Azure server-side SSML cache
       const ssml = `
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${docLang}">
-          <!-- gen:${Date.now()} -->
           ${ssmlBody}
         </speak>
       `.trim();
