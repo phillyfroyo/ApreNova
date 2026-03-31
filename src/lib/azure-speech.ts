@@ -400,8 +400,12 @@ export class AzureSpeechService {
         ssmlBody += `</voice>`;
       }
 
+      // Cache-buster comment forces Azure to synthesize fresh audio rather than
+      // returning stale cached results from previous SSML versions.
+      // TODO: Remove once Azure's server-side cache has fully expired for old variants.
       const ssml = `
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${docLang}">
+          <!-- v2:${Date.now()} -->
           ${ssmlBody}
         </speak>
       `.trim();
