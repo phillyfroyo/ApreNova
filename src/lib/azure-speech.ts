@@ -13,9 +13,31 @@ import type {
   TTSError 
 } from '@/types/azure-tts';
 
-// Voice configuration for different languages and speeds
-// Uses BrianMultilingualNeural as default to match audiobook player,
-// enabling cache sharing between audiobook and per-line TTS features
+// Types for chapter-level synthesis
+export interface ChapterSSMLSegment {
+  text: string;
+  language: TTSLanguage;
+  voice: string;
+  rate: number;
+  ssmlLang: string;
+  contentLang: string; // "en" or "es" — the language of the text content
+  breakBeforeMs?: number;
+  speakerName?: string;
+  stageDirection?: string;
+}
+
+export interface ChapterSynthesisResult {
+  buffer: ArrayBuffer;
+  totalDuration: number;        // from bookmark offsets — accurate for sentence timing within chunk
+  bufferDuration: number;       // from actual audio byte count — accurate for chunk concatenation offset
+  sentenceTimings: {
+    startTime: number;
+    endTime: number;
+    wordTimings: WordTiming[];
+  }[];
+}
+
+// Brian reads all story text (target language). Ava reads native language (bilingual only).
 export const VOICE_CONFIG: VoiceConfig = {
   'es-ES': {
     normal: 'en-US-BrianMultilingualNeural',
@@ -26,6 +48,9 @@ export const VOICE_CONFIG: VoiceConfig = {
     slow: 'en-US-BrianMultilingualNeural'
   }
 };
+
+/** Ava — only used for the native language in bilingual mode */
+export const NATIVE_VOICE = 'en-US-AvaMultilingualNeural';
 
 // Rate multipliers for different speeds
 export const SPEED_RATES: Record<string, number> = {
@@ -194,12 +219,12 @@ export class AzureSpeechService {
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               const audioData = result.audioData;
-              
-              // Calculate accurate duration from word timings (last word end time)
-              const duration = wordTimings.length > 0 
+
+              // Calculate duration from word timings (last word end time)
+              const duration = wordTimings.length > 0
                 ? Math.max(...wordTimings.map(w => w.endTime))
-                : this.calculateAudioDuration(audioData); // Fallback to file size estimation
-              
+                : this.calculateAudioDuration(audioData);
+
               resolve({
                 audioUrl: '', // Will be set by caching layer
                 wordTimings,
@@ -273,12 +298,12 @@ export class AzureSpeechService {
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
               const audioData = result.audioData;
-              
-              // Calculate accurate duration from word timings (last word end time)
-              const duration = wordTimings.length > 0 
+
+              // Calculate duration from word timings (last word end time)
+              const duration = wordTimings.length > 0
                 ? Math.max(...wordTimings.map(w => w.endTime))
-                : this.calculateAudioDuration(audioData); // Fallback to file size estimation
-              
+                : this.calculateAudioDuration(audioData);
+
               resolve({
                 buffer: audioData,
                 wordTimings,
@@ -299,6 +324,165 @@ export class AzureSpeechService {
         );
       });
 
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Generate a full chapter as a single SSML document with bookmark markers.
+   * Returns one audio buffer with exact sentence timing from bookmark events.
+   */
+  public async generateChapterBuffer(segments: ChapterSSMLSegment[]): Promise<ChapterSynthesisResult> {
+    try {
+      const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
+      const docLang = LOCALE_MAP[segments[0]?.ssmlLang || "en-US"] || segments[0]?.ssmlLang || "en-US";
+
+      // Build SSML body with per-segment <voice> tags to support multiple voices
+      // (e.g., Brian for Spanish, Ava for English in bilingual mode).
+      // Group consecutive same-voice segments to minimize <voice> tag switches.
+      let ssmlBody = "";
+      let currentVoice: string | null = null;
+
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+
+        // Close previous voice group if voice changed
+        if (currentVoice && currentVoice !== seg.voice) {
+          ssmlBody += `</voice>`;
+          currentVoice = null;
+        }
+
+        // Open new voice group if needed (before break, so break is always inside a <voice>)
+        if (currentVoice !== seg.voice) {
+          ssmlBody += `<voice name="${seg.voice}">`;
+          currentVoice = seg.voice;
+        }
+
+        // Inter-sentence silence (always inside a <voice> tag)
+        if (i > 0) {
+          ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
+        }
+
+        ssmlBody += `<bookmark mark="s_${i}"/>`;
+
+        const segLang = LOCALE_MAP[seg.language] || seg.language;
+        let content = "";
+
+        // Speaker name (for scripts)
+        if (seg.speakerName) {
+          content += `<emphasis level="moderate">${this.escapeXML(seg.speakerName)}</emphasis><break time="300ms"/>`;
+        }
+
+        // Stage direction (for scripts)
+        if (seg.stageDirection) {
+          content += `<prosody volume="soft" rate="medium">${this.escapeXML(seg.stageDirection)}</prosody><break time="200ms"/>`;
+        }
+
+        // Main text
+        content += `<prosody rate="${seg.rate}" volume="medium">${this.escapeXML(seg.text)}</prosody>`;
+
+        // Wrap in <lang> if voice's native language differs from content language
+        const voiceLang = seg.voice.substring(0, 2);
+        const contentLang = seg.contentLang;
+        if (voiceLang !== contentLang) {
+          ssmlBody += `<lang xml:lang="${segLang}">${content}</lang>`;
+        } else {
+          ssmlBody += content;
+        }
+      }
+
+      // End bookmark to capture total duration (must be inside a <voice> tag)
+      ssmlBody += `<bookmark mark="s_end"/>`;
+
+      // Close final voice group
+      if (currentVoice) {
+        ssmlBody += `</voice>`;
+      }
+
+      // Cache-buster comment forces Azure to synthesize fresh audio rather than
+      // returning stale cached results from previous SSML versions.
+      // TODO: Remove once Azure's server-side cache has fully expired for old variants.
+      const ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${docLang}">
+          <!-- v2:${Date.now()} -->
+          ${ssmlBody}
+        </speak>
+      `.trim();
+
+      // Create synthesizer
+      this.synthesizer = new sdk.SpeechSynthesizer(this.speechConfig, null);
+
+      // Track bookmark events and word boundaries
+      const bookmarkOffsets = new Map<string, number>();
+      const wordTimings: WordTiming[] = [];
+
+      return new Promise((resolve, reject) => {
+        // Bookmark events — exact audio offset for each sentence start
+        this.synthesizer!.bookmarkReached = (sender, event) => {
+          bookmarkOffsets.set(event.text, event.audioOffset / 10000000); // 100ns ticks → seconds
+        };
+
+        // Word boundary events
+        this.synthesizer!.wordBoundary = (sender, event) => {
+          const word = event.text?.trim();
+          if (word && word.length > 0 && /\w/.test(word)) {
+            wordTimings.push({
+              word,
+              startTime: event.audioOffset / 10000000,
+              endTime: (event.audioOffset + event.duration) / 10000000,
+              confidence: 1.0,
+            });
+          }
+        };
+
+        this.synthesizer!.speakSsmlAsync(
+          ssml,
+          (result) => {
+            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+              const audioData = result.audioData;
+              // Bookmark-based duration: accurate for relative sentence timing within this chunk
+              const bookmarkDuration = bookmarkOffsets.get("s_end") ?? 0;
+              // Buffer-based duration: matches actual MP3 byte length (48kHz 192kbps mono)
+              const bufferDuration = (audioData.byteLength * 8) / 192000;
+              // Use bookmark duration for sentence timing, fall back to buffer if no bookmarks
+              const totalDuration = bookmarkDuration || bufferDuration;
+
+              // Build sentence timings from bookmark offsets
+              const sentenceTimings: { startTime: number; endTime: number; wordTimings: WordTiming[] }[] = [];
+
+              for (let i = 0; i < segments.length; i++) {
+                const start = bookmarkOffsets.get(`s_${i}`) ?? 0;
+                const end = bookmarkOffsets.get(`s_${i + 1}`) ?? (i === segments.length - 1 ? totalDuration : start);
+
+                // Collect word timings that fall within this sentence's time range
+                const sentenceWords = wordTimings.filter(
+                  (w) => w.startTime >= start && w.startTime < end
+                );
+
+                sentenceTimings.push({ startTime: start, endTime: end, wordTimings: sentenceWords });
+              }
+
+              resolve({
+                buffer: audioData,
+                totalDuration,
+                bufferDuration,
+                sentenceTimings,
+              });
+            } else {
+              reject(new Error(`Chapter synthesis failed: ${result.errorDetails}`));
+            }
+
+            this.synthesizer?.close();
+            this.synthesizer = null;
+          },
+          (error) => {
+            reject(new Error(`Chapter synthesis error: ${error}`));
+            this.synthesizer?.close();
+            this.synthesizer = null;
+          }
+        );
+      });
     } catch (error) {
       throw this.handleError(error);
     }

@@ -1,7 +1,7 @@
 // src/components/audio-player/AudioPlayerBar.tsx
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useAudioPlayer } from "@/contexts/audio-player";
 import { getContentSentences } from "@/contexts/audio-player";
 import { useParams } from "next/navigation";
@@ -11,10 +11,12 @@ import { STORY_METADATA } from "@/lib/stories";
 import type { Language } from "@/types/i18n";
 import TransportControls from "./TransportControls";
 import SettingsControls from "./SettingsControls";
-import VoicePopup from "./VoicePopup";
 import ToastNotification from "./ToastNotification";
+import ChapterLoadingOverlay, { getLoadingLabels } from "./ChapterLoadingOverlay";
+import SettingsPicker from "./SettingsPicker";
 import { useDragToMinimize } from "./useDragToMinimize";
 import { useBottomNavDetection } from "./useBottomNavDetection";
+import { savePlaybackRate, saveLanguageMode } from "@/contexts/audio-player/storage";
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -23,13 +25,11 @@ function lerp(a: number, b: number, t: number): number {
 export default function AudioPlayerBar() {
   const {
     state, pausePlayback, resumePlayback, stopPlayback, toggleMode,
-    skipForward, skipBack, nextPage, prevPage, setVoice, setPlaybackRate,
+    skipForward, skipBack, nextPage, prevPage, setPlaybackRate, seekToTime,
+    confirmAndPlay, dismissPicker,
   } = useAudioPlayer();
   const params = useParams();
   const lng = (params?.lng as Language) ?? "es";
-
-  const [showVoice, setShowVoice] = useState(false);
-  const voiceButtonRef = useRef<HTMLButtonElement>(null);
 
   // Toast state
   const [langToast, setLangToast] = useState<"on" | "off" | null>(null);
@@ -44,15 +44,38 @@ export default function AudioPlayerBar() {
 
   if (!state.isVisible) return null;
 
-  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, voiceSelection, playbackRate } = state;
+  const { status, position, mode, currentPageSentences, highlightedSentenceIndex, playbackRate, playbackMode, chapterCurrentTime, chapterDuration } = state;
 
-  // Compute sentence progress
-  const contentSentences = getContentSentences(currentPageSentences);
-  const totalSentences = contentSentences.length;
-  const currentSentence = highlightedSentenceIndex !== null
-    ? contentSentences.findIndex(e => e.originalIndex === highlightedSentenceIndex) + 1
-    : 0;
-  const progressBar = totalSentences > 0 ? (currentSentence / totalSentences) * 100 : 0;
+  const isChapterMode = playbackMode === "chapter";
+  const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
+
+  // Compute progress — time-based for chapter mode, sentence-based for legacy
+  let progressBar: number;
+  if (isChapterMode) {
+    progressBar = chapterDuration > 0 ? (chapterCurrentTime / chapterDuration) * 100 : 0;
+  } else {
+    const contentSentences = getContentSentences(currentPageSentences);
+    const totalSentences = contentSentences.length;
+    const currentSentence = highlightedSentenceIndex !== null
+      ? contentSentences.findIndex(e => e.originalIndex === highlightedSentenceIndex) + 1
+      : 0;
+    progressBar = totalSentences > 0 ? (currentSentence / totalSentences) * 100 : 0;
+  }
+
+  // Format time as mm:ss
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Handle seekable progress bar click
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isChapterMode || chapterDuration <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seekToTime(fraction * chapterDuration);
+  };
 
   const handlePlayPause = () => {
     if (status === "playing") pausePlayback();
@@ -62,6 +85,14 @@ export default function AudioPlayerBar() {
   const statusLabel = (() => {
     switch (status) {
       case "loading": return t(lng, "stories", "loading");
+      case "generating": {
+        const p = state.chapterGenerationProgress;
+        const { sectionLabel, lineUnit } = getLoadingLabels(storyMeta?.type, lng);
+        const section = position ? `${sectionLabel} ${position.chapter}` : sectionLabel;
+        const preparing = t(lng, "audioPlayer", "preparing");
+        return p ? `${preparing} ${section} | ${lineUnit} ${p.sentencesComplete}/${p.sentencesTotal}` : `${preparing} ${section}...`;
+      }
+      case "ready": return t(lng, "audioPlayer", "startListening");
       case "navigating": return t(lng, "audioPlayer", "turningPage");
       case "finished": return t(lng, "audioPlayer", "storyComplete");
       case "error": return state.error || "Error";
@@ -69,21 +100,25 @@ export default function AudioPlayerBar() {
     }
   })();
 
-  const positionLabel = position ? `Ch ${position.chapter} · Page ${position.page}` : "";
+  const positionLabel = (() => {
+    if (!position) return "";
+    const base = `Ch ${position.chapter} · Page ${position.page}`;
+    if (isChapterMode && chapterDuration > 0) {
+      return `${base} · ${formatTime(chapterCurrentTime)} / ${formatTime(chapterDuration)}`;
+    }
+    return base;
+  })();
   const isTransport = status !== "finished";
-  const transportDisabled = status === "loading" || status === "navigating";
+  const transportDisabled = status === "loading" || status === "navigating" || status === "generating" || status === "ready";
+  const settingsDisabled = status === "loading" || status === "navigating";
 
   const handleClick = () => {
-    setMinimized(prev => {
-      if (!prev) setShowVoice(false);
-      return !prev;
-    });
+    setMinimized(prev => !prev);
   };
 
   const handleSpeedToggle = () => {
     const newSpeed = playbackRate === 1.0 ? 0.7 : 1.0;
     setPlaybackRate(newSpeed);
-    setShowVoice(false);
     setSpeedToast(newSpeed === 1.0 ? '1x' : '0.7x');
     setSpeedToastFading(false);
     if (speedToastTimer.current) clearTimeout(speedToastTimer.current);
@@ -119,10 +154,41 @@ export default function AudioPlayerBar() {
   const fadeOut = 1 - Math.min(1, progress * 2.5);
   const fadeIn = Math.max(0, (progress - 0.5) * 2);
 
-  const storyMeta = position ? STORY_METADATA.find(s => s.slug === position.storySlug) : null;
-
   return (
     <>
+      {/* Settings picker — shown when variant is not cached, before generation starts */}
+      {state.pendingPlayback && (
+        <SettingsPicker
+          lng={lng}
+          initialSpeed={playbackRate}
+          initialMode={mode}
+          cacheStatus={state.pendingPlayback.cacheStatus}
+          onConfirm={(newSpeed, newMode) => {
+            // Persist selections to localStorage
+            savePlaybackRate(newSpeed);
+            saveLanguageMode(newMode);
+            // Start playback with chosen settings
+            confirmAndPlay(newMode, newSpeed);
+          }}
+          onDismiss={dismissPicker}
+        />
+      )}
+
+      {/* Chapter generation loading overlay — shown during generation, ready, error, or variant reload */}
+      {(status === "generating" || status === "ready" || status === "error" || (status === "loading" && state.generationLabel)) && position && (
+        <ChapterLoadingOverlay
+          chapterNumber={position.chapter}
+          progress={state.chapterGenerationProgress}
+          storyType={storyMeta?.type}
+          isReady={status === "ready"}
+          isError={status === "error"}
+          lng={lng}
+          onStartListening={resumePlayback}
+          onCancel={stopPlayback}
+          label={state.generationLabel}
+        />
+      )}
+
       {/* Spacer to prevent content from being hidden behind the bar on mobile */}
       <div
         className={`md:hidden ${transitionClass}`}
@@ -144,16 +210,6 @@ export default function AudioPlayerBar() {
         >
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
-
-        {/* Voice popup */}
-        <VoicePopup
-          lng={lng}
-          voiceSelection={voiceSelection}
-          setVoice={setVoice}
-          show={progress < 0.5 && showVoice}
-          onClose={() => setShowVoice(false)}
-          triggerRef={voiceButtonRef}
-        />
 
         {/* Speed toast */}
         <ToastNotification
@@ -195,8 +251,11 @@ export default function AudioPlayerBar() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full transition-[width] duration-500 ease-out" style={{ width: `${progressBar}%` }} />
+              <div
+                className={`w-full h-1 bg-gray-300 rounded-full overflow-hidden ${isChapterMode ? "cursor-pointer" : ""}`}
+                onClick={handleProgressBarClick}
+              >
+                <div className="h-full bg-indigo-500 rounded-full transition-[width] duration-300 ease-out" style={{ width: `${progressBar}%` }} />
               </div>
             </div>
           </div>
@@ -241,11 +300,10 @@ export default function AudioPlayerBar() {
             playbackRate={playbackRate}
             isBilingual={mode === "bilingual"}
             onSpeedToggle={handleSpeedToggle}
-            onVoiceToggle={() => setShowVoice(prev => !prev)}
             onLangToggle={handleLangToggle}
             onClose={stopPlayback}
-            voiceButtonRef={voiceButtonRef}
             variant="mobile"
+            disabled={settingsDisabled}
           />
         </div>
 
@@ -254,8 +312,11 @@ export default function AudioPlayerBar() {
         {/* ============================================================ */}
         <div className="hidden md:block">
           {/* Progress bar — thin line across top */}
-          <div className="w-full h-0.5 bg-gray-200">
-            <div className="h-full bg-indigo-500 transition-[width] duration-500 ease-out" style={{ width: `${progressBar}%` }} />
+          <div
+            className={`w-full h-0.5 bg-gray-200 ${isChapterMode ? "cursor-pointer hover:h-1 transition-all" : ""}`}
+            onClick={handleProgressBarClick}
+          >
+            <div className="h-full bg-indigo-500 transition-[width] duration-300 ease-out" style={{ width: `${progressBar}%` }} />
           </div>
 
           {isTransport ? (
@@ -291,11 +352,10 @@ export default function AudioPlayerBar() {
                 playbackRate={playbackRate}
                 isBilingual={mode === "bilingual"}
                 onSpeedToggle={handleSpeedToggle}
-                onVoiceToggle={() => setShowVoice(prev => !prev)}
                 onLangToggle={handleLangToggle}
                 onClose={stopPlayback}
-                voiceButtonRef={voiceButtonRef}
                 variant="desktop"
+                disabled={settingsDisabled}
               />
             </div>
           ) : (

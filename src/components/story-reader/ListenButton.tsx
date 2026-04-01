@@ -1,7 +1,7 @@
 // src/components/story-reader/ListenButton.tsx
 "use client";
 
-import { Headphones } from "lucide-react";
+import { Headphones, Loader2 } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
@@ -10,6 +10,7 @@ import type { StoryMapType } from "@/contexts/StoryReaderContext";
 interface ListenButtonProps {
   typedLang: Language;
   session: any;
+  sessionStatus?: "loading" | "authenticated" | "unauthenticated";
   audioPlayer: any;
   storySlug: string;
   title: string;
@@ -30,6 +31,7 @@ interface ListenButtonProps {
 export default function ListenButton({
   typedLang,
   session,
+  sessionStatus,
   audioPlayer,
   storySlug,
   title,
@@ -52,6 +54,8 @@ export default function ListenButton({
     audioPlayer.state.status === "paused" ||
     audioPlayer.state.status === "loading";
 
+  const isSessionLoading = sessionStatus === "loading";
+
   return (
     <div className="flex items-center justify-end gap-3 pr-4">
       {isListening ? (
@@ -61,10 +65,12 @@ export default function ListenButton({
         </span>
       ) : (
         <button
+          disabled={isSessionLoading}
           onClick={() => {
             setMenuOpen(false);
             if (!session?.user) {
               setTtsAuthError(true);
+              return;
             }
             stop();
             setActiveAudio(null);
@@ -80,9 +86,13 @@ export default function ListenButton({
               userStoryId,
             });
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-colors"
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+            isSessionLoading
+              ? "text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed"
+              : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
+          }`}
         >
-          <Headphones className="w-4 h-4" />
+          {isSessionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
           {t(typedLang, "audioPlayer", "listen")}
         </button>
       )}
