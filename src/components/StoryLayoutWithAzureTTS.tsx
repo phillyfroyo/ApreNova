@@ -236,86 +236,13 @@ export default function StoryLayoutWithAzureTTS({
     if (next) router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
   }, [chapterNumber, pageNumber, storyMap]);
 
-  // Prefetch next page early when audio reaches ~75% through this page's sentences
-  const hasPrefetchedNextRef = useRef(false);
-  useEffect(() => { hasPrefetchedNextRef.current = false; }, [pageNumber]);
-  useEffect(() => {
-    if (hasPrefetchedNextRef.current) return;
-    const idx = audioPlayer.state.highlightedSentenceIndex;
-    if (idx === null) return;
-    const contentCount = sentences.filter(s => !s.isStanzaBreak && ((s.es && s.es.trim()) || (s.en && s.en.trim()))).length;
-    if (contentCount > 0 && idx >= Math.floor(contentCount * 0.75)) {
-      const { next } = getPrevNextPageUtil(chapterNumber, pageNumber, storyMap);
-      if (next) {
-        hasPrefetchedNextRef.current = true;
-        router.prefetch(getNavigationUrl(currentLevel, next.ch, next.pg));
-      }
-    }
-  }, [audioPlayer.state.highlightedSentenceIndex, sentences, chapterNumber, pageNumber, storyMap, currentLevel]);
-
-  useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber, storySlug, currentLevel); }, [sentences, chapterNumber, pageNumber, storySlug, currentLevel]);
+  useEffect(() => { audioPlayer.registerPageContent(sentences, chapterNumber, pageNumber); }, [sentences, chapterNumber, pageNumber]);
 
   const sentenceRefs = useRef<(HTMLDivElement | null)[]>([]);
-  useEffect(() => { audioPlayer.registerSentenceElements(sentenceRefs); }, []);
-  const lastScrolledStanzaRef = useRef<number | null>(null);
-  const skipNextScrollRef = useRef(false);
-
-  // After page navigation, skip the first scroll since the page is already at the top
-  useEffect(() => {
-    skipNextScrollRef.current = true;
-  }, [pageNumber]);
-
-  // Scroll an element into view. On mobile (< 768px), position at upper quarter
-  // of viewport to keep text above the audio player bar. On desktop, center as usual.
-  const scrollToElement = (el: Element) => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      const rect = el.getBoundingClientRect();
-      const targetY = window.scrollY + rect.top - window.innerHeight * 0.25;
-      window.scrollTo({ top: targetY, behavior: "smooth" });
-    } else {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  };
-
   useEffect(() => {
     const idx = audioPlayer.state.highlightedSentenceIndex;
-    if (idx === null) return;
-
-    // Only scroll if the audio is playing content for this exact page
-    const pos = audioPlayer.state.position;
-    if (!pos || pos.storySlug !== storySlug || pos.level !== currentLevel
-      || pos.chapter !== chapterNumber || pos.page !== pageNumber) return;
-
-    // Skip scroll on first highlight after page navigation
-    if (skipNextScrollRef.current) {
-      skipNextScrollRef.current = false;
-      return;
-    }
-
-    const isPoemType = storyType === "poem" || storyType === "song-lyrics" || storyType === "epic";
-
-    if (isPoemType && sentences[idx]?.stanzaNumber) {
-      // Poetry: only scroll when stanza changes
-      const currentStanza = sentences[idx].stanzaNumber!;
-      if (currentStanza === lastScrolledStanzaRef.current) return;
-      lastScrolledStanzaRef.current = currentStanza;
-
-      // Scroll to the stanza container (first line of the stanza)
-      const stanzaEl = document.querySelector(`[data-stanza-number="${currentStanza}"]`);
-      if (stanzaEl) {
-        scrollToElement(stanzaEl);
-      } else if (sentenceRefs.current[idx]) {
-        scrollToElement(sentenceRefs.current[idx]!);
-      }
-    } else {
-      // Prose/scripts: scroll per line as before
-      if (sentenceRefs.current[idx]) {
-        scrollToElement(sentenceRefs.current[idx]!);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- sentences is stable per page; skipNextScrollRef guards page changes
-  }, [audioPlayer.state.highlightedSentenceIndex, storyType]);
+    if (idx !== null && sentenceRefs.current[idx]) sentenceRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [audioPlayer.state.highlightedSentenceIndex]);
 
   useEffect(() => {
     if (!session?.user || hasPreloadedRef.current) return;
@@ -443,7 +370,7 @@ export default function StoryLayoutWithAzureTTS({
           audioPlayerIsVisible={audioPlayer.state.isVisible} getNavigationUrl={getNavigationUrl}
         />
         <ListenButton
-          typedLang={typedLang} session={session} sessionStatus={status} audioPlayer={audioPlayer}
+          typedLang={typedLang} session={session} audioPlayer={audioPlayer}
           storySlug={storySlug} title={title} currentLevel={currentLevel}
           chapterNumber={chapterNumber} pageNumber={pageNumber} sentences={sentences}
           storyMap={storyMap} isUserStory={isUserStory} userStoryId={userStoryId}

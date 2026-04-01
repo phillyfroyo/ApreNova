@@ -94,10 +94,6 @@ export async function POST(request: NextRequest) {
         const stats = await cacheService.getCacheStats();
         return createSuccessResponse({ action, stats });
 
-      case 'clear-chapter-audio':
-        const deleted = await cacheService.clearChapterAudio();
-        return createSuccessResponse({ action, result: `Deleted ${deleted} chapter audio files from R2` });
-
       default:
         return createErrorResponse('Unknown admin action', 400);
     }

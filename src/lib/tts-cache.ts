@@ -9,7 +9,6 @@ import type {
   CacheStats,
   WordTiming
 } from '@/types/azure-tts';
-import type { ChapterAudioRequest, ChapterAudioMetadata, ChapterAudioResponse } from '@/types/chapter-audio';
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 const BUCKET = process.env.R2_BUCKET_NAME || '';
@@ -135,7 +134,6 @@ export class TTSCacheService {
         Key: metadataKey,
         Body: JSON.stringify(metadata),
         ContentType: 'application/json',
-        CacheControl: 'public, max-age=31536000, immutable',
       })),
     ]);
 
@@ -220,32 +218,6 @@ export class TTSCacheService {
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
-  }
-
-  /** Clear all chapter-level audio from R2 */
-  public async clearChapterAudio(): Promise<number> {
-    let count = 0;
-    try {
-      let continuationToken: string | undefined;
-      do {
-        const response = await this.client.send(new ListObjectsV2Command({
-          Bucket: BUCKET,
-          Prefix: 'chapter-audio/',
-          ContinuationToken: continuationToken,
-        }));
-
-        const deletePromises = (response.Contents || []).map(obj => {
-          count++;
-          return this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: obj.Key! })).catch(() => {});
-        });
-        await Promise.all(deletePromises);
-
-        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
-      } while (continuationToken);
-    } catch (error) {
-      console.error('Error clearing chapter audio cache:', error);
-    }
-    return count;
   }
 
   /**
