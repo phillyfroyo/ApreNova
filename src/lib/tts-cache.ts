@@ -331,7 +331,7 @@ export class TTSCacheService {
     return {
       audioKey: `${cacheKey}.mp3`,
       metadataKey: `${cacheKey}.meta.json`,
-      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3`,
+      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3?v=${Date.now()}`,
     };
   }
 
