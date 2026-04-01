@@ -25,7 +25,7 @@ export default function TtsErrorDisplay({
     <>
       {/* TTS Auth Error Display */}
       {ttsAuthError && (
-        <div className="fixed top-16 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-50 bg-white text-black px-5 pt-3 pb-3 rounded-xl shadow-lg md:max-w-xl md:whitespace-nowrap">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow-lg max-w-sm">
           <button
             onClick={() => setTtsAuthError(false)}
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"

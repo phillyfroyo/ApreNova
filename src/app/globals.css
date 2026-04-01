@@ -125,27 +125,3 @@ body {
 .animate-shake {
   animation: shake 0.4s ease-in-out;
 }
-
-/* DOM-direct audio highlight classes (applied via JS, not React state) */
-.audio-highlight {
-  background-color: rgb(238 242 255); /* bg-indigo-50 */
-  border-radius: 0.75rem; /* rounded-xl */
-}
-.audio-highlight-bilingual {
-  background-color: rgb(238 242 255); /* bg-indigo-50 */
-  border-radius: 0.75rem; /* rounded-xl */
-}
-.audio-highlight-target {
-  background-color: rgb(224 231 255); /* bg-indigo-100 */
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
-}
-.audio-highlight-native {
-  background-color: rgb(224 231 255); /* bg-indigo-100 */
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
-}

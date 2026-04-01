@@ -29,7 +29,7 @@ export default function StoryLine({
   isScriptType,
 }: StoryLineProps) {
   const {
-    typedLang, oppositeLang, audioPlayer, chapterNumber, pageNumber, currentLevel, storySlug,
+    typedLang, oppositeLang, audioPlayer,
     showEmojiButtons, wordSelections, activeAudio, playbackState,
     savingWord, translationData, manualTranslateFunctions, skipGlobalClickRef,
     saveAuthLine, setSaveAuthLine,
@@ -76,18 +76,12 @@ export default function StoryLine({
   }
 
   const lineSpacing = isPoemType || isInsideStanza ? "my-0" : "my-6";
-  const pos = audioPlayer.state.position;
-  const isAudioOnThisPage = pos?.storySlug === storySlug
-    && pos?.level === currentLevel
-    && pos?.chapter === chapterNumber
-    && pos?.page === pageNumber;
-  const isAudioActive = isAudioOnThisPage && audioPlayer.state.isVisible;
-  const isBilingualMode = isAudioActive && audioPlayer.state.mode === "bilingual";
+  const isHighlighted = audioPlayer.state.highlightedSentenceIndex === lineIndex;
 
   return (
     <div
       ref={(el) => { sentenceRefs.current[lineIndex] = el; }}
-      className={`${lineSpacing} w-full relative rounded-xl`}
+      className={`${lineSpacing} w-full relative transition-colors duration-300 ${isHighlighted ? "bg-indigo-50 rounded-xl" : ""}`}
       data-sentence-index={lineIndex}
     >
       {/* Speaker name (scripts) */}
@@ -117,33 +111,23 @@ export default function StoryLine({
 
       {/* Text content */}
       <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""}`} data-text-content={lineIndex}>
-        {/* Target language (always shown) */}
-        <div className="rounded-lg" data-target-line>
-          <UnifiedTranslator
-            sentence={s[oppositeLang]}
-            staticTranslation={s[typedLang]}
-            enabled={!isAnyDropdownOpen && !menuOpen}
-            readOnlyMode={translationMode === "free"}
-            autoTriggerAll={premiumTriggers[lineIndex] || false}
-            onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
-            onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
-            onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
-            onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
-            onTranslationData={(data) => handleTranslationData(lineIndex, data)}
-            sentenceIndex={lineIndex}
-            contextSentences={sentences}
-            parentHasSelection={!!wordSelections[lineIndex]}
-            externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
-            onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(stanzaContext.stanzaIdx, lineIndex, wordIdx, stanzaContext.linesInStanza) : undefined}
-          />
-        </div>
-
-        {/* Native language (bilingual mode only) */}
-        {isBilingualMode && s[typedLang]?.trim() && (
-          <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg`} data-native-line>
-            <p className="text-sm text-gray-400 leading-relaxed">{s[typedLang]}</p>
-          </div>
-        )}
+        <UnifiedTranslator
+          sentence={s[oppositeLang]}
+          staticTranslation={s[typedLang]}
+          enabled={!isAnyDropdownOpen && !menuOpen}
+          readOnlyMode={translationMode === "free"}
+          autoTriggerAll={premiumTriggers[lineIndex] || false}
+          onTranslationStateChange={(hasActive) => handleTranslationStateChange(lineIndex, hasActive)}
+          onSelectionChange={(selection) => handleWordSelectionChange(lineIndex, selection)}
+          onManualTranslate={(translateFn) => handleManualTranslate(lineIndex, translateFn)}
+          onClearSelection={(clearFn) => handleClearSelection(lineIndex, clearFn)}
+          onTranslationData={(data) => handleTranslationData(lineIndex, data)}
+          sentenceIndex={lineIndex}
+          contextSentences={sentences}
+          parentHasSelection={!!wordSelections[lineIndex]}
+          externalSelection={stanzaContext ? wordSelections[lineIndex] : undefined}
+          onWordClick={stanzaContext ? (wordIdx) => handleStanzaWordClick(stanzaContext.stanzaIdx, lineIndex, wordIdx, stanzaContext.linesInStanza) : undefined}
+        />
 
         {/* Save auth prompt */}
         {saveAuthLine === lineIndex && (

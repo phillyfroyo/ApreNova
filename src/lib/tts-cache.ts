@@ -9,7 +9,6 @@ import type {
   CacheStats,
   WordTiming
 } from '@/types/azure-tts';
-import type { ChapterAudioRequest, ChapterAudioMetadata, ChapterAudioResponse } from '@/types/chapter-audio';
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 const BUCKET = process.env.R2_BUCKET_NAME || '';
@@ -135,7 +134,6 @@ export class TTSCacheService {
         Key: metadataKey,
         Body: JSON.stringify(metadata),
         ContentType: 'application/json',
-        CacheControl: 'public, max-age=31536000, immutable',
       })),
     ]);
 
@@ -222,32 +220,6 @@ export class TTSCacheService {
     }
   }
 
-  /** Clear all chapter-level audio from R2 */
-  public async clearChapterAudio(): Promise<number> {
-    let count = 0;
-    try {
-      let continuationToken: string | undefined;
-      do {
-        const response = await this.client.send(new ListObjectsV2Command({
-          Bucket: BUCKET,
-          Prefix: 'chapter-audio/',
-          ContinuationToken: continuationToken,
-        }));
-
-        const deletePromises = (response.Contents || []).map(obj => {
-          count++;
-          return this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: obj.Key! })).catch(() => {});
-        });
-        await Promise.all(deletePromises);
-
-        continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
-      } while (continuationToken);
-    } catch (error) {
-      console.error('Error clearing chapter audio cache:', error);
-    }
-    return count;
-  }
-
   /**
    * Batch save multiple TTS responses
    */
@@ -314,102 +286,6 @@ export class TTSCacheService {
     }
 
     return { cached, generated };
-  }
-  // ===========================================================================
-  // Chapter-Level Audio Cache
-  // ===========================================================================
-
-  /**
-   * Human-readable R2 key for a chapter audio variant.
-   * Format: chapter-audio/{slug}/{level}/ch{chapter}/{mode}-{speed}
-   */
-  public getChapterCacheKey(request: ChapterAudioRequest): string {
-    return `chapter-audio/${request.storySlug}/${request.level}/ch${request.chapter}/${request.mode}-${request.speed}`;
-  }
-
-  private getChapterR2Keys(cacheKey: string) {
-    return {
-      audioKey: `${cacheKey}.mp3`,
-      metadataKey: `${cacheKey}.meta.json`,
-      publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3`,
-    };
-  }
-
-  /** Check if chapter audio exists in R2 */
-  public async isChapterCached(request: ChapterAudioRequest): Promise<boolean> {
-    try {
-      const cacheKey = this.getChapterCacheKey(request);
-      const { audioKey } = this.getChapterR2Keys(cacheKey);
-      await this.client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: audioKey }));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /** Get cached chapter audio URL + metadata from R2 */
-  public async getChapterCached(request: ChapterAudioRequest): Promise<ChapterAudioResponse | null> {
-    try {
-      const cacheKey = this.getChapterCacheKey(request);
-      const { metadataKey, publicUrl } = this.getChapterR2Keys(cacheKey);
-
-      const metaResponse = await this.client.send(
-        new GetObjectCommand({ Bucket: BUCKET, Key: metadataKey })
-      );
-      const metaBody = await metaResponse.Body?.transformToString();
-      if (!metaBody) return null;
-
-      const metadata: ChapterAudioMetadata = JSON.parse(metaBody);
-      return { audioUrl: publicUrl, metadata, cached: true };
-    } catch {
-      return null;
-    }
-  }
-
-  /** Save concatenated chapter audio + metadata to R2 */
-  public async saveChapterAudio(
-    request: ChapterAudioRequest,
-    audioBuffer: Buffer,
-    metadata: ChapterAudioMetadata
-  ): Promise<string> {
-    const cacheKey = this.getChapterCacheKey(request);
-    const { audioKey, metadataKey, publicUrl } = this.getChapterR2Keys(cacheKey);
-
-    await Promise.all([
-      this.client.send(new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: audioKey,
-        Body: audioBuffer,
-        ContentType: 'audio/mpeg',
-        CacheControl: 'public, max-age=31536000, immutable',
-      })),
-      this.client.send(new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: metadataKey,
-        Body: JSON.stringify(metadata),
-        ContentType: 'application/json',
-        CacheControl: 'public, max-age=31536000, immutable',
-      })),
-    ]);
-
-    return publicUrl;
-  }
-
-  /**
-   * Download raw MP3 bytes for a per-sentence cache entry.
-   * Used during chapter concatenation to fetch individual sentence audio.
-   */
-  public async getSentenceAudioBuffer(sentenceCacheKey: string): Promise<Buffer | null> {
-    try {
-      const { audioKey } = this.getR2Keys(sentenceCacheKey);
-      const response = await this.client.send(
-        new GetObjectCommand({ Bucket: BUCKET, Key: audioKey })
-      );
-      const bytes = await response.Body?.transformToByteArray();
-      return bytes ? Buffer.from(bytes) : null;
-    } catch {
-      return null;
-    }
   }
 }
 
