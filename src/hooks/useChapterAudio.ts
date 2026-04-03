@@ -131,30 +131,49 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // The `emitPageChange` flag controls whether onPageChange fires — set to
   // false for on-demand sync (after resume/resetSentenceTracking) to avoid
   // re-triggering page navigation loops, true for natural cuechange playback.
+  //
+  // CRITICAL: We only fire onPageChange when ALL active sentence cues belong
+  // to the new page — if any cue from the previous page is still active, that
+  // sentence is still audibly playing and the page turn must wait.
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || activeCues.length === 0) return;
+
+    // First pass: collect all page numbers present in active sentence cues,
+    // and find the highest-index sentence cue for highlight tracking
+    const activePages = new Set<number>();
+    let latestSentencePayload: { t: string; i: number; p: number; l: number; lang: string } | null = null;
 
     for (let i = 0; i < activeCues.length; i++) {
       const cue = activeCues[i] as VTTCue;
       let payload: { t: string; i?: number; p?: number; l?: number; lang?: string };
       try { payload = JSON.parse(cue.text); } catch { continue; }
 
-      if (payload.t === "s" && payload.i !== undefined) {
-        if (payload.i !== lastSentenceIdxRef.current) {
-          lastSentenceIdxRef.current = payload.i;
-          const timing = metadataRef.current!.sentenceTimings[payload.i];
-          currentSentenceRef.current = timing;
-          setState(prev => ({ ...prev, currentSentence: timing }));
-          optionsRef.current.onSentenceChange?.(timing);
+      if (payload.t === "s" && payload.i !== undefined && payload.p !== undefined) {
+        activePages.add(payload.p);
+        if (!latestSentencePayload || payload.i > latestSentencePayload.i) {
+          latestSentencePayload = payload as { t: string; i: number; p: number; l: number; lang: string };
         }
+      }
+    }
 
-        // Derive page change from sentence's page number (only during playback)
-        if (emitPageChange && payload.p !== undefined && payload.p !== lastPageRef.current) {
-          lastPageRef.current = payload.p;
-          setState(prev => ({ ...prev, currentPage: payload.p! }));
-          optionsRef.current.onPageChange?.(payload.p);
-        }
+    // Update sentence highlight (always use the latest/highest-index sentence)
+    if (latestSentencePayload && latestSentencePayload.i !== lastSentenceIdxRef.current) {
+      lastSentenceIdxRef.current = latestSentencePayload.i;
+      const timing = metadataRef.current!.sentenceTimings[latestSentencePayload.i];
+      currentSentenceRef.current = timing;
+      setState(prev => ({ ...prev, currentSentence: timing }));
+      optionsRef.current.onSentenceChange?.(timing);
+    }
+
+    // Fire page change only when ALL active cues are on the new page
+    // (i.e., no cue from the previous page is still playing)
+    if (emitPageChange && latestSentencePayload) {
+      const newPage = latestSentencePayload.p;
+      if (newPage !== lastPageRef.current && activePages.size === 1) {
+        lastPageRef.current = newPage;
+        setState(prev => ({ ...prev, currentPage: newPage }));
+        optionsRef.current.onPageChange?.(newPage);
       }
     }
   }, []);
