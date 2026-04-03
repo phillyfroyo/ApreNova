@@ -178,19 +178,25 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn: fire immediately. The provider will pause audio (killing
-    // any buffered next-page content), navigate, then registerPageContent
-    // will seek to the new page's start and resume. The seek discards the
-    // stale audio buffer so there's no bleed from the next page.
+    // Page turn: delayed so the audio output pipeline finishes playing
+    // the current page's last sentence. audio.currentTime runs ~1.5-2s
+    // ahead of audible output. The provider will pause + seek on resume
+    // to eliminate any next-page audio bleed.
     if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
       if (pageChangeTimerRef.current) {
         clearTimeout(pageChangeTimerRef.current);
         pageChangeTimerRef.current = null;
       }
 
-      lastPageRef.current = latestPayload.p;
-      setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
-      optionsRef.current.onPageChange?.(latestPayload.p);
+      const newPage = latestPayload.p;
+      pageChangeTimerRef.current = setTimeout(() => {
+        pageChangeTimerRef.current = null;
+        if (audioRef.current && lastPageRef.current !== newPage) {
+          lastPageRef.current = newPage;
+          setState(prev => ({ ...prev, currentPage: newPage }));
+          optionsRef.current.onPageChange?.(newPage);
+        }
+      }, 1800);
     }
   }, []);
 
