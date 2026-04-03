@@ -58,26 +58,26 @@ function buildCuesFromMetadata(
 ): void {
   const timings = metadata.sentenceTimings;
 
+  // Debug: log page boundary cue times
+  const p3Last = timings.filter(t => t.pageNumber === 3).pop();
+  const p4First = timings.find(t => t.pageNumber === 4);
+  if (p3Last && p4First) {
+    console.log(`[ChapterAudio] Page 3→4 boundary: last cue ${p3Last.startTime.toFixed(3)}→${p3Last.endTime.toFixed(3)}, next cue ${p4First.startTime.toFixed(3)}→${p4First.endTime.toFixed(3)}, gap=${(p4First.startTime - p3Last.endTime).toFixed(3)}s`);
+  }
+
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
 
-    // Start: when speech actually begins (first word), fall back to bookmark
-    let startTime = st.startTime;
-    if (st.wordTimings && st.wordTimings.length > 0) {
-      startTime = st.wordTimings[0].startTime;
-    }
-
-    // End: next sentence's speech start (contiguous), or this sentence's
-    // bookmark endTime for the last sentence in the chapter
-    let endTime = st.endTime;
-    if (i < timings.length - 1) {
-      const next = timings[i + 1];
-      if (next.wordTimings && next.wordTimings.length > 0) {
-        endTime = next.wordTimings[0].startTime;
-      } else {
-        endTime = next.startTime;
-      }
-    }
+    // Use bookmark-derived times: startTime and endTime are contiguous
+    // by definition (sentence N endTime = sentence N+1 startTime) because
+    // they come from sequential SSML bookmark events. This guarantees no
+    // gaps between cues, which is critical for page turn detection.
+    //
+    // The highlight activates slightly early (during the inter-sentence
+    // break before speech starts) but this is preferable to gaps that
+    // cause premature page turns and highlight drift.
+    const startTime = st.startTime;
+    const endTime = st.endTime;
 
     const cue = new VTTCue(
       startTime,
