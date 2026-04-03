@@ -40,14 +40,14 @@ interface UseChapterAudioOptions {
 
 /**
  * Build VTTCue objects from chapter metadata and add them to a TextTrack.
- * Each sentence gets a cue spanning its duration; each page boundary gets
- * a point-in-time cue (1ms) so cuechange fires on page transitions.
+ * Each sentence gets a cue spanning its duration. Page changes are detected
+ * from the page number embedded in each sentence cue — no separate page
+ * boundary cues needed (point-in-time cues are unreliable with cuechange).
  */
 function buildCuesFromMetadata(
   track: TextTrack,
   metadata: ChapterAudioMetadata
 ): void {
-  // Sentence cues
   for (let i = 0; i < metadata.sentenceTimings.length; i++) {
     const st = metadata.sentenceTimings[i];
     const cue = new VTTCue(
@@ -56,17 +56,6 @@ function buildCuesFromMetadata(
       JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
     );
     cue.id = `s-${i}`;
-    track.addCue(cue);
-  }
-
-  // Page boundary cues (point-in-time: 1ms)
-  for (const pb of metadata.pageBoundaries) {
-    const cue = new VTTCue(
-      pb.startTime,
-      pb.startTime + 0.001,
-      JSON.stringify({ t: "p", p: pb.pageNumber })
-    );
-    cue.id = `page-${pb.pageNumber}`;
     track.addCue(cue);
   }
 }
@@ -138,6 +127,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, []);
 
   // ---- Process active cues and fire callbacks ----
+  // Page changes are derived from sentence cues (each carries its page number).
+  // This is more reliable than separate page boundary cues because sentence
+  // cues have real duration and are guaranteed to be in activeCues.
   const handleCueChange = useCallback((textTrack: TextTrack) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || activeCues.length === 0) return;
@@ -155,8 +147,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           setState(prev => ({ ...prev, currentSentence: timing }));
           optionsRef.current.onSentenceChange?.(timing);
         }
-      } else if (payload.t === "p" && payload.p !== undefined) {
-        if (payload.p !== lastPageRef.current) {
+
+        // Derive page change from sentence's page number
+        if (payload.p !== undefined && payload.p !== lastPageRef.current) {
           lastPageRef.current = payload.p;
           setState(prev => ({ ...prev, currentPage: payload.p! }));
           optionsRef.current.onPageChange?.(payload.p);
