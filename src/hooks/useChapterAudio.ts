@@ -41,8 +41,15 @@ interface UseChapterAudioOptions {
 /**
  * Build VTTCue objects from chapter metadata and add them to a TextTrack.
  * Each sentence gets a cue spanning its duration. Page changes are detected
- * from the page number embedded in each sentence cue — no separate page
- * boundary cues needed (point-in-time cues are unreliable with cuechange).
+ * from the page number embedded in each sentence cue.
+ *
+ * Cue timing is refined using word-level timings from Azure:
+ * - startTime: first word's startTime (when speech actually begins, after
+ *   any inter-sentence <break> silence)
+ * - endTime: last word's endTime (when speech actually ends)
+ *
+ * This ensures highlights activate when speech starts and deactivate when
+ * speech ends, rather than at SSML bookmark positions which include silence.
  */
 function buildCuesFromMetadata(
   track: TextTrack,
@@ -50,9 +57,20 @@ function buildCuesFromMetadata(
 ): void {
   for (let i = 0; i < metadata.sentenceTimings.length; i++) {
     const st = metadata.sentenceTimings[i];
+
+    let startTime = st.startTime;
+    let endTime = st.endTime;
+
+    if (st.wordTimings && st.wordTimings.length > 0) {
+      // First word startTime = when speech actually begins (after break)
+      startTime = st.wordTimings[0].startTime;
+      // Last word endTime = when speech actually ends
+      endTime = st.wordTimings[st.wordTimings.length - 1].endTime;
+    }
+
     const cue = new VTTCue(
-      st.startTime,
-      st.endTime,
+      startTime,
+      endTime,
       JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
     );
     cue.id = `s-${i}`;
