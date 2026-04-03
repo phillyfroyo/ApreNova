@@ -54,30 +54,19 @@ interface UseChapterAudioOptions {
  */
 function buildCuesFromMetadata(
   track: TextTrack,
-  metadata: ChapterAudioMetadata
+  metadata: ChapterAudioMetadata,
+  timeScale: number = 1
 ): void {
   const timings = metadata.sentenceTimings;
-
-  // Debug: log page boundary cue times
-  const p3Last = timings.filter(t => t.pageNumber === 3).pop();
-  const p4First = timings.find(t => t.pageNumber === 4);
-  if (p3Last && p4First) {
-    console.log(`[ChapterAudio] Page 3→4 boundary: last cue ${p3Last.startTime.toFixed(3)}→${p3Last.endTime.toFixed(3)}, next cue ${p4First.startTime.toFixed(3)}→${p4First.endTime.toFixed(3)}, gap=${(p4First.startTime - p3Last.endTime).toFixed(3)}s`);
-  }
 
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
 
-    // Use bookmark-derived times: startTime and endTime are contiguous
-    // by definition (sentence N endTime = sentence N+1 startTime) because
-    // they come from sequential SSML bookmark events. This guarantees no
-    // gaps between cues, which is critical for page turn detection.
-    //
-    // The highlight activates slightly early (during the inter-sentence
-    // break before speech starts) but this is preferable to gaps that
-    // cause premature page turns and highlight drift.
-    const startTime = st.startTime;
-    const endTime = st.endTime;
+    // Bookmark-derived times are contiguous (no gaps). Apply time scale
+    // to correct for any mismatch between metadata duration and actual
+    // decoded audio duration.
+    const startTime = st.startTime * timeScale;
+    const endTime = st.endTime * timeScale;
 
     const cue = new VTTCue(
       startTime,
@@ -433,9 +422,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       document.body.appendChild(audio);
       audioInDOMRef.current = true;
 
-      audio.addEventListener("loadedmetadata", () => {
-        setState(prev => ({ ...prev, duration: audio.duration }));
-      });
       audio.addEventListener("ended", () => {
         stopProgressTimer();
         setState(prev => ({ ...prev, status: "finished", currentSentence: null }));
@@ -447,12 +433,50 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
 
-      // ---- Build TextTrack cues programmatically from metadata ----
-      // No VTT file, no CORS, no network request — cues are built from
-      // the sentenceTimings/pageBoundaries we already have.
+      // ---- Wait for audio metadata to get actual decoded duration ----
+      await new Promise<void>((resolve) => {
+        if (audio.readyState >= 1) { resolve(); return; }
+        audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
+      });
+
+      setState(prev => ({ ...prev, duration: audio.duration }));
+
+      // ---- Correct metadata times to match actual audio duration ----
+      // The metadata's totalDuration comes from byte-count estimates of
+      // concatenated MP3 chunks. The browser's audio.duration is the actual
+      // decoded duration. Multi-chunk chapters accumulate MP3 frame padding
+      // that shifts all timestamps. Scale all times proportionally so they
+      // align with the browser's audio timeline.
+      const metaDuration = chapterMetadata!.totalDuration;
+      const realDuration = audio.duration;
+      const timeScale = (metaDuration > 0 && realDuration > 0 && Math.abs(realDuration - metaDuration) > 0.1)
+        ? realDuration / metaDuration
+        : 1;
+
+      if (timeScale !== 1) {
+        console.log(`[ChapterAudio] Time correction: metadata=${metaDuration.toFixed(3)}s, audio=${realDuration.toFixed(3)}s, scale=${timeScale.toFixed(6)}`);
+
+        // Scale all timing data in-place so seeking, highlighting, and
+        // page boundaries all use corrected times
+        for (const st of chapterMetadata!.sentenceTimings) {
+          st.startTime *= timeScale;
+          st.endTime *= timeScale;
+          for (const wt of st.wordTimings) {
+            wt.startTime *= timeScale;
+            wt.endTime *= timeScale;
+          }
+        }
+        for (const pb of chapterMetadata!.pageBoundaries) {
+          pb.startTime *= timeScale;
+          pb.endTime *= timeScale;
+        }
+        chapterMetadata!.totalDuration = realDuration;
+      }
+
+      // ---- Build TextTrack cues from (possibly corrected) metadata ----
       const textTrack = audio.addTextTrack("metadata", "sentence-sync", "en");
       textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
-      buildCuesFromMetadata(textTrack, chapterMetadata);
+      buildCuesFromMetadata(textTrack, chapterMetadata!);
       textTrackRef.current = textTrack;
 
       textTrack.addEventListener("cuechange", () => processCues(textTrack, true));
