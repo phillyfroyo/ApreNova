@@ -182,19 +182,24 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn: delayed to let audio output catch up with currentTime
+    // Page turn: pause audio immediately so next-page content doesn't play
+    // before the page navigates, then delay the actual onPageChange to let
+    // the audio output pipeline finish playing the current page's last sentence.
     if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
-      // Cancel any pending page turn (e.g., if user seeked away)
       if (pageChangeTimerRef.current) {
         clearTimeout(pageChangeTimerRef.current);
         pageChangeTimerRef.current = null;
       }
 
+      // Pause immediately — prevents next-page audio from playing
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause();
+      }
+
       const newPage = latestPayload.p;
       pageChangeTimerRef.current = setTimeout(() => {
         pageChangeTimerRef.current = null;
-        // Verify the page still needs to change (audio may have been paused/stopped)
-        if (audioRef.current && !audioRef.current.paused && lastPageRef.current !== newPage) {
+        if (audioRef.current && lastPageRef.current !== newPage) {
           lastPageRef.current = newPage;
           setState(prev => ({ ...prev, currentPage: newPage }));
           optionsRef.current.onPageChange?.(newPage);
