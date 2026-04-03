@@ -136,7 +136,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
-    if (!activeCues) return;
+    if (!activeCues || !metadataRef.current) return;
 
     // Build a set of currently active sentence indices
     const activeSentenceIndices = new Set<number>();
