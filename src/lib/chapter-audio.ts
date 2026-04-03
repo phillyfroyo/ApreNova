@@ -6,6 +6,7 @@
 import { getAzureSpeechService, VOICE_CONFIG, NATIVE_VOICE, SPEED_RATES } from "./azure-speech";
 import type { ChapterSSMLSegment } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
+import { alignChapterAudio } from "./whisper-alignment";
 import { prisma } from "@/lib/prisma";
 import { toFolderName } from "@/lib/cefr";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
@@ -336,7 +337,36 @@ export async function generateChapterAudio(
 
   const concatenatedBuffer = Buffer.concat(audioBuffers);
 
-  // 6. Build final metadata
+  // 6. Run Whisper forced alignment for accurate timestamps
+  // Azure TTS bookmark timestamps run ~1.5-2s ahead of audible output due
+  // to OS audio pipeline buffering. Whisper analyzes the actual audio waveform
+  // and returns word-level timestamps that match what users hear.
+  onProgress?.({ status: "aligning", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
+  try {
+    const alignedTimings = await alignChapterAudio(concatenatedBuffer, allSentenceTimings);
+    allSentenceTimings.splice(0, allSentenceTimings.length, ...alignedTimings);
+
+    // Rebuild page boundaries from aligned timings
+    pageBoundaryMap.clear();
+    for (const st of allSentenceTimings) {
+      const existing = pageBoundaryMap.get(st.pageNumber);
+      if (existing) {
+        existing.endTime = st.endTime;
+        existing.sentenceCount++;
+      } else {
+        pageBoundaryMap.set(st.pageNumber, {
+          startTime: st.startTime,
+          endTime: st.endTime,
+          sentenceCount: 1,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[chapter-audio] Whisper alignment failed, using bookmark timings:", err);
+    // Continue with original bookmark timings — better than failing entirely
+  }
+
+  // 7. Build final metadata (using Whisper-aligned timings if available)
   const pageBoundaries: PageBoundary[] = Array.from(pageBoundaryMap.entries())
     .sort(([a], [b]) => a - b)
     .map(([pageNumber, data]) => ({
@@ -348,9 +378,14 @@ export async function generateChapterAudio(
 
   const generationDurationMs = Date.now() - generationStartTime;
 
+  // Use the last sentence's endTime for total duration (more accurate if Whisper-aligned)
+  const alignedDuration = allSentenceTimings.length > 0
+    ? allSentenceTimings[allSentenceTimings.length - 1].endTime
+    : timeOffset;
+
   const metadata: ChapterAudioMetadata = {
     variant: request,
-    totalDuration: timeOffset,
+    totalDuration: alignedDuration,
     totalSentences: allSentenceTimings.length,
     totalCharacters,
     generationDurationMs,
@@ -361,7 +396,7 @@ export async function generateChapterAudio(
     version: 3,
   };
 
-  // 7. Record generation stats in database (non-blocking)
+  // 8. Record generation stats in database (non-blocking)
   prisma.ttsGenerationStat.create({
     data: {
       storySlug: request.storySlug,
@@ -376,7 +411,7 @@ export async function generateChapterAudio(
     },
   }).catch((err) => console.error("[chapter-audio] Failed to record generation stats:", err));
 
-  // 8. Upload concatenated audio to R2
+  // 9. Upload concatenated audio to R2
   onProgress?.({ status: "uploading", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
   const audioUrl = await cache.saveChapterAudio(request, concatenatedBuffer, metadata);
 

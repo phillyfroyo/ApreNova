@@ -72,7 +72,7 @@ export interface ChapterAudioMetadata {
 // ============================================================================
 
 export interface ChapterGenerationProgress {
-  status: "generating" | "concatenating" | "uploading" | "complete" | "error";
+  status: "generating" | "concatenating" | "aligning" | "uploading" | "complete" | "error";
   sentencesComplete: number;
   sentencesTotal: number;
   error?: string;

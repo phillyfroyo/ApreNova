@@ -43,34 +43,19 @@ interface UseChapterAudioOptions {
  * Each sentence gets a cue spanning its duration. Page changes are detected
  * from the page number embedded in each sentence cue.
  *
- * Cue timing strategy:
- * - startTime: first word's startTime (when speech begins, after any break)
- * - endTime: next sentence's first word startTime (keeps cues contiguous)
- *
- * Cues MUST be contiguous (no gaps) because page turn detection relies on
- * the previous page's last cue exiting activeCues. A gap between cues would
- * cause the cue to exit early, triggering a premature page turn while audio
- * is still in the inter-sentence silence.
+ * With Whisper-aligned timestamps, cue times match audible output directly.
  */
 function buildCuesFromMetadata(
   track: TextTrack,
-  metadata: ChapterAudioMetadata,
-  timeScale: number = 1
+  metadata: ChapterAudioMetadata
 ): void {
   const timings = metadata.sentenceTimings;
 
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
-
-    // Bookmark-derived times are contiguous (no gaps). Apply time scale
-    // to correct for any mismatch between metadata duration and actual
-    // decoded audio duration.
-    const startTime = st.startTime * timeScale;
-    const endTime = st.endTime * timeScale;
-
     const cue = new VTTCue(
-      startTime,
-      endTime,
+      st.startTime,
+      st.endTime,
       JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
     );
     cue.id = `s-${i}`;
@@ -147,10 +132,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Process active cues and fire callbacks ----
   // Sentence highlights fire immediately from cue transitions.
   // Page turns are DELAYED because audio.currentTime runs ~1.5-2s ahead
-  // of audible output (MP3 decoder pipeline buffering). Without the delay,
-  // the page navigates while the last sentence is still audibly playing.
-  const pageChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || !metadataRef.current) return;
@@ -169,7 +150,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
     }
 
-    // Update sentence highlight (immediate — slight lead is acceptable)
+    // Update sentence highlight
     if (latestPayload && latestPayload.i !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = latestPayload.i;
       const timing = metadataRef.current!.sentenceTimings[latestPayload.i];
@@ -178,25 +159,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn: delayed so the audio output pipeline finishes playing
-    // the current page's last sentence. audio.currentTime runs ~1.5-2s
-    // ahead of audible output. The provider will pause + seek on resume
-    // to eliminate any next-page audio bleed.
+    // Page turn (immediate — Whisper timestamps match audible output)
     if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
-      if (pageChangeTimerRef.current) {
-        clearTimeout(pageChangeTimerRef.current);
-        pageChangeTimerRef.current = null;
-      }
-
-      const newPage = latestPayload.p;
-      pageChangeTimerRef.current = setTimeout(() => {
-        pageChangeTimerRef.current = null;
-        if (audioRef.current && lastPageRef.current !== newPage) {
-          lastPageRef.current = newPage;
-          setState(prev => ({ ...prev, currentPage: newPage }));
-          optionsRef.current.onPageChange?.(newPage);
-        }
-      }, 1200);
+      lastPageRef.current = latestPayload.p;
+      setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
+      optionsRef.current.onPageChange?.(latestPayload.p);
     }
   }, []);
 
@@ -426,39 +393,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
       setState(prev => ({ ...prev, duration: audio.duration }));
 
-      // ---- Correct metadata times to match actual audio duration ----
-      // The metadata's totalDuration comes from byte-count estimates of
-      // concatenated MP3 chunks. The browser's audio.duration is the actual
-      // decoded duration. Multi-chunk chapters accumulate MP3 frame padding
-      // that shifts all timestamps. Scale all times proportionally so they
-      // align with the browser's audio timeline.
-      const metaDuration = chapterMetadata!.totalDuration;
-      const realDuration = audio.duration;
-      const timeScale = (metaDuration > 0 && realDuration > 0 && Math.abs(realDuration - metaDuration) > 0.1)
-        ? realDuration / metaDuration
-        : 1;
-
-      if (timeScale !== 1) {
-        console.log(`[ChapterAudio] Time correction: metadata=${metaDuration.toFixed(3)}s, audio=${realDuration.toFixed(3)}s, scale=${timeScale.toFixed(6)}`);
-
-        // Scale all timing data in-place so seeking, highlighting, and
-        // page boundaries all use corrected times
-        for (const st of chapterMetadata!.sentenceTimings) {
-          st.startTime *= timeScale;
-          st.endTime *= timeScale;
-          for (const wt of st.wordTimings) {
-            wt.startTime *= timeScale;
-            wt.endTime *= timeScale;
-          }
-        }
-        for (const pb of chapterMetadata!.pageBoundaries) {
-          pb.startTime *= timeScale;
-          pb.endTime *= timeScale;
-        }
-        chapterMetadata!.totalDuration = realDuration;
-      }
-
-      // ---- Build TextTrack cues from (possibly corrected) metadata ----
+      // ---- Build TextTrack cues from Whisper-aligned metadata ----
       const textTrack = audio.addTextTrack("metadata", "sentence-sync", "en");
       textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
       buildCuesFromMetadata(textTrack, chapterMetadata!);
@@ -558,7 +493,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (audioRef.current) {
       audioRef.current.pause();
       stopProgressTimer();
-      if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
       setState(prev => ({ ...prev, status: "paused" }));
     }
   }, [stopProgressTimer]);
@@ -567,7 +501,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (audioRef.current) {
       audioRef.current.pause();
       stopProgressTimer();
-      if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
     }
   }, [stopProgressTimer]);
 
@@ -577,7 +510,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       abortRef.current = null;
     }
     stopProgressTimer();
-    if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
     if (audioRef.current) {
       audioRef.current.pause();
       removeAudioFromDOM();
@@ -715,10 +647,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
-      if (pageChangeTimerRef.current) {
-        clearTimeout(pageChangeTimerRef.current);
-        pageChangeTimerRef.current = null;
-      }
       if (progressTimerRef.current) {
         clearInterval(progressTimerRef.current);
         progressTimerRef.current = null;
