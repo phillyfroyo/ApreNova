@@ -196,7 +196,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           setState(prev => ({ ...prev, currentPage: newPage }));
           optionsRef.current.onPageChange?.(newPage);
         }
-      }, 1800);
+      }, 1200);
     }
   }, []);
 
