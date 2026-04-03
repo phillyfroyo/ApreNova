@@ -145,19 +145,20 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, []);
 
   // ---- Process active cues and fire callbacks ----
-  // Sentence highlights: fire onSentenceChange for the latest active sentence.
-  // Page turns: fire onPageChange only when a page's LAST sentence has EXITED
-  // activeCues (its endTime has passed), meaning the audio is truly done with
-  // that page. This prevents premature page turns caused by slight timing
-  // imprecision in Azure bookmark offsets.
-  const lastPageSentenceIdxRef = useRef<Map<number, number>>(new Map());
+  // Sentence highlights fire immediately from cue transitions.
+  // Page turns are DELAYED because audio.currentTime runs ~1.5-2s ahead
+  // of audible output (MP3 decoder pipeline buffering). Without the delay,
+  // the page navigates while the last sentence is still audibly playing.
+  const pageChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Delay before firing onPageChange after detecting the cue transition.
+  // This compensates for the gap between currentTime and audible output.
+  const PAGE_TURN_DELAY_MS = 1800;
 
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || !metadataRef.current) return;
 
-    // Build a set of currently active sentence indices
-    const activeSentenceIndices = new Set<number>();
     let latestPayload: { i: number; p: number; l: number; lang: string } | null = null;
 
     for (let i = 0; i < activeCues.length; i++) {
@@ -166,14 +167,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       try { payload = JSON.parse(cue.text); } catch { continue; }
 
       if (payload.t === "s" && payload.i !== undefined && payload.p !== undefined) {
-        activeSentenceIndices.add(payload.i);
         if (!latestPayload || payload.i > latestPayload.i) {
           latestPayload = payload as { i: number; p: number; l: number; lang: string };
         }
       }
     }
 
-    // Update sentence highlight
+    // Update sentence highlight (immediate — slight lead is acceptable)
     if (latestPayload && latestPayload.i !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = latestPayload.i;
       const timing = metadataRef.current!.sentenceTimings[latestPayload.i];
@@ -182,35 +182,24 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn detection: check if the last sentence of the current page
-    // has exited activeCues (meaning it finished playing)
-    if (emitPageChange && latestPayload) {
-      const currentPage = lastPageRef.current;
-
-      // Build the page→lastSentenceIdx map lazily on first use
-      if (lastPageSentenceIdxRef.current.size === 0 && metadataRef.current) {
-        const timings = metadataRef.current.sentenceTimings;
-        for (let i = 0; i < timings.length; i++) {
-          lastPageSentenceIdxRef.current.set(timings[i].pageNumber, i);
-        }
+    // Page turn: delayed to let audio output catch up with currentTime
+    if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
+      // Cancel any pending page turn (e.g., if user seeked away)
+      if (pageChangeTimerRef.current) {
+        clearTimeout(pageChangeTimerRef.current);
+        pageChangeTimerRef.current = null;
       }
 
-      const lastSentenceOnCurrentPage = lastPageSentenceIdxRef.current.get(currentPage);
-      if (lastSentenceOnCurrentPage !== undefined) {
-        // Page turn: the last sentence of the current page is no longer active,
-        // and we have a sentence from a different (later) page active
-        const lastSentenceStillActive = activeSentenceIndices.has(lastSentenceOnCurrentPage);
-        if (!lastSentenceStillActive && latestPayload.p !== currentPage) {
-          lastPageRef.current = latestPayload.p;
-          setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
-          optionsRef.current.onPageChange?.(latestPayload.p);
+      const newPage = latestPayload.p;
+      pageChangeTimerRef.current = setTimeout(() => {
+        pageChangeTimerRef.current = null;
+        // Verify the page still needs to change (audio may have been paused/stopped)
+        if (audioRef.current && !audioRef.current.paused && lastPageRef.current !== newPage) {
+          lastPageRef.current = newPage;
+          setState(prev => ({ ...prev, currentPage: newPage }));
+          optionsRef.current.onPageChange?.(newPage);
         }
-      } else if (latestPayload.p !== currentPage) {
-        // No page mapping yet (first page) — just follow the sentence's page
-        lastPageRef.current = latestPayload.p;
-        setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
-        optionsRef.current.onPageChange?.(latestPayload.p);
-      }
+      }, PAGE_TURN_DELAY_MS);
     }
   }, []);
 
@@ -573,6 +562,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (audioRef.current) {
       audioRef.current.pause();
       stopProgressTimer();
+      if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
       setState(prev => ({ ...prev, status: "paused" }));
     }
   }, [stopProgressTimer]);
@@ -581,6 +571,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (audioRef.current) {
       audioRef.current.pause();
       stopProgressTimer();
+      if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
     }
   }, [stopProgressTimer]);
 
@@ -590,6 +581,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       abortRef.current = null;
     }
     stopProgressTimer();
+    if (pageChangeTimerRef.current) { clearTimeout(pageChangeTimerRef.current); pageChangeTimerRef.current = null; }
     if (audioRef.current) {
       audioRef.current.pause();
       removeAudioFromDOM();
@@ -727,6 +719,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
+      if (pageChangeTimerRef.current) {
+        clearTimeout(pageChangeTimerRef.current);
+        pageChangeTimerRef.current = null;
+      }
       if (progressTimerRef.current) {
         clearInterval(progressTimerRef.current);
         progressTimerRef.current = null;
