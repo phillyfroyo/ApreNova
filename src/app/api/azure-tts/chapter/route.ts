@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const cached = await cache.getChapterCached(chapterRequest);
     if (cached) {
       return new Response(
-        JSON.stringify({ type: "complete", audioUrl: cached.audioUrl, metadata: cached.metadata, cached: true }) + "\n",
+        JSON.stringify({ type: "complete", audioUrl: cached.audioUrl, vttUrl: cached.vttUrl ?? null, metadata: cached.metadata, cached: true }) + "\n",
         {
           status: 200,
           headers: {
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
           const completeLine = JSON.stringify({
             type: "complete",
             audioUrl: result.audioUrl,
+            vttUrl: result.vttUrl ?? null,
             metadata: result.metadata,
             cached: result.cached,
           }) + "\n";

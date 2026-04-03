@@ -59,7 +59,12 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const lookaheadRef = useRef(0.15); // default lookahead in seconds, can be adjusted externally
   optionsRef.current = options;
 
-  // ---- Binary search for current sentence by time ----
+  // VTT sync refs
+  const vttSyncActiveRef = useRef(false);
+  const audioInDOMRef = useRef(false);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ---- Binary search for current sentence by time (used by RAF fallback + seeking) ----
   const findSentenceAtTime = useCallback((time: number): number => {
     const timings = metadataRef.current?.sentenceTimings;
     if (!timings || timings.length === 0) return -1;
@@ -97,7 +102,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     return boundaries[0].pageNumber;
   }, []);
 
-  // ---- High-precision time sync via requestAnimationFrame ----
+  // ---- High-precision time sync via requestAnimationFrame (fallback when VTT unavailable) ----
   const syncPlayback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || audio.paused) {
@@ -147,6 +152,31 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, []);
 
+  // ---- Progress timer for VTT mode (lightweight, ~4x/sec for progress bar) ----
+  const startProgressTimer = useCallback(() => {
+    if (progressTimerRef.current) return;
+    progressTimerRef.current = setInterval(() => {
+      if (audioRef.current && !audioRef.current.paused) {
+        setState(prev => ({ ...prev, currentTime: audioRef.current!.currentTime }));
+      }
+    }, 250);
+  }, []);
+
+  const stopProgressTimer = useCallback(() => {
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+  }, []);
+
+  // ---- Remove audio element from DOM if it was appended for VTT ----
+  const removeAudioFromDOM = useCallback(() => {
+    if (audioInDOMRef.current && audioRef.current && audioRef.current.parentNode) {
+      audioRef.current.parentNode.removeChild(audioRef.current);
+    }
+    audioInDOMRef.current = false;
+  }, []);
+
   // ---- Get current playback time (for resuming after variant reload) ----
   const getCurrentTime = useCallback((): number => {
     return audioRef.current?.currentTime ?? 0;
@@ -181,8 +211,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     // Stop any existing audio
     if (audioRef.current) {
       audioRef.current.pause();
+      removeAudioFromDOM();
       audioRef.current = null;
     }
+    vttSyncActiveRef.current = false;
+    stopProgressTimer();
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
     setMetadata(null);
@@ -267,6 +300,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let audioUrl = "";
+      let vttUrl: string | null = null;
       let chapterMetadata: ChapterAudioMetadata | null = null;
       let wasCached = false;
       let buffer = "";
@@ -304,6 +338,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           } else if (data.type === "complete") {
             stopSimulatedProgress();
             audioUrl = data.audioUrl;
+            vttUrl = data.vttUrl ?? null;
             chapterMetadata = data.metadata;
             wasCached = !!data.cached;
             // Snap progress to 100% immediately
@@ -343,14 +378,77 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       });
       audio.addEventListener("ended", () => {
         stopSyncLoop();
+        stopProgressTimer();
         setState(prev => ({ ...prev, status: "finished", currentSentence: null }));
         optionsRef.current.onPlaybackComplete?.();
       });
       audio.addEventListener("error", () => {
         stopSyncLoop();
+        stopProgressTimer();
         setState(prev => ({ ...prev, status: "error", error: "Audio playback failed" }));
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
+
+      // ---- Attempt VTT-based sync (browser-native cuechange) ----
+      let useVTTSync = false;
+
+      if (vttUrl) {
+        // Append audio to DOM so <track> element works
+        audio.style.display = "none";
+        document.body.appendChild(audio);
+        audioInDOMRef.current = true;
+
+        const trackEl = document.createElement("track");
+        trackEl.kind = "metadata";
+        trackEl.label = "sentence-sync";
+        trackEl.src = vttUrl;
+        trackEl.default = true;
+        audio.appendChild(trackEl);
+
+        // Wait for track to load (with timeout fallback to RAF)
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => resolve(), 2000);
+          trackEl.addEventListener("load", () => { clearTimeout(timeout); resolve(); }, { once: true });
+          trackEl.addEventListener("error", () => { clearTimeout(timeout); resolve(); }, { once: true });
+        });
+
+        const textTrack = audio.textTracks[0];
+        if (textTrack && textTrack.cues) {
+          useVTTSync = true;
+          textTrack.mode = "hidden"; // must be 'hidden' (not 'disabled') for cuechange to fire
+
+          textTrack.addEventListener("cuechange", () => {
+            const activeCues = textTrack.activeCues;
+            if (!activeCues || activeCues.length === 0) return;
+
+            for (let i = 0; i < activeCues.length; i++) {
+              const cue = activeCues[i] as VTTCue;
+              let payload: { t: string; i?: number; p?: number; l?: number; lang?: string };
+              try { payload = JSON.parse(cue.text); } catch { continue; }
+
+              if (payload.t === "s" && payload.i !== undefined) {
+                // Sentence cue
+                if (payload.i !== lastSentenceIdxRef.current) {
+                  lastSentenceIdxRef.current = payload.i;
+                  const timing = metadataRef.current!.sentenceTimings[payload.i];
+                  currentSentenceRef.current = timing;
+                  setState(prev => ({ ...prev, currentSentence: timing }));
+                  optionsRef.current.onSentenceChange?.(timing);
+                }
+              } else if (payload.t === "p" && payload.p !== undefined) {
+                // Page boundary cue
+                if (payload.p !== lastPageRef.current) {
+                  lastPageRef.current = payload.p;
+                  setState(prev => ({ ...prev, currentPage: payload.p! }));
+                  optionsRef.current.onPageChange?.(payload.p);
+                }
+              }
+            }
+          });
+        }
+      }
+
+      vttSyncActiveRef.current = useVTTSync;
 
       // Seek to initial position before playing (e.g., resuming from bookmark or page start)
       if (request.seekToPosition && chapterMetadata) {
@@ -383,7 +481,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
       // Pre-fire the first sentence highlight before audio starts
       const startTime = audio.currentTime;
-      const firstSentenceIdx = findSentenceAtTime(startTime + lookaheadRef.current);
+      const firstSentenceIdx = findSentenceAtTime(startTime + (useVTTSync ? 0 : lookaheadRef.current));
       if (firstSentenceIdx !== -1) {
         lastSentenceIdxRef.current = firstSentenceIdx;
         const timing = chapterMetadata!.sentenceTimings[firstSentenceIdx];
@@ -394,7 +492,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       if (wasCached) {
         // Audio was already in Cloudflare — skip modal and play immediately
         await audio.play();
-        startSyncLoop();
+        if (useVTTSync) {
+          startProgressTimer();
+        } else {
+          startSyncLoop();
+        }
         setState(prev => ({
           ...prev,
           status: "playing",
@@ -428,25 +530,33 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
       optionsRef.current.onError?.(err instanceof Error ? err : new Error(err.message));
     }
-  }, [startSyncLoop, stopSyncLoop]);
+  }, [startSyncLoop, stopSyncLoop, startProgressTimer, stopProgressTimer, removeAudioFromDOM]);
 
   // ---- Playback controls ----
 
   const play = useCallback(() => {
     if (audioRef.current && !audioRef.current.ended) {
       audioRef.current.play();
-      startSyncLoop();
+      if (vttSyncActiveRef.current) {
+        startProgressTimer();
+      } else {
+        startSyncLoop();
+      }
       setState(prev => ({ ...prev, status: "playing" }));
     }
-  }, [startSyncLoop]);
+  }, [startSyncLoop, startProgressTimer]);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      stopSyncLoop();
+      if (vttSyncActiveRef.current) {
+        stopProgressTimer();
+      } else {
+        stopSyncLoop();
+      }
       setState(prev => ({ ...prev, status: "paused" }));
     }
-  }, [stopSyncLoop]);
+  }, [stopSyncLoop, stopProgressTimer]);
 
   // Pause audio and stop sync loop without setting status — used during page
   // navigation so the provider can go straight to "navigating" without a
@@ -454,9 +564,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const pauseSilently = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      stopSyncLoop();
+      if (vttSyncActiveRef.current) {
+        stopProgressTimer();
+      } else {
+        stopSyncLoop();
+      }
     }
-  }, [stopSyncLoop]);
+  }, [stopSyncLoop, stopProgressTimer]);
 
   const stop = useCallback(() => {
     // Abort any in-flight fetch
@@ -465,10 +579,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       abortRef.current = null;
     }
     stopSyncLoop();
+    stopProgressTimer();
     if (audioRef.current) {
       audioRef.current.pause();
+      removeAudioFromDOM();
       audioRef.current = null;
     }
+    vttSyncActiveRef.current = false;
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
     currentSentenceRef.current = null;
@@ -483,7 +600,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       progress: null,
       error: null,
     });
-  }, [stopSyncLoop]);
+  }, [stopSyncLoop, stopProgressTimer, removeAudioFromDOM]);
 
   // After seeking, manually update highlight/page state (RAF loop may be stopped when paused)
   const syncAfterSeek = useCallback(() => {
@@ -605,12 +722,19 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
       if (abortRef.current) {
         abortRef.current.abort();
         abortRef.current = null;
       }
       if (audioRef.current) {
         audioRef.current.pause();
+        if (audioInDOMRef.current && audioRef.current.parentNode) {
+          audioRef.current.parentNode.removeChild(audioRef.current);
+        }
         audioRef.current = null;
       }
     };
