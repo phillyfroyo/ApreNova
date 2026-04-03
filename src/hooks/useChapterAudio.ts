@@ -269,7 +269,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     stopProgressTimer();
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
-    lastPageSentenceIdxRef.current.clear();
     setMetadata(null);
     metadataRef.current = null;
 
