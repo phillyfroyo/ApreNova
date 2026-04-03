@@ -127,22 +127,20 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, []);
 
   // ---- Process active cues and fire callbacks ----
-  // Page changes are derived from sentence cues (each carries its page number).
-  // The `emitPageChange` flag controls whether onPageChange fires — set to
-  // false for on-demand sync (after resume/resetSentenceTracking) to avoid
-  // re-triggering page navigation loops, true for natural cuechange playback.
-  //
-  // CRITICAL: We only fire onPageChange when ALL active sentence cues belong
-  // to the new page — if any cue from the previous page is still active, that
-  // sentence is still audibly playing and the page turn must wait.
+  // Sentence highlights: fire onSentenceChange for the latest active sentence.
+  // Page turns: fire onPageChange only when a page's LAST sentence has EXITED
+  // activeCues (its endTime has passed), meaning the audio is truly done with
+  // that page. This prevents premature page turns caused by slight timing
+  // imprecision in Azure bookmark offsets.
+  const lastPageSentenceIdxRef = useRef<Map<number, number>>(new Map());
+
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
-    if (!activeCues || activeCues.length === 0) return;
+    if (!activeCues) return;
 
-    // First pass: collect all page numbers present in active sentence cues,
-    // and find the highest-index sentence cue for highlight tracking
-    const activePages = new Set<number>();
-    let latestSentencePayload: { t: string; i: number; p: number; l: number; lang: string } | null = null;
+    // Build a set of currently active sentence indices
+    const activeSentenceIndices = new Set<number>();
+    let latestPayload: { i: number; p: number; l: number; lang: string } | null = null;
 
     for (let i = 0; i < activeCues.length; i++) {
       const cue = activeCues[i] as VTTCue;
@@ -150,30 +148,50 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       try { payload = JSON.parse(cue.text); } catch { continue; }
 
       if (payload.t === "s" && payload.i !== undefined && payload.p !== undefined) {
-        activePages.add(payload.p);
-        if (!latestSentencePayload || payload.i > latestSentencePayload.i) {
-          latestSentencePayload = payload as { t: string; i: number; p: number; l: number; lang: string };
+        activeSentenceIndices.add(payload.i);
+        if (!latestPayload || payload.i > latestPayload.i) {
+          latestPayload = payload as { i: number; p: number; l: number; lang: string };
         }
       }
     }
 
-    // Update sentence highlight (always use the latest/highest-index sentence)
-    if (latestSentencePayload && latestSentencePayload.i !== lastSentenceIdxRef.current) {
-      lastSentenceIdxRef.current = latestSentencePayload.i;
-      const timing = metadataRef.current!.sentenceTimings[latestSentencePayload.i];
+    // Update sentence highlight
+    if (latestPayload && latestPayload.i !== lastSentenceIdxRef.current) {
+      lastSentenceIdxRef.current = latestPayload.i;
+      const timing = metadataRef.current!.sentenceTimings[latestPayload.i];
       currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Fire page change only when ALL active cues are on the new page
-    // (i.e., no cue from the previous page is still playing)
-    if (emitPageChange && latestSentencePayload) {
-      const newPage = latestSentencePayload.p;
-      if (newPage !== lastPageRef.current && activePages.size === 1) {
-        lastPageRef.current = newPage;
-        setState(prev => ({ ...prev, currentPage: newPage }));
-        optionsRef.current.onPageChange?.(newPage);
+    // Page turn detection: check if the last sentence of the current page
+    // has exited activeCues (meaning it finished playing)
+    if (emitPageChange && latestPayload) {
+      const currentPage = lastPageRef.current;
+
+      // Build the page→lastSentenceIdx map lazily on first use
+      if (lastPageSentenceIdxRef.current.size === 0 && metadataRef.current) {
+        const timings = metadataRef.current.sentenceTimings;
+        for (let i = 0; i < timings.length; i++) {
+          lastPageSentenceIdxRef.current.set(timings[i].pageNumber, i);
+        }
+      }
+
+      const lastSentenceOnCurrentPage = lastPageSentenceIdxRef.current.get(currentPage);
+      if (lastSentenceOnCurrentPage !== undefined) {
+        // Page turn: the last sentence of the current page is no longer active,
+        // and we have a sentence from a different (later) page active
+        const lastSentenceStillActive = activeSentenceIndices.has(lastSentenceOnCurrentPage);
+        if (!lastSentenceStillActive && latestPayload.p !== currentPage) {
+          lastPageRef.current = latestPayload.p;
+          setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
+          optionsRef.current.onPageChange?.(latestPayload.p);
+        }
+      } else if (latestPayload.p !== currentPage) {
+        // No page mapping yet (first page) — just follow the sentence's page
+        lastPageRef.current = latestPayload.p;
+        setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
+        optionsRef.current.onPageChange?.(latestPayload.p);
       }
     }
   }, []);
@@ -244,6 +262,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     stopProgressTimer();
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
+    lastPageSentenceIdxRef.current.clear();
     setMetadata(null);
     metadataRef.current = null;
 
