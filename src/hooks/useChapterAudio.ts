@@ -1,4 +1,7 @@
 // src/hooks/useChapterAudio.ts
+// Client-side chapter audio playback with WebVTT-based highlight sync.
+// The browser's native cuechange events drive sentence/page callbacks at
+// exact audio clock positions, eliminating RAF polling drift.
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -50,21 +53,18 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const metadataRef = useRef<ChapterAudioMetadata | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastTimeUpdateRef = useRef(0);
   const optionsRef = useRef(options);
   const lastSentenceIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
   const currentSentenceRef = useRef<SentenceTiming | null>(null);
-  const lookaheadRef = useRef(0.15); // default lookahead in seconds, can be adjusted externally
   optionsRef.current = options;
 
-  // VTT sync refs
-  const vttSyncActiveRef = useRef(false);
+  // VTT refs
   const audioInDOMRef = useRef(false);
+  const textTrackRef = useRef<TextTrack | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ---- Binary search for current sentence by time (used by RAF fallback + seeking) ----
+  // ---- Binary search for current sentence by time (used for seeking) ----
   const findSentenceAtTime = useCallback((time: number): number => {
     const timings = metadataRef.current?.sentenceTimings;
     if (!timings || timings.length === 0) return -1;
@@ -79,15 +79,14 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       } else if (time >= timings[mid].endTime) {
         lo = mid + 1;
       } else {
-        return mid; // time is within this sentence
+        return mid;
       }
     }
 
     // In a gap — return the next sentence so the highlight transitions
     // during silence rather than lagging into the next sentence's audio
     if (lo < timings.length) return lo;
-
-    return -1; // past the end
+    return -1;
   }, []);
 
   const findPageAtTime = useCallback((time: number): number => {
@@ -102,57 +101,45 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     return boundaries[0].pageNumber;
   }, []);
 
-  // ---- High-precision time sync via requestAnimationFrame (fallback when VTT unavailable) ----
-  const syncPlayback = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || audio.paused) {
-      rafRef.current = null;
-      return;
-    }
+  // ---- VTT cuechange handler (processes active cues) ----
+  const handleCueChange = useCallback((textTrack: TextTrack) => {
+    const activeCues = textTrack.activeCues;
+    if (!activeCues || activeCues.length === 0) return;
 
-    const currentTime = audio.currentTime;
+    for (let i = 0; i < activeCues.length; i++) {
+      const cue = activeCues[i] as VTTCue;
+      let payload: { t: string; i?: number; p?: number; l?: number; lang?: string };
+      try { payload = JSON.parse(cue.text); } catch { continue; }
 
-    // Throttle currentTime state updates to ~4x/sec (progress bar doesn't need 60fps)
-    const now = performance.now();
-    if (now - lastTimeUpdateRef.current > 250) {
-      lastTimeUpdateRef.current = now;
-      setState(prev => ({ ...prev, currentTime }));
-    }
-
-    const lookahead = lookaheadRef.current;
-    const sentenceIdx = findSentenceAtTime(currentTime + lookahead);
-    if (sentenceIdx !== -1 && sentenceIdx !== lastSentenceIdxRef.current) {
-      lastSentenceIdxRef.current = sentenceIdx;
-      const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
-      currentSentenceRef.current = timing;
-      setState(prev => ({ ...prev, currentSentence: timing }));
-      optionsRef.current.onSentenceChange?.(timing);
-    }
-
-    // Find current page
-    const page = findPageAtTime(currentTime);
-    if (page !== lastPageRef.current) {
-      lastPageRef.current = page;
-      setState(prev => ({ ...prev, currentPage: page }));
-      optionsRef.current.onPageChange?.(page);
-    }
-
-    rafRef.current = requestAnimationFrame(syncPlayback);
-  }, [findSentenceAtTime, findPageAtTime]);
-
-  const startSyncLoop = useCallback(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(syncPlayback);
-  }, [syncPlayback]);
-
-  const stopSyncLoop = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+      if (payload.t === "s" && payload.i !== undefined) {
+        if (payload.i !== lastSentenceIdxRef.current) {
+          lastSentenceIdxRef.current = payload.i;
+          const timing = metadataRef.current!.sentenceTimings[payload.i];
+          currentSentenceRef.current = timing;
+          setState(prev => ({ ...prev, currentSentence: timing }));
+          optionsRef.current.onSentenceChange?.(timing);
+        }
+      } else if (payload.t === "p" && payload.p !== undefined) {
+        if (payload.p !== lastPageRef.current) {
+          lastPageRef.current = payload.p;
+          setState(prev => ({ ...prev, currentPage: payload.p! }));
+          optionsRef.current.onPageChange?.(payload.p);
+        }
+      }
     }
   }, []);
 
-  // ---- Progress timer for VTT mode (lightweight, ~4x/sec for progress bar) ----
+  // ---- Sync from active cues on demand ----
+  // Called after play/resume and after resetSentenceTracking to catch
+  // already-active cues that won't trigger a new cuechange event.
+  const syncFromActiveCues = useCallback(() => {
+    const track = textTrackRef.current;
+    if (track) {
+      handleCueChange(track);
+    }
+  }, [handleCueChange]);
+
+  // ---- Progress timer (~4x/sec for progress bar) ----
   const startProgressTimer = useCallback(() => {
     if (progressTimerRef.current) return;
     progressTimerRef.current = setInterval(() => {
@@ -169,7 +156,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, []);
 
-  // ---- Remove audio element from DOM if it was appended for VTT ----
+  // ---- Remove audio element from DOM ----
   const removeAudioFromDOM = useCallback(() => {
     if (audioInDOMRef.current && audioRef.current && audioRef.current.parentNode) {
       audioRef.current.parentNode.removeChild(audioRef.current);
@@ -184,11 +171,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   // ---- Get current sentence position (for resuming after variant reload) ----
   const getCurrentPosition = useCallback((): { pageNumber: number; lineIndex: number } | null => {
-    // Prefer the tracked ref (set by the sync loop)
     const st = currentSentenceRef.current;
     if (st) return { pageNumber: st.pageNumber, lineIndex: st.lineIndex };
 
-    // Fallback: derive position from current audio time + metadata
     const time = audioRef.current?.currentTime ?? 0;
     const timings = metadataRef.current?.sentenceTimings;
     if (time > 0 && timings && timings.length > 0) {
@@ -197,7 +182,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         return { pageNumber: timings[idx].pageNumber, lineIndex: timings[idx].lineIndex };
       }
     }
-
     return null;
   }, [findSentenceAtTime]);
 
@@ -214,7 +198,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       removeAudioFromDOM();
       audioRef.current = null;
     }
-    vttSyncActiveRef.current = false;
+    textTrackRef.current = null;
     stopProgressTimer();
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
@@ -235,8 +219,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     });
 
     // Safety timeout — scales once we know chapter size from first progress event.
-    // Starts at 90s (covers cache check + first chunk for long chapters), then
-    // resets to 30s base + 2s per segment once sentencesTotal is known.
     const loadStartTime = Date.now();
     let timeoutMs = 90_000;
     const abortOnTimeout = () => {
@@ -254,13 +236,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     let timeoutId = setTimeout(abortOnTimeout, timeoutMs);
 
     // Artificial progress: tick sentencesComplete toward ~50% while Azure synthesizes.
-    // Kept conservative so it jumps forward to 100% on completion rather than stalling near the top.
     let progressIntervalId: ReturnType<typeof setInterval> | null = null;
     let simulatedComplete = 0;
     const startSimulatedProgress = (total: number) => {
       if (progressIntervalId) return;
       const target = Math.floor(total * 0.5);
-      // Spread ticks evenly across estimated wait time (rough: 1s per sentence)
       const intervalMs = Math.max(500, (total * 1_000) / Math.max(target, 1));
       progressIntervalId = setInterval(() => {
         if (simulatedComplete >= target) {
@@ -311,37 +291,31 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // keep incomplete line
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.trim()) continue;
           const data = JSON.parse(line);
 
           if (data.type === "progress") {
-            // First progress event: scale timeout and start simulated counter
             if (data.sentencesTotal && data.sentencesComplete === 0) {
               clearTimeout(timeoutId);
-              // Scale timeout: 60s base + 3s per segment, no cap.
-              // Novel chapters can have 300+ segments; slow/bilingual variants need extra time.
               timeoutMs = 60_000 + data.sentencesTotal * 3_000;
               console.log(`[ChapterAudio] ${data.sentencesTotal} segments — timeout set to ${Math.round(timeoutMs / 1000)}s`);
               timeoutId = setTimeout(abortOnTimeout, timeoutMs);
               startSimulatedProgress(data.sentencesTotal);
-              // Set initial state — after this, simulated interval drives progress
               setState(prev => ({
                 ...prev,
                 status: "generating",
                 progress: { status: "generating", sentencesComplete: 0, sentencesTotal: data.sentencesTotal },
               }));
             }
-            // Ignore subsequent server progress events — simulated progress is driving the UI
           } else if (data.type === "complete") {
             stopSimulatedProgress();
             audioUrl = data.audioUrl;
             vttUrl = data.vttUrl ?? null;
             chapterMetadata = data.metadata;
             wasCached = !!data.cached;
-            // Snap progress to 100% immediately
             if (data.metadata?.totalSentences) {
               const total = data.metadata.totalSentences;
               setState(prev => ({
@@ -362,42 +336,35 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         throw new Error("No audio URL received from server");
       }
 
-      // Check if cancelled during generation
       if (abortController.signal.aborted) return;
 
       // Store metadata
       setMetadata(chapterMetadata);
       metadataRef.current = chapterMetadata;
 
-      // Create audio element and start playback
+      // Create audio element, append to DOM for <track> support
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
+      audio.style.display = "none";
+      document.body.appendChild(audio);
+      audioInDOMRef.current = true;
 
       audio.addEventListener("loadedmetadata", () => {
         setState(prev => ({ ...prev, duration: audio.duration }));
       });
       audio.addEventListener("ended", () => {
-        stopSyncLoop();
         stopProgressTimer();
         setState(prev => ({ ...prev, status: "finished", currentSentence: null }));
         optionsRef.current.onPlaybackComplete?.();
       });
       audio.addEventListener("error", () => {
-        stopSyncLoop();
         stopProgressTimer();
         setState(prev => ({ ...prev, status: "error", error: "Audio playback failed" }));
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
 
-      // ---- Attempt VTT-based sync (browser-native cuechange) ----
-      let useVTTSync = false;
-
+      // ---- Attach VTT track for browser-native cuechange sync ----
       if (vttUrl) {
-        // Append audio to DOM so <track> element works
-        audio.style.display = "none";
-        document.body.appendChild(audio);
-        audioInDOMRef.current = true;
-
         const trackEl = document.createElement("track");
         trackEl.kind = "metadata";
         trackEl.label = "sentence-sync";
@@ -405,54 +372,36 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         trackEl.default = true;
         audio.appendChild(trackEl);
 
-        // Wait for track to load (with timeout fallback to RAF)
+        // Wait for track to load
         await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => resolve(), 2000);
+          const timeout = setTimeout(() => {
+            console.warn("[ChapterAudio] VTT track load timed out after 3s");
+            resolve();
+          }, 3000);
           trackEl.addEventListener("load", () => { clearTimeout(timeout); resolve(); }, { once: true });
-          trackEl.addEventListener("error", () => { clearTimeout(timeout); resolve(); }, { once: true });
+          trackEl.addEventListener("error", (e) => {
+            clearTimeout(timeout);
+            console.warn("[ChapterAudio] VTT track load error:", e);
+            resolve();
+          }, { once: true });
         });
 
         const textTrack = audio.textTracks[0];
         if (textTrack && textTrack.cues) {
-          useVTTSync = true;
-          textTrack.mode = "hidden"; // must be 'hidden' (not 'disabled') for cuechange to fire
+          textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
+          textTrackRef.current = textTrack;
 
-          textTrack.addEventListener("cuechange", () => {
-            const activeCues = textTrack.activeCues;
-            if (!activeCues || activeCues.length === 0) return;
-
-            for (let i = 0; i < activeCues.length; i++) {
-              const cue = activeCues[i] as VTTCue;
-              let payload: { t: string; i?: number; p?: number; l?: number; lang?: string };
-              try { payload = JSON.parse(cue.text); } catch { continue; }
-
-              if (payload.t === "s" && payload.i !== undefined) {
-                // Sentence cue
-                if (payload.i !== lastSentenceIdxRef.current) {
-                  lastSentenceIdxRef.current = payload.i;
-                  const timing = metadataRef.current!.sentenceTimings[payload.i];
-                  currentSentenceRef.current = timing;
-                  setState(prev => ({ ...prev, currentSentence: timing }));
-                  optionsRef.current.onSentenceChange?.(timing);
-                }
-              } else if (payload.t === "p" && payload.p !== undefined) {
-                // Page boundary cue
-                if (payload.p !== lastPageRef.current) {
-                  lastPageRef.current = payload.p;
-                  setState(prev => ({ ...prev, currentPage: payload.p! }));
-                  optionsRef.current.onPageChange?.(payload.p);
-                }
-              }
-            }
-          });
+          textTrack.addEventListener("cuechange", () => handleCueChange(textTrack));
+          console.log(`[ChapterAudio] VTT sync active — ${textTrack.cues.length} cues loaded`);
+        } else {
+          console.warn("[ChapterAudio] VTT track loaded but no cues available");
         }
+      } else {
+        console.warn("[ChapterAudio] No VTT URL — highlights will only work via seeking");
       }
 
-      vttSyncActiveRef.current = useVTTSync;
-
-      // Seek to initial position before playing (e.g., resuming from bookmark or page start)
+      // Seek to initial position before playing
       if (request.seekToPosition && chapterMetadata) {
-        // Variant reload: find the same sentence by content position (pageNumber + lineIndex)
         const target = chapterMetadata.sentenceTimings.find(
           t => t.pageNumber === request.seekToPosition!.pageNumber && t.lineIndex === request.seekToPosition!.lineIndex
         );
@@ -462,7 +411,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       } else if (request.initialSeekTime && request.initialSeekTime > 0) {
         audio.currentTime = request.initialSeekTime;
       } else if (request.initialPage && chapterMetadata) {
-        // Seek to the start of a specific page
         const pageBoundary = chapterMetadata.pageBoundaries.find(b => b.pageNumber === request.initialPage);
         if (pageBoundary && pageBoundary.startTime > 0) {
           audio.currentTime = pageBoundary.startTime;
@@ -481,7 +429,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
       // Pre-fire the first sentence highlight before audio starts
       const startTime = audio.currentTime;
-      const firstSentenceIdx = findSentenceAtTime(startTime + (useVTTSync ? 0 : lookaheadRef.current));
+      const firstSentenceIdx = findSentenceAtTime(startTime);
       if (firstSentenceIdx !== -1) {
         lastSentenceIdxRef.current = firstSentenceIdx;
         const timing = chapterMetadata!.sentenceTimings[firstSentenceIdx];
@@ -490,13 +438,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
 
       if (wasCached) {
-        // Audio was already in Cloudflare — skip modal and play immediately
         await audio.play();
-        if (useVTTSync) {
-          startProgressTimer();
-        } else {
-          startSyncLoop();
-        }
+        startProgressTimer();
+        // Sync from active cues immediately in case cuechange doesn't fire for already-active cue
+        requestAnimationFrame(() => syncFromActiveCues());
         setState(prev => ({
           ...prev,
           status: "playing",
@@ -505,7 +450,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           currentPage: startPage,
         }));
       } else {
-        // Freshly generated — snap progress to 100%, wait for "Start Listening"
         const total = chapterMetadata!.totalSentences;
         setState(prev => ({
           ...prev,
@@ -519,7 +463,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     } catch (err: any) {
       clearTimeout(timeoutId);
       stopSimulatedProgress();
-      // Ignore abort errors — these are intentional cancellations (user cancel or timeout already handled)
       if (err.name === "AbortError") return;
 
       setState(prev => ({
@@ -530,62 +473,48 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
       optionsRef.current.onError?.(err instanceof Error ? err : new Error(err.message));
     }
-  }, [startSyncLoop, stopSyncLoop, startProgressTimer, stopProgressTimer, removeAudioFromDOM]);
+  }, [startProgressTimer, stopProgressTimer, removeAudioFromDOM, findSentenceAtTime, handleCueChange, syncFromActiveCues]);
 
   // ---- Playback controls ----
 
   const play = useCallback(() => {
     if (audioRef.current && !audioRef.current.ended) {
       audioRef.current.play();
-      if (vttSyncActiveRef.current) {
-        startProgressTimer();
-      } else {
-        startSyncLoop();
-      }
+      startProgressTimer();
       setState(prev => ({ ...prev, status: "playing" }));
+      // Sync from active cues after resume — cuechange won't re-fire for already-active cues
+      requestAnimationFrame(() => syncFromActiveCues());
     }
-  }, [startSyncLoop, startProgressTimer]);
+  }, [startProgressTimer, syncFromActiveCues]);
 
   const pause = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      if (vttSyncActiveRef.current) {
-        stopProgressTimer();
-      } else {
-        stopSyncLoop();
-      }
+      stopProgressTimer();
       setState(prev => ({ ...prev, status: "paused" }));
     }
-  }, [stopSyncLoop, stopProgressTimer]);
+  }, [stopProgressTimer]);
 
-  // Pause audio and stop sync loop without setting status — used during page
-  // navigation so the provider can go straight to "navigating" without a
-  // visible "paused" flash.
+  // Pause without setting status — used during page navigation
   const pauseSilently = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
-      if (vttSyncActiveRef.current) {
-        stopProgressTimer();
-      } else {
-        stopSyncLoop();
-      }
+      stopProgressTimer();
     }
-  }, [stopSyncLoop, stopProgressTimer]);
+  }, [stopProgressTimer]);
 
   const stop = useCallback(() => {
-    // Abort any in-flight fetch
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
     }
-    stopSyncLoop();
     stopProgressTimer();
     if (audioRef.current) {
       audioRef.current.pause();
       removeAudioFromDOM();
       audioRef.current = null;
     }
-    vttSyncActiveRef.current = false;
+    textTrackRef.current = null;
     lastSentenceIdxRef.current = -1;
     lastPageRef.current = -1;
     currentSentenceRef.current = null;
@@ -600,9 +529,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       progress: null,
       error: null,
     });
-  }, [stopSyncLoop, stopProgressTimer, removeAudioFromDOM]);
+  }, [stopProgressTimer, removeAudioFromDOM]);
 
-  // After seeking, manually update highlight/page state (RAF loop may be stopped when paused)
+  // After seeking, update highlight/page state immediately (cuechange will confirm)
   const syncAfterSeek = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -610,10 +539,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const currentTime = audio.currentTime;
     setState(prev => ({ ...prev, currentTime }));
 
-    const sentenceIdx = findSentenceAtTime(currentTime + 0.4); // same lookahead
+    const sentenceIdx = findSentenceAtTime(currentTime);
     if (sentenceIdx !== -1) {
       lastSentenceIdxRef.current = sentenceIdx;
       const timing = metadataRef.current!.sentenceTimings[sentenceIdx];
+      currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
@@ -632,8 +562,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       syncAfterSeek();
     }
   }, [syncAfterSeek]);
-
-  // ---- Sentence-level seeking ----
 
   const seekToSentence = useCallback((pageNumber: number, lineIndex: number) => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -674,7 +602,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (!timings || !audioRef.current) return;
 
     const currentIdx = lastSentenceIdxRef.current;
-    // If we're more than 2s into current sentence, restart it; otherwise go to previous
     const currentTiming = currentIdx >= 0 ? timings[currentIdx] : null;
     if (currentTiming && audioRef.current.currentTime - currentTiming.startTime > 2) {
       audioRef.current.currentTime = currentTiming.startTime;
@@ -709,19 +636,17 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     syncAfterSeek();
   }, [syncAfterSeek]);
 
-  // Reset sentence tracking so the next sync fires onSentenceChange even if
-  // the sentence index hasn't changed (e.g., after page navigation)
+  // Reset sentence tracking so the next cuechange fires onSentenceChange
+  // even if the same sentence index is active (e.g., after page navigation)
   const resetSentenceTracking = useCallback(() => {
     lastSentenceIdxRef.current = -1;
-  }, []);
+    // Immediately sync from active cues to pick up the current sentence
+    syncFromActiveCues();
+  }, [syncFromActiveCues]);
 
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
       if (progressTimerRef.current) {
         clearInterval(progressTimerRef.current);
         progressTimerRef.current = null;
@@ -758,6 +683,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     resetSentenceTracking,
     getCurrentPosition,
     getCurrentTime,
-    setLookahead: (sec: number) => { lookaheadRef.current = sec; },
+    setLookahead: (_sec: number) => {}, // no-op — VTT handles timing natively
   };
 }
