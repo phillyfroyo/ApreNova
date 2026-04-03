@@ -151,10 +151,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // the page navigates while the last sentence is still audibly playing.
   const pageChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Delay before firing onPageChange after detecting the cue transition.
-  // This compensates for the gap between currentTime and audible output.
-  const PAGE_TURN_DELAY_MS = 1800;
-
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || !metadataRef.current) return;
@@ -182,25 +178,19 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn: delayed to let the audio output pipeline finish playing
-    // the current page's last sentence. audio.currentTime runs ~1.5-2s
-    // ahead of audible output. The provider's onPageChange handler will
-    // pause the audio and navigate — we just delay when it's called.
+    // Page turn: fire immediately. The provider will pause audio (killing
+    // any buffered next-page content), navigate, then registerPageContent
+    // will seek to the new page's start and resume. The seek discards the
+    // stale audio buffer so there's no bleed from the next page.
     if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
       if (pageChangeTimerRef.current) {
         clearTimeout(pageChangeTimerRef.current);
         pageChangeTimerRef.current = null;
       }
 
-      const newPage = latestPayload.p;
-      pageChangeTimerRef.current = setTimeout(() => {
-        pageChangeTimerRef.current = null;
-        if (audioRef.current && lastPageRef.current !== newPage) {
-          lastPageRef.current = newPage;
-          setState(prev => ({ ...prev, currentPage: newPage }));
-          optionsRef.current.onPageChange?.(newPage);
-        }
-      }, PAGE_TURN_DELAY_MS);
+      lastPageRef.current = latestPayload.p;
+      setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
+      optionsRef.current.onPageChange?.(latestPayload.p);
     }
   }, []);
 

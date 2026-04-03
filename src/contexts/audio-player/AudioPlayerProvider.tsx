@@ -1027,6 +1027,13 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         // Delay resume by one frame so the "navigating" spinner paints before clearing.
         requestAnimationFrame(() => {
           if (nav.shouldResume) {
+            // Seek to the new page's start — audio.currentTime may have
+            // advanced past this point due to decoder pipeline buffering.
+            // The seek discards stale buffered audio so playback starts
+            // cleanly at the first sentence of the new page.
+            if (firstSentence) {
+              chapterAudio.seekToTime(firstSentence.startTime);
+            }
             setStatusOverride("playing");
             chapterAudio.play();
           } else {
