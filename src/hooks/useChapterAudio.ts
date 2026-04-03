@@ -43,29 +43,40 @@ interface UseChapterAudioOptions {
  * Each sentence gets a cue spanning its duration. Page changes are detected
  * from the page number embedded in each sentence cue.
  *
- * Cue timing is refined using word-level timings from Azure:
- * - startTime: first word's startTime (when speech actually begins, after
- *   any inter-sentence <break> silence)
- * - endTime: last word's endTime (when speech actually ends)
+ * Cue timing strategy:
+ * - startTime: first word's startTime (when speech begins, after any break)
+ * - endTime: next sentence's first word startTime (keeps cues contiguous)
  *
- * This ensures highlights activate when speech starts and deactivate when
- * speech ends, rather than at SSML bookmark positions which include silence.
+ * Cues MUST be contiguous (no gaps) because page turn detection relies on
+ * the previous page's last cue exiting activeCues. A gap between cues would
+ * cause the cue to exit early, triggering a premature page turn while audio
+ * is still in the inter-sentence silence.
  */
 function buildCuesFromMetadata(
   track: TextTrack,
   metadata: ChapterAudioMetadata
 ): void {
-  for (let i = 0; i < metadata.sentenceTimings.length; i++) {
-    const st = metadata.sentenceTimings[i];
+  const timings = metadata.sentenceTimings;
 
+  for (let i = 0; i < timings.length; i++) {
+    const st = timings[i];
+
+    // Start: when speech actually begins (first word), fall back to bookmark
     let startTime = st.startTime;
-    let endTime = st.endTime;
-
     if (st.wordTimings && st.wordTimings.length > 0) {
-      // First word startTime = when speech actually begins (after break)
       startTime = st.wordTimings[0].startTime;
-      // Last word endTime = when speech actually ends
-      endTime = st.wordTimings[st.wordTimings.length - 1].endTime;
+    }
+
+    // End: next sentence's speech start (contiguous), or this sentence's
+    // bookmark endTime for the last sentence in the chapter
+    let endTime = st.endTime;
+    if (i < timings.length - 1) {
+      const next = timings[i + 1];
+      if (next.wordTimings && next.wordTimings.length > 0) {
+        endTime = next.wordTimings[0].startTime;
+      } else {
+        endTime = next.startTime;
+      }
     }
 
     const cue = new VTTCue(
