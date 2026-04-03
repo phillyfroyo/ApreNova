@@ -324,8 +324,12 @@ export async function generateChapterAudio(
     }
 
     console.log(`[chapter-audio] chunk ${c+1}/${chunks.length}: bookmarkDuration=${result.totalDuration.toFixed(3)}s bufferDuration=${result.bufferDuration.toFixed(3)}s diff=${(result.bufferDuration - result.totalDuration).toFixed(3)}s timeOffset=${timeOffset.toFixed(3)}s`);
-    // Use buffer-based duration for offset accumulation
-    timeOffset += result.bufferDuration;
+    // Use bookmark-based duration for offset accumulation. This matches
+    // the synthesis engine's actual timeline. Buffer-based duration
+    // (byte-count / bitrate) includes MP3 frame padding that doesn't
+    // correspond to audible content, causing cumulative timing drift
+    // in multi-chunk chapters.
+    timeOffset += result.totalDuration;
   }
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
