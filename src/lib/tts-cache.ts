@@ -331,9 +331,7 @@ export class TTSCacheService {
     return {
       audioKey: `${cacheKey}.mp3`,
       metadataKey: `${cacheKey}.meta.json`,
-      vttKey: `${cacheKey}.vtt`,
       publicUrl: `${R2_PUBLIC_URL}/${cacheKey}.mp3?v=${Date.now()}`,
-      vttPublicUrl: `${R2_PUBLIC_URL}/${cacheKey}.vtt`,
     };
   }
 
@@ -353,7 +351,7 @@ export class TTSCacheService {
   public async getChapterCached(request: ChapterAudioRequest): Promise<ChapterAudioResponse | null> {
     try {
       const cacheKey = this.getChapterCacheKey(request);
-      const { metadataKey, publicUrl, vttKey, vttPublicUrl } = this.getChapterR2Keys(cacheKey);
+      const { metadataKey, publicUrl } = this.getChapterR2Keys(cacheKey);
 
       const metaResponse = await this.client.send(
         new GetObjectCommand({ Bucket: BUCKET, Key: metadataKey })
@@ -361,31 +359,23 @@ export class TTSCacheService {
       const metaBody = await metaResponse.Body?.transformToString();
       if (!metaBody) return null;
 
-      // Check for VTT existence (non-blocking — old cache entries won't have one)
-      let vttUrl: string | null = null;
-      try {
-        await this.client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: vttKey }));
-        vttUrl = vttPublicUrl;
-      } catch { /* VTT not available — old cache entry */ }
-
       const metadata: ChapterAudioMetadata = JSON.parse(metaBody);
-      return { audioUrl: publicUrl, vttUrl, metadata, cached: true };
+      return { audioUrl: publicUrl, metadata, cached: true };
     } catch {
       return null;
     }
   }
 
-  /** Save concatenated chapter audio + metadata (and optional VTT) to R2 */
+  /** Save concatenated chapter audio + metadata to R2 */
   public async saveChapterAudio(
     request: ChapterAudioRequest,
     audioBuffer: Buffer,
-    metadata: ChapterAudioMetadata,
-    vttContent?: string
-  ): Promise<{ audioUrl: string; vttUrl: string | null }> {
+    metadata: ChapterAudioMetadata
+  ): Promise<string> {
     const cacheKey = this.getChapterCacheKey(request);
-    const { audioKey, metadataKey, vttKey, publicUrl, vttPublicUrl } = this.getChapterR2Keys(cacheKey);
+    const { audioKey, metadataKey, publicUrl } = this.getChapterR2Keys(cacheKey);
 
-    const uploads: Promise<unknown>[] = [
+    await Promise.all([
       this.client.send(new PutObjectCommand({
         Bucket: BUCKET,
         Key: audioKey,
@@ -400,23 +390,9 @@ export class TTSCacheService {
         ContentType: 'application/json',
         CacheControl: 'public, max-age=31536000, immutable',
       })),
-    ];
+    ]);
 
-    if (vttContent) {
-      uploads.push(
-        this.client.send(new PutObjectCommand({
-          Bucket: BUCKET,
-          Key: vttKey,
-          Body: vttContent,
-          ContentType: 'text/vtt',
-          CacheControl: 'public, max-age=31536000, immutable',
-        }))
-      );
-    }
-
-    await Promise.all(uploads);
-
-    return { audioUrl: publicUrl, vttUrl: vttContent ? vttPublicUrl : null };
+    return publicUrl;
   }
 
   /**

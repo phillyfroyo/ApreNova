@@ -26,7 +26,6 @@ export interface ChapterAudioRequest {
 
 export interface ChapterAudioResponse {
   audioUrl: string;
-  vttUrl?: string | null;
   metadata: ChapterAudioMetadata;
   cached: boolean;
 }

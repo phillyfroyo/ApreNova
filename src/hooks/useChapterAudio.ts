@@ -1,7 +1,8 @@
 // src/hooks/useChapterAudio.ts
-// Client-side chapter audio playback with WebVTT-based highlight sync.
-// The browser's native cuechange events drive sentence/page callbacks at
-// exact audio clock positions, eliminating RAF polling drift.
+// Client-side chapter audio playback with programmatic TextTrack sync.
+// Builds VTTCue objects from sentenceTimings metadata and uses the browser's
+// native cuechange events for highlight synchronization — zero network
+// dependencies, no CORS, no VTT file needed.
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -34,6 +35,43 @@ interface UseChapterAudioOptions {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Build VTTCue objects from chapter metadata and add them to a TextTrack.
+ * Each sentence gets a cue spanning its duration; each page boundary gets
+ * a point-in-time cue (1ms) so cuechange fires on page transitions.
+ */
+function buildCuesFromMetadata(
+  track: TextTrack,
+  metadata: ChapterAudioMetadata
+): void {
+  // Sentence cues
+  for (let i = 0; i < metadata.sentenceTimings.length; i++) {
+    const st = metadata.sentenceTimings[i];
+    const cue = new VTTCue(
+      st.startTime,
+      st.endTime,
+      JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
+    );
+    cue.id = `s-${i}`;
+    track.addCue(cue);
+  }
+
+  // Page boundary cues (point-in-time: 1ms)
+  for (const pb of metadata.pageBoundaries) {
+    const cue = new VTTCue(
+      pb.startTime,
+      pb.startTime + 0.001,
+      JSON.stringify({ t: "p", p: pb.pageNumber })
+    );
+    cue.id = `page-${pb.pageNumber}`;
+    track.addCue(cue);
+  }
+}
+
+// ============================================================================
 // Hook
 // ============================================================================
 
@@ -59,9 +97,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const currentSentenceRef = useRef<SentenceTiming | null>(null);
   optionsRef.current = options;
 
-  // VTT refs
-  const audioInDOMRef = useRef(false);
+  // TextTrack ref for reading active cues on demand
   const textTrackRef = useRef<TextTrack | null>(null);
+  const audioInDOMRef = useRef(false);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ---- Binary search for current sentence by time (used for seeking) ----
@@ -83,8 +121,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }
     }
 
-    // In a gap — return the next sentence so the highlight transitions
-    // during silence rather than lagging into the next sentence's audio
     if (lo < timings.length) return lo;
     return -1;
   }, []);
@@ -101,7 +137,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     return boundaries[0].pageNumber;
   }, []);
 
-  // ---- VTT cuechange handler (processes active cues) ----
+  // ---- Process active cues and fire callbacks ----
   const handleCueChange = useCallback((textTrack: TextTrack) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || activeCues.length === 0) return;
@@ -129,14 +165,12 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, []);
 
-  // ---- Sync from active cues on demand ----
-  // Called after play/resume and after resetSentenceTracking to catch
-  // already-active cues that won't trigger a new cuechange event.
+  // Read active cues on demand — covers cases where cuechange won't fire
+  // (e.g., after play/resume when a cue is already active, or after
+  // resetSentenceTracking resets the dedup guard)
   const syncFromActiveCues = useCallback(() => {
     const track = textTrackRef.current;
-    if (track) {
-      handleCueChange(track);
-    }
+    if (track) handleCueChange(track);
   }, [handleCueChange]);
 
   // ---- Progress timer (~4x/sec for progress bar) ----
@@ -164,12 +198,12 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     audioInDOMRef.current = false;
   }, []);
 
-  // ---- Get current playback time (for resuming after variant reload) ----
+  // ---- Get current playback time ----
   const getCurrentTime = useCallback((): number => {
     return audioRef.current?.currentTime ?? 0;
   }, []);
 
-  // ---- Get current sentence position (for resuming after variant reload) ----
+  // ---- Get current sentence position ----
   const getCurrentPosition = useCallback((): { pageNumber: number; lineIndex: number } | null => {
     const st = currentSentenceRef.current;
     if (st) return { pageNumber: st.pageNumber, lineIndex: st.lineIndex };
@@ -187,10 +221,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   // ---- Load chapter audio and start playback ----
   const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number; seekToPosition?: { pageNumber: number; lineIndex: number } }) => {
-    // Abort any in-flight request
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    if (abortRef.current) abortRef.current.abort();
 
     // Stop any existing audio
     if (audioRef.current) {
@@ -218,7 +249,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       error: null,
     });
 
-    // Safety timeout — scales once we know chapter size from first progress event.
     const loadStartTime = Date.now();
     let timeoutMs = 90_000;
     const abortOnTimeout = () => {
@@ -235,7 +265,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     };
     let timeoutId = setTimeout(abortOnTimeout, timeoutMs);
 
-    // Artificial progress: tick sentencesComplete toward ~50% while Azure synthesizes.
     let progressIntervalId: ReturnType<typeof setInterval> | null = null;
     let simulatedComplete = 0;
     const startSimulatedProgress = (total: number) => {
@@ -263,7 +292,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     };
 
     try {
-      // Fetch chapter audio with streaming progress
       const response = await fetch("/api/azure-tts/chapter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -276,11 +304,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         throw new Error(err.error || `HTTP ${response.status}`);
       }
 
-      // Read NDJSON stream
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let audioUrl = "";
-      let vttUrl: string | null = null;
       let chapterMetadata: ChapterAudioMetadata | null = null;
       let wasCached = false;
       let buffer = "";
@@ -313,7 +339,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           } else if (data.type === "complete") {
             stopSimulatedProgress();
             audioUrl = data.audioUrl;
-            vttUrl = data.vttUrl ?? null;
             chapterMetadata = data.metadata;
             wasCached = !!data.cached;
             if (data.metadata?.totalSentences) {
@@ -342,7 +367,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       setMetadata(chapterMetadata);
       metadataRef.current = chapterMetadata;
 
-      // Create audio element, append to DOM for <track> support
+      // Create audio element, append to DOM for TextTrack support
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       audio.style.display = "none";
@@ -363,42 +388,16 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         optionsRef.current.onError?.(new Error("Audio playback failed"));
       });
 
-      // ---- Attach VTT track for browser-native cuechange sync ----
-      if (vttUrl) {
-        const trackEl = document.createElement("track");
-        trackEl.kind = "metadata";
-        trackEl.label = "sentence-sync";
-        trackEl.src = vttUrl;
-        trackEl.default = true;
-        audio.appendChild(trackEl);
+      // ---- Build TextTrack cues programmatically from metadata ----
+      // No VTT file, no CORS, no network request — cues are built from
+      // the sentenceTimings/pageBoundaries we already have.
+      const textTrack = audio.addTextTrack("metadata", "sentence-sync", "en");
+      textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
+      buildCuesFromMetadata(textTrack, chapterMetadata);
+      textTrackRef.current = textTrack;
 
-        // Wait for track to load
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            console.warn("[ChapterAudio] VTT track load timed out after 3s");
-            resolve();
-          }, 3000);
-          trackEl.addEventListener("load", () => { clearTimeout(timeout); resolve(); }, { once: true });
-          trackEl.addEventListener("error", (e) => {
-            clearTimeout(timeout);
-            console.warn("[ChapterAudio] VTT track load error:", e);
-            resolve();
-          }, { once: true });
-        });
-
-        const textTrack = audio.textTracks[0];
-        if (textTrack && textTrack.cues) {
-          textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
-          textTrackRef.current = textTrack;
-
-          textTrack.addEventListener("cuechange", () => handleCueChange(textTrack));
-          console.log(`[ChapterAudio] VTT sync active — ${textTrack.cues.length} cues loaded`);
-        } else {
-          console.warn("[ChapterAudio] VTT track loaded but no cues available");
-        }
-      } else {
-        console.warn("[ChapterAudio] No VTT URL — highlights will only work via seeking");
-      }
+      textTrack.addEventListener("cuechange", () => handleCueChange(textTrack));
+      console.log(`[ChapterAudio] TextTrack sync active — ${textTrack.cues?.length ?? 0} cues built from metadata`);
 
       // Seek to initial position before playing
       if (request.seekToPosition && chapterMetadata) {
@@ -440,7 +439,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       if (wasCached) {
         await audio.play();
         startProgressTimer();
-        // Sync from active cues immediately in case cuechange doesn't fire for already-active cue
+        // Sync from active cues immediately — cuechange won't fire for already-active cues
         requestAnimationFrame(() => syncFromActiveCues());
         setState(prev => ({
           ...prev,
@@ -495,7 +494,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, [stopProgressTimer]);
 
-  // Pause without setting status — used during page navigation
   const pauseSilently = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -640,7 +638,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   // even if the same sentence index is active (e.g., after page navigation)
   const resetSentenceTracking = useCallback(() => {
     lastSentenceIdxRef.current = -1;
-    // Immediately sync from active cues to pick up the current sentence
     syncFromActiveCues();
   }, [syncFromActiveCues]);
 
@@ -683,6 +680,6 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     resetSentenceTracking,
     getCurrentPosition,
     getCurrentTime,
-    setLookahead: (_sec: number) => {}, // no-op — VTT handles timing natively
+    setLookahead: (_sec: number) => {}, // no-op — TextTrack handles timing natively
   };
 }

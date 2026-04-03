@@ -6,7 +6,6 @@
 import { getAzureSpeechService, VOICE_CONFIG, NATIVE_VOICE, SPEED_RATES } from "./azure-speech";
 import type { ChapterSSMLSegment } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
-import { generateVTT } from "./vtt-generator";
 import { prisma } from "@/lib/prisma";
 import { toFolderName } from "@/lib/cefr";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
@@ -373,14 +372,11 @@ export async function generateChapterAudio(
     },
   }).catch((err) => console.error("[chapter-audio] Failed to record generation stats:", err));
 
-  // 8. Generate WebVTT for browser-native highlight sync
-  const vttContent = generateVTT(allSentenceTimings, pageBoundaries);
-
-  // 9. Upload concatenated audio + VTT to R2
+  // 8. Upload concatenated audio to R2
   onProgress?.({ status: "uploading", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
-  const { audioUrl, vttUrl } = await cache.saveChapterAudio(request, concatenatedBuffer, metadata, vttContent);
+  const audioUrl = await cache.saveChapterAudio(request, concatenatedBuffer, metadata);
 
   onProgress?.({ status: "complete", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 
-  return { audioUrl, vttUrl, metadata, cached: false };
+  return { audioUrl, metadata, cached: false };
 }
