@@ -128,9 +128,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
   // ---- Process active cues and fire callbacks ----
   // Page changes are derived from sentence cues (each carries its page number).
-  // This is more reliable than separate page boundary cues because sentence
-  // cues have real duration and are guaranteed to be in activeCues.
-  const handleCueChange = useCallback((textTrack: TextTrack) => {
+  // The `emitPageChange` flag controls whether onPageChange fires — set to
+  // false for on-demand sync (after resume/resetSentenceTracking) to avoid
+  // re-triggering page navigation loops, true for natural cuechange playback.
+  const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || activeCues.length === 0) return;
 
@@ -148,8 +149,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           optionsRef.current.onSentenceChange?.(timing);
         }
 
-        // Derive page change from sentence's page number
-        if (payload.p !== undefined && payload.p !== lastPageRef.current) {
+        // Derive page change from sentence's page number (only during playback)
+        if (emitPageChange && payload.p !== undefined && payload.p !== lastPageRef.current) {
           lastPageRef.current = payload.p;
           setState(prev => ({ ...prev, currentPage: payload.p! }));
           optionsRef.current.onPageChange?.(payload.p);
@@ -158,13 +159,11 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
   }, []);
 
-  // Read active cues on demand — covers cases where cuechange won't fire
-  // (e.g., after play/resume when a cue is already active, or after
-  // resetSentenceTracking resets the dedup guard)
+  // On-demand sync: pick up current sentence highlight only (no page navigation)
   const syncFromActiveCues = useCallback(() => {
     const track = textTrackRef.current;
-    if (track) handleCueChange(track);
-  }, [handleCueChange]);
+    if (track) processCues(track, false);
+  }, [processCues]);
 
   // ---- Progress timer (~4x/sec for progress bar) ----
   const startProgressTimer = useCallback(() => {
@@ -389,7 +388,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       buildCuesFromMetadata(textTrack, chapterMetadata);
       textTrackRef.current = textTrack;
 
-      textTrack.addEventListener("cuechange", () => handleCueChange(textTrack));
+      textTrack.addEventListener("cuechange", () => processCues(textTrack, true));
       console.log(`[ChapterAudio] TextTrack sync active — ${textTrack.cues?.length ?? 0} cues built from metadata`);
 
       // Seek to initial position before playing
@@ -465,7 +464,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       }));
       optionsRef.current.onError?.(err instanceof Error ? err : new Error(err.message));
     }
-  }, [startProgressTimer, stopProgressTimer, removeAudioFromDOM, findSentenceAtTime, handleCueChange, syncFromActiveCues]);
+  }, [startProgressTimer, stopProgressTimer, removeAudioFromDOM, findSentenceAtTime, processCues, syncFromActiveCues]);
 
   // ---- Playback controls ----
 
