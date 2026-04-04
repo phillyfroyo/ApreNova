@@ -65,6 +65,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position) {
         if (timing.pageNumber === s.position.page) {
+          console.log(`[highlight] sentIdx=${chapterAudio.state.currentSentence === timing ? 'cur' : '?'} line=${timing.lineIndex} lang=${timing.language} text="${timing.text.substring(0, 30)}"`);
           applyHighlight(timing.lineIndex, timing.language);
         }
       }

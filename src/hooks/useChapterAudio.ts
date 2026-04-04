@@ -403,6 +403,14 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
             audioUrl = data.audioUrl;
             chapterMetadata = data.metadata;
             wasCached = !!data.cached;
+
+            // Debug: log first 6 sentence timings to verify bilingual ordering
+            if (data.metadata?.sentenceTimings) {
+              console.log("[ChapterAudio] First 6 sentences in metadata:");
+              for (const s of data.metadata.sentenceTimings.slice(0, 6)) {
+                console.log(`  [${s.startTime.toFixed(2)}-${s.endTime.toFixed(2)}] lang=${s.language} line=${s.lineIndex} "${s.text.substring(0, 35)}"`);
+              }
+            }
             if (data.metadata?.totalSentences) {
               const total = data.metadata.totalSentences;
               setState(prev => ({
