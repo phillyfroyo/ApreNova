@@ -74,14 +74,16 @@ function buildCuesFromMetadata(
     sentenceCue.id = `s-${i}`;
     track.addCue(sentenceCue);
 
-    // Page-end cue: fires at the exact moment the last sentence on this page
-    // finishes speaking. Used to trigger page turn at the right time.
+    // Page-end cue: spans from the last sentence's endTime to the next
+    // sentence's startTime (the inter-page silence). This ensures the cue
+    // is reliably in activeCues when cuechange fires (point-in-time cues
+    // are too brief to be caught).
     if (lastSentencePerPage.get(st.pageNumber) === i && i < timings.length - 1) {
-      const nextPage = timings[i + 1].pageNumber;
+      const nextSentence = timings[i + 1];
       const pageEndCue = new VTTCue(
         st.endTime,
-        st.endTime + 0.001,
-        JSON.stringify({ t: "pe", fromPage: st.pageNumber, toPage: nextPage })
+        nextSentence.startTime,
+        JSON.stringify({ t: "pe", fromPage: st.pageNumber, toPage: nextSentence.pageNumber })
       );
       pageEndCue.id = `pe-${st.pageNumber}`;
       track.addCue(pageEndCue);
