@@ -21,7 +21,6 @@
     "clsx": "^2.1.1",
     "crypto": "^1.0.1",
     "framer-motion": "^12.23.5",
-    "lamejs": "^1.2.1",
     "lucide-react": "^0.523.0",
     "lz-string": "^1.5.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.45.0",

@@ -7,7 +7,6 @@ import { getAzureSpeechService, VOICE_CONFIG, NATIVE_VOICE, SPEED_RATES } from "
 import type { ChapterSSMLSegment } from "./azure-speech";
 import { getTTSCacheService } from "./tts-cache";
 import { alignChunkSentences } from "./forced-alignment";
-import { wavToMp3, concatenateWavBuffers } from "./wav-to-mp3";
 import { prisma } from "@/lib/prisma";
 import { toFolderName } from "@/lib/cefr";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
@@ -277,10 +276,10 @@ export async function generateChapterAudio(
     chunkStart = chunkEnd;
   }
 
-  // 5. Synthesize each chunk as WAV, run forced alignment, build timings
+  // 5. Synthesize each chunk (MP3 for storage + WAV for alignment), run forced alignment
   const speech = getAzureSpeechService();
   const isBilingual = request.mode === "bilingual-en" || request.mode === "bilingual-es";
-  const wavBuffers: Buffer[] = [];
+  const audioBuffers: Buffer[] = [];
   const allSentenceTimings: SentenceTiming[] = [];
   const pageBoundaryMap = new Map<number, { startTime: number; endTime: number; sentenceCount: number }>();
   let timeOffset = 0;
@@ -289,12 +288,11 @@ export async function generateChapterAudio(
     const chunk = chunks[c];
     const ssmlSegments = toSSMLSegments(chunk);
 
-    // Synthesize as WAV (for alignment + eventual MP3 encoding)
+    // Synthesize MP3 (for storage) — includes bookmark timings
     const result = await speech.generateChapterBuffer(ssmlSegments);
-    const wavBuffer = Buffer.from(result.buffer);
-    wavBuffers.push(wavBuffer);
+    audioBuffers.push(Buffer.from(result.buffer));
 
-    // Build initial sentence timings from bookmarks (used as fallback)
+    // Build bookmark-based sentence timings (fallback if alignment fails)
     const bookmarkTimings: SentenceTiming[] = [];
     for (let i = 0; i < chunk.length; i++) {
       const entry = chunk[i];
@@ -316,9 +314,13 @@ export async function generateChapterAudio(
 
     console.log(`[chapter-audio] chunk ${c+1}/${chunks.length}: duration=${result.totalDuration.toFixed(3)}s timeOffset=${timeOffset.toFixed(3)}s`);
 
-    // Run forced alignment on this chunk's WAV using Azure Pronunciation Assessment
+    // Synthesize WAV (for forced alignment) and run Azure Pronunciation Assessment
     onProgress?.({ status: "aligning", sentencesComplete: Math.round(totalSentences * (c / chunks.length)), sentencesTotal: totalSentences });
     try {
+      console.log(`[chapter-audio] chunk ${c+1}: synthesizing WAV for alignment...`);
+      const wavBuffer = await speech.generateChapterBufferWav(ssmlSegments);
+      console.log(`[chapter-audio] chunk ${c+1}: WAV ${(wavBuffer.byteLength / 1024 / 1024).toFixed(1)}MB, running PA...`);
+
       const chunkSentenceInfo = chunk.map(entry => ({
         text: entry.text,
         language: entry.langKey as "en" | "es",
@@ -330,13 +332,12 @@ export async function generateChapterAudio(
         wavBuffer, chunkSentenceInfo, timeOffset, isBilingual
       );
 
-      // Merge aligned results with bookmark data
+      // Merge: use PA timestamps where available, bookmark as fallback
       for (let i = 0; i < chunk.length; i++) {
         const aligned = alignedResults[i];
         const bookmark = bookmarkTimings[i];
 
         if (aligned.wordTimings.length > 0) {
-          // Alignment succeeded — use PA timestamps
           allSentenceTimings.push({
             ...bookmark,
             startTime: aligned.startTime,
@@ -344,7 +345,6 @@ export async function generateChapterAudio(
             wordTimings: aligned.wordTimings,
           });
         } else {
-          // Alignment failed for this sentence — use bookmark timing
           allSentenceTimings.push(bookmark);
         }
       }
@@ -352,11 +352,11 @@ export async function generateChapterAudio(
       const alignedCount = alignedResults.filter(r => r.wordTimings.length > 0).length;
       console.log(`[chapter-audio] chunk ${c+1}: ${alignedCount}/${chunk.length} sentences aligned via PA`);
     } catch (err) {
-      console.error(`[chapter-audio] Forced alignment failed for chunk ${c+1}, using bookmarks:`, err);
+      console.error(`[chapter-audio] Alignment failed for chunk ${c+1}, using bookmarks:`, err);
       allSentenceTimings.push(...bookmarkTimings);
     }
 
-    // Build page boundaries from whatever timings we have
+    // Build page boundaries
     for (const st of allSentenceTimings.slice(-chunk.length)) {
       const existing = pageBoundaryMap.get(st.pageNumber);
       if (existing) {
@@ -376,10 +376,7 @@ export async function generateChapterAudio(
 
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 
-  // Concatenate WAV buffers (proper header merging) and encode to MP3
-  const concatenatedWav = concatenateWavBuffers(wavBuffers);
-  console.log(`[chapter-audio] Encoding ${(concatenatedWav.byteLength / 1024 / 1024).toFixed(1)}MB WAV → MP3...`);
-  const concatenatedBuffer = wavToMp3(concatenatedWav);
+  const concatenatedBuffer = Buffer.concat(audioBuffers);
 
   // 6. Build final metadata (using PA-aligned timings where available)
   const pageBoundaries: PageBoundary[] = Array.from(pageBoundaryMap.entries())
