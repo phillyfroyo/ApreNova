@@ -1,10 +1,9 @@
 // src/lib/whisper-alignment.ts
 // Post-generation forced alignment using OpenAI Whisper.
 // Sends the concatenated chapter MP3 to Whisper to get word-level
-// timestamps from the actual audio waveform, then aligns those words
-// back to our known sentence structure. This produces timestamps that
-// match audible output (unlike Azure TTS bookmarks which run ~1.5-2s
-// ahead due to OS audio pipeline buffering).
+// timestamps from the actual audio waveform. Uses Whisper's word
+// timeline to correct sentence boundaries proportionally — no fuzzy
+// text matching needed, works reliably with bilingual content.
 
 import OpenAI from "openai";
 import type { SentenceTiming } from "@/types/chapter-audio";
@@ -17,128 +16,80 @@ interface WhisperWord {
 }
 
 /**
- * Normalize text for fuzzy matching: lowercase, strip punctuation, collapse whitespace.
- */
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, "") // strip punctuation, keep letters/numbers/spaces (Unicode-aware)
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Split normalized text into words.
- */
-function toWords(text: string): string[] {
-  return normalize(text).split(" ").filter(w => w.length > 0);
-}
-
-/**
- * Calculate word overlap ratio between two word lists.
- * Returns 0-1 where 1 means every word in `target` appears in `candidate`.
- */
-function wordOverlap(target: string[], candidate: string[]): number {
-  if (target.length === 0) return 0;
-  const candidateSet = new Set(candidate);
-  let matches = 0;
-  for (const word of target) {
-    if (candidateSet.has(word)) matches++;
-  }
-  return matches / target.length;
-}
-
-/**
- * Align Whisper words to our known sentence timings.
+ * Correct sentence timings using Whisper's audio-derived timeline.
  *
- * Strategy: walk through both lists sequentially (they're in audio order).
- * For each sentence, consume Whisper words greedily until we've matched
- * enough of the sentence's text. Uses fuzzy matching because Whisper may
- * transcribe differently than the TTS input (especially for bilingual content
- * where Whisper may use a different language than expected).
+ * Strategy: Whisper gives us the true audio timeline via word timestamps.
+ * We find the actual audio start (first Whisper word) and end (last word),
+ * then map each sentence's bookmark-relative position onto Whisper's
+ * timeline proportionally. This preserves the relative sentence durations
+ * from Azure (which are accurate) while correcting the absolute positions
+ * to match what users actually hear.
+ *
+ * For word-level timings within each sentence, we assign the Whisper words
+ * that fall within that sentence's corrected time range.
  */
-function alignWordsToSentences(
+function correctTimingsFromWhisper(
   whisperWords: WhisperWord[],
   sentences: SentenceTiming[]
 ): SentenceTiming[] {
+  if (sentences.length === 0 || whisperWords.length === 0) return sentences;
+
+  // Bookmark timeline: first sentence start to last sentence end
+  const bookmarkStart = sentences[0].startTime;
+  const bookmarkEnd = sentences[sentences.length - 1].endTime;
+  const bookmarkDuration = bookmarkEnd - bookmarkStart;
+
+  if (bookmarkDuration <= 0) return sentences;
+
+  // Whisper timeline: first word start to last word end
+  const whisperStart = whisperWords[0].start;
+  const whisperEnd = whisperWords[whisperWords.length - 1].end;
+  const whisperDuration = whisperEnd - whisperStart;
+
+  if (whisperDuration <= 0) return sentences;
+
+  console.log(`[whisper-alignment] Bookmark timeline: ${bookmarkStart.toFixed(3)}-${bookmarkEnd.toFixed(3)} (${bookmarkDuration.toFixed(3)}s)`);
+  console.log(`[whisper-alignment] Whisper timeline:  ${whisperStart.toFixed(3)}-${whisperEnd.toFixed(3)} (${whisperDuration.toFixed(3)}s)`);
+  console.log(`[whisper-alignment] Offset: ${(whisperStart - bookmarkStart).toFixed(3)}s, scale: ${(whisperDuration / bookmarkDuration).toFixed(6)}`);
+
+  // Map a bookmark time to Whisper time proportionally
+  const scale = whisperDuration / bookmarkDuration;
+  function toWhisperTime(bookmarkTime: number): number {
+    return whisperStart + (bookmarkTime - bookmarkStart) * scale;
+  }
+
+  // Pre-sort Whisper words by start time (should already be sorted)
+  const sortedWords = [...whisperWords].sort((a, b) => a.start - b.start);
+
+  // Correct each sentence's timing
   const aligned: SentenceTiming[] = [];
-  let wIdx = 0; // Current position in Whisper word list
 
-  for (let sIdx = 0; sIdx < sentences.length; sIdx++) {
-    const sentence = sentences[sIdx];
-    const sentenceWords = toWords(sentence.text);
+  for (const sentence of sentences) {
+    const correctedStart = toWhisperTime(sentence.startTime);
+    const correctedEnd = toWhisperTime(sentence.endTime);
 
-    if (sentenceWords.length === 0 || wIdx >= whisperWords.length) {
-      // Empty sentence or no more Whisper words — keep original timing
-      aligned.push({ ...sentence });
-      continue;
-    }
+    // Find Whisper words that fall within this sentence's corrected range
+    const sentenceWhisperWords: WordTiming[] = [];
+    for (const w of sortedWords) {
+      // Word overlaps with sentence if it starts before sentence ends
+      // and ends after sentence starts
+      if (w.start >= correctedEnd) break; // past this sentence
+      if (w.end <= correctedStart) continue; // before this sentence
 
-    // Estimate how many Whisper words this sentence should consume.
-    // Use the sentence's word count as a guide, but allow 50% extra
-    // for Whisper's different tokenization.
-    const expectedWordCount = sentenceWords.length;
-    const maxWords = Math.ceil(expectedWordCount * 1.5) + 3;
-    const minWords = Math.max(1, Math.floor(expectedWordCount * 0.5));
-
-    // Try different spans of Whisper words and pick the best match
-    let bestSpanEnd = wIdx + expectedWordCount;
-    let bestOverlap = 0;
-
-    for (let spanEnd = wIdx + minWords; spanEnd <= Math.min(wIdx + maxWords, whisperWords.length); spanEnd++) {
-      const candidateWords = whisperWords.slice(wIdx, spanEnd).map(w => normalize(w.word));
-      const overlap = wordOverlap(sentenceWords, candidateWords);
-
-      if (overlap > bestOverlap) {
-        bestOverlap = overlap;
-        bestSpanEnd = spanEnd;
-      }
-
-      // Good enough match — stop searching
-      if (overlap >= 0.6) break;
-    }
-
-    // If overlap is very low, this sentence might not have been transcribed
-    // (e.g., very short utterance Whisper missed). Use a minimal span.
-    if (bestOverlap < 0.2 && sIdx < sentences.length - 1) {
-      // Try to estimate position from surrounding sentences
-      // For now, use a proportional time estimate from original timings
-      const originalDuration = sentence.endTime - sentence.startTime;
-      const estimatedStart = wIdx > 0 ? whisperWords[wIdx - 1].end : (wIdx < whisperWords.length ? whisperWords[wIdx].start - originalDuration : sentence.startTime);
-      const estimatedEnd = estimatedStart + originalDuration;
-
-      aligned.push({
-        ...sentence,
-        startTime: estimatedStart,
-        endTime: estimatedEnd,
-        wordTimings: [], // No reliable word timings for unmatched sentences
+      sentenceWhisperWords.push({
+        word: w.word,
+        startTime: w.start,
+        endTime: w.end,
+        confidence: 1.0,
       });
-      // Don't advance wIdx — these Whisper words belong to the next sentence
-      continue;
     }
-
-    // Extract the matched span
-    const matchedWords = whisperWords.slice(wIdx, bestSpanEnd);
-    const startTime = matchedWords[0].start;
-    const endTime = matchedWords[matchedWords.length - 1].end;
-
-    // Build word timings from matched Whisper words
-    const wordTimings: WordTiming[] = matchedWords.map(w => ({
-      word: w.word,
-      startTime: w.start,
-      endTime: w.end,
-      confidence: 1.0,
-    }));
 
     aligned.push({
       ...sentence,
-      startTime,
-      endTime,
-      wordTimings,
+      startTime: correctedStart,
+      endTime: correctedEnd,
+      wordTimings: sentenceWhisperWords.length > 0 ? sentenceWhisperWords : sentence.wordTimings,
     });
-
-    // Advance past the consumed words
-    wIdx = bestSpanEnd;
   }
 
   return aligned;
@@ -157,7 +108,6 @@ export async function alignChapterAudio(
   console.log(`[whisper-alignment] Sending ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB MP3 to Whisper...`);
   const startTime = Date.now();
 
-  // Send to Whisper with word-level timestamps
   const audioFile = new File([new Uint8Array(audioBuffer)], "chapter.mp3", { type: "audio/mpeg" });
   const response = await openai.audio.transcriptions.create({
     model: "whisper-1",
@@ -180,28 +130,10 @@ export async function alignChapterAudio(
     return sentenceTimings;
   }
 
-  // Log Whisper word distribution around a known boundary for debugging
-  const boundaryWords = whisperWords.filter(w => w.start >= 210 && w.start <= 225);
-  if (boundaryWords.length > 0) {
-    console.log(`[whisper-alignment] Whisper words near 210-225s:`);
-    for (const w of boundaryWords) {
-      console.log(`  [${w.start.toFixed(3)}-${w.end.toFixed(3)}] "${w.word}"`);
-    }
-  }
+  // Correct sentence timings using Whisper's timeline
+  const aligned = correctTimingsFromWhisper(whisperWords, sentenceTimings);
 
-  // Align Whisper words to our sentence structure
-  const aligned = alignWordsToSentences(whisperWords, sentenceTimings);
-
-  // Log alignment quality metrics
-  let matched = 0;
-  let unmatched = 0;
-  for (const s of aligned) {
-    if (s.wordTimings.length > 0) matched++;
-    else unmatched++;
-  }
-  console.log(`[whisper-alignment] Alignment: ${matched} matched, ${unmatched} unmatched out of ${aligned.length} sentences`);
-
-  // Log page 3 last few sentences to check alignment accuracy
+  // Log alignment quality at page 3→4 boundary
   const p3 = aligned.filter(s => s.pageNumber === 3);
   const p4 = aligned.filter(s => s.pageNumber === 4);
   if (p3.length > 0) {
