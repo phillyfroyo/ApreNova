@@ -328,8 +328,14 @@ export async function generateChapterAudio(
         lineIndex: entry.lineIndex,
       }));
 
+      // Pass bookmark timings so PA can filter words by time window (bilingual)
+      const chunkBookmarkTimings = bookmarkTimings.map(bt => ({
+        startTime: bt.startTime,
+        endTime: bt.endTime,
+      }));
+
       const alignedResults = await alignChunkSentences(
-        wavBuffer, chunkSentenceInfo, timeOffset, isBilingual
+        wavBuffer, chunkSentenceInfo, timeOffset, isBilingual, chunkBookmarkTimings
       );
 
       // Merge: use PA timestamps where available, bookmark as fallback

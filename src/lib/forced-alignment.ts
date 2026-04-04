@@ -114,17 +114,25 @@ export async function alignChunkSentences(
   wavBuffer: Buffer,
   chunkSentences: { text: string; language: "en" | "es"; pageNumber: number; lineIndex: number }[],
   timeOffset: number, // seconds to add for chapter-level positioning
-  isBilingual: boolean
+  isBilingual: boolean,
+  bookmarkTimings?: { startTime: number; endTime: number }[] // original bookmark times for time-window filtering
 ): Promise<{ startTime: number; endTime: number; wordTimings: WordTiming[] }[]> {
 
-  // Split sentences by language
-  const enSentences: { idx: number; text: string }[] = [];
-  const esSentences: { idx: number; text: string }[] = [];
+  // Split sentences by language (preserving bookmark time ranges for filtering)
+  const enSentences: { idx: number; text: string; bookmarkStart?: number; bookmarkEnd?: number }[] = [];
+  const esSentences: { idx: number; text: string; bookmarkStart?: number; bookmarkEnd?: number }[] = [];
 
   for (let i = 0; i < chunkSentences.length; i++) {
     const s = chunkSentences[i];
-    if (s.language === "en") enSentences.push({ idx: i, text: s.text });
-    else esSentences.push({ idx: i, text: s.text });
+    const bm = bookmarkTimings?.[i];
+    const entry = {
+      idx: i,
+      text: s.text,
+      bookmarkStart: bm ? bm.startTime - timeOffset : undefined, // chunk-relative
+      bookmarkEnd: bm ? bm.endTime - timeOffset : undefined,
+    };
+    if (s.language === "en") enSentences.push(entry);
+    else esSentences.push(entry);
   }
 
   // Build reference texts (one per language)
@@ -174,51 +182,53 @@ export async function alignChunkSentences(
  */
 function assignWordsToSentences(
   words: AlignedWord[],
-  sentences: { idx: number; text: string }[],
+  sentences: { idx: number; text: string; bookmarkStart?: number; bookmarkEnd?: number }[],
   results: { startTime: number; endTime: number; wordTimings: WordTiming[] }[],
   timeOffset: number
 ): void {
-  let wCursor = 0;
+  // For bilingual: PA may place words from the wrong language's audio
+  // region. Use bookmark time windows to filter — only keep PA words
+  // that fall within the sentence's expected time range.
 
-  for (const { idx, text } of sentences) {
+  for (const { idx, text, bookmarkStart, bookmarkEnd } of sentences) {
     const expectedWords = text
       .replace(/[^\p{L}\p{N}\s]/gu, " ")
       .split(/\s+/)
       .filter(w => w.length > 0).length;
 
-    if (wCursor >= words.length || expectedWords === 0) continue;
+    if (expectedWords === 0) continue;
 
-    const startIdx = wCursor;
-    let consumed = 0;
+    // Find PA words within this sentence's bookmark time window
+    // Use generous margin (50% of sentence duration on each side)
+    let matchedWords: AlignedWord[];
 
-    // Consume words for this sentence. Azure PA returns words aligned to
-    // our reference text, so the word count should match closely.
-    // Allow some flexibility for punctuation differences.
-    const maxWords = expectedWords + 3;
+    if (bookmarkStart !== undefined && bookmarkEnd !== undefined) {
+      const duration = bookmarkEnd - bookmarkStart;
+      const margin = Math.max(duration * 0.5, 1.0); // at least 1s margin
+      const windowStart = bookmarkStart - margin;
+      const windowEnd = bookmarkEnd + margin;
 
-    while (consumed < maxWords && wCursor < words.length) {
-      // Check for silence gap indicating sentence boundary
-      if (consumed >= Math.max(1, expectedWords - 1) && wCursor > startIdx) {
-        const gap = words[wCursor].startTime - words[wCursor - 1].endTime;
-        if (gap >= 0.1) break; // sentence boundary
-      }
-
-      wCursor++;
-      consumed++;
-
-      // If we've hit the expected count exactly, check for gap
-      if (consumed === expectedWords && wCursor < words.length) {
-        const gap = words[wCursor].startTime - words[wCursor - 1].endTime;
-        if (gap >= 0.05) break; // even small gap after exact count = boundary
-      }
+      matchedWords = words.filter(w =>
+        w.startTime >= windowStart && w.startTime < windowEnd
+      );
+    } else {
+      // No bookmark data — use all words (monolingual mode)
+      matchedWords = words;
     }
 
-    const assigned = words.slice(startIdx, wCursor);
-    if (assigned.length > 0) {
+    if (matchedWords.length === 0) continue;
+
+    // From the filtered words, take the ones that best match sequentially.
+    // Sort by time (should already be sorted) and take up to expectedWords + margin
+    matchedWords.sort((a, b) => a.startTime - b.startTime);
+    const maxToTake = expectedWords + 3;
+    const taken = matchedWords.slice(0, maxToTake);
+
+    if (taken.length > 0) {
       results[idx] = {
-        startTime: assigned[0].startTime + timeOffset,
-        endTime: assigned[assigned.length - 1].endTime + timeOffset,
-        wordTimings: assigned.map(w => ({
+        startTime: taken[0].startTime + timeOffset,
+        endTime: taken[taken.length - 1].endTime + timeOffset,
+        wordTimings: taken.map(w => ({
           word: w.word,
           startTime: w.startTime + timeOffset,
           endTime: w.endTime + timeOffset,
