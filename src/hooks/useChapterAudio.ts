@@ -52,6 +52,12 @@ function buildCuesFromMetadata(
 ): void {
   const timings = metadata.sentenceTimings;
 
+  // Find the last sentence index per page (for page-end cues)
+  const lastSentencePerPage = new Map<number, number>();
+  for (let i = 0; i < timings.length; i++) {
+    lastSentencePerPage.set(timings[i].pageNumber, i);
+  }
+
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
 
@@ -67,6 +73,19 @@ function buildCuesFromMetadata(
     );
     sentenceCue.id = `s-${i}`;
     track.addCue(sentenceCue);
+
+    // Page-end cue: fires at the exact moment the last sentence on this page
+    // finishes speaking. Used to trigger page turn at the right time.
+    if (lastSentencePerPage.get(st.pageNumber) === i && i < timings.length - 1) {
+      const nextPage = timings[i + 1].pageNumber;
+      const pageEndCue = new VTTCue(
+        st.endTime,
+        st.endTime + 0.001,
+        JSON.stringify({ t: "pe", fromPage: st.pageNumber, toPage: nextPage })
+      );
+      pageEndCue.id = `pe-${st.pageNumber}`;
+      track.addCue(pageEndCue);
+    }
 
     // Word cues (contiguous within sentence: each extends to next word's start)
     if (st.wordTimings && st.wordTimings.length > 0) {
@@ -156,14 +175,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, []);
 
   // ---- Process active cues and fire callbacks ----
-  // Sentence highlights fire immediately from cue transitions.
-  // Page turns are DELAYED because audio.currentTime runs ~1.5-2s ahead
   const processCues = useCallback((textTrack: TextTrack, emitPageChange: boolean) => {
     const activeCues = textTrack.activeCues;
     if (!activeCues || !metadataRef.current) return;
 
     let latestSentence: { i: number; p: number; l: number; lang: string } | null = null;
     let latestWord: { si: number; wi: number; l: number; lang: string } | null = null;
+    let pageEnd: { fromPage: number; toPage: number } | null = null;
 
     for (let i = 0; i < activeCues.length; i++) {
       const cue = activeCues[i] as VTTCue;
@@ -178,13 +196,15 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         if (!latestWord || payload.si > latestWord.si || (payload.si === latestWord.si && payload.wi > latestWord.wi)) {
           latestWord = payload;
         }
+      } else if (payload.t === "pe" && payload.toPage !== undefined) {
+        pageEnd = payload;
       }
     }
 
     // Update sentence highlight
     if (latestSentence && latestSentence.i !== lastSentenceIdxRef.current) {
       lastSentenceIdxRef.current = latestSentence.i;
-      lastWordIdxRef.current = -1; // reset word tracking on sentence change
+      lastWordIdxRef.current = -1;
       const timing = metadataRef.current!.sentenceTimings[latestSentence.i];
       currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
@@ -197,11 +217,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onWordChange?.(latestWord.l, latestWord.wi, latestWord.lang as "en" | "es");
     }
 
-    // Page turn
-    if (emitPageChange && latestSentence && latestSentence.p !== lastPageRef.current) {
-      lastPageRef.current = latestSentence.p;
-      setState(prev => ({ ...prev, currentPage: latestSentence!.p }));
-      optionsRef.current.onPageChange?.(latestSentence.p);
+    // Page turn: fires from page-end cue at the exact moment the last
+    // sentence on the current page finishes speaking (PA-aligned timestamp).
+    // No delay needed — timestamps match audible output.
+    if (emitPageChange && pageEnd && pageEnd.toPage !== lastPageRef.current) {
+      lastPageRef.current = pageEnd.toPage;
+      setState(prev => ({ ...prev, currentPage: pageEnd!.toPage }));
+      optionsRef.current.onPageChange?.(pageEnd.toPage);
     }
   }, []);
 
