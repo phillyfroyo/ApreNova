@@ -1,9 +1,8 @@
 // src/lib/whisper-alignment.ts
 // Post-generation forced alignment using OpenAI Whisper.
 // Sends the concatenated chapter MP3 to Whisper to get word-level
-// timestamps from the actual audio waveform. Uses silence gaps between
-// Whisper words to detect sentence boundaries and map word timestamps
-// directly to our known sentence structure.
+// timestamps from the actual audio waveform, then assigns Whisper words
+// to sentences sequentially based on word count.
 
 import OpenAI from "openai";
 import type { SentenceTiming } from "@/types/chapter-audio";
@@ -15,236 +14,99 @@ interface WhisperWord {
   end: number;
 }
 
-/** A group of consecutive Whisper words separated by silence gaps */
-interface WordGroup {
-  words: WhisperWord[];
-  startTime: number;
-  endTime: number;
-}
-
 /**
- * Split Whisper words into groups using silence gaps.
- * Adjacent words with > `gapThreshold` seconds between them are split
- * into separate groups. Each group roughly corresponds to one sentence
- * in the audio.
+ * Count the speakable words in a sentence text.
+ * Strips punctuation, collapses whitespace, filters empties.
  */
-function groupBysilence(
-  whisperWords: WhisperWord[],
-  gapThreshold: number
-): WordGroup[] {
-  if (whisperWords.length === 0) return [];
-
-  const groups: WordGroup[] = [];
-  let currentGroup: WhisperWord[] = [whisperWords[0]];
-
-  for (let i = 1; i < whisperWords.length; i++) {
-    const gap = whisperWords[i].start - whisperWords[i - 1].end;
-    if (gap >= gapThreshold) {
-      // Silence gap detected — close current group, start new one
-      groups.push({
-        words: currentGroup,
-        startTime: currentGroup[0].start,
-        endTime: currentGroup[currentGroup.length - 1].end,
-      });
-      currentGroup = [whisperWords[i]];
-    } else {
-      currentGroup.push(whisperWords[i]);
-    }
-  }
-
-  // Close final group
-  if (currentGroup.length > 0) {
-    groups.push({
-      words: currentGroup,
-      startTime: currentGroup[0].start,
-      endTime: currentGroup[currentGroup.length - 1].end,
-    });
-  }
-
-  return groups;
+function countWords(text: string): number {
+  return text
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .length;
 }
 
 /**
- * Align Whisper word groups to our known sentence structure.
+ * Assign Whisper words to sentences sequentially by word count.
  *
- * Strategy: We have N sentences in exact audio order and M word groups
- * (separated by silence gaps) also in audio order. We match them
- * sequentially. When there are fewer groups than sentences (Whisper
- * merged sentences or missed gaps), we split large groups proportionally.
- * When there are more groups than sentences, we merge adjacent groups.
+ * Each sentence expects roughly N words (from its text). We walk through
+ * Whisper's word list and assign the next N words to each sentence.
+ * This works because both lists are in the same audio order.
+ *
+ * We also use silence gaps (>150ms) as confirmation boundaries — if we
+ * encounter a gap while assigning words to a sentence and we've already
+ * assigned at least half the expected words, we treat it as the sentence
+ * boundary even if the word count hasn't been fully reached. This handles
+ * Whisper tokenizing differently than our text (merging/splitting words).
  */
-function alignGroupsToSentences(
-  groups: WordGroup[],
+function assignWordsToSentences(
+  whisperWords: WhisperWord[],
   sentences: SentenceTiming[]
 ): SentenceTiming[] {
   const aligned: SentenceTiming[] = [];
+  let wIdx = 0;
 
-  if (groups.length === 0) return sentences.map(s => ({ ...s }));
+  for (let sIdx = 0; sIdx < sentences.length; sIdx++) {
+    const sentence = sentences[sIdx];
+    const expectedWords = countWords(sentence.text);
 
-  // If group count matches sentence count, perfect 1:1 mapping
-  if (groups.length === sentences.length) {
-    for (let i = 0; i < sentences.length; i++) {
-      aligned.push(buildAlignedSentence(sentences[i], groups[i]));
-    }
-    return aligned;
-  }
-
-  // If more groups than sentences: merge groups to match sentence count.
-  // Use sentence duration ratios to decide how many groups each sentence gets.
-  if (groups.length > sentences.length) {
-    const mergedGroups = mergeGroupsToMatchCount(groups, sentences);
-    for (let i = 0; i < sentences.length; i++) {
-      aligned.push(buildAlignedSentence(sentences[i], mergedGroups[i]));
-    }
-    return aligned;
-  }
-
-  // If fewer groups than sentences: some sentences share a group.
-  // Split groups proportionally based on sentence durations.
-  const splitGroups = splitGroupsToMatchCount(groups, sentences);
-  for (let i = 0; i < sentences.length; i++) {
-    aligned.push(buildAlignedSentence(sentences[i], splitGroups[i]));
-  }
-  return aligned;
-}
-
-/** Build an aligned SentenceTiming from the original sentence + a word group */
-function buildAlignedSentence(sentence: SentenceTiming, group: WordGroup): SentenceTiming {
-  return {
-    ...sentence,
-    startTime: group.startTime,
-    endTime: group.endTime,
-    wordTimings: group.words.map(w => ({
-      word: w.word,
-      startTime: w.start,
-      endTime: w.end,
-      confidence: 1.0,
-    })),
-  };
-}
-
-/**
- * Merge adjacent word groups to reduce count to match sentence count.
- * Groups are merged based on which sentences are longest (longest
- * sentences get the most groups).
- */
-function mergeGroupsToMatchCount(
-  groups: WordGroup[],
-  sentences: SentenceTiming[]
-): WordGroup[] {
-  const n = sentences.length;
-  const totalDuration = sentences.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
-
-  // Allocate groups to sentences proportionally by duration
-  const allocation: number[] = [];
-  let remaining = groups.length;
-
-  for (let i = 0; i < n; i++) {
-    const fraction = (sentences[i].endTime - sentences[i].startTime) / totalDuration;
-    const count = i === n - 1
-      ? remaining // last sentence gets whatever's left
-      : Math.max(1, Math.round(fraction * groups.length));
-    allocation.push(Math.min(count, remaining));
-    remaining -= allocation[i];
-  }
-
-  // Merge groups according to allocation
-  const merged: WordGroup[] = [];
-  let gIdx = 0;
-  for (let i = 0; i < n; i++) {
-    const count = allocation[i];
-    if (count === 0) {
-      // No groups allocated — interpolate from neighbors
-      const prevEnd = merged.length > 0 ? merged[merged.length - 1].endTime : 0;
-      const nextStart = gIdx < groups.length ? groups[gIdx].startTime : prevEnd;
-      merged.push({ words: [], startTime: prevEnd, endTime: nextStart });
-    } else {
-      const slice = groups.slice(gIdx, gIdx + count);
-      const allWords = slice.flatMap(g => g.words);
-      merged.push({
-        words: allWords,
-        startTime: slice[0].startTime,
-        endTime: slice[slice.length - 1].endTime,
-      });
-      gIdx += count;
-    }
-  }
-
-  return merged;
-}
-
-/**
- * Split word groups to increase count to match sentence count.
- * When a single Whisper group contains words from multiple sentences
- * (because Whisper didn't detect the inter-sentence silence), we split
- * the group's words proportionally based on sentence durations.
- */
-function splitGroupsToMatchCount(
-  groups: WordGroup[],
-  sentences: SentenceTiming[]
-): WordGroup[] {
-  const n = sentences.length;
-  const m = groups.length;
-
-  // Calculate how many sentences each group should cover
-  const totalBookmarkDuration = sentences[sentences.length - 1].endTime - sentences[0].startTime;
-  const result: WordGroup[] = [];
-  let sIdx = 0;
-
-  for (let gIdx = 0; gIdx < m; gIdx++) {
-    const group = groups[gIdx];
-    const groupTimeStart = group.startTime;
-    const groupTimeEnd = group.endTime;
-
-    // How many sentences fall within this group's time range?
-    // Use the proportional mapping to estimate
-    const groupFraction = (groupTimeEnd - groupTimeStart) /
-      (groups[groups.length - 1].endTime - groups[0].startTime);
-    const expectedSentences = Math.max(1, Math.round(groupFraction * n));
-    const sentencesForGroup = Math.min(expectedSentences, n - sIdx);
-
-    // If only 1 sentence maps to this group, simple assignment
-    if (sentencesForGroup <= 1 || sIdx >= n - 1) {
-      result.push(group);
-      sIdx++;
+    if (expectedWords === 0 || wIdx >= whisperWords.length) {
+      // Empty sentence or out of Whisper words — keep original timing
+      aligned.push({ ...sentence });
       continue;
     }
 
-    // Split this group's words among multiple sentences proportionally
-    const sentenceSlice = sentences.slice(sIdx, sIdx + sentencesForGroup);
-    const sliceTotalDuration = sentenceSlice.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
+    const startWordIdx = wIdx;
 
-    let wIdx = 0;
-    for (let j = 0; j < sentencesForGroup; j++) {
-      const fraction = (sentenceSlice[j].endTime - sentenceSlice[j].startTime) / sliceTotalDuration;
-      const wordCount = j === sentencesForGroup - 1
-        ? group.words.length - wIdx
-        : Math.max(1, Math.round(fraction * group.words.length));
+    // Consume words for this sentence
+    let consumed = 0;
+    const minWords = Math.max(1, Math.floor(expectedWords * 0.5));
+    const maxWords = Math.ceil(expectedWords * 1.8) + 2;
 
-      const slice = group.words.slice(wIdx, wIdx + wordCount);
-      if (slice.length > 0) {
-        result.push({
-          words: slice,
-          startTime: slice[0].start,
-          endTime: slice[slice.length - 1].end,
-        });
-      } else {
-        // No words for this sentence — interpolate
-        const prevEnd = result.length > 0 ? result[result.length - 1].endTime : groupTimeStart;
-        result.push({ words: [], startTime: prevEnd, endTime: prevEnd });
+    while (consumed < maxWords && wIdx < whisperWords.length) {
+      // Check for silence gap (sentence boundary signal)
+      if (consumed >= minWords && wIdx > startWordIdx) {
+        const gap = whisperWords[wIdx].start - whisperWords[wIdx - 1].end;
+        if (gap >= 0.15) {
+          // Silence gap after we've consumed enough words — sentence boundary
+          break;
+        }
       }
-      wIdx += wordCount;
+
+      consumed++;
+      wIdx++;
+
+      // If we've hit the expected count, check if the next word has a gap
+      if (consumed >= expectedWords && wIdx < whisperWords.length) {
+        const gap = whisperWords[wIdx].start - whisperWords[wIdx - 1].end;
+        if (gap >= 0.08) {
+          // Even a small gap after expected count — good boundary
+          break;
+        }
+      }
     }
-    sIdx += sentencesForGroup;
+
+    // Build the aligned sentence from consumed Whisper words
+    const assignedWords = whisperWords.slice(startWordIdx, wIdx);
+
+    if (assignedWords.length > 0) {
+      aligned.push({
+        ...sentence,
+        startTime: assignedWords[0].start,
+        endTime: assignedWords[assignedWords.length - 1].end,
+        wordTimings: assignedWords.map(w => ({
+          word: w.word,
+          startTime: w.start,
+          endTime: w.end,
+          confidence: 1.0,
+        })),
+      });
+    } else {
+      aligned.push({ ...sentence });
+    }
   }
 
-  // If we haven't covered all sentences, fill remaining with interpolation
-  while (result.length < n) {
-    const lastEnd = result.length > 0 ? result[result.length - 1].endTime : 0;
-    result.push({ words: [], startTime: lastEnd, endTime: lastEnd });
-  }
-
-  return result;
+  return aligned;
 }
 
 /**
@@ -282,53 +144,36 @@ export async function alignChapterAudio(
     return sentenceTimings;
   }
 
-  // Detect sentence boundaries via silence gaps.
-  // SSML uses 200ms breaks between sentences within a language and 300ms
-  // for bilingual pauses. Use 150ms threshold to catch most gaps while
-  // not splitting within sentences.
-  const GAP_THRESHOLD = 0.15; // seconds
-  const groups = groupBysilence(whisperWords, GAP_THRESHOLD);
+  const totalSentenceWords = sentenceTimings.reduce((sum, s) => sum + countWords(s.text), 0);
+  console.log(`[whisper-alignment] Expected ~${totalSentenceWords} words from ${sentenceTimings.length} sentences, Whisper has ${whisperWords.length}`);
 
-  console.log(`[whisper-alignment] ${groups.length} word groups detected (${sentenceTimings.length} sentences expected)`);
+  // Assign Whisper words to sentences
+  const aligned = assignWordsToSentences(whisperWords, sentenceTimings);
 
-  // If group count is very different from sentence count, try adjusting threshold
-  let finalGroups = groups;
-  if (groups.length < sentenceTimings.length * 0.5) {
-    // Too few groups — threshold too high, try lower
-    const tighterGroups = groupBysilence(whisperWords, 0.10);
-    console.log(`[whisper-alignment] Retrying with 100ms threshold: ${tighterGroups.length} groups`);
-    if (Math.abs(tighterGroups.length - sentenceTimings.length) < Math.abs(groups.length - sentenceTimings.length)) {
-      finalGroups = tighterGroups;
-    }
-  } else if (groups.length > sentenceTimings.length * 2) {
-    // Too many groups — threshold too low, try higher
-    const looserGroups = groupBysilence(whisperWords, 0.25);
-    console.log(`[whisper-alignment] Retrying with 250ms threshold: ${looserGroups.length} groups`);
-    if (Math.abs(looserGroups.length - sentenceTimings.length) < Math.abs(groups.length - sentenceTimings.length)) {
-      finalGroups = looserGroups;
-    }
+  // Quality metrics
+  let withWords = 0;
+  let totalAssigned = 0;
+  for (const s of aligned) {
+    if (s.wordTimings.length > 0) withWords++;
+    totalAssigned += s.wordTimings.length;
   }
-
-  console.log(`[whisper-alignment] Using ${finalGroups.length} groups for ${sentenceTimings.length} sentences`);
-
-  // Align groups to sentences
-  const aligned = alignGroupsToSentences(finalGroups, sentenceTimings);
+  console.log(`[whisper-alignment] ${withWords}/${aligned.length} sentences got Whisper words (${totalAssigned}/${whisperWords.length} words used)`);
 
   // Log page boundary diagnostics
   const p3 = aligned.filter(s => s.pageNumber === 3);
   const p4 = aligned.filter(s => s.pageNumber === 4);
   if (p3.length > 0) {
     for (const s of p3.slice(-4)) {
-      console.log(`[whisper-alignment] P3 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
+      console.log(`[whisper-alignment] P3 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length}/${countWords(s.text)} "${s.text.substring(0, 40)}"`);
     }
   }
   if (p4.length > 0) {
     for (const s of p4.slice(0, 2)) {
-      console.log(`[whisper-alignment] P4 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
+      console.log(`[whisper-alignment] P4 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length}/${countWords(s.text)} "${s.text.substring(0, 40)}"`);
     }
   }
 
-  // Quality check: verify alignment is monotonically increasing
+  // Monotonic check
   let monotonic = true;
   for (let i = 1; i < aligned.length; i++) {
     if (aligned[i].startTime < aligned[i - 1].startTime) {
@@ -337,9 +182,7 @@ export async function alignChapterAudio(
       break;
     }
   }
-  if (monotonic) {
-    console.log(`[whisper-alignment] Alignment quality: monotonic ✓`);
-  }
+  console.log(`[whisper-alignment] Alignment quality: monotonic ${monotonic ? "✓" : "✗"}`);
 
   return aligned;
 }
