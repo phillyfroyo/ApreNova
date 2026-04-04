@@ -18,7 +18,7 @@ interface WhisperWord {
 }
 
 // ============================================================================
-// Whisper API call
+// Whisper API
 // ============================================================================
 
 async function transcribeWithWhisper(
@@ -43,19 +43,20 @@ async function transcribeWithWhisper(
 }
 
 // ============================================================================
-// Time-window word assignment
+// Sequential word assignment (no double-counting)
 // ============================================================================
 
 /**
- * For a set of sentences (all same language), find the Whisper words that
- * fall within each sentence's time window. The time window is derived by
- * mapping the sentence's bookmark time onto the Whisper timeline.
+ * Assign Whisper words to sentences sequentially. Each word is consumed
+ * exactly once — the cursor never goes backwards. For each sentence we:
  *
- * @param whisperWords - Words from a single-language Whisper pass
- * @param sentences - Only the sentences matching that language (with original indices)
- * @param allSentences - Full sentence list (for computing global timeline mapping)
+ * 1. Skip Whisper words that are before the sentence's expected position
+ * 2. Consume words until we hit a silence gap or reach the expected count
+ *
+ * For bilingual passes, the skip in step 1 jumps past the garbage words
+ * that Whisper produced for the other language's segments.
  */
-function assignWordsToLanguageSentences(
+function assignWordsSequentially(
   whisperWords: WhisperWord[],
   languageSentences: { sentence: SentenceTiming; originalIndex: number }[],
   allSentences: SentenceTiming[]
@@ -64,48 +65,64 @@ function assignWordsToLanguageSentences(
 
   if (whisperWords.length === 0 || languageSentences.length === 0) return results;
 
-  // Global timeline: map bookmark times to Whisper times
-  const bookmarkStart = allSentences[0].startTime;
-  const bookmarkEnd = allSentences[allSentences.length - 1].endTime;
-  const bookmarkDuration = bookmarkEnd - bookmarkStart;
+  // Map bookmark times → Whisper times (approximate, for seeking)
+  const bStart = allSentences[0].startTime;
+  const bEnd = allSentences[allSentences.length - 1].endTime;
+  const bDur = bEnd - bStart;
+  const wStart = whisperWords[0].start;
+  const wEnd = whisperWords[whisperWords.length - 1].end;
+  const wDur = wEnd - wStart;
 
-  const whisperStart = whisperWords[0].start;
-  const whisperEnd = whisperWords[whisperWords.length - 1].end;
-  const whisperDuration = whisperEnd - whisperStart;
+  if (bDur <= 0 || wDur <= 0) return results;
 
-  if (bookmarkDuration <= 0 || whisperDuration <= 0) return results;
+  const scale = wDur / bDur;
+  const toW = (t: number) => wStart + (t - bStart) * scale;
 
-  const scale = whisperDuration / bookmarkDuration;
-  const offset = whisperStart - bookmarkStart * scale;
+  let cursor = 0;
 
-  function toWhisperTime(bookmarkTime: number): number {
-    return bookmarkTime * scale + offset;
-  }
-
-  // For each sentence of this language, find Whisper words in its time window
   for (const { sentence, originalIndex } of languageSentences) {
-    const mappedStart = toWhisperTime(sentence.startTime);
-    const mappedEnd = toWhisperTime(sentence.endTime);
-    const duration = mappedEnd - mappedStart;
-    const margin = Math.max(duration * 0.3, 0.3); // at least 300ms margin
+    const expectedStart = toW(sentence.startTime);
+    const expectedEnd = toW(sentence.endTime);
+    const textWords = sentence.text
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter(w => w.length > 0).length;
 
-    const windowStart = mappedStart - margin;
-    const windowEnd = mappedEnd + margin;
-
-    const matchedWords: WhisperWord[] = [];
-    for (const w of whisperWords) {
-      if (w.start >= windowEnd) break;
-      if (w.end <= windowStart) continue;
-      if (w.start >= windowStart && w.start < windowEnd) {
-        matchedWords.push(w);
-      }
+    // Skip words before this sentence's expected start (with 1s tolerance)
+    while (cursor < whisperWords.length && whisperWords[cursor].start < expectedStart - 1.0) {
+      cursor++;
     }
 
-    if (matchedWords.length > 0) {
+    if (cursor >= whisperWords.length) break;
+
+    // Consume words for this sentence
+    const startIdx = cursor;
+    let consumed = 0;
+    const maxWords = Math.ceil(textWords * 1.5) + 3;
+
+    while (consumed < maxWords && cursor < whisperWords.length) {
+      const w = whisperWords[cursor];
+
+      // Stop if word is clearly past this sentence (1s past expected end)
+      if (w.start > expectedEnd + 1.0 && consumed > 0) break;
+
+      // Silence gap detection: if we've consumed at least half the expected
+      // words and there's a gap, treat it as the sentence boundary
+      if (consumed >= Math.max(1, Math.floor(textWords * 0.5)) && cursor > startIdx) {
+        const gap = w.start - whisperWords[cursor - 1].end;
+        if (gap >= 0.12) break;
+      }
+
+      cursor++;
+      consumed++;
+    }
+
+    const assigned = whisperWords.slice(startIdx, cursor);
+    if (assigned.length > 0) {
       results.set(originalIndex, {
-        startTime: matchedWords[0].start,
-        endTime: matchedWords[matchedWords.length - 1].end,
-        wordTimings: matchedWords.map(w => ({
+        startTime: assigned[0].start,
+        endTime: assigned[assigned.length - 1].end,
+        wordTimings: assigned.map(w => ({
           word: w.word,
           startTime: w.start,
           endTime: w.end,
@@ -119,44 +136,31 @@ function assignWordsToLanguageSentences(
 }
 
 // ============================================================================
-// Interpolation for unmatched sentences
+// Interpolation
 // ============================================================================
 
-/**
- * For sentences that got no Whisper words, interpolate timing from
- * neighboring matched sentences. Ensures monotonic ordering.
- */
-function interpolateAndFinalize(
-  aligned: SentenceTiming[]
-): SentenceTiming[] {
-  // Forward pass: interpolate start times from previous sentence's end
+function interpolateAndFinalize(aligned: SentenceTiming[]): SentenceTiming[] {
   for (let i = 0; i < aligned.length; i++) {
-    if (aligned[i].wordTimings.length === 0 && i > 0) {
-      aligned[i].startTime = aligned[i - 1].endTime;
-    }
-    // Find the next sentence with words to get endTime
     if (aligned[i].wordTimings.length === 0) {
-      let nextEnd = aligned[i].endTime;
+      const prevEnd = i > 0 ? aligned[i - 1].endTime : aligned[i].startTime;
+      let nextStart = aligned[i].endTime;
       for (let j = i + 1; j < aligned.length; j++) {
         if (aligned[j].wordTimings.length > 0) {
-          nextEnd = aligned[j].startTime;
+          nextStart = aligned[j].startTime;
           break;
         }
       }
-      aligned[i].endTime = nextEnd;
+      aligned[i].startTime = prevEnd;
+      aligned[i].endTime = Math.max(nextStart, prevEnd + 0.001);
     }
-  }
 
-  // Ensure monotonic and valid ranges
-  for (let i = 1; i < aligned.length; i++) {
-    if (aligned[i].startTime < aligned[i - 1].startTime) {
+    if (i > 0 && aligned[i].startTime < aligned[i - 1].startTime) {
       aligned[i].startTime = aligned[i - 1].endTime;
     }
     if (aligned[i].endTime <= aligned[i].startTime) {
       aligned[i].endTime = aligned[i].startTime + 0.001;
     }
   }
-
   return aligned;
 }
 
@@ -164,12 +168,6 @@ function interpolateAndFinalize(
 // Public API
 // ============================================================================
 
-/**
- * Run Whisper forced alignment on a chapter's audio buffer.
- *
- * - Monolingual modes: single Whisper call
- * - Bilingual modes: two parallel Whisper calls (one per language), merged
- */
 export async function alignChapterAudio(
   audioBuffer: Buffer,
   sentenceTimings: SentenceTiming[],
@@ -179,99 +177,78 @@ export async function alignChapterAudio(
   const isBilingual = mode === "bilingual-en" || mode === "bilingual-es";
 
   console.log(`[whisper-alignment] Mode: ${mode}, ${sentenceTimings.length} sentences, ${(audioBuffer.length / 1024 / 1024).toFixed(1)}MB`);
-  const startTime = Date.now();
+  const t0 = Date.now();
 
-  // Determine which languages to transcribe
+  // Run Whisper
   let enWords: WhisperWord[] = [];
   let esWords: WhisperWord[] = [];
 
   if (isBilingual) {
-    // Two parallel Whisper calls — one per language
-    console.log("[whisper-alignment] Bilingual mode — running EN and ES passes in parallel...");
-    const [enResult, esResult] = await Promise.all([
+    console.log("[whisper-alignment] Bilingual — EN + ES passes in parallel...");
+    [enWords, esWords] = await Promise.all([
       transcribeWithWhisper(openai, audioBuffer, "en"),
       transcribeWithWhisper(openai, audioBuffer, "es"),
     ]);
-    enWords = enResult;
-    esWords = esResult;
-    console.log(`[whisper-alignment] EN pass: ${enWords.length} words, ES pass: ${esWords.length} words`);
+    console.log(`[whisper-alignment] EN: ${enWords.length} words, ES: ${esWords.length} words`);
   } else {
-    // Single pass for monolingual
-    const language = mode === "en" ? "en" : "es";
-    console.log(`[whisper-alignment] Monolingual mode — running ${language} pass...`);
-    const words = await transcribeWithWhisper(openai, audioBuffer, language);
-    if (language === "en") enWords = words;
-    else esWords = words;
-    console.log(`[whisper-alignment] ${language} pass: ${words.length} words`);
+    const lang = mode === "en" ? "en" : "es";
+    console.log(`[whisper-alignment] Monolingual ${lang} pass...`);
+    const words = await transcribeWithWhisper(openai, audioBuffer, lang);
+    if (lang === "en") enWords = words; else esWords = words;
+    console.log(`[whisper-alignment] ${lang}: ${words.length} words`);
   }
 
-  const elapsed = Date.now() - startTime;
-  console.log(`[whisper-alignment] Whisper completed in ${(elapsed / 1000).toFixed(1)}s`);
+  console.log(`[whisper-alignment] Whisper done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
   if (enWords.length === 0 && esWords.length === 0) {
-    console.warn("[whisper-alignment] No words from either pass — keeping original timings");
+    console.warn("[whisper-alignment] No words — keeping original timings");
     return sentenceTimings;
   }
 
-  // Split sentences by language (preserving original indices)
-  const enSentences: { sentence: SentenceTiming; originalIndex: number }[] = [];
-  const esSentences: { sentence: SentenceTiming; originalIndex: number }[] = [];
+  // Split sentences by language
+  const enSents: { sentence: SentenceTiming; originalIndex: number }[] = [];
+  const esSents: { sentence: SentenceTiming; originalIndex: number }[] = [];
   for (let i = 0; i < sentenceTimings.length; i++) {
-    const s = sentenceTimings[i];
-    if (s.language === "en") enSentences.push({ sentence: s, originalIndex: i });
-    else esSentences.push({ sentence: s, originalIndex: i });
+    if (sentenceTimings[i].language === "en") enSents.push({ sentence: sentenceTimings[i], originalIndex: i });
+    else esSents.push({ sentence: sentenceTimings[i], originalIndex: i });
   }
 
-  console.log(`[whisper-alignment] Sentences: ${enSentences.length} EN, ${esSentences.length} ES`);
+  // Assign words sequentially (no double-counting)
+  const enAligned = assignWordsSequentially(enWords, enSents, sentenceTimings);
+  const esAligned = assignWordsSequentially(esWords, esSents, sentenceTimings);
 
-  // Assign Whisper words to sentences by language
-  const enAligned = assignWordsToLanguageSentences(enWords, enSentences, sentenceTimings);
-  const esAligned = assignWordsToLanguageSentences(esWords, esSentences, sentenceTimings);
+  console.log(`[whisper-alignment] Matched: ${enAligned.size}/${enSents.length} EN, ${esAligned.size}/${esSents.length} ES`);
 
-  console.log(`[whisper-alignment] Matched: ${enAligned.size}/${enSentences.length} EN, ${esAligned.size}/${esSentences.length} ES`);
-
-  // Merge results back into sentence order
-  const aligned: SentenceTiming[] = sentenceTimings.map((sentence, i) => {
-    const match = sentence.language === "en" ? enAligned.get(i) : esAligned.get(i);
-    if (match) {
-      return { ...sentence, ...match };
-    }
-    // No match — keep original timing (will be interpolated)
-    return { ...sentence };
+  // Merge back into sentence order
+  const aligned: SentenceTiming[] = sentenceTimings.map((s, i) => {
+    const match = s.language === "en" ? enAligned.get(i) : esAligned.get(i);
+    return match ? { ...s, ...match } : { ...s };
   });
 
-  // Interpolate unmatched sentences and ensure monotonic ordering
   interpolateAndFinalize(aligned);
 
-  // Quality metrics
-  const matchedCount = enAligned.size + esAligned.size;
-  const totalWords = [...enAligned.values(), ...esAligned.values()].reduce((sum, m) => sum + m.wordTimings.length, 0);
-  console.log(`[whisper-alignment] ${matchedCount}/${sentenceTimings.length} sentences matched, ${totalWords} total words assigned`);
+  // Quality
+  const matched = enAligned.size + esAligned.size;
+  const words = [...enAligned.values(), ...esAligned.values()].reduce((n, m) => n + m.wordTimings.length, 0);
+  console.log(`[whisper-alignment] ${matched}/${sentenceTimings.length} matched, ${words} words total`);
 
-  // Log page boundary diagnostics
-  const p3 = aligned.filter(s => s.pageNumber === 3);
-  const p4 = aligned.filter(s => s.pageNumber === 4);
-  if (p3.length > 0) {
-    for (const s of p3.slice(-4)) {
-      console.log(`[whisper-alignment] P3 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
-    }
+  // Diagnostics: page 3→4
+  for (const s of aligned.filter(s => s.pageNumber === 3).slice(-4)) {
+    console.log(`[whisper-alignment] P3 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] w=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
   }
-  if (p4.length > 0) {
-    for (const s of p4.slice(0, 2)) {
-      console.log(`[whisper-alignment] P4 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
-    }
+  for (const s of aligned.filter(s => s.pageNumber === 4).slice(0, 2)) {
+    console.log(`[whisper-alignment] P4 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] w=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
   }
 
-  // Monotonic check
-  let monotonic = true;
+  let mono = true;
   for (let i = 1; i < aligned.length; i++) {
     if (aligned[i].startTime < aligned[i - 1].startTime) {
-      monotonic = false;
+      mono = false;
       console.warn(`[whisper-alignment] Non-monotonic at ${i}: ${aligned[i].startTime.toFixed(3)} < ${aligned[i - 1].startTime.toFixed(3)}`);
       break;
     }
   }
-  console.log(`[whisper-alignment] Alignment quality: monotonic ${monotonic ? "✓" : "✗"}`);
+  console.log(`[whisper-alignment] Monotonic: ${mono ? "✓" : "✗"}`);
 
   return aligned;
 }
