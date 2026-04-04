@@ -53,9 +53,18 @@ function buildCuesFromMetadata(
 
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
+
+    // Make cues contiguous: extend endTime to the next sentence's startTime.
+    // This keeps the highlight on the current sentence through the silence
+    // gap between sentences, preventing cumulative drift from gaps where
+    // no cue is active.
+    const endTime = i < timings.length - 1
+      ? timings[i + 1].startTime
+      : st.endTime;
+
     const cue = new VTTCue(
       st.startTime,
-      st.endTime,
+      endTime,
       JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
     );
     cue.id = `s-${i}`;
