@@ -343,7 +343,7 @@ export async function generateChapterAudio(
   // and returns word-level timestamps that match what users hear.
   onProgress?.({ status: "aligning", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
   try {
-    const alignedTimings = await alignChapterAudio(concatenatedBuffer, allSentenceTimings);
+    const alignedTimings = await alignChapterAudio(concatenatedBuffer, allSentenceTimings, request.mode);
     allSentenceTimings.splice(0, allSentenceTimings.length, ...alignedTimings);
 
     // Rebuild page boundaries from aligned timings
