@@ -61,10 +61,9 @@ function buildCuesFromMetadata(
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
 
-    // Sentence cue (contiguous: extends to next sentence's start)
-    const sentenceEnd = i < timings.length - 1
-      ? timings[i + 1].startTime
-      : st.endTime;
+    // Sentence cue — uses PA-aligned endTime directly (no contiguous extension).
+    // PA timestamps match audible output, so gaps between cues don't cause drift.
+    const sentenceEnd = st.endTime;
 
     const sentenceCue = new VTTCue(
       st.startTime,
