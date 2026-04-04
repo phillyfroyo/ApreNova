@@ -72,6 +72,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     onWordChange: (lineIndex, wordIndex, language) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position) {
+        // In bilingual mode, only apply word highlight for the target language
+        // (native language text is a plain <p>, no word buttons)
+        const isBilingualMode = s.mode === "bilingual" && s.isVisible;
+        if (isBilingualMode) {
+          const targetLang = oppositeLang; // language being learned
+          if (language !== targetLang) {
+            // Native language sentence — clear word highlight, keep sentence highlight
+            clearWordHighlight();
+            return;
+          }
+        }
         applyWordHighlight(lineIndex, wordIndex, language);
       }
     },
