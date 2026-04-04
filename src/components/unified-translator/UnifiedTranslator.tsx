@@ -147,6 +147,7 @@ export default function UnifiedTranslator({
           {words.map((word, i) => (
             <button
               key={i}
+              data-word-index={i}
               onClick={() => handleClick(i)}
               className={`px-0.5 -ml-[1.5px] whitespace-nowrap leading-normal align-baseline border-r-0 border-l-0 border-[1.5px] rounded-md transition-colors duration-200 ease-in-out ${
                 enabled && isSelected(i)

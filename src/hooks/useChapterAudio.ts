@@ -29,6 +29,7 @@ export interface ChapterAudioState {
 
 interface UseChapterAudioOptions {
   onSentenceChange?: (timing: SentenceTiming) => void;
+  onWordChange?: (lineIndex: number, wordIndex: number, language: "en" | "es") => void;
   onPageChange?: (pageNumber: number) => void;
   onPlaybackComplete?: () => void;
   onError?: (error: Error) => void;
@@ -54,21 +55,36 @@ function buildCuesFromMetadata(
   for (let i = 0; i < timings.length; i++) {
     const st = timings[i];
 
-    // Make cues contiguous: extend endTime to the next sentence's startTime.
-    // This keeps the highlight on the current sentence through the silence
-    // gap between sentences, preventing cumulative drift from gaps where
-    // no cue is active.
-    const endTime = i < timings.length - 1
+    // Sentence cue (contiguous: extends to next sentence's start)
+    const sentenceEnd = i < timings.length - 1
       ? timings[i + 1].startTime
       : st.endTime;
 
-    const cue = new VTTCue(
+    const sentenceCue = new VTTCue(
       st.startTime,
-      endTime,
+      sentenceEnd,
       JSON.stringify({ t: "s", i, p: st.pageNumber, l: st.lineIndex, lang: st.language })
     );
-    cue.id = `s-${i}`;
-    track.addCue(cue);
+    sentenceCue.id = `s-${i}`;
+    track.addCue(sentenceCue);
+
+    // Word cues (contiguous within sentence: each extends to next word's start)
+    if (st.wordTimings && st.wordTimings.length > 0) {
+      for (let w = 0; w < st.wordTimings.length; w++) {
+        const wt = st.wordTimings[w];
+        const wordEnd = w < st.wordTimings.length - 1
+          ? st.wordTimings[w + 1].startTime
+          : sentenceEnd;
+
+        const wordCue = new VTTCue(
+          wt.startTime,
+          wordEnd,
+          JSON.stringify({ t: "w", si: i, wi: w, l: st.lineIndex, lang: st.language })
+        );
+        wordCue.id = `w-${i}-${w}`;
+        track.addCue(wordCue);
+      }
+    }
   }
 }
 
@@ -94,6 +110,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   const abortRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   const lastSentenceIdxRef = useRef(-1);
+  const lastWordIdxRef = useRef(-1);
   const lastPageRef = useRef(-1);
   const currentSentenceRef = useRef<SentenceTiming | null>(null);
   optionsRef.current = options;
@@ -145,34 +162,46 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const activeCues = textTrack.activeCues;
     if (!activeCues || !metadataRef.current) return;
 
-    let latestPayload: { i: number; p: number; l: number; lang: string } | null = null;
+    let latestSentence: { i: number; p: number; l: number; lang: string } | null = null;
+    let latestWord: { si: number; wi: number; l: number; lang: string } | null = null;
 
     for (let i = 0; i < activeCues.length; i++) {
       const cue = activeCues[i] as VTTCue;
-      let payload: { t: string; i?: number; p?: number; l?: number; lang?: string };
+      let payload: any;
       try { payload = JSON.parse(cue.text); } catch { continue; }
 
-      if (payload.t === "s" && payload.i !== undefined && payload.p !== undefined) {
-        if (!latestPayload || payload.i > latestPayload.i) {
-          latestPayload = payload as { i: number; p: number; l: number; lang: string };
+      if (payload.t === "s" && payload.i !== undefined) {
+        if (!latestSentence || payload.i > latestSentence.i) {
+          latestSentence = payload;
+        }
+      } else if (payload.t === "w" && payload.si !== undefined && payload.wi !== undefined) {
+        if (!latestWord || payload.si > latestWord.si || (payload.si === latestWord.si && payload.wi > latestWord.wi)) {
+          latestWord = payload;
         }
       }
     }
 
     // Update sentence highlight
-    if (latestPayload && latestPayload.i !== lastSentenceIdxRef.current) {
-      lastSentenceIdxRef.current = latestPayload.i;
-      const timing = metadataRef.current!.sentenceTimings[latestPayload.i];
+    if (latestSentence && latestSentence.i !== lastSentenceIdxRef.current) {
+      lastSentenceIdxRef.current = latestSentence.i;
+      lastWordIdxRef.current = -1; // reset word tracking on sentence change
+      const timing = metadataRef.current!.sentenceTimings[latestSentence.i];
       currentSentenceRef.current = timing;
       setState(prev => ({ ...prev, currentSentence: timing }));
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn (immediate — Whisper timestamps match audible output)
-    if (emitPageChange && latestPayload && latestPayload.p !== lastPageRef.current) {
-      lastPageRef.current = latestPayload.p;
-      setState(prev => ({ ...prev, currentPage: latestPayload!.p }));
-      optionsRef.current.onPageChange?.(latestPayload.p);
+    // Update word highlight
+    if (latestWord && latestWord.wi !== lastWordIdxRef.current) {
+      lastWordIdxRef.current = latestWord.wi;
+      optionsRef.current.onWordChange?.(latestWord.l, latestWord.wi, latestWord.lang as "en" | "es");
+    }
+
+    // Page turn
+    if (emitPageChange && latestSentence && latestSentence.p !== lastPageRef.current) {
+      lastPageRef.current = latestSentence.p;
+      setState(prev => ({ ...prev, currentPage: latestSentence!.p }));
+      optionsRef.current.onPageChange?.(latestSentence.p);
     }
   }, []);
 
@@ -241,6 +270,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     textTrackRef.current = null;
     stopProgressTimer();
     lastSentenceIdxRef.current = -1;
+    lastWordIdxRef.current = -1;
     lastPageRef.current = -1;
     setMetadata(null);
     metadataRef.current = null;
@@ -533,6 +563,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
     textTrackRef.current = null;
     lastSentenceIdxRef.current = -1;
+    lastWordIdxRef.current = -1;
     lastPageRef.current = -1;
     currentSentenceRef.current = null;
     setMetadata(null);
