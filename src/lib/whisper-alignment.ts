@@ -180,13 +180,39 @@ export async function alignChapterAudio(
     return sentenceTimings;
   }
 
+  // Log Whisper word distribution around a known boundary for debugging
+  const boundaryWords = whisperWords.filter(w => w.start >= 210 && w.start <= 225);
+  if (boundaryWords.length > 0) {
+    console.log(`[whisper-alignment] Whisper words near 210-225s:`);
+    for (const w of boundaryWords) {
+      console.log(`  [${w.start.toFixed(3)}-${w.end.toFixed(3)}] "${w.word}"`);
+    }
+  }
+
   // Align Whisper words to our sentence structure
   const aligned = alignWordsToSentences(whisperWords, sentenceTimings);
 
-  // Log a sample to verify alignment quality
-  const sample = aligned.find(s => s.pageNumber === 3 && s.language === "en");
-  if (sample) {
-    console.log(`[whisper-alignment] Sample (page 3 EN): "${sample.text.substring(0, 40)}..." [${sample.startTime.toFixed(3)}-${sample.endTime.toFixed(3)}]`);
+  // Log alignment quality metrics
+  let matched = 0;
+  let unmatched = 0;
+  for (const s of aligned) {
+    if (s.wordTimings.length > 0) matched++;
+    else unmatched++;
+  }
+  console.log(`[whisper-alignment] Alignment: ${matched} matched, ${unmatched} unmatched out of ${aligned.length} sentences`);
+
+  // Log page 3 last few sentences to check alignment accuracy
+  const p3 = aligned.filter(s => s.pageNumber === 3);
+  const p4 = aligned.filter(s => s.pageNumber === 4);
+  if (p3.length > 0) {
+    for (const s of p3.slice(-4)) {
+      console.log(`[whisper-alignment] P3 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
+    }
+  }
+  if (p4.length > 0) {
+    for (const s of p4.slice(0, 2)) {
+      console.log(`[whisper-alignment] P4 ${s.language}: [${s.startTime.toFixed(3)}-${s.endTime.toFixed(3)}] words=${s.wordTimings.length} "${s.text.substring(0, 40)}"`);
+    }
   }
 
   return aligned;
