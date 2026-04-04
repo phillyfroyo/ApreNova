@@ -79,9 +79,10 @@ export class AzureSpeechService {
     }
 
     this.speechConfig = sdk.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
-    
-    // Configure audio format for high quality
-    this.speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz192KBitRateMonoMp3;
+
+    // Output WAV (RIFF PCM) for forced alignment compatibility.
+    // The caller converts WAV→MP3 for storage using lamejs.
+    this.speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Riff48Khz16BitMonoPcm;
   }
 
   /**
@@ -443,8 +444,9 @@ export class AzureSpeechService {
               const audioData = result.audioData;
               // Bookmark-based duration: accurate for relative sentence timing within this chunk
               const bookmarkDuration = bookmarkOffsets.get("s_end") ?? 0;
-              // Buffer-based duration: matches actual MP3 byte length (48kHz 192kbps mono)
-              const bufferDuration = (audioData.byteLength * 8) / 192000;
+              // Buffer-based duration: WAV at 48kHz 16-bit mono = 96000 bytes/sec
+              // Subtract 44 bytes for RIFF header
+              const bufferDuration = Math.max(0, audioData.byteLength - 44) / 96000;
               // Use bookmark duration for sentence timing, fall back to buffer if no bookmarks
               const totalDuration = bookmarkDuration || bufferDuration;
 

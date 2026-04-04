@@ -2,12 +2,22 @@
 <html><head><title>Timing Debug</title></head>
 <body>
 <h2>Chapter Audio Timing Debug</h2>
-<button onclick="run()">Fetch Timings</button>
+<button onclick="run()">Fetch & Play (seeks to page 3 last sentence)</button>
+<button onclick="stopAudio()">Stop</button>
 <pre id="out" style="font-size:12px;white-space:pre-wrap;"></pre>
 <script>
+var audioEl = null;
+var trackEl = null;
+
+function stopAudio() {
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+}
+
 async function run() {
   var out = document.getElementById('out');
-  out.textContent = 'Fetching...';
+  out.textContent = 'Fetching metadata...';
+  stopAudio();
+
   try {
     var r = await fetch('/api/azure-tts/chapter', {
       method: 'POST',
@@ -18,34 +28,80 @@ async function run() {
     var lines = text.trim().split('\n');
     var d = JSON.parse(lines[lines.length - 1]);
     var m = d.metadata;
-    var result = '';
-    result += 'Total sentences: ' + m.sentenceTimings.length + '\n';
-    result += 'Total duration: ' + m.totalDuration + 's\n';
-    result += 'Pages: ' + m.pageBoundaries.map(function(p){return p.pageNumber}).join(', ') + '\n\n';
+    var audioUrl = d.audioUrl;
 
-    for (var pg = 3; pg <= 4; pg++) {
-      var sents = m.sentenceTimings.filter(function(s){return s.pageNumber === pg});
-      var show = pg === 3 ? sents.slice(-4) : sents.slice(0, 2);
-      result += '=== PAGE ' + pg + ' (' + sents.length + ' total sentences) ===\n';
-      show.forEach(function(s, idx) {
-        var wt = s.wordTimings || [];
-        var firstW = wt.length > 0 ? wt[0].startTime.toFixed(3) : 'none';
-        var lastW = wt.length > 0 ? wt[wt.length-1].endTime.toFixed(3) : 'none';
-        result += '  [' + s.startTime.toFixed(3) + ' - ' + s.endTime.toFixed(3) + '] ';
-        result += 'lang=' + s.language + ' words=' + wt.length + ' ';
-        result += 'firstWordStart=' + firstW + ' lastWordEnd=' + lastW + '\n';
-        result += '  "' + s.text.substring(0, 60) + '"\n';
-      });
-      result += '\n';
-    }
+    // Find the page 3 last sentence
+    var p3sents = m.sentenceTimings.filter(function(s){return s.pageNumber === 3});
+    var p4sents = m.sentenceTimings.filter(function(s){return s.pageNumber === 4});
+    var lastP3 = p3sents[p3sents.length - 1];
+    var firstP4 = p4sents[0];
 
-    // Also show page boundaries
-    result += '=== PAGE BOUNDARIES ===\n';
-    m.pageBoundaries.forEach(function(p) {
-      result += '  Page ' + p.pageNumber + ': ' + p.startTime.toFixed(3) + ' - ' + p.endTime.toFixed(3) + ' (' + p.sentenceCount + ' sentences)\n';
+    var result = 'Audio URL: ' + audioUrl + '\n';
+    result += 'Total duration (metadata): ' + m.totalDuration.toFixed(3) + 's\n\n';
+    result += 'Page 3 last sentence:\n';
+    result += '  bookmark: [' + lastP3.startTime.toFixed(3) + ' - ' + lastP3.endTime.toFixed(3) + ']\n';
+    result += '  text: "' + lastP3.text + '"\n\n';
+    result += 'Page 4 first sentence:\n';
+    result += '  bookmark: [' + firstP4.startTime.toFixed(3) + ' - ' + firstP4.endTime.toFixed(3) + ']\n';
+    result += '  text: "' + firstP4.text.substring(0,60) + '"\n\n';
+
+    out.textContent = result + 'Loading audio...\n';
+
+    // Create audio and seek to ~5s before page 3's last sentence
+    var audio = new Audio(audioUrl);
+    audioEl = audio;
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
+
+    await new Promise(function(resolve) {
+      audio.addEventListener('loadedmetadata', resolve, {once:true});
     });
 
+    result += 'Audio duration (browser): ' + audio.duration.toFixed(3) + 's\n';
+    result += 'Duration diff: ' + (audio.duration - m.totalDuration).toFixed(3) + 's\n\n';
+
+    // Seek to 5s before the last sentence of page 3
+    var seekTo = lastP3.startTime - 5;
+    audio.currentTime = seekTo;
+    result += 'Seeking to: ' + seekTo.toFixed(3) + 's (5s before last P3 sentence)\n';
+    result += 'Listening for page boundary crossing...\n\n';
     out.textContent = result;
+
+    // Monitor currentTime around the page boundary
+    audio.play();
+    var logged = false;
+    var interval = setInterval(function() {
+      if (!audio || audio.paused) { clearInterval(interval); return; }
+      var ct = audio.currentTime;
+
+      // Log when we cross from page 3 to page 4 territory
+      if (ct >= lastP3.startTime && ct < firstP4.endTime) {
+        var line = 'currentTime=' + ct.toFixed(3);
+        if (ct < lastP3.endTime) {
+          line += '  [IN page3 last sentence region]';
+        } else if (ct < firstP4.startTime) {
+          line += '  [IN gap between pages]';
+        } else {
+          line += '  [IN page4 first sentence region]';
+          if (!logged) {
+            logged = true;
+            line += '  *** PAGE 4 STARTS HERE ***';
+          }
+        }
+        out.textContent += line + '\n';
+      }
+
+      // Stop after page 4 first sentence
+      if (ct > firstP4.endTime + 2) {
+        audio.pause();
+        clearInterval(interval);
+        out.textContent += '\nDone. Compare what you HEARD vs the timestamps above.\n';
+        out.textContent += 'If you heard page 3 last sentence finishing AFTER the\n';
+        out.textContent += '"page4 first sentence region" timestamps, the browser\n';
+        out.textContent += 'audio timeline is ahead of the actual audio output.\n';
+      }
+    }, 50);
+
   } catch(e) {
     out.textContent = 'Error: ' + e.message;
   }

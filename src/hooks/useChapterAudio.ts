@@ -432,20 +432,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
 
       setState(prev => ({ ...prev, duration: audio.duration }));
 
-      // ---- Build TextTrack cues from Whisper-aligned metadata ----
+      // ---- Build TextTrack cues from PA-aligned metadata ----
       const textTrack = audio.addTextTrack("metadata", "sentence-sync", "en");
       textTrack.mode = "hidden"; // must be 'hidden' for cuechange to fire
       buildCuesFromMetadata(textTrack, chapterMetadata!);
       textTrackRef.current = textTrack;
 
       textTrack.addEventListener("cuechange", () => processCues(textTrack, true));
-
-      // Diagnostic: log a sample timing to verify Whisper alignment reached client
-      const sampleP3 = chapterMetadata!.sentenceTimings.filter(s => s.pageNumber === 3);
-      if (sampleP3.length > 0) {
-        const last = sampleP3[sampleP3.length - 1];
-        console.log(`[ChapterAudio] Timing check — page 3 last sentence: [${last.startTime.toFixed(3)}-${last.endTime.toFixed(3)}] "${last.text.substring(0, 40)}"`);
-      }
       console.log(`[ChapterAudio] TextTrack sync active — ${textTrack.cues?.length ?? 0} cues built from metadata`);
 
       // Seek to initial position before playing
