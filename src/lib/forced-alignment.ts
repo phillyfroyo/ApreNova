@@ -20,7 +20,8 @@ interface AlignedWord {
 async function alignChunk(
   wavBuffer: Buffer,
   referenceText: string,
-  language: string // "en-US" or "es-ES"
+  language: string, // "en-US" or "es-ES"
+  audioDurationSec?: number
 ): Promise<AlignedWord[]> {
   const speechConfig = sdk.SpeechConfig.fromSubscription(
     process.env.AZURE_SPEECH_KEY!,
@@ -45,11 +46,13 @@ async function alignChunk(
   const words: AlignedWord[] = [];
 
   return new Promise((resolve, reject) => {
+    // Timeout: audio duration + 60s buffer (PA processes in ~real-time)
+    const timeoutMs = ((audioDurationSec || 300) + 60) * 1000;
     const timeout = setTimeout(() => {
       recognizer.stopContinuousRecognitionAsync();
-      console.warn("[forced-alignment] Timeout after 120s");
+      console.warn(`[forced-alignment] Timeout after ${Math.round(timeoutMs / 1000)}s (got ${words.length} words so far)`);
       resolve(words);
-    }, 120_000);
+    }, timeoutMs);
 
     recognizer.recognized = (_sender, event) => {
       if (event.result.reason === sdk.ResultReason.RecognizedSpeech) {
@@ -128,18 +131,21 @@ export async function alignChunkSentences(
   const enRefText = enSentences.map(s => s.text).join(" ");
   const esRefText = esSentences.map(s => s.text).join(" ");
 
+  // Estimate audio duration from WAV buffer (48kHz 16-bit mono = 96000 bytes/sec + 44 byte header)
+  const audioDurationSec = Math.max(0, wavBuffer.byteLength - 44) / 96000;
+
   // Run alignment passes
   const passes: Promise<{ lang: "en" | "es"; words: AlignedWord[] }>[] = [];
 
   if (enRefText.trim()) {
     passes.push(
-      alignChunk(wavBuffer, enRefText, "en-US")
+      alignChunk(wavBuffer, enRefText, "en-US", audioDurationSec)
         .then(words => ({ lang: "en" as const, words }))
     );
   }
   if (esRefText.trim()) {
     passes.push(
-      alignChunk(wavBuffer, esRefText, "es-MX")
+      alignChunk(wavBuffer, esRefText, "es-MX", audioDurationSec)
         .then(words => ({ lang: "es" as const, words }))
     );
   }
