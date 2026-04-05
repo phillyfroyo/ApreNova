@@ -212,10 +212,15 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Update word highlight
+    // Update word highlight — only for words belonging to the current sentence.
+    // In bilingual mode, word cues from the next sentence can overlap with
+    // the current sentence's time range due to PA timing imprecision.
     if (latestWord && latestWord.wi !== lastWordIdxRef.current) {
-      lastWordIdxRef.current = latestWord.wi;
-      optionsRef.current.onWordChange?.(latestWord.l, latestWord.wi, latestWord.lang as "en" | "es");
+      // Only fire if the word belongs to the currently active sentence
+      if (latestSentence && latestWord.si === latestSentence.i) {
+        lastWordIdxRef.current = latestWord.wi;
+        optionsRef.current.onWordChange?.(latestWord.l, latestWord.wi, latestWord.lang as "en" | "es");
+      }
     }
 
     // Page turn: fires from page-end cue at the exact moment the last
