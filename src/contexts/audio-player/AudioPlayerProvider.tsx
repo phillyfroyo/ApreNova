@@ -71,11 +71,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
     },
     onPageChange: (pageNumber) => {
+      // This callback is now AUTO PAGE TURN ONLY (from processCues page-end cue).
+      // Manual page nav and line skips handle their own navigation.
       const s = stateRef.current;
+      if (navigatingToPageRef.current) return; // guard: ignore during active nav
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
         navigatingToPageRef.current = { page: pageNumber, shouldResume: true };
-        chapterAudio.pauseSilently();
-        setStatusOverride("navigating"); // Synchronous ref + re-render trigger
+        // Delay pause by 300ms so the last syllable finishes playing.
+        // Audio is in the inter-page silence gap, so the delay is inaudible.
+        if (delayedPauseRef.current) clearTimeout(delayedPauseRef.current);
+        delayedPauseRef.current = setTimeout(() => {
+          delayedPauseRef.current = null;
+          chapterAudio.pauseSilently();
+        }, 300);
+        setStatusOverride("navigating");
 
         setState(prev => ({
           ...prev,
@@ -237,7 +246,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
-  const navigatingToPageRef = useRef<{ page: number; shouldResume: boolean } | null>(null);
+  const navigatingToPageRef = useRef<{
+    page: number;
+    shouldResume: boolean;
+    seekToLine?: { pageNumber: number; lineIndex: number };
+  } | null>(null);
+  const delayedPauseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSeekTimeRef = useRef<number | null>(null);
   // Deferred label for variant reloads — applied only once generation actually starts
   const pendingGenerationLabelRef = useRef<string | null>(null);
@@ -862,7 +876,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const skipForward = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      const posBefore = chapterAudio.getCurrentPosition();
       chapterAudio.skipForwardSentence();
+      const posAfter = chapterAudio.getCurrentPosition();
+      // Cross-page skip: navigate to the new page
+      if (posBefore && posAfter && posAfter.pageNumber !== posBefore.pageNumber && s.position) {
+        navigatingToPageRef.current = {
+          page: posAfter.pageNumber,
+          shouldResume: true,
+          seekToLine: posAfter,
+        };
+        chapterAudio.pauseSilently();
+        setStatusOverride("navigating");
+        setState(prev => ({
+          ...prev,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
+          position: prev.position ? { ...prev.position, page: posAfter.pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
+        }));
+        router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, s.position.chapter, posAfter.pageNumber, s.position.isUserStory, s.position.userStoryId));
+      }
       return;
     }
     // Legacy
@@ -880,7 +913,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const skipBack = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      const posBefore = chapterAudio.getCurrentPosition();
       chapterAudio.skipBackSentence();
+      const posAfter = chapterAudio.getCurrentPosition();
+      // Cross-page skip: navigate to the new page
+      if (posBefore && posAfter && posAfter.pageNumber !== posBefore.pageNumber && s.position) {
+        navigatingToPageRef.current = {
+          page: posAfter.pageNumber,
+          shouldResume: true,
+          seekToLine: posAfter,
+        };
+        chapterAudio.pauseSilently();
+        setStatusOverride("navigating");
+        setState(prev => ({
+          ...prev,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
+          position: prev.position ? { ...prev.position, page: posAfter.pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
+        }));
+        router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, s.position.chapter, posAfter.pageNumber, s.position.isUserStory, s.position.userStoryId));
+      }
       return;
     }
     // Legacy
@@ -901,8 +953,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (!s.position || !s.storyMap) return;
       const { next } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!next) return;
-      const wasPlaying = chapterAudio.state.status === "playing";
-      navigatingToPageRef.current = { page: next.pg, shouldResume: wasPlaying };
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      navigatingToPageRef.current = { page: next.pg, shouldResume: true };
       chapterAudio.pauseSilently();
       chapterAudio.skipForwardPage();
       setStatusOverride("navigating");
@@ -933,8 +985,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (!s.position || !s.storyMap) return;
       const { prev: prevPg } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!prevPg) return;
-      const wasPlaying = chapterAudio.state.status === "playing";
-      navigatingToPageRef.current = { page: prevPg.pg, shouldResume: wasPlaying };
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      navigatingToPageRef.current = { page: prevPg.pg, shouldResume: true };
       chapterAudio.pauseSilently();
       chapterAudio.skipBackPage();
       setStatusOverride("navigating");
@@ -1012,29 +1064,34 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const nav = navigatingToPageRef.current;
       if (nav && nav.page === page) {
         navigatingToPageRef.current = null;
-        const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
+
+        // Determine seek target: exact line (cross-page line skip) or page start
+        let seekTarget = nav.seekToLine
+          ? chapterAudio.metadata?.sentenceTimings.find(
+              t => t.pageNumber === nav.seekToLine!.pageNumber && t.lineIndex === nav.seekToLine!.lineIndex
+            )
+          : undefined;
+        if (!seekTarget) {
+          seekTarget = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
+        }
 
         // Set highlight eagerly via DOM; sync loop will confirm on its first frame.
-        if (firstSentence) {
-          applyHighlight(firstSentence.lineIndex, firstSentence.language);
+        if (seekTarget) {
+          applyHighlight(seekTarget.lineIndex, seekTarget.language);
         }
 
         // Delay resume by one frame so the "navigating" spinner paints before clearing.
         requestAnimationFrame(() => {
+          if (seekTarget) {
+            chapterAudio.seekToTime(seekTarget.startTime);
+          }
           if (nav.shouldResume) {
-            // Seek to the new page's start — audio.currentTime may have
-            // advanced past this point due to decoder pipeline buffering.
-            // The seek discards stale buffered audio so playback starts
-            // cleanly at the first sentence of the new page.
-            if (firstSentence) {
-              chapterAudio.seekToTime(firstSentence.startTime);
-            }
             setStatusOverride("playing");
             chapterAudio.play();
-            // Reset sentence tracking after seek so cuechange re-fires
             chapterAudio.resetSentenceTracking();
           } else {
-            setStatusOverride(null);
+            setStatusOverride("paused");
+            chapterAudio.resetSentenceTracking();
           }
         });
       } else if (!nav) {

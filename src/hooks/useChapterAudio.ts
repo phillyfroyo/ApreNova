@@ -571,7 +571,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, [stopProgressTimer, removeAudioFromDOM]);
 
   // After seeking, update highlight/page state immediately (cuechange will confirm)
-  const syncAfterSeek = useCallback(() => {
+  // Sync sentence highlight + internal page tracking after a seek.
+  // Does NOT fire onPageChange — callers handle page navigation themselves.
+  // This prevents seek → onPageChange → navigation → seek loops.
+  const syncSentenceAfterSeek = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -587,20 +590,21 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
+    // Update page tracking silently so processCues doesn't re-fire
+    // onPageChange for a page the caller already navigated to.
     const page = findPageAtTime(currentTime);
     if (page !== lastPageRef.current) {
       lastPageRef.current = page;
       setState(prev => ({ ...prev, currentPage: page }));
-      optionsRef.current.onPageChange?.(page);
     }
   }, [findSentenceAtTime, findPageAtTime]);
 
   const seekToTime = useCallback((time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.max(0, Math.min(time, audioRef.current.duration || 0));
-      syncAfterSeek();
+      syncSentenceAfterSeek();
     }
-  }, [syncAfterSeek]);
+  }, [syncSentenceAfterSeek]);
 
   const seekToSentence = useCallback((pageNumber: number, lineIndex: number) => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -609,9 +613,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const target = timings.find(t => t.pageNumber === pageNumber && t.lineIndex === lineIndex);
     if (target) {
       audioRef.current.currentTime = target.startTime;
-      syncAfterSeek();
+      syncSentenceAfterSeek();
     }
-  }, [syncAfterSeek]);
+  }, [syncSentenceAfterSeek]);
 
   const seekToPage = useCallback((pageNumber: number) => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -620,9 +624,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const target = boundaries.find(b => b.pageNumber === pageNumber);
     if (target) {
       audioRef.current.currentTime = target.startTime;
-      syncAfterSeek();
+      syncSentenceAfterSeek();
     }
-  }, [syncAfterSeek]);
+  }, [syncSentenceAfterSeek]);
 
   const skipForwardSentence = useCallback(() => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -642,9 +646,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     }
     if (nextIdx < timings.length) {
       audioRef.current.currentTime = timings[nextIdx].startTime;
-      syncAfterSeek();
+      syncSentenceAfterSeek();
     }
-  }, [syncAfterSeek]);
+  }, [syncSentenceAfterSeek]);
 
   const skipBackSentence = useCallback(() => {
     const timings = metadataRef.current?.sentenceTimings;
@@ -687,8 +691,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         audioRef.current.currentTime = timings[0].startTime;
       }
     }
-    syncAfterSeek();
-  }, [syncAfterSeek]);
+    syncSentenceAfterSeek();
+  }, [syncSentenceAfterSeek]);
 
   const skipForwardPage = useCallback(() => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -699,9 +703,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const nextIdx = currentBoundaryIdx + 1;
     if (nextIdx < boundaries.length) {
       audioRef.current.currentTime = boundaries[nextIdx].startTime;
-      syncAfterSeek();
+      syncSentenceAfterSeek();
     }
-  }, [syncAfterSeek]);
+  }, [syncSentenceAfterSeek]);
 
   const skipBackPage = useCallback(() => {
     const boundaries = metadataRef.current?.pageBoundaries;
@@ -711,8 +715,8 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     const currentBoundaryIdx = boundaries.findIndex(b => b.pageNumber === currentPage);
     const prevIdx = Math.max(0, currentBoundaryIdx - 1);
     audioRef.current.currentTime = boundaries[prevIdx].startTime;
-    syncAfterSeek();
-  }, [syncAfterSeek]);
+    syncSentenceAfterSeek();
+  }, [syncSentenceAfterSeek]);
 
   // Reset sentence tracking so the next cuechange fires onSentenceChange
   // even if the same sentence index is active (e.g., after page navigation)
