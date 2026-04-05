@@ -380,6 +380,48 @@ export async function generateChapterAudio(
     timeOffset += result.totalDuration;
   }
 
+  // Enforce non-overlapping, monotonic sentence timings.
+  // PA alignment for bilingual can produce overlapping ranges when one
+  // language's PA pass finds phonemes in the other language's audio.
+  // Clamp each sentence's endTime to the next sentence's startTime.
+  for (let i = 0; i < allSentenceTimings.length - 1; i++) {
+    const curr = allSentenceTimings[i];
+    const next = allSentenceTimings[i + 1];
+
+    // Ensure startTime is monotonic
+    if (next.startTime < curr.startTime) {
+      next.startTime = curr.endTime;
+    }
+
+    // Ensure no overlap: curr.endTime <= next.startTime
+    if (curr.endTime > next.startTime) {
+      // Split the overlap at the midpoint
+      const mid = (curr.endTime + next.startTime) / 2;
+      curr.endTime = mid;
+      next.startTime = mid;
+
+      // Also trim word timings that extend past the clamped endTime
+      curr.wordTimings = curr.wordTimings.filter(w => w.startTime < curr.endTime);
+      next.wordTimings = next.wordTimings.filter(w => w.startTime >= next.startTime);
+    }
+  }
+
+  // Rebuild page boundaries from corrected timings
+  pageBoundaryMap.clear();
+  for (const st of allSentenceTimings) {
+    const existing = pageBoundaryMap.get(st.pageNumber);
+    if (existing) {
+      existing.endTime = st.endTime;
+      existing.sentenceCount++;
+    } else {
+      pageBoundaryMap.set(st.pageNumber, {
+        startTime: st.startTime,
+        endTime: st.endTime,
+        sentenceCount: 1,
+      });
+    }
+  }
+
   onProgress?.({ status: "concatenating", sentencesComplete: totalSentences, sentencesTotal: totalSentences });
 
   const concatenatedBuffer = Buffer.concat(audioBuffers);
