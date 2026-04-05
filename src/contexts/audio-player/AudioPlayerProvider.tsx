@@ -399,37 +399,34 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [chapterAudio.state.currentTime]);
 
   // ---- Sync chapter audio data (NOT status) into provider state ----
-  // Status is now derived via effectiveStatus; this effect only syncs progress bar
-  // data and handles pending seeks.
+  // Only react to status, currentTime, duration, and progress changes —
+  // NOT currentSentence (which changes per-word and would cause loops).
+  const { status: csStatus, currentTime: csCurrentTime, duration: csDuration, progress: csProgress } = chapterAudio.state;
+
   useEffect(() => {
     if (stateRef.current.playbackMode !== "chapter") return;
 
-    const cs = chapterAudio.state;
-
     setState(prev => ({
       ...prev,
-      chapterCurrentTime: cs.currentTime,
-      chapterDuration: cs.duration,
-      chapterGenerationProgress: cs.status === "generating" && cs.progress
-        ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-        : cs.status === "ready" && cs.progress
-          ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-          : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
-      // Apply deferred variant-reload label once generation starts (not during loading/cache check);
-      // clear once audio is playing or ready
-      generationLabel: (cs.status === "playing" || cs.status === "ready") ? null
-        : cs.status === "generating" && pendingGenerationLabelRef.current
+      chapterCurrentTime: csCurrentTime,
+      chapterDuration: csDuration,
+      chapterGenerationProgress: csStatus === "generating" && csProgress
+        ? { sentencesComplete: csProgress.sentencesComplete, sentencesTotal: csProgress.sentencesTotal }
+        : csStatus === "ready" && csProgress
+          ? { sentencesComplete: csProgress.sentencesComplete, sentencesTotal: csProgress.sentencesTotal }
+          : (csStatus === "ready" ? prev.chapterGenerationProgress : (csStatus !== "generating" ? null : prev.chapterGenerationProgress)),
+      generationLabel: (csStatus === "playing" || csStatus === "ready") ? null
+        : csStatus === "generating" && pendingGenerationLabelRef.current
           ? pendingGenerationLabelRef.current
           : prev.generationLabel,
     }));
 
-    // Clear pending generation label ref after it's been applied or is no longer needed
-    if (cs.status === "generating" || cs.status === "playing" || cs.status === "ready") {
+    if (csStatus === "generating" || csStatus === "playing" || csStatus === "ready") {
       pendingGenerationLabelRef.current = null;
     }
 
-    // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
-    if (cs.status === "playing" && pendingSeekTimeRef.current !== null) {
+    // Handle pending seek when audio starts playing
+    if (csStatus === "playing" && pendingSeekTimeRef.current !== null) {
       const seekTime = pendingSeekTimeRef.current;
       pendingSeekTimeRef.current = null;
 
@@ -453,13 +450,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     // Clear redundant overrides once the hook's status matches.
-    // "navigating" is NOT cleared here — registerPageContent handles that after a paint frame.
-    // "playing" override is cleared once the hook confirms it's playing.
     const override = statusOverrideRef.current;
-    if (override && override !== "navigating" && cs.status === override) {
+    if (override && override !== "navigating" && csStatus === override) {
       setStatusOverride(null);
     }
-  }, [chapterAudio.state]);
+  }, [csStatus, csCurrentTime, csDuration, csProgress]);
 
   // ---- Helper: determine ChapterAudioMode ----
   function getChapterAudioMode(languageMode: "target-only" | "bilingual"): ChapterAudioMode {
