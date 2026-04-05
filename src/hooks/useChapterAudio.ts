@@ -388,7 +388,9 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           if (data.type === "progress") {
             if (data.sentencesTotal && data.sentencesComplete === 0) {
               clearTimeout(timeoutId);
-              timeoutMs = 60_000 + data.sentencesTotal * 3_000;
+              // Scale timeout: 120s base + 5s per segment. Bilingual chapters
+              // with forced alignment (dual synthesis + dual PA) can take 8-10min.
+              timeoutMs = 120_000 + data.sentencesTotal * 5_000;
               console.log(`[ChapterAudio] ${data.sentencesTotal} segments — timeout set to ${Math.round(timeoutMs / 1000)}s`);
               timeoutId = setTimeout(abortOnTimeout, timeoutMs);
               startSimulatedProgress(data.sentencesTotal);
