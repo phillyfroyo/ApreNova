@@ -629,7 +629,17 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (!timings || !audioRef.current) return;
 
     const currentIdx = lastSentenceIdxRef.current;
-    const nextIdx = currentIdx + 1;
+    if (currentIdx < 0) return;
+    const currentLine = timings[currentIdx].lineIndex;
+    const currentPage = timings[currentIdx].pageNumber;
+
+    // Find the next entry where lineIndex or pageNumber changes (next visual line)
+    let nextIdx = currentIdx + 1;
+    while (nextIdx < timings.length &&
+           timings[nextIdx].lineIndex === currentLine &&
+           timings[nextIdx].pageNumber === currentPage) {
+      nextIdx++;
+    }
     if (nextIdx < timings.length) {
       audioRef.current.currentTime = timings[nextIdx].startTime;
       syncAfterSeek();
@@ -641,12 +651,41 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     if (!timings || !audioRef.current) return;
 
     const currentIdx = lastSentenceIdxRef.current;
-    const currentTiming = currentIdx >= 0 ? timings[currentIdx] : null;
-    if (currentTiming && audioRef.current.currentTime - currentTiming.startTime > 2) {
-      audioRef.current.currentTime = currentTiming.startTime;
+    if (currentIdx < 0) return;
+    const currentTiming = timings[currentIdx];
+
+    // If more than 2s into current line, restart it (go to first entry of this line)
+    if (audioRef.current.currentTime - currentTiming.startTime > 2) {
+      // Find the first entry for this lineIndex + pageNumber
+      let lineStart = currentIdx;
+      while (lineStart > 0 &&
+             timings[lineStart - 1].lineIndex === currentTiming.lineIndex &&
+             timings[lineStart - 1].pageNumber === currentTiming.pageNumber) {
+        lineStart--;
+      }
+      audioRef.current.currentTime = timings[lineStart].startTime;
     } else {
-      const prevIdx = Math.max(0, currentIdx - 1);
-      audioRef.current.currentTime = timings[prevIdx].startTime;
+      // Go to the previous visual line (find where lineIndex changes going backward)
+      let prevIdx = currentIdx - 1;
+      // Skip past other entries on the same line (e.g., native language of current line)
+      while (prevIdx >= 0 &&
+             timings[prevIdx].lineIndex === currentTiming.lineIndex &&
+             timings[prevIdx].pageNumber === currentTiming.pageNumber) {
+        prevIdx--;
+      }
+      if (prevIdx >= 0) {
+        // Now find the first entry of that previous line
+        const prevLine = timings[prevIdx].lineIndex;
+        const prevPage = timings[prevIdx].pageNumber;
+        while (prevIdx > 0 &&
+               timings[prevIdx - 1].lineIndex === prevLine &&
+               timings[prevIdx - 1].pageNumber === prevPage) {
+          prevIdx--;
+        }
+        audioRef.current.currentTime = timings[prevIdx].startTime;
+      } else {
+        audioRef.current.currentTime = timings[0].startTime;
+      }
     }
     syncAfterSeek();
   }, [syncAfterSeek]);
