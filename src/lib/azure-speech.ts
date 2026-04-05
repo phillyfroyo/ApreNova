@@ -492,10 +492,7 @@ export class AzureSpeechService {
    * Synthesize the same SSML as WAV for forced alignment.
    * Uses a separate SpeechConfig with RIFF PCM output.
    */
-  public async generateChapterBufferWav(segments: ChapterSSMLSegment[]): Promise<{
-    buffer: Buffer;
-    sentenceTimings: { startTime: number; endTime: number }[];
-  }> {
+  public async generateChapterBufferWav(segments: ChapterSSMLSegment[]): Promise<Buffer> {
     try {
       const wavConfig = sdk.SpeechConfig.fromSubscription(
         process.env.AZURE_SPEECH_KEY!,
@@ -555,29 +552,13 @@ export class AzureSpeechService {
       `.trim();
 
       const synthesizer = new sdk.SpeechSynthesizer(wavConfig, null);
-      const bookmarkOffsets = new Map<string, number>();
 
       return new Promise((resolve, reject) => {
-        // Capture bookmark timings from the WAV synthesis (matches WAV audio exactly)
-        synthesizer.bookmarkReached = (_sender, event) => {
-          bookmarkOffsets.set(event.text, event.audioOffset / 10_000_000); // 100ns → seconds
-        };
-
         synthesizer.speakSsmlAsync(
           ssml,
           (result) => {
             if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-              const totalDuration = bookmarkOffsets.get("s_end") ??
-                (result.audioData.byteLength - 44) / 96000; // fallback: WAV byte count
-
-              const sentenceTimings: { startTime: number; endTime: number }[] = [];
-              for (let i = 0; i < segments.length; i++) {
-                const start = bookmarkOffsets.get(`s_${i}`) ?? 0;
-                const end = bookmarkOffsets.get(`s_${i + 1}`) ?? (i === segments.length - 1 ? totalDuration : start);
-                sentenceTimings.push({ startTime: start, endTime: end });
-              }
-
-              resolve({ buffer: Buffer.from(result.audioData), sentenceTimings });
+              resolve(Buffer.from(result.audioData));
             } else {
               reject(new Error(`WAV synthesis failed: ${result.errorDetails}`));
             }

@@ -74,7 +74,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
         navigatingToPageRef.current = { page: pageNumber, shouldResume: true };
-        chapterAudio.pauseSilently();
+        // Delay pause by 300ms — PA reports sentence endTime slightly before
+        // the last word finishes playing. The audio is in the inter-page
+        // silence gap anyway, so this delay is inaudible.
+        setTimeout(() => chapterAudio.pauseSilently(), 300);
         setStatusOverride("navigating");
 
         setState(prev => ({
