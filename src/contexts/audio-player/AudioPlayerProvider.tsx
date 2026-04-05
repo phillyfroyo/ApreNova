@@ -70,23 +70,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         }
       }
     },
-    onWordChange: (lineIndex, wordIndex, language) => {
-      const s = stateRef.current;
-      if (s.playbackMode === "chapter" && s.position) {
-        // In bilingual mode, only apply word highlight for the target language
-        // (native language text is a plain <p>, no word buttons)
-        const isBilingualMode = s.mode === "bilingual" && s.isVisible;
-        if (isBilingualMode) {
-          const targetLang = oppositeLang; // language being learned
-          if (language !== targetLang) {
-            // Native language sentence — clear word highlight, keep sentence highlight
-            clearWordHighlight();
-            return;
-          }
-        }
-        applyWordHighlight(lineIndex, wordIndex, language);
-      }
-    },
     onPageChange: (pageNumber) => {
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
@@ -263,7 +246,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   // DOM-direct highlight: refs to sentence line elements, registered by StoryLayout
   const sentenceElementsRef = useRef<React.MutableRefObject<(HTMLDivElement | null)[]> | null>(null);
   const lastHighlightRef = useRef<{ lineIndex: number; language: "en" | "es" | null } | null>(null);
-  const lastWordHighlightRef = useRef<{ lineIndex: number; wordIndex: number } | null>(null);
 
   // ---- DOM-direct highlight manipulation (bypasses React render for instant transitions) ----
   const applyHighlight = useCallback((lineIndex: number, language: "en" | "es") => {
@@ -318,43 +300,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     lastHighlightRef.current = { lineIndex, language };
   }, [lng]);
 
-  // ---- Word-level highlight (DOM-direct, same pattern as sentence highlight) ----
-  const applyWordHighlight = useCallback((lineIndex: number, wordIndex: number, language: "en" | "es") => {
-    const refs = sentenceElementsRef.current?.current;
-    if (!refs) return;
-
-    const prev = lastWordHighlightRef.current;
-    if (prev) {
-      const prevEl = refs[prev.lineIndex];
-      if (prevEl) {
-        const prevWord = prevEl.querySelector(`[data-word-index="${prev.wordIndex}"]`);
-        if (prevWord) prevWord.classList.remove("audio-word-highlight");
-      }
-    }
-
-    const el = refs[lineIndex];
-    if (el) {
-      const targetLine = el.querySelector("[data-target-line]") || el;
-      const wordBtn = targetLine.querySelector(`[data-word-index="${wordIndex}"]`);
-      if (wordBtn) wordBtn.classList.add("audio-word-highlight");
-    }
-
-    lastWordHighlightRef.current = { lineIndex, wordIndex };
-  }, []);
-
-  const clearWordHighlight = useCallback(() => {
-    const prev = lastWordHighlightRef.current;
-    const refs = sentenceElementsRef.current?.current;
-    if (prev && refs) {
-      const el = refs[prev.lineIndex];
-      if (el) {
-        const wordBtn = el.querySelector(`[data-word-index="${prev.wordIndex}"]`);
-        if (wordBtn) wordBtn.classList.remove("audio-word-highlight");
-      }
-    }
-    lastWordHighlightRef.current = null;
-  }, []);
-
   const clearHighlight = useCallback(() => {
     const prev = lastHighlightRef.current;
     const refs = sentenceElementsRef.current?.current;
@@ -369,8 +314,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
     }
     lastHighlightRef.current = null;
-    clearWordHighlight();
-  }, [clearWordHighlight]);
+  }, []);
 
   // ---- Audio bookmark persistence ----
   const saveAudioBookmark = useCallback(async () => {
@@ -1065,7 +1009,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     // In chapter mode (continued — same page or navigating)
     if (s.playbackMode === "chapter") {
-      chapterAudio.resetSentenceTracking();
       const nav = navigatingToPageRef.current;
       if (nav && nav.page === page) {
         navigatingToPageRef.current = null;
@@ -1088,10 +1031,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
             }
             setStatusOverride("playing");
             chapterAudio.play();
+            // Reset sentence tracking after seek so cuechange re-fires
+            chapterAudio.resetSentenceTracking();
           } else {
             setStatusOverride(null);
           }
         });
+      } else if (!nav) {
+        // Same page re-render (not a navigation) — re-sync highlights
+        chapterAudio.resetSentenceTracking();
       }
       return;
     }

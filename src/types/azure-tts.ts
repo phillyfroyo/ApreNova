@@ -114,23 +114,6 @@ export interface CacheCleanupOptions {
   maxFiles: number;
 }
 
-// Enhanced word highlighting types
-export interface WordHighlightConfig {
-  style: 'subtle' | 'prominent' | 'pulse' | 'custom';
-  smoothTransitions: boolean;
-  showConfidence: boolean;
-  clickToSeek: boolean;
-  autoScroll: boolean;
-}
-
-export interface AudioPlayerConfig {
-  preloadStrategy: 'none' | 'next' | 'all';
-  fallbackToStatic: boolean;
-  retryAttempts: number;
-  retryDelay: number; // milliseconds
-  wordHighlighting: WordHighlightConfig;
-}
-
 export interface SentenceAudioData {
   sentenceIndex: number;
   text: string;
