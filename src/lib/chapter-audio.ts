@@ -318,8 +318,8 @@ export async function generateChapterAudio(
     onProgress?.({ status: "aligning", sentencesComplete: Math.round(totalSentences * (c / chunks.length)), sentencesTotal: totalSentences });
     try {
       console.log(`[chapter-audio] chunk ${c+1}: synthesizing WAV for alignment...`);
-      const wavBuffer = await speech.generateChapterBufferWav(ssmlSegments);
-      console.log(`[chapter-audio] chunk ${c+1}: WAV ${(wavBuffer.byteLength / 1024 / 1024).toFixed(1)}MB, running PA...`);
+      const wavResult = await speech.generateChapterBufferWav(ssmlSegments);
+      console.log(`[chapter-audio] chunk ${c+1}: WAV ${(wavResult.buffer.byteLength / 1024 / 1024).toFixed(1)}MB, running PA...`);
 
       const chunkSentenceInfo = chunk.map(entry => ({
         text: entry.text,
@@ -328,14 +328,15 @@ export async function generateChapterAudio(
         lineIndex: entry.lineIndex,
       }));
 
-      // Pass bookmark timings so PA can filter words by time window (bilingual)
-      const chunkBookmarkTimings = bookmarkTimings.map(bt => ({
-        startTime: bt.startTime,
-        endTime: bt.endTime,
+      // Use WAV-native bookmark timings for slicing (not MP3 bookmarks)
+      // so clip boundaries match the actual WAV audio exactly.
+      const wavBookmarkTimings = wavResult.sentenceTimings.map(wt => ({
+        startTime: wt.startTime + timeOffset,
+        endTime: wt.endTime + timeOffset,
       }));
 
       const alignedResults = await alignChunkSentences(
-        wavBuffer, chunkSentenceInfo, timeOffset, isBilingual, chunkBookmarkTimings
+        wavResult.buffer, chunkSentenceInfo, timeOffset, isBilingual, wavBookmarkTimings
       );
 
       // Merge: use PA timestamps where available, bookmark as fallback

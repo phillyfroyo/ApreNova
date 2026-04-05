@@ -72,16 +72,15 @@ function buildCuesFromMetadata(
     sentenceCue.id = `s-${i}`;
     track.addCue(sentenceCue);
 
-    // Page-end cue: placed at the midpoint of the gap between the last
-    // sentence on this page and the first sentence on the next page.
-    // This gives the last word time to finish playing before the page
-    // turns, while ensuring the turn happens before next-page audio starts.
+    // Page-end cue: anchored to 200ms before the NEXT sentence starts.
+    // This is more reliable than using the current sentence's endTime
+    // (which PA can report early). The cue spans 200ms — enough for
+    // cuechange detection — and fires just before next-page audio begins.
     if (lastSentencePerPage.get(st.pageNumber) === i && i < timings.length - 1) {
       const nextSentence = timings[i + 1];
-      const gap = nextSentence.startTime - st.endTime;
-      const midGap = st.endTime + gap / 2;
+      const cueStart = Math.max(st.endTime, nextSentence.startTime - 0.2);
       const pageEndCue = new VTTCue(
-        midGap,
+        cueStart,
         nextSentence.startTime,
         JSON.stringify({ t: "pe", fromPage: st.pageNumber, toPage: nextSentence.pageNumber })
       );
@@ -189,9 +188,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       optionsRef.current.onSentenceChange?.(timing);
     }
 
-    // Page turn: fires from page-end cue at the exact moment the last
-    // sentence on the current page finishes speaking (PA-aligned timestamp).
-    // No delay needed — timestamps match audible output.
+    // Page turn: immediate — the cue already starts late in the gap
     if (emitPageChange && pageEnd && pageEnd.toPage !== lastPageRef.current) {
       lastPageRef.current = pageEnd.toPage;
       setState(prev => ({ ...prev, currentPage: pageEnd!.toPage }));

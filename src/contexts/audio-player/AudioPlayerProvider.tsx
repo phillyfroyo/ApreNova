@@ -75,7 +75,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
         navigatingToPageRef.current = { page: pageNumber, shouldResume: true };
         chapterAudio.pauseSilently();
-        setStatusOverride("navigating"); // Synchronous ref + re-render trigger
+        setStatusOverride("navigating");
 
         setState(prev => ({
           ...prev,
