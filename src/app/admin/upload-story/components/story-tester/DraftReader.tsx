@@ -147,9 +147,9 @@ export default function DraftReader({ draftId, onBack }: DraftReaderProps) {
   const paragraphs = draft.content.split(/\n\s*\n/).filter((p) => p.trim());
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto mt-6">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 pb-4 mb-6 z-10">
+      <div className="sticky top-0 bg-white border-b border-gray-200 pt-4 pb-4 mb-6 z-10">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={() => { saveTimestamp(); onBack(); }} className="text-sm text-blue-600 hover:text-blue-800">
             &larr; Back

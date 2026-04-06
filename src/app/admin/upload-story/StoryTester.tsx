@@ -21,9 +21,9 @@ export default function StoryTester() {
   }
 
   return (
-    <div>
+    <div className="mt-6">
       {/* Sub-tab navigation */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 ml-6">
         {(["stories", "upload"] as SubView[]).map((tab) => (
           <button
             key={tab}

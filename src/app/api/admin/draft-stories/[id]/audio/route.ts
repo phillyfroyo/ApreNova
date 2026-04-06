@@ -63,21 +63,37 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const speech = getAzureSpeechService();
   const audioBuffers: Buffer[] = [];
 
-  for (let i = 0; i < chunks.length; i++) {
-    console.log(`[draft-tts] chunk ${i + 1}/${chunks.length}: ${chunks[i].reduce((s, seg) => s + seg.text.length, 0)} chars`);
-    const result = await speech.generateChapterBuffer(chunks[i]);
-    audioBuffers.push(Buffer.from(result.buffer));
+  // Synthesize chunks in parallel batches of 3 to speed up generation
+  // while avoiding overwhelming Azure's rate limits.
+  const BATCH_SIZE = 3;
+  const startTime = Date.now();
+  for (let b = 0; b < chunks.length; b += BATCH_SIZE) {
+    const batch = chunks.slice(b, b + BATCH_SIZE);
+    const batchStart = Date.now();
+    const batchLabels = batch.map((c, i) => `${b + i + 1}/${chunks.length}`);
+    console.log(`[draft-tts] synthesizing chunks ${batchLabels.join(", ")}...`);
+
+    const results = await Promise.all(
+      batch.map((chunk) => speech.generateChapterBuffer(chunk))
+    );
+    for (const result of results) {
+      audioBuffers.push(Buffer.from(result.buffer));
+    }
+    console.log(`[draft-tts] batch done in ${((Date.now() - batchStart) / 1000).toFixed(1)}s`);
   }
 
   const finalBuffer = Buffer.concat(audioBuffers);
+  console.log(`[draft-tts] All chunks done in ${((Date.now() - startTime) / 1000).toFixed(1)}s, total ${(finalBuffer.byteLength / 1024 / 1024).toFixed(1)}MB. Uploading to R2...`);
+
   const cache = getTTSCacheService();
   const audioUrl = await cache.saveDraftAudio(id, finalBuffer);
+  console.log(`[draft-tts] R2 upload done. Updating DB...`);
 
   await prisma.draftStory.update({
     where: { id },
     data: { audioUrl: `${audioUrl}?v=${Date.now()}`, audioTimestamp: 0 },
   });
 
-  console.log(`[draft-tts] Generated ${(finalBuffer.byteLength / 1024 / 1024).toFixed(1)}MB audio for "${draft.title}"`);
+  console.log(`[draft-tts] Complete for "${draft.title}"`);
   return NextResponse.json({ audioUrl: `${audioUrl}?v=${Date.now()}` });
 }
