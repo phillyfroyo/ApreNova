@@ -301,29 +301,27 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
       const TICK_MS = 500;
 
       if (estimatedMs && estimatedMs > 0) {
-        // Estimate-based progress: linear to 85%, then each tick doubles
-        // in duration while still advancing +1 sentence, up to 95% ceiling.
-        const fastPhaseMs = estimatedMs * 0.85;
+        // Estimate-based progress: linear to 80% across 80% of estimated time,
+        // then +1 sentence per tick with 10% longer intervals each time, up to 98%.
+        const fastPhaseMs = estimatedMs * 0.8;
         const fastPhaseTicks = Math.max(1, Math.floor(fastPhaseMs / TICK_MS));
-        const fastTarget = Math.floor(total * 0.85);
+        const fastTarget = Math.floor(total * 0.8);
         const increment = Math.max(1, Math.round(fastTarget / fastPhaseTicks));
-        const ceiling = Math.floor(total * 0.95);
-        let slowTickMs = TICK_MS; // starting slow-phase interval
+        const ceiling = Math.floor(total * 0.98);
+        let slowTickMs = TICK_MS;
 
         const tick = () => {
           if (simulatedComplete < fastTarget) {
-            // Fast phase: linear progress toward 85%
             simulatedComplete = Math.min(fastTarget, simulatedComplete + increment);
           } else if (simulatedComplete < ceiling) {
-            // Slow phase: +1 sentence per tick, doubling the interval each time
+            // Gradual slowdown: +1 sentence, 10% longer each tick
             simulatedComplete++;
-            slowTickMs = Math.min(slowTickMs * 2, 10_000); // cap at 10s
+            slowTickMs = Math.round(slowTickMs * 1.1);
           }
           setState(prev => ({
             ...prev,
             progress: { status: "generating", sentencesComplete: simulatedComplete, sentencesTotal: total },
           }));
-          // Schedule next tick (dynamic interval for slow phase)
           if (simulatedComplete < ceiling) {
             const nextMs = simulatedComplete < fastTarget ? TICK_MS : slowTickMs;
             progressIntervalId = setTimeout(tick, nextMs) as unknown as ReturnType<typeof setInterval>;
