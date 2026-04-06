@@ -9,10 +9,11 @@ import StoryManager from "./StoryManager";
 import CostsManager from "./CostsManager";
 import UsersManager from "./UsersManager";
 import { SUTPAlgorithms } from "./components/dev-tools";
+import StoryTester from "./StoryTester";
 
 const ADMIN_SESSION_KEY = "admin_authenticated";
 
-type AdminTab = "upload" | "manage" | "costs" | "users" | "premium" | "dev";
+type AdminTab = "upload" | "manage" | "costs" | "users" | "premium" | "dev" | "test";
 
 // Warm up serverless functions in the background
 function warmupServerless() {
@@ -143,6 +144,16 @@ export default function UploadStoryPage() {
             >
               Dev
             </button>
+            <button
+              onClick={() => setActiveTab("test")}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "test"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Test
+            </button>
           </div>
         </div>
       </div>
@@ -156,6 +167,7 @@ export default function UploadStoryPage() {
       {activeTab === "users" && <UsersManager />}
       {activeTab === "premium" && <PremiumManager />}
       {activeTab === "dev" && <DevTools />}
+      {activeTab === "test" && <StoryTester />}
     </div>
   );
 }

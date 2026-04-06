@@ -411,6 +411,23 @@ export class TTSCacheService {
       return null;
     }
   }
+
+  public async saveDraftAudio(draftId: string, audioBuffer: Buffer): Promise<string> {
+    const key = `draft-audio/${draftId}.mp3`;
+    await this.client.send(new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: audioBuffer,
+      ContentType: 'audio/mpeg',
+      CacheControl: 'public, max-age=31536000, immutable',
+    }));
+    return `${R2_PUBLIC_URL}/${key}`;
+  }
+
+  public async deleteDraftAudio(draftId: string): Promise<void> {
+    const key = `draft-audio/${draftId}.mp3`;
+    await this.client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key })).catch(() => {});
+  }
 }
 
 // Singleton instance
