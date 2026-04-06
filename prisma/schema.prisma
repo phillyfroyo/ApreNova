@@ -433,3 +433,13 @@ model TtsGenerationStat {
   @@index([mode, speed])
   @@index([createdAt])
 }
+
+model DraftStory {
+  id             String   @id @default(cuid())
+  title          String
+  content        String   @db.Text
+  audioUrl       String?
+  audioTimestamp  Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
