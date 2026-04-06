@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html><head><title>Web Audio API Timing Test</title></head>
+<body>
+<h2>Web Audio API vs HTMLAudioElement Timing</h2>
+<p>This test plays audio through Web Audio API and compares both clocks at the page 3→4 boundary.</p>
+<button onclick="run()">Fetch & Play (seeks to 5s before page 3→4 boundary)</button>
+<button onclick="stopAudio()">Stop</button>
+<pre id="out" style="font-size:12px;white-space:pre-wrap;max-height:600px;overflow:auto;"></pre>
+<script>
+var audioEl = null;
+var audioCtx = null;
+var rafId = null;
+
+function stopAudio() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+}
+
+async function run() {
+  var out = document.getElementById('out');
+  out.textContent = 'Fetching metadata...\n';
+  stopAudio();
+
+  try {
+    var r = await fetch('/api/azure-tts/chapter', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({storySlug:'the-last-word',level:'C1',chapter:1,mode:'bilingual-en',speed:'normal'})
+    });
+    var text = await r.text();
+    var lines = text.trim().split('\n');
+    var d = JSON.parse(lines[lines.length - 1]);
+    var m = d.metadata;
+    var audioUrl = d.audioUrl;
+
+    var p3sents = m.sentenceTimings.filter(function(s){return s.pageNumber === 3});
+    var p4sents = m.sentenceTimings.filter(function(s){return s.pageNumber === 4});
+    var lastP3 = p3sents[p3sents.length - 1];
+    var firstP4 = p4sents[0];
+    var boundary = lastP3.endTime; // = firstP4.startTime
+
+    out.textContent += 'Page 3 last: [' + lastP3.startTime.toFixed(3) + '-' + lastP3.endTime.toFixed(3) + '] "' + lastP3.text.substring(0,50) + '"\n';
+    out.textContent += 'Page 4 first: [' + firstP4.startTime.toFixed(3) + '-' + firstP4.endTime.toFixed(3) + '] "' + firstP4.text.substring(0,50) + '"\n';
+    out.textContent += 'Boundary at: ' + boundary.toFixed(3) + 's\n\n';
+
+    // Create audio element
+    var audio = new Audio(audioUrl);
+    audioEl = audio;
+    audio.crossOrigin = 'anonymous'; // required for Web Audio API
+
+    // Create Web Audio context and connect
+    var ctx = new AudioContext();
+    audioCtx = ctx;
+
+    await new Promise(function(resolve) {
+      audio.addEventListener('loadedmetadata', resolve, {once: true});
+    });
+
+    var source = ctx.createMediaElementSource(audio);
+    source.connect(ctx.destination);
+
+    out.textContent += 'Audio duration: ' + audio.duration.toFixed(3) + 's\n';
+    out.textContent += 'AudioContext state: ' + ctx.state + '\n';
+    out.textContent += 'AudioContext sampleRate: ' + ctx.sampleRate + '\n\n';
+
+    // Seek to 5s before boundary
+    var seekTo = lastP3.startTime - 3;
+    audio.currentTime = seekTo;
+
+    // Record the ctx.currentTime when playback starts so we can
+    // compute the "audio position according to Web Audio clock"
+    var ctxStartTime = 0;
+    var audioStartPosition = seekTo;
+
+    out.textContent += 'Seeking to: ' + seekTo.toFixed(3) + 's\n';
+    out.textContent += 'Playing...\n\n';
+    out.textContent += 'Legend:\n';
+    out.textContent += '  elTime  = audio.currentTime (HTMLAudioElement clock)\n';
+    out.textContent += '  waTime  = position derived from AudioContext.currentTime\n';
+    out.textContent += '  drift   = elTime - waTime (positive = element clock ahead)\n\n';
+
+    await audio.play();
+    ctxStartTime = ctx.currentTime;
+    audioStartPosition = audio.currentTime;
+
+    var headerLogged = false;
+    var boundaryLogged = false;
+    var logCount = 0;
+
+    function monitor() {
+      if (!audio || audio.paused) return;
+
+      var elTime = audio.currentTime;
+      // Web Audio derived position: how much time has passed on the
+      // AudioContext clock since we started, added to our start position
+      var elapsed = ctx.currentTime - ctxStartTime;
+      var waTime = audioStartPosition + elapsed;
+      var drift = elTime - waTime;
+
+      // Only log around the boundary region (save space)
+      if (elTime >= lastP3.startTime - 1 && elTime <= firstP4.startTime + 5) {
+        var region = '';
+        if (elTime < boundary) {
+          region = 'PAGE 3';
+        } else {
+          region = 'PAGE 4';
+          if (!boundaryLogged) {
+            boundaryLogged = true;
+            region += ' *** BOUNDARY CROSSED ***';
+          }
+        }
+
+        if (logCount % 2 === 0) { // log every ~100ms instead of 50ms
+          out.textContent += 'elTime=' + elTime.toFixed(3) +
+            '  waTime=' + waTime.toFixed(3) +
+            '  drift=' + (drift >= 0 ? '+' : '') + drift.toFixed(3) +
+            '  [' + region + ']\n';
+          out.scrollTop = out.scrollHeight;
+        }
+        logCount++;
+      }
+
+      // Stop after a few seconds into page 4
+      if (elTime > firstP4.endTime + 2) {
+        audio.pause();
+        out.textContent += '\n--- DONE ---\n';
+        out.textContent += 'If drift is consistently ~1.5-2s, AudioContext clock\n';
+        out.textContent += 'tracks the same as HTMLAudioElement (both ahead of speakers).\n\n';
+        out.textContent += 'If drift is near 0 but BOUNDARY CROSSED appears while\n';
+        out.textContent += 'you still hear page 3 audio, then BOTH clocks are ahead.\n\n';
+        out.textContent += 'If waTime is behind elTime AND matches what you hear,\n';
+        out.textContent += 'then AudioContext.currentTime is the accurate one.\n';
+        return;
+      }
+
+      rafId = requestAnimationFrame(monitor);
+    }
+
+    rafId = requestAnimationFrame(monitor);
+
+  } catch(e) {
+    out.textContent += 'Error: ' + e.message + '\n';
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>

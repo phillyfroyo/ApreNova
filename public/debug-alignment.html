@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html><head><title>Forced Alignment Test</title>
+<style>
+  body { font-family: monospace; padding: 20px; max-width: 1200px; }
+  button { margin: 5px; padding: 8px 16px; font-size: 14px; }
+  .word { display: inline; padding: 2px 4px; margin: 1px; border-radius: 3px; transition: background 0.05s; }
+  .word.active { background: #ffd700; font-weight: bold; }
+  .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+  .section h3 { margin-top: 0; }
+  pre { font-size: 11px; white-space: pre-wrap; max-height: 300px; overflow: auto; background: #f5f5f5; padding: 10px; }
+  .status { padding: 10px; background: #e8f4fd; border-radius: 5px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<h2>Forced Alignment Comparison Test</h2>
+<p>This fetches the cached chapter MP3, runs it through OpenAI Whisper and Azure STT,
+then lets you play the audio with word-level highlights from each source.</p>
+
+<div class="status" id="status">Ready. Click "Run Alignment" to start.</div>
+
+<button onclick="runAlignment()">Run Alignment (takes ~60s)</button>
+<button onclick="stopAudio()">Stop Audio</button>
+
+<div id="results" style="display:none">
+  <h3>Play the page 3→4 boundary with each timestamp source:</h3>
+  <button onclick="playWith('tts')">Play with TTS Bookmarks</button>
+  <button onclick="playWith('whisper')">Play with Whisper Timestamps</button>
+  <button onclick="playWith('azure')">Play with Azure STT Timestamps</button>
+
+  <div class="section">
+    <h3>TTS Bookmark Words (page 3 last sentence)</h3>
+    <div id="tts-words"></div>
+  </div>
+
+  <div class="section">
+    <h3>Whisper Words (around page 3→4 boundary)</h3>
+    <div id="whisper-words"></div>
+  </div>
+
+  <div class="section">
+    <h3>Azure STT Words (around page 3→4 boundary)</h3>
+    <div id="azure-words"></div>
+  </div>
+
+  <div class="section">
+    <h3>Timing Comparison (page 3 last sentence: "hurrying back to her seat")</h3>
+    <pre id="comparison"></pre>
+  </div>
+
+  <div class="section">
+    <h3>Raw Data</h3>
+    <pre id="raw"></pre>
+  </div>
+</div>
+
+<script>
+var data = null;
+var audioEl = null;
+var highlightInterval = null;
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+function stopAudio() {
+  if (highlightInterval) { clearInterval(highlightInterval); highlightInterval = null; }
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  // Clear all highlights
+  document.querySelectorAll('.word.active').forEach(function(el) { el.classList.remove('active'); });
+}
+
+async function runAlignment() {
+  setStatus('Fetching alignment data... (this sends the full MP3 to Whisper + Azure STT, ~30-60s)');
+  stopAudio();
+
+  try {
+    var r = await fetch('/api/debug-alignment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        storySlug: 'the-last-word',
+        level: 'C1',
+        chapter: 1,
+        mode: 'bilingual-en',
+        speed: 'normal'
+      })
+    });
+
+    if (!r.ok) {
+      var err = await r.json();
+      setStatus('Error: ' + (err.error || r.status));
+      return;
+    }
+
+    data = await r.json();
+    setStatus('Done! Click a play button to test each timestamp source.');
+    document.getElementById('results').style.display = 'block';
+
+    // Render TTS words
+    var ttsDiv = document.getElementById('tts-words');
+    ttsDiv.innerHTML = '';
+    if (data.ttsBookmarks.lastP3 && data.ttsBookmarks.lastP3.wordTimings) {
+      data.ttsBookmarks.lastP3.wordTimings.forEach(function(w, i) {
+        var span = document.createElement('span');
+        span.className = 'word';
+        span.id = 'tts-' + i;
+        span.textContent = w.word;
+        span.title = w.startTime.toFixed(3) + '-' + w.endTime.toFixed(3);
+        ttsDiv.appendChild(span);
+        ttsDiv.appendChild(document.createTextNode(' '));
+      });
+    }
+
+    // Find words near the boundary (210s - 220s) for Whisper
+    var whisperDiv = document.getElementById('whisper-words');
+    whisperDiv.innerHTML = '';
+    if (data.whisper && data.whisper.words) {
+      var nearBoundary = data.whisper.words.filter(function(w) {
+        return w.start >= 208 && w.start <= 222;
+      });
+      nearBoundary.forEach(function(w, i) {
+        var span = document.createElement('span');
+        span.className = 'word';
+        span.id = 'whisper-' + i;
+        span.textContent = w.word;
+        span.title = w.start.toFixed(3) + '-' + w.end.toFixed(3);
+        whisperDiv.appendChild(span);
+        whisperDiv.appendChild(document.createTextNode(' '));
+      });
+    } else {
+      whisperDiv.textContent = 'Whisper data not available';
+    }
+
+    // Find words near boundary for Azure STT
+    var azureDiv = document.getElementById('azure-words');
+    azureDiv.innerHTML = '';
+    if (data.azureSTT && data.azureSTT.words) {
+      var nearBoundary = data.azureSTT.words.filter(function(w) {
+        return w.start >= 208 && w.start <= 222;
+      });
+      nearBoundary.forEach(function(w, i) {
+        var span = document.createElement('span');
+        span.className = 'word';
+        span.id = 'azure-' + i;
+        span.textContent = w.word;
+        span.title = w.start.toFixed(3) + '-' + w.end.toFixed(3);
+        azureDiv.appendChild(span);
+        azureDiv.appendChild(document.createTextNode(' '));
+      });
+    } else {
+      azureDiv.textContent = 'Azure STT data not available';
+    }
+
+    // Build comparison
+    var comp = document.getElementById('comparison');
+    var text = '';
+    text += 'TTS Bookmark: sentence [' + data.ttsBookmarks.lastP3.startTime.toFixed(3) + ' - ' + data.ttsBookmarks.lastP3.endTime.toFixed(3) + ']\n';
+
+    if (data.ttsBookmarks.lastP3.wordTimings && data.ttsBookmarks.lastP3.wordTimings.length > 0) {
+      var lastTTSWord = data.ttsBookmarks.lastP3.wordTimings[data.ttsBookmarks.lastP3.wordTimings.length - 1];
+      text += 'TTS last word "' + lastTTSWord.word + '": ends at ' + lastTTSWord.endTime.toFixed(3) + '\n\n';
+    }
+
+    // Find "seat" or "her seat" in Whisper results
+    if (data.whisper && data.whisper.words) {
+      var seatWords = data.whisper.words.filter(function(w) {
+        return w.word.toLowerCase().replace(/[^a-z]/g, '') === 'seat' && w.start > 210 && w.start < 220;
+      });
+      if (seatWords.length > 0) {
+        text += 'Whisper "seat": ends at ' + seatWords[0].end.toFixed(3) + '\n';
+        text += 'Difference from TTS: ' + (seatWords[0].end - (lastTTSWord ? lastTTSWord.endTime : 0)).toFixed(3) + 's\n\n';
+      }
+    }
+
+    if (data.azureSTT && data.azureSTT.words) {
+      var seatWords = data.azureSTT.words.filter(function(w) {
+        return w.word.toLowerCase().replace(/[^a-z]/g, '') === 'seat' && w.start > 210 && w.start < 220;
+      });
+      if (seatWords.length > 0) {
+        text += 'Azure STT "seat": ends at ' + seatWords[0].end.toFixed(3) + '\n';
+        text += 'Difference from TTS: ' + (seatWords[0].end - (lastTTSWord ? lastTTSWord.endTime : 0)).toFixed(3) + 's\n';
+      }
+    }
+
+    comp.textContent = text;
+
+    // Raw data
+    document.getElementById('raw').textContent = JSON.stringify({
+      ttsLastP3Words: data.ttsBookmarks.lastP3 ? data.ttsBookmarks.lastP3.wordTimings : null,
+      whisperNearBoundary: data.whisper ? data.whisper.words.filter(function(w) { return w.start >= 210 && w.start <= 217; }) : null,
+      azureNearBoundary: data.azureSTT ? data.azureSTT.words.filter(function(w) { return w.start >= 210 && w.start <= 217; }) : null,
+    }, null, 2);
+
+  } catch(e) {
+    setStatus('Error: ' + e.message);
+    console.error(e);
+  }
+}
+
+function playWith(source) {
+  stopAudio();
+  if (!data) return;
+
+  var words;
+  var prefix;
+  if (source === 'tts') {
+    words = data.ttsBookmarks.lastP3 ? data.ttsBookmarks.lastP3.wordTimings.map(function(w) {
+      return { word: w.word, start: w.startTime, end: w.endTime };
+    }) : [];
+    prefix = 'tts-';
+  } else if (source === 'whisper') {
+    words = data.whisper ? data.whisper.words.filter(function(w) {
+      return w.start >= 208 && w.start <= 222;
+    }) : [];
+    prefix = 'whisper-';
+  } else {
+    words = data.azureSTT ? data.azureSTT.words.filter(function(w) {
+      return w.start >= 208 && w.start <= 222;
+    }) : [];
+    prefix = 'azure-';
+  }
+
+  if (words.length === 0) {
+    setStatus('No words available for ' + source);
+    return;
+  }
+
+  // Seek to 3s before first word
+  var seekTo = words[0].start - 3;
+  var audio = new Audio(data.audioUrl);
+  audioEl = audio;
+
+  audio.addEventListener('loadedmetadata', function() {
+    audio.currentTime = seekTo;
+    audio.play();
+
+    setStatus('Playing with ' + source + ' timestamps. Watch the highlights!');
+
+    // Highlight words based on currentTime
+    highlightInterval = setInterval(function() {
+      if (!audio || audio.paused) return;
+      var ct = audio.currentTime;
+
+      // Clear all highlights for this source
+      for (var i = 0; i < words.length; i++) {
+        var el = document.getElementById(prefix + i);
+        if (el) {
+          if (ct >= words[i].start && ct < words[i].end) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        }
+      }
+
+      // Stop after playing past the boundary area
+      if (ct > 222) {
+        audio.pause();
+        clearInterval(highlightInterval);
+        setStatus('Done playing ' + source + '. Compare how the highlights matched the audio!');
+      }
+    }, 30);
+  });
+}
+</script>
+</body>
+</html>

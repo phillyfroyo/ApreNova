@@ -65,16 +65,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const s = stateRef.current;
       if (s.playbackMode === "chapter" && s.position) {
         if (timing.pageNumber === s.position.page) {
+          console.log(`[highlight] sentIdx=${chapterAudio.state.currentSentence === timing ? 'cur' : '?'} line=${timing.lineIndex} lang=${timing.language} text="${timing.text.substring(0, 30)}"`);
           applyHighlight(timing.lineIndex, timing.language);
         }
       }
     },
     onPageChange: (pageNumber) => {
+      // This callback is now AUTO PAGE TURN ONLY (from processCues page-end cue).
+      // Manual page nav and line skips handle their own navigation.
       const s = stateRef.current;
+      if (navigatingToPageRef.current) return; // guard: ignore during active nav
       if (s.playbackMode === "chapter" && s.position && pageNumber !== s.position.page) {
         navigatingToPageRef.current = { page: pageNumber, shouldResume: true };
-        chapterAudio.pauseSilently();
-        setStatusOverride("navigating"); // Synchronous ref + re-render trigger
+        // Delay pause by 300ms so the last syllable finishes playing.
+        // Audio is in the inter-page silence gap, so the delay is inaudible.
+        if (delayedPauseRef.current) clearTimeout(delayedPauseRef.current);
+        delayedPauseRef.current = setTimeout(() => {
+          delayedPauseRef.current = null;
+          chapterAudio.pauseSilently();
+        }, 300);
+        setStatusOverride("navigating");
 
         setState(prev => ({
           ...prev,
@@ -236,7 +246,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const pendingNavigationRef = useRef<{ chapter: number; page: number } | null>(null);
-  const navigatingToPageRef = useRef<{ page: number; shouldResume: boolean } | null>(null);
+  const navigatingToPageRef = useRef<{
+    page: number;
+    shouldResume: boolean;
+    seekToLine?: { pageNumber: number; lineIndex: number };
+  } | null>(null);
+  const delayedPauseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSeekTimeRef = useRef<number | null>(null);
   // Deferred label for variant reloads — applied only once generation actually starts
   const pendingGenerationLabelRef = useRef<string | null>(null);
@@ -342,37 +357,34 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [chapterAudio.state.currentTime]);
 
   // ---- Sync chapter audio data (NOT status) into provider state ----
-  // Status is now derived via effectiveStatus; this effect only syncs progress bar
-  // data and handles pending seeks.
+  // Only react to status, currentTime, duration, and progress changes —
+  // NOT currentSentence (which changes per-word and would cause loops).
+  const { status: csStatus, currentTime: csCurrentTime, duration: csDuration, progress: csProgress } = chapterAudio.state;
+
   useEffect(() => {
     if (stateRef.current.playbackMode !== "chapter") return;
 
-    const cs = chapterAudio.state;
-
     setState(prev => ({
       ...prev,
-      chapterCurrentTime: cs.currentTime,
-      chapterDuration: cs.duration,
-      chapterGenerationProgress: cs.status === "generating" && cs.progress
-        ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-        : cs.status === "ready" && cs.progress
-          ? { sentencesComplete: cs.progress.sentencesComplete, sentencesTotal: cs.progress.sentencesTotal }
-          : (cs.status === "ready" ? prev.chapterGenerationProgress : (cs.status !== "generating" ? null : prev.chapterGenerationProgress)),
-      // Apply deferred variant-reload label once generation starts (not during loading/cache check);
-      // clear once audio is playing or ready
-      generationLabel: (cs.status === "playing" || cs.status === "ready") ? null
-        : cs.status === "generating" && pendingGenerationLabelRef.current
+      chapterCurrentTime: csCurrentTime,
+      chapterDuration: csDuration,
+      chapterGenerationProgress: csStatus === "generating" && csProgress
+        ? { sentencesComplete: csProgress.sentencesComplete, sentencesTotal: csProgress.sentencesTotal }
+        : csStatus === "ready" && csProgress
+          ? { sentencesComplete: csProgress.sentencesComplete, sentencesTotal: csProgress.sentencesTotal }
+          : (csStatus === "ready" ? prev.chapterGenerationProgress : (csStatus !== "generating" ? null : prev.chapterGenerationProgress)),
+      generationLabel: (csStatus === "playing" || csStatus === "ready") ? null
+        : csStatus === "generating" && pendingGenerationLabelRef.current
           ? pendingGenerationLabelRef.current
           : prev.generationLabel,
     }));
 
-    // Clear pending generation label ref after it's been applied or is no longer needed
-    if (cs.status === "generating" || cs.status === "playing" || cs.status === "ready") {
+    if (csStatus === "generating" || csStatus === "playing" || csStatus === "ready") {
       pendingGenerationLabelRef.current = null;
     }
 
-    // Handle pending seek when audio starts playing (e.g., resuming from bookmark)
-    if (cs.status === "playing" && pendingSeekTimeRef.current !== null) {
+    // Handle pending seek when audio starts playing
+    if (csStatus === "playing" && pendingSeekTimeRef.current !== null) {
       const seekTime = pendingSeekTimeRef.current;
       pendingSeekTimeRef.current = null;
 
@@ -396,13 +408,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     // Clear redundant overrides once the hook's status matches.
-    // "navigating" is NOT cleared here — registerPageContent handles that after a paint frame.
-    // "playing" override is cleared once the hook confirms it's playing.
     const override = statusOverrideRef.current;
-    if (override && override !== "navigating" && cs.status === override) {
+    if (override && override !== "navigating" && csStatus === override) {
       setStatusOverride(null);
     }
-  }, [chapterAudio.state]);
+  }, [csStatus, csCurrentTime, csDuration, csProgress]);
 
   // ---- Helper: determine ChapterAudioMode ----
   function getChapterAudioMode(languageMode: "target-only" | "bilingual"): ChapterAudioMode {
@@ -538,6 +548,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     modeOverride?: AudioLanguageMode,
     speedOverride?: number,
     seekToPosition?: { pageNumber: number; lineIndex: number },
+    estimatedMs?: number,
   ) => {
     const s = stateRef.current;
     const effectiveMode = modeOverride ?? s.mode;
@@ -604,6 +615,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       seekToPosition,
       initialSeekTime: !seekToPosition ? (bookmarkAudioTime ?? undefined) : undefined,
       initialPage: !seekToPosition && bookmarkAudioTime === null ? resolvedPage : undefined,
+      estimatedMs,
     });
 
     if ("mediaSession" in navigator) {
@@ -668,7 +680,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const confirmAndPlay = useCallback((modeOverride?: AudioLanguageMode, speedOverride?: number) => {
     const pending = stateRef.current.pendingPlayback;
     if (!pending) return;
-    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition);
+    // Extract the estimate for the selected variant
+    const s = stateRef.current;
+    const mode = modeOverride ?? s.mode;
+    const speed = speedOverride === 0.7 ? "slow" : "normal";
+    const est = pending.cacheStatus.estimates;
+    const estimatedMs = mode === "bilingual"
+      ? (speed === "slow" ? est.bilingualSlow : est.bilingualNormal)
+      : (speed === "slow" ? est.targetSlow : est.targetNormal);
+    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition, estimatedMs ?? undefined);
   }, [beginPlayback]);
 
   const dismissPicker = useCallback(() => {
@@ -866,7 +886,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const skipForward = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      const posBefore = chapterAudio.getCurrentPosition();
       chapterAudio.skipForwardSentence();
+      const posAfter = chapterAudio.getCurrentPosition();
+      // Cross-page skip: navigate to the new page
+      if (posBefore && posAfter && posAfter.pageNumber !== posBefore.pageNumber && s.position) {
+        navigatingToPageRef.current = {
+          page: posAfter.pageNumber,
+          shouldResume: true,
+          seekToLine: posAfter,
+        };
+        chapterAudio.pauseSilently();
+        setStatusOverride("navigating");
+        setState(prev => ({
+          ...prev,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
+          position: prev.position ? { ...prev.position, page: posAfter.pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
+        }));
+        router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, s.position.chapter, posAfter.pageNumber, s.position.isUserStory, s.position.userStoryId));
+      }
       return;
     }
     // Legacy
@@ -884,7 +923,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const skipBack = useCallback(() => {
     const s = stateRef.current;
     if (s.playbackMode === "chapter") {
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      const posBefore = chapterAudio.getCurrentPosition();
       chapterAudio.skipBackSentence();
+      const posAfter = chapterAudio.getCurrentPosition();
+      // Cross-page skip: navigate to the new page
+      if (posBefore && posAfter && posAfter.pageNumber !== posBefore.pageNumber && s.position) {
+        navigatingToPageRef.current = {
+          page: posAfter.pageNumber,
+          shouldResume: true,
+          seekToLine: posAfter,
+        };
+        chapterAudio.pauseSilently();
+        setStatusOverride("navigating");
+        setState(prev => ({
+          ...prev,
+          highlightedSentenceIndex: null, highlightedLanguage: null,
+          position: prev.position ? { ...prev.position, page: posAfter.pageNumber, sentenceIndex: 0, currentLanguage: "target" } : null,
+        }));
+        router.push(getNavigationUrl(lng, s.position.storySlug, s.position.level, s.position.chapter, posAfter.pageNumber, s.position.isUserStory, s.position.userStoryId));
+      }
       return;
     }
     // Legacy
@@ -905,8 +963,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (!s.position || !s.storyMap) return;
       const { next } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!next) return;
-      const wasPlaying = chapterAudio.state.status === "playing";
-      navigatingToPageRef.current = { page: next.pg, shouldResume: wasPlaying };
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      navigatingToPageRef.current = { page: next.pg, shouldResume: true };
       chapterAudio.pauseSilently();
       chapterAudio.skipForwardPage();
       setStatusOverride("navigating");
@@ -937,8 +995,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       if (!s.position || !s.storyMap) return;
       const { prev: prevPg } = getPrevNextPage(s.position.chapter, s.position.page, s.storyMap);
       if (!prevPg) return;
-      const wasPlaying = chapterAudio.state.status === "playing";
-      navigatingToPageRef.current = { page: prevPg.pg, shouldResume: wasPlaying };
+      if (delayedPauseRef.current) { clearTimeout(delayedPauseRef.current); delayedPauseRef.current = null; }
+      navigatingToPageRef.current = { page: prevPg.pg, shouldResume: true };
       chapterAudio.pauseSilently();
       chapterAudio.skipBackPage();
       setStatusOverride("navigating");
@@ -1013,26 +1071,42 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     // In chapter mode (continued — same page or navigating)
     if (s.playbackMode === "chapter") {
-      chapterAudio.resetSentenceTracking();
       const nav = navigatingToPageRef.current;
       if (nav && nav.page === page) {
         navigatingToPageRef.current = null;
-        const firstSentence = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
+
+        // Determine seek target: exact line (cross-page line skip) or page start
+        let seekTarget = nav.seekToLine
+          ? chapterAudio.metadata?.sentenceTimings.find(
+              t => t.pageNumber === nav.seekToLine!.pageNumber && t.lineIndex === nav.seekToLine!.lineIndex
+            )
+          : undefined;
+        if (!seekTarget) {
+          seekTarget = chapterAudio.metadata?.sentenceTimings.find(t => t.pageNumber === page);
+        }
 
         // Set highlight eagerly via DOM; sync loop will confirm on its first frame.
-        if (firstSentence) {
-          applyHighlight(firstSentence.lineIndex, firstSentence.language);
+        if (seekTarget) {
+          applyHighlight(seekTarget.lineIndex, seekTarget.language);
         }
 
         // Delay resume by one frame so the "navigating" spinner paints before clearing.
         requestAnimationFrame(() => {
+          if (seekTarget) {
+            chapterAudio.seekToTime(seekTarget.startTime);
+          }
           if (nav.shouldResume) {
             setStatusOverride("playing");
             chapterAudio.play();
+            chapterAudio.resetSentenceTracking();
           } else {
-            setStatusOverride(null);
+            setStatusOverride("paused");
+            chapterAudio.resetSentenceTracking();
           }
         });
+      } else if (!nav) {
+        // Same page re-render (not a navigation) — re-sync highlights
+        chapterAudio.resetSentenceTracking();
       }
       return;
     }

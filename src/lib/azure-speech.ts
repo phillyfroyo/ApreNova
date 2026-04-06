@@ -79,8 +79,8 @@ export class AzureSpeechService {
     }
 
     this.speechConfig = sdk.SpeechConfig.fromSubscription(subscriptionKey, serviceRegion);
-    
-    // Configure audio format for high quality
+
+    // Default output: MP3 for storage/playback
     this.speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio48Khz192KBitRateMonoMp3;
   }
 
@@ -443,7 +443,7 @@ export class AzureSpeechService {
               const audioData = result.audioData;
               // Bookmark-based duration: accurate for relative sentence timing within this chunk
               const bookmarkDuration = bookmarkOffsets.get("s_end") ?? 0;
-              // Buffer-based duration: matches actual MP3 byte length (48kHz 192kbps mono)
+              // Buffer-based duration: MP3 at 48kHz 192kbps mono
               const bufferDuration = (audioData.byteLength * 8) / 192000;
               // Use bookmark duration for sentence timing, fall back to buffer if no bookmarks
               const totalDuration = bookmarkDuration || bufferDuration;
@@ -480,6 +480,93 @@ export class AzureSpeechService {
             reject(new Error(`Chapter synthesis error: ${error}`));
             this.synthesizer?.close();
             this.synthesizer = null;
+          }
+        );
+      });
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Synthesize the same SSML as WAV for forced alignment.
+   * Uses a separate SpeechConfig with RIFF PCM output.
+   */
+  public async generateChapterBufferWav(segments: ChapterSSMLSegment[]): Promise<Buffer> {
+    try {
+      const wavConfig = sdk.SpeechConfig.fromSubscription(
+        process.env.AZURE_SPEECH_KEY!,
+        process.env.AZURE_SPEECH_REGION!
+      );
+      wavConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Riff48Khz16BitMonoPcm;
+
+      // Build the same SSML as generateChapterBuffer
+      const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
+      const docLang = LOCALE_MAP[segments[0]?.ssmlLang || "en-US"] || segments[0]?.ssmlLang || "en-US";
+
+      let ssmlBody = "";
+      let currentVoice: string | null = null;
+
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (currentVoice && currentVoice !== seg.voice) {
+          ssmlBody += `</voice>`;
+          currentVoice = null;
+        }
+        if (currentVoice !== seg.voice) {
+          ssmlBody += `<voice name="${seg.voice}">`;
+          currentVoice = seg.voice;
+        }
+        if (i > 0) {
+          ssmlBody += `<break time="${seg.breakBeforeMs || 200}ms"/>`;
+        }
+        ssmlBody += `<bookmark mark="s_${i}"/>`;
+
+        const segLang = LOCALE_MAP[seg.language] || seg.language;
+        let content = "";
+        if (seg.speakerName) {
+          content += `<emphasis level="moderate">${this.escapeXML(seg.speakerName)}</emphasis><break time="300ms"/>`;
+        }
+        if (seg.stageDirection) {
+          content += `<prosody volume="soft" rate="medium">${this.escapeXML(seg.stageDirection)}</prosody><break time="200ms"/>`;
+        }
+        content += `<prosody rate="${seg.rate}" volume="medium">${this.escapeXML(seg.text)}</prosody>`;
+
+        const voiceLang = seg.voice.substring(0, 2);
+        const contentLang = seg.contentLang;
+        if (voiceLang !== contentLang) {
+          ssmlBody += `<lang xml:lang="${segLang}">${content}</lang>`;
+        } else {
+          ssmlBody += content;
+        }
+      }
+
+      ssmlBody += `<bookmark mark="s_end"/>`;
+      if (currentVoice) ssmlBody += `</voice>`;
+
+      const ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${docLang}">
+          <!-- v2:${Date.now()} -->
+          ${ssmlBody}
+        </speak>
+      `.trim();
+
+      const synthesizer = new sdk.SpeechSynthesizer(wavConfig, null);
+
+      return new Promise((resolve, reject) => {
+        synthesizer.speakSsmlAsync(
+          ssml,
+          (result) => {
+            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+              resolve(Buffer.from(result.audioData));
+            } else {
+              reject(new Error(`WAV synthesis failed: ${result.errorDetails}`));
+            }
+            synthesizer.close();
+          },
+          (error) => {
+            reject(new Error(`WAV synthesis error: ${error}`));
+            synthesizer.close();
           }
         );
       });
