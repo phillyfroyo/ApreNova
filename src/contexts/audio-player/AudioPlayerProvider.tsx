@@ -548,6 +548,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     modeOverride?: AudioLanguageMode,
     speedOverride?: number,
     seekToPosition?: { pageNumber: number; lineIndex: number },
+    estimatedMs?: number,
   ) => {
     const s = stateRef.current;
     const effectiveMode = modeOverride ?? s.mode;
@@ -614,6 +615,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       seekToPosition,
       initialSeekTime: !seekToPosition ? (bookmarkAudioTime ?? undefined) : undefined,
       initialPage: !seekToPosition && bookmarkAudioTime === null ? resolvedPage : undefined,
+      estimatedMs,
     });
 
     if ("mediaSession" in navigator) {
@@ -678,7 +680,15 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const confirmAndPlay = useCallback((modeOverride?: AudioLanguageMode, speedOverride?: number) => {
     const pending = stateRef.current.pendingPlayback;
     if (!pending) return;
-    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition);
+    // Extract the estimate for the selected variant
+    const s = stateRef.current;
+    const mode = modeOverride ?? s.mode;
+    const speed = speedOverride === 0.7 ? "slow" : "normal";
+    const est = pending.cacheStatus.estimates;
+    const estimatedMs = mode === "bilingual"
+      ? (speed === "slow" ? est.bilingualSlow : est.bilingualNormal)
+      : (speed === "slow" ? est.targetSlow : est.targetNormal);
+    beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition, estimatedMs ?? undefined);
   }, [beginPlayback]);
 
   const dismissPicker = useCallback(() => {

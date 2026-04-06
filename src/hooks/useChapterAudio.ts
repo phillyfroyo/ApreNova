@@ -248,7 +248,7 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
   }, [findSentenceAtTime]);
 
   // ---- Load chapter audio and start playback ----
-  const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number; seekToPosition?: { pageNumber: number; lineIndex: number } }) => {
+  const loadAndPlay = useCallback(async (request: ChapterAudioRequest & { initialSeekTime?: number; initialPage?: number; seekToPosition?: { pageNumber: number; lineIndex: number }; estimatedMs?: number }) => {
     if (abortRef.current) abortRef.current.abort();
 
     // Stop any existing audio
@@ -297,20 +297,56 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     let simulatedComplete = 0;
     const startSimulatedProgress = (total: number) => {
       if (progressIntervalId) return;
-      const target = Math.floor(total * 0.5);
-      const intervalMs = Math.max(500, (total * 1_000) / Math.max(target, 1));
-      progressIntervalId = setInterval(() => {
-        if (simulatedComplete >= target) {
-          clearInterval(progressIntervalId!);
-          progressIntervalId = null;
-          return;
-        }
-        simulatedComplete++;
-        setState(prev => ({
-          ...prev,
-          progress: { status: "generating", sentencesComplete: simulatedComplete, sentencesTotal: total },
-        }));
-      }, intervalMs);
+      const estimatedMs = request.estimatedMs;
+      const TICK_MS = 500;
+
+      if (estimatedMs && estimatedMs > 0) {
+        // Estimate-based progress: linear to 85%, then each tick doubles
+        // in duration while still advancing +1 sentence, up to 95% ceiling.
+        const fastPhaseMs = estimatedMs * 0.85;
+        const fastPhaseTicks = Math.max(1, Math.floor(fastPhaseMs / TICK_MS));
+        const fastTarget = Math.floor(total * 0.85);
+        const increment = Math.max(1, Math.round(fastTarget / fastPhaseTicks));
+        const ceiling = Math.floor(total * 0.95);
+        let slowTickMs = TICK_MS; // starting slow-phase interval
+
+        const tick = () => {
+          if (simulatedComplete < fastTarget) {
+            // Fast phase: linear progress toward 85%
+            simulatedComplete = Math.min(fastTarget, simulatedComplete + increment);
+          } else if (simulatedComplete < ceiling) {
+            // Slow phase: +1 sentence per tick, doubling the interval each time
+            simulatedComplete++;
+            slowTickMs = Math.min(slowTickMs * 2, 10_000); // cap at 10s
+          }
+          setState(prev => ({
+            ...prev,
+            progress: { status: "generating", sentencesComplete: simulatedComplete, sentencesTotal: total },
+          }));
+          // Schedule next tick (dynamic interval for slow phase)
+          if (simulatedComplete < ceiling) {
+            const nextMs = simulatedComplete < fastTarget ? TICK_MS : slowTickMs;
+            progressIntervalId = setTimeout(tick, nextMs) as unknown as ReturnType<typeof setInterval>;
+          }
+        };
+        progressIntervalId = setTimeout(tick, TICK_MS) as unknown as ReturnType<typeof setInterval>;
+      } else {
+        // No estimate available: simple linear progress to 50%
+        const target = Math.floor(total * 0.5);
+        const intervalMs = Math.max(500, (total * 1_000) / Math.max(target, 1));
+        progressIntervalId = setInterval(() => {
+          if (simulatedComplete >= target) {
+            clearInterval(progressIntervalId!);
+            progressIntervalId = null;
+            return;
+          }
+          simulatedComplete++;
+          setState(prev => ({
+            ...prev,
+            progress: { status: "generating", sentencesComplete: simulatedComplete, sentencesTotal: total },
+          }));
+        }, intervalMs);
+      }
     };
     const stopSimulatedProgress = () => {
       if (progressIntervalId) {

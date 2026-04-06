@@ -91,8 +91,9 @@ export async function GET(request: NextRequest) {
         const computeEstimate = (mode: ChapterAudioMode, speed: "normal" | "slow", isCached: boolean): number | null => {
           if (isCached) return null; // No estimate needed
           const ratio = msPerChar[`${mode}:${speed}`];
-          // Fall back to any available ratio if exact match isn't found
-          const fallbackRatio = ratio ?? Object.values(msPerChar)[0];
+          // Only fall back to the same mode with different speed (not across modes)
+          const altSpeed = speed === "normal" ? "slow" : "normal";
+          const fallbackRatio = ratio ?? msPerChar[`${mode}:${altSpeed}`];
           if (!fallbackRatio) return null;
           const chars = getCharacterCount(pages, mode, speed);
           return Math.round(fallbackRatio * chars);
