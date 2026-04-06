@@ -288,8 +288,11 @@ export async function generateChapterAudio(
     const chunk = chunks[c];
     const ssmlSegments = toSSMLSegments(chunk);
 
-    // Synthesize MP3 (for storage) — includes bookmark timings
-    const result = await speech.generateChapterBuffer(ssmlSegments);
+    // Synthesize MP3 + WAV in parallel (same SSML, independent Azure TTS calls)
+    const [result, wavBuffer] = await Promise.all([
+      speech.generateChapterBuffer(ssmlSegments),
+      speech.generateChapterBufferWav(ssmlSegments),
+    ]);
     audioBuffers.push(Buffer.from(result.buffer));
 
     // Build bookmark-based sentence timings (fallback if alignment fails)
@@ -314,11 +317,9 @@ export async function generateChapterAudio(
 
     console.log(`[chapter-audio] chunk ${c+1}/${chunks.length}: duration=${result.totalDuration.toFixed(3)}s timeOffset=${timeOffset.toFixed(3)}s`);
 
-    // Synthesize WAV (for forced alignment) and run Azure Pronunciation Assessment
+    // Run Azure Pronunciation Assessment on WAV for forced alignment
     onProgress?.({ status: "aligning", sentencesComplete: Math.round(totalSentences * (c / chunks.length)), sentencesTotal: totalSentences });
     try {
-      console.log(`[chapter-audio] chunk ${c+1}: synthesizing WAV for alignment...`);
-      const wavBuffer = await speech.generateChapterBufferWav(ssmlSegments);
       console.log(`[chapter-audio] chunk ${c+1}: WAV ${(wavBuffer.byteLength / 1024 / 1024).toFixed(1)}MB, running PA...`);
 
       const chunkSentenceInfo = chunk.map(entry => ({
