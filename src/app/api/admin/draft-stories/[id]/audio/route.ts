@@ -63,23 +63,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const speech = getAzureSpeechService();
   const audioBuffers: Buffer[] = [];
 
-  // Synthesize chunks in parallel batches of 3 to speed up generation
-  // while avoiding overwhelming Azure's rate limits.
-  const BATCH_SIZE = 3;
+  try {
+  // Synthesize chunks sequentially — more reliable than parallel with Azure TTS.
+  const CHUNK_TIMEOUT_MS = 120_000; // 2 min per chunk
   const startTime = Date.now();
-  for (let b = 0; b < chunks.length; b += BATCH_SIZE) {
-    const batch = chunks.slice(b, b + BATCH_SIZE);
-    const batchStart = Date.now();
-    const batchLabels = batch.map((c, i) => `${b + i + 1}/${chunks.length}`);
-    console.log(`[draft-tts] synthesizing chunks ${batchLabels.join(", ")}...`);
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkStart = Date.now();
+    console.log(`[draft-tts] chunk ${i + 1}/${chunks.length}: ${chunks[i].reduce((s, seg) => s + seg.text.length, 0)} chars`);
 
-    const results = await Promise.all(
-      batch.map((chunk) => speech.generateChapterBuffer(chunk))
-    );
-    for (const result of results) {
-      audioBuffers.push(Buffer.from(result.buffer));
-    }
-    console.log(`[draft-tts] batch done in ${((Date.now() - batchStart) / 1000).toFixed(1)}s`);
+    const result = await Promise.race([
+      speech.generateChapterBuffer(chunks[i]),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Chunk ${i + 1} timed out after 120s`)), CHUNK_TIMEOUT_MS)
+      ),
+    ]);
+    audioBuffers.push(Buffer.from(result.buffer));
+    console.log(`[draft-tts] chunk ${i + 1}/${chunks.length} done in ${((Date.now() - chunkStart) / 1000).toFixed(1)}s`);
   }
 
   const finalBuffer = Buffer.concat(audioBuffers);
@@ -96,4 +95,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   console.log(`[draft-tts] Complete for "${draft.title}"`);
   return NextResponse.json({ audioUrl: `${audioUrl}?v=${Date.now()}` });
+
+  } catch (err: any) {
+    console.error(`[draft-tts] Failed:`, err.message);
+    return NextResponse.json({ error: err.message || "Generation failed" }, { status: 500 });
+  }
 }
