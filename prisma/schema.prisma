@@ -183,6 +183,10 @@ model User {
   isPremium         Boolean             @default(false)
   stripeCustomerId  String?             @unique
   deletedAt         DateTime?
+  tourStep1CompletedAt DateTime?
+  tourStep2CompletedAt DateTime?
+  tourStep3CompletedAt DateTime?
+  tourCompletedAt      DateTime?
   Account           Account[]
   ApiCost           ApiCost[]
   CompletedStory    CompletedStory[]
