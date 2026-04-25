@@ -21,13 +21,17 @@ We need to (a) make the magic discoverable, (b) build a tighter feedback loop wi
 - Added optional `phone` field to signup form with founder framing + privacy reassurance
 - EN/ES copy: "I'm Philip, the founder. I might text you personally to ask how it's going (WhatsApp preferred). I'll never sell or share your number."
 - Prisma migration `add_phone_to_user` applied to prod
-- **Files touched:** `prisma/schema.prisma`, `src/components/auth/AuthForm.tsx`, `src/app/api/auth/signup/route.ts`, `src/content/ui/{en,es}.ts`
+- Phone visible in admin Users tab with click-to-copy pills next to email and phone
+- Hard-delete script for test users at `scripts/delete-test-user.mjs`
+- **Files touched:** `prisma/schema.prisma`, `src/components/auth/AuthForm.tsx`, `src/app/api/auth/signup/route.ts`, `src/app/api/admin/users/route.ts`, `src/app/admin/upload-story/UsersManager.tsx`, `src/content/ui/{en,es}.ts`
+- **Note:** This is forward-looking. Existing 94 users will not have phone numbers — only new signups will. Outreach to existing users is email-only.
 
-### 2. Manual WhatsApp outreach to existing 94 users
+### 2. Manual WhatsApp outreach (new signups going forward)
 - Personal, non-templated messages from founder's WhatsApp
 - Goal: extract real feedback from churned users, re-engage interested ones
 - "Do things that don't scale" — this is the unfair advantage at this stage
 - Mexico context: WhatsApp is the default communication channel, normal to receive a personal message
+- **Existing 94 users are email-only** — phone collection started 2026-04-25, applies to new signups only
 
 ### 3. Triage queue for inactive users
 - Build/use a digest of inactive users (phone if available, email if not)
@@ -35,11 +39,12 @@ We need to (a) make the magic discoverable, (b) build a tighter feedback loop wi
 - **Not** an automated WhatsApp drip — point is the personal touch
 - Defer building until #2 is exhausted manually
 
-### 4. Landing page → stories page (after auth)
-- Currently: dashboard with stats + quick actions
-- Change: take authenticated users straight to stories
-- Job-to-be-done on app open is "read" — get them there in zero clicks
-- Quick win, low risk
+### 4. Landing page → stories page (after auth) ✅ NO CHANGE NEEDED
+- **Investigation result:** existing routing is already a defensible split:
+  - **New signups** → `/stories` (after onboarding/quiz). Drops them straight into reading. Maximum chance to engage with the magic.
+  - **Returning users** → `/dashboard`. Stats can reinforce habit ("3-day streak, don't break it").
+- Verified in `src/components/auth/AuthForm.tsx` and `src/app/api/post-login/route.ts`
+- Forcing returning users to `/stories` would lose the dashboard's habit-reinforcement role. Skipping.
 
 ### 5. In-app onboarding tour (the big one)
 **Why this matters:** users churn because they see a plain reader and don't realize the language-learning features exist. Tour makes the magic discoverable.
@@ -75,7 +80,7 @@ We need to (a) make the magic discoverable, (b) build a tighter feedback loop wi
 - Defer the **fully interactive story** version — significant lift (auth-less story rendering, audio, highlight state). Revisit only if static version isn't enough once we have paid traffic data.
 
 ### 8. Paid social ad campaign ($200-500)
-- **Sequence: only after #1, #4, #5, #7-static are live.** Don't drive paid traffic to the current funnel.
+- **Sequence: only after #1, #5, #7-static are live.** Don't drive paid traffic to the current funnel.
 - Target intent-based audiences: "learn Spanish/English through reading," book-readers, etc.
 - Goal isn't conversion — it's getting 30-50 self-selected users we can actually learn from
 - Compare retention/engagement of paid cohort vs. bus-speech cohort — confirms or rules out the "acquisition channel was the problem" hypothesis
