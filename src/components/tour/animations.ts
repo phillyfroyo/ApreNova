@@ -4,12 +4,10 @@
 // JS orchestrator needs (timeouts, dwell thresholds).
 
 export const TOUR_DURATIONS = {
-  /** Word glow fade-in before the auto-tap fires (seconds). */
-  wordGlowFadeIn: 1.2,
-  /** Glow holds at peak before the auto-tap fires (seconds). */
-  wordGlowPulseHold: 0.8,
-  /** Emoji row visible time after the auto-tap before step completes (seconds). */
-  emojiRowDwell: 5.0,
+  /** Emoji row visible time after the auto-tap before step completes (seconds).
+      Sized to fit: 1s pre-wave pause + 1.5s wave + 2 full bounce cycles (3.5s × 2 = 7s)
+      = 9.5s total. Rounded to 10s so the user sees the bounce repeat at least once. */
+  emojiRowDwell: 10.0,
   /** Listen-button glow hold time for step 2 (seconds). */
   audioGlowHold: 6.0,
 };
