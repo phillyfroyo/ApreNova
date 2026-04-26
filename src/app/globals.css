@@ -149,3 +149,179 @@ body {
   margin-left: -0.5rem;
   margin-right: -0.5rem;
 }
+
+/* Discovery tour: anchored word glow.
+   Applied when the orchestrator marks the body with data-tour-active-step (1 or 3)
+   and a specific anchor line + word. The selector reaches into the unified
+   translator's button DOM. */
+@keyframes tour-word-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    background-color: rgba(99, 102, 241, 0);
+  }
+  50% {
+    box-shadow: 0 0 22px 5px rgba(99, 102, 241, 0.75);
+    background-color: rgba(99, 102, 241, 0.35);
+  }
+}
+@keyframes tour-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.45); }
+}
+@keyframes tour-emoji-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1) drop-shadow(0 0 0 rgba(245, 158, 11, 0));
+  }
+  50% {
+    transform: scale(1.18);
+    filter: brightness(1.3) drop-shadow(0 0 8px rgba(245, 158, 11, 0.7));
+  }
+}
+/* Running-light border: a conic gradient rotates around the element so a
+   bright arc travels clockwise along its edge. The visible "border" is a
+   thin band created by stacking a same-colored inner mask on top. */
+@property --tour-light-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes tour-light-sweep {
+  to { --tour-light-angle: 360deg; }
+}
+@keyframes tour-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+/* Trapezoidal pulse: snap up, hold fat, snap back, hold thin. The snaps
+   are short (5% of the cycle each = 0.3s) and use ease-out so they feel
+   crisp but organic. The holds are flat so there's no slow drift the eye
+   can perceive as discrete steps. */
+@keyframes tour-ring-brightness {
+  0%, 5% { filter: brightness(1); }
+  10%, 55% { filter: brightness(1.2); }
+  60%, 100% { filter: brightness(1); }
+}
+@keyframes tour-ring-thicken {
+  0%, 5% { padding: 5px; }
+  10%, 55% { padding: 8px; }
+  60%, 100% { padding: 5px; }
+}
+
+.tour-word-glow {
+  animation: tour-word-glow 2.0s cubic-bezier(0.16, 1, 0.3, 1) infinite !important;
+  border-radius: 0.5rem !important;
+}
+.tour-ring-pulse {
+  animation: tour-ring-pulse 1.5s cubic-bezier(0.16, 1, 0.3, 1) 2;
+  border-radius: 9999px;
+}
+.tour-emoji-pulse {
+  animation: tour-emoji-pulse 0.9s cubic-bezier(0.16, 1, 0.3, 1) 3;
+}
+/* Tour ring: a slowly rotating gold border around the thumbnail. Lives in
+   the card's DOM (not a floating overlay) so banners, side panels, and
+   modals at higher z-index naturally cover it. The conic gradient is
+   purely gold with subtle hue/brightness variation that rotates clockwise
+   to give the ring a gentle "alive" shimmer without any square-bleed glow. */
+.tour-ring-overlay {
+  position: absolute;
+  /* Extend 3px beyond the thumbnail on all sides so the ring fully encloses
+     the thumbnail's rounded corners (thumbnail border-radius = 12px).
+     Card width is 140px; thumbnail height = 140 * 1.5 = 210px. */
+  top: -3px;
+  left: -3px;
+  width: 146px;
+  height: 216px;
+  pointer-events: none;
+  /* Outer radius = thumbnail radius (12px) + outset (3px) = 15px */
+  border-radius: 15px;
+  z-index: 5;
+  /* 6s trapezoidal brightness pulse. Easing is per-keyframe (ease-out
+     during the snaps, linear during the holds — see keyframe definition).
+     Band-thickness pulse runs independently on ::before so the outer
+     edge stays glued to the thumbnail. */
+  animation: tour-ring-brightness 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.tour-ring-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  /* Gold base with three bright "facet" highlights spaced ~120° apart.
+     Each facet is a sharp narrow band so the eye can track it as the
+     gradient rotates — without the facets, smooth gold reads as static. */
+  background: conic-gradient(
+    from var(--tour-light-angle),
+    rgb(160, 95, 8) 0deg,
+    rgb(255, 220, 90) 8deg,
+    rgb(255, 248, 200) 14deg,
+    rgb(255, 220, 90) 20deg,
+    rgb(225, 165, 35) 40deg,
+    rgb(160, 95, 8) 110deg,
+    rgb(255, 220, 90) 124deg,
+    rgb(255, 248, 200) 130deg,
+    rgb(255, 220, 90) 136deg,
+    rgb(225, 165, 35) 156deg,
+    rgb(160, 95, 8) 230deg,
+    rgb(255, 220, 90) 244deg,
+    rgb(255, 248, 200) 250deg,
+    rgb(255, 220, 90) 256deg,
+    rgb(225, 165, 35) 276deg,
+    rgb(160, 95, 8) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  padding: 5px;
+  animation:
+    tour-light-sweep 20s linear infinite,
+    tour-ring-thicken 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* "Start here" toast: position:fixed so it escapes row container clipping.
+   Position is set by JS to track the card. z-index is below banner/modal
+   z-indices so they cover it naturally. */
+/* "Start here" toast: positioned inside the thumbnail near the bottom.
+   Lives as a child of the card wrapper — when the thumbnail is covered
+   (banner, side panel, modal), the toast is covered too.
+   Card width is 140px, thumbnail aspect is 2:3 → thumbnail height = 210px.
+   Toast anchors 14px above the thumbnail's bottom edge. */
+.tour-thumbnail-toast {
+  position: absolute;
+  top: calc(210px - 36px);
+  left: 50%;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(196, 130, 18), rgb(245, 195, 60));
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  pointer-events: none;
+  z-index: 8;
+  transform: translateX(-50%);
+  animation: tour-toast-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Card wrapper needs position:relative so absolute children anchor to it. */
+[data-tour-story-card='first'] {
+  position: relative;
+}
+
+/* "Start here" toast inner pill. Outer wrapper handles position/centering;
+   this element animates the bob/fade-in via keyframes that include
+   translateX(-50%) so they don't overwrite the centering transform. */
+.tour-thumbnail-toast {
+  animation: tour-toast-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Bob removed — feedback was that it felt cheap. */
+  transform: translateX(-50%);
+}

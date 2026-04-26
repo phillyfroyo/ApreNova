@@ -26,7 +26,7 @@ export const TOUR_DURATIONS = {
 
 export const TOUR_TIMING = {
   /** Minimum dwell time on a story page before a tour step is eligible to fire (ms). */
-  dwellThresholdMs: 5000,
+  dwellThresholdMs: 2000,
   /** Window within which an organic interaction is considered to "pre-empt" the tour step (ms). */
   adaptiveSkipWindowMs: 5000,
 };

@@ -42,6 +42,10 @@ language: {
   es: "Español"
 },
 
+tour: {
+  startHere: "Empieza aquí",
+},
+
   stories: {
   goPremium: "Planes",
   premiumDescription: "Desbloquea herramientas más inteligentes para aprender más rápido.",
