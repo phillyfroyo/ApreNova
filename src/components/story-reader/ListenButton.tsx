@@ -65,6 +65,7 @@ export default function ListenButton({
         </span>
       ) : (
         <button
+          data-tour-listen-button="true"
           disabled={isSessionLoading}
           onClick={() => {
             setMenuOpen(false);

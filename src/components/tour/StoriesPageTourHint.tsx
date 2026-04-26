@@ -10,12 +10,13 @@ interface StoriesPageTourHintProps {
 }
 
 /**
- * Renders nothing visible directly. Finds the first story card on /stories
- * and (a) applies the `.tour-thumbnail-ring` class — pseudo-elements draw
- * the running-light border around the thumbnail — and (b) appends a
- * "Start here" toast as a child of the card so it shares the card's
- * stacking context. Anything that visually covers the card (top banner,
- * side panel, modal) covers the hint naturally.
+ * Renders nothing directly. Finds the first story card on /stories and
+ * injects (a) a `.tour-ring-overlay` div as a child of the card to draw
+ * the rotating gold border around the thumbnail, and (b) a
+ * `.tour-thumbnail-toast` "Start here" pill positioned inside the
+ * thumbnail. Both live in the card's DOM so any element with a higher
+ * z-index (top banner, side panel, story detail modal) naturally covers
+ * them — no floating-overlay logic needed.
  *
  * This is a UI hint, not a tracked tour step. Fires whenever the user
  * lands on /stories without a step1CompletedAt timestamp.
