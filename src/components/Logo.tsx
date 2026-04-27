@@ -68,13 +68,16 @@ export default function Logo({ variant = 'default', size = 'text-[32px]', classN
       : ['myCuent', 'ana'];
 
   return (
-    <h1 className={`font-bold leading-none ${font} ${size} ${className} ${showBeta ? 'inline-flex items-center gap-2' : ''}`}>
+    <h1 className={`font-bold leading-none ${font} ${size} ${className} ${showBeta ? 'relative inline-block' : ''}`}>
       <span>
         <span className={`${aprendColor} drop-shadow-aprenova`}>{brand[0]}</span>
         <span className={`${oColor} drop-shadow-aprenova`}>{brand[1]}</span>
       </span>
       {showBeta && (
-        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none font-sans">
+        // Absolutely positioned so the wordmark stays centered; badge
+        // floats just right of the last letter without affecting the
+        // wordmark's measured width for centering.
+        <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none font-sans whitespace-nowrap">
           beta
         </span>
       )}

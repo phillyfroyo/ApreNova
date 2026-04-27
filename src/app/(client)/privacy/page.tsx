@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function PrivacyPolicyPage() {
   const lastUpdated = 'December 29, 2025';
-  const contactEmail = 'privacy@cuentana.com';
+  const contactEmail = 'philipwooleryprice@gmail.com';
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
