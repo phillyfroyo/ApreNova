@@ -78,7 +78,7 @@ export default function LanguageSelectPage() {
       cefrHeadline: "¿Cansado de leer al nivel equivocado?",
       cefrBody:
         "Los libros para niños pueden ser poco interesantes para adultos. La novela que en verdad quieres leer es demasiado difícil. Así que dejas de leer. Reescribimos cualquier historia para tu nivel CEFR — de A1 a C1 — sin perder la trama.",
-      cefrLabelA: "A2 — principiante",
+      cefrLabelA: "A1 — principiante",
       cefrLabelB: "B2 — intermedio",
       // Section 3 — Upload
       uploadHeadline: "¿No ves lo que quieres leer? Súbelo.",
@@ -121,7 +121,7 @@ export default function LanguageSelectPage() {
       cefrHeadline: "Tired of reading at the wrong level?",
       cefrBody:
         "Children's books can be unappealing to adults. The novel you actually want to read is too hard. So you stop reading. We rewrite any story to match your CEFR level — A1 through C1 — without losing the plot.",
-      cefrLabelA: "A2 — beginner",
+      cefrLabelA: "A1 — beginner",
       cefrLabelB: "B2 — intermediate",
       uploadHeadline: "Don't see what you want to read? Upload it.",
       uploadBody:
@@ -391,14 +391,22 @@ export default function LanguageSelectPage() {
         <SectionBlock>
           <SectionHeadline>{t.cefrHeadline}</SectionHeadline>
           <SectionBody>{t.cefrBody}</SectionBody>
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+          <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 w-full">
             <CefrLevelComparison
               label={t.cefrLabelA}
-              src="/landing/cefr-a2.png"
+              src={
+                preferredLang === "en"
+                  ? "/landing/cefr-en-a1.mp4"
+                  : "/landing/cefr-es-a1.mp4"
+              }
             />
             <CefrLevelComparison
               label={t.cefrLabelB}
-              src="/landing/cefr-b2.png"
+              src={
+                preferredLang === "en"
+                  ? "/landing/cefr-en-b2.mp4"
+                  : "/landing/cefr-es-b2.mp4"
+              }
             />
           </div>
         </SectionBlock>
@@ -539,21 +547,35 @@ interface CefrLevelComparisonProps {
 }
 
 function CefrLevelComparison({ label, src }: CefrLevelComparisonProps) {
-  // Static images served from /public/landing/. If the image isn't present
-  // (recording not yet captured), the alt text + soft placeholder bg keep
-  // the layout intact instead of breaking the grid.
+  // Renders either a static image or a looping silent video, picked from
+  // the file extension. If the asset isn't present yet (recording not
+  // captured), the gray placeholder + caption keep the layout intact.
+  const isVideo = /\.(mp4|webm|mov)$/i.test(src);
+
   return (
     <figure className="flex flex-col items-center">
       <div className="w-full aspect-[2/3] rounded-2xl bg-gray-100 overflow-hidden shadow-md">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={label}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
-          }}
-        />
+        {isVideo ? (
+          <video
+            src={src}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={label}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
       </div>
       <figcaption className="mt-2 text-xs font-semibold text-gray-700">
         {label}
