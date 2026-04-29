@@ -421,7 +421,11 @@ export default function LanguageSelectPage() {
             {t.uploadCaption}
           </p>
           <DemoFeatureFrame
-            videoSrc={preferredLang === "en" ? "/landing/upload-flow.mp4" : null}
+            videoSrc={
+              preferredLang === "en"
+                ? "/landing/upload-flow-en.mp4"
+                : "/landing/upload-flow-es.mp4"
+            }
             placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
             lang={preferredLang}
           />
