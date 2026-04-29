@@ -864,10 +864,10 @@ interface DemoVideoFrameProps {
 }
 
 function DemoVideoFrame({ lang }: DemoVideoFrameProps) {
-  // English video is recorded; Spanish version is coming. Show a tasteful
-  // placeholder for `es` until that's recorded so we don't play
-  // English-language audio/UI to a Spanish-speaking visitor.
-  const hasVideo = lang === "en";
+  const videoSrc =
+    lang === "en"
+      ? "/landing/tap-translate-save-en.mp4"
+      : "/landing/tap-translate-save-es.mp4";
 
   return (
     <div
@@ -875,29 +875,18 @@ function DemoVideoFrame({ lang }: DemoVideoFrameProps) {
       style={{ width: "260px" }}
     >
       <div className="relative overflow-hidden rounded-[20px] bg-gray-800" style={{ aspectRatio: "344 / 610" }}>
-        {hasVideo ? (
-          <video
-            // `key` forces remount on lang change so a fresh video loads.
-            key={lang}
-            src="/landing/tap-translate-save.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-indigo-100 to-purple-100">
-            <div className="w-12 h-12 rounded-full bg-white/70 flex items-center justify-center mb-3 shadow-sm">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <p className="text-sm font-semibold text-gray-800">Próximamente</p>
-            <p className="text-xs text-gray-600 mt-1">Demo en español</p>
-          </div>
-        )}
+        <video
+          // `key` forces remount on lang change so a fresh video loads
+          // instead of the browser hanging on the old <video> element.
+          key={lang}
+          src={videoSrc}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover"
+        />
       </div>
     </div>
   );
