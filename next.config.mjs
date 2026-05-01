@@ -21,6 +21,13 @@ const nextConfig = {
   // Turbopack config (Next.js 16 default)
   turbopack: {},
 
+  // Keep large static assets out of serverless function bundles. They're
+  // still served from /public via Vercel's CDN — this just stops them from
+  // being copied into every function bundle and pushing past the 250MB cap.
+  outputFileTracingExcludes: {
+    '*': ['public/landing/**', 'public/images/**'],
+  },
+
   // Webpack fallback for compatibility
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(process.cwd(), 'src')
