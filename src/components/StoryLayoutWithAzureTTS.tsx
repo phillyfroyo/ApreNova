@@ -19,6 +19,7 @@ import {
   type PoemNavInfo,
   type StoryMapType,
 } from "@/contexts/StoryReaderContext";
+import TourOrchestrator from "@/components/tour/TourOrchestrator";
 
 // Extracted hooks
 import { useWordSelection } from "@/hooks/useWordSelection";
@@ -421,6 +422,13 @@ export default function StoryLayoutWithAzureTTS({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <StoryReaderProvider value={contextValue}>
+      <TourOrchestrator
+        sentences={sentences}
+        storySlug={storySlug}
+        chapterNumber={chapterNumber}
+        pageNumber={pageNumber}
+        targetLang={oppositeLang}
+      />
       <div
         className={`min-h-screen px-1.5 sm:px-4 pt-6 pb-[32rem] bg-cover bg-fixed bg-center ${theme.fontFamily} ${theme.textColor}`}
         style={backgroundStyle}

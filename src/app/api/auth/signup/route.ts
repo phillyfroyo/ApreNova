@@ -14,7 +14,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const { email, password, nativeLanguage, name } = body;
+  const { email, password, nativeLanguage, name, phone } = body;
+  const normalizedPhone = typeof phone === 'string' && phone.trim() ? phone.trim() : null;
 
   // Validate required fields
   if (!email || !password) {
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
         password: hashed,
         nativeLanguage: nativeLanguage ?? null,
         name: name ?? null,
+        phone: normalizedPhone,
         updatedAt: new Date(),
         ...(isEarlyAdopter && { isPremium: true }),
       },

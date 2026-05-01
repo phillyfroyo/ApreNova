@@ -8,6 +8,8 @@ const es = {
   password: "Contraseña",
   confirmPassword: "Confirmar contraseña",
   name: "Nombre",
+  phone: "Teléfono (opcional)",
+  phoneHelper: "Soy Philip, el fundador. Es posible que te escriba personalmente para preguntarte qué tal te va (prefiero WhatsApp). Nunca venderé ni compartiré tu número.",
   welcomeBack: "¡Bienvenido de nuevo!",
   error: "Credenciales incorrectas. Inténtalo de nuevo.",
   or: "o",
@@ -38,6 +40,10 @@ const es = {
 language: {
   en: "English",
   es: "Español"
+},
+
+tour: {
+  startHere: "Empieza aquí",
 },
 
   stories: {

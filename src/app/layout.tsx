@@ -6,6 +6,7 @@ import SessionWrapper from '@/components/SessionWrapper';
 import SessionTracker from '@/components/SessionTracker';
 import StoryUploadWrapper from '@/components/user-stories/StoryUploadWrapper';
 import AudioPlayerWrapper from '@/components/AudioPlayerWrapper';
+import { TourProvider } from '@/components/tour/TourProvider';
 import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
 
 export const metadata = {
@@ -35,12 +36,14 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
         <SessionWrapper>
-          <StoryUploadWrapper>
-            <AudioPlayerWrapper>
-              <SessionTracker />
-              {children}
-            </AudioPlayerWrapper>
-          </StoryUploadWrapper>
+          <TourProvider>
+            <StoryUploadWrapper>
+              <AudioPlayerWrapper>
+                <SessionTracker />
+                {children}
+              </AudioPlayerWrapper>
+            </StoryUploadWrapper>
+          </TourProvider>
         </SessionWrapper>
       </body>
     </html>

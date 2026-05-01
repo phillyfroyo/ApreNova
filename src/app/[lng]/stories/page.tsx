@@ -12,6 +12,7 @@ import { useUserLevel } from "@/hooks/useUserLevel";
 import { useUserSession } from "@/lib/auth";
 import StoryDetailModal from "@/components/StoryDetailModal";
 import StoryCard from "@/components/StoryCard";
+import StoriesPageTourHint from "@/components/tour/StoriesPageTourHint";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import type { Language } from "@/types/i18n";
@@ -318,6 +319,7 @@ useEffect(() => {
 
   return (
     <>
+    <StoriesPageTourHint lang={typedLang} />
     {/* Full-screen background that extends under sidebar */}
     <div
       style={{
@@ -626,7 +628,7 @@ useEffect(() => {
                   }}
                   className="hide-scrollbar"
                 >
-                  {cuentanaOriginals.slice(0, 8).map((story) => {
+                  {cuentanaOriginals.slice(0, 8).map((story, idx) => {
                     const originalIndex = STORY_METADATA.findIndex(s => s.slug === story.slug);
                     return (
                       <StoryCard
@@ -637,6 +639,7 @@ useEffect(() => {
                         onClick={() => openDetailModal(story.slug)}
                         isNew={isNewStory(story.addedAt)}
                         newLabel={t(typedLang, "stories", "newBadge")}
+                        tourFirst={idx === 0}
                       />
                     );
                   })}

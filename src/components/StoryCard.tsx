@@ -12,6 +12,7 @@ type StoryCardProps = {
   onClick: () => void;
   isNew?: boolean;
   newLabel?: string;
+  tourFirst?: boolean;
 };
 
 export default function StoryCard({
@@ -21,9 +22,11 @@ export default function StoryCard({
   onClick,
   isNew,
   newLabel = "New",
+  tourFirst,
 }: StoryCardProps) {
   return (
     <div
+      data-tour-story-card={tourFirst ? "first" : undefined}
       style={{
         width: "140px",
         flexShrink: 0,

@@ -24,6 +24,7 @@ type OtpStep = 'email' | 'code';
 export default function AuthForm({ mode, lang }: AuthFormProps) {
   const searchParams = useSearchParams();
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -226,7 +227,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         const res = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, nativeLanguage: lang, name }),
+          body: JSON.stringify({ email, password, nativeLanguage: lang, name, phone: phone.trim() || null }),
         });
 
         const data = await res.json();
@@ -371,6 +372,23 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
               required
               disabled={isLoading}
             />
+          )}
+
+          {/* Phone field - signup only, optional */}
+          {!isLogin && (
+            <div className="space-y-1">
+              <Input
+                type="tel"
+                placeholder={t(lang, 'auth', 'phone')}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={isLoading}
+                autoComplete="tel"
+              />
+              <p className="text-xs text-gray-600 leading-snug">
+                {t(lang, 'auth', 'phoneHelper')}
+              </p>
+            </div>
           )}
 
           {/* Email field - always shown */}

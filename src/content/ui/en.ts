@@ -8,6 +8,8 @@ auth: {
   password: "Password",
   confirmPassword: "Confirm Password",
   name: "Name",
+  phone: "Phone (optional)",
+  phoneHelper: "I'm Philip, the founder. I might text you personally to ask how it's going (WhatsApp preferred). I'll never sell or share your number.",
   welcomeBack: "Welcome back!",
   error: "Incorrect credentials. Please try again.",
   or: "or",
@@ -38,6 +40,10 @@ auth: {
 language: {
   en: "English",
   es: "Español"
+},
+
+tour: {
+  startHere: "Start here",
 },
 
 stories: {

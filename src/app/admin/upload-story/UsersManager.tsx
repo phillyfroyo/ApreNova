@@ -16,6 +16,7 @@ interface UserListItem {
   userNumber: number;
   name: string | null;
   email: string | null;
+  phone: string | null;
   nativeLanguage: string | null;
   quizLevel: string | null;
   isPremium: boolean;
@@ -181,6 +182,28 @@ export default function UsersManager() {
   const [userDetails, setUserDetails] = useState<UserDetailsData | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>("stories");
+
+  // Tracks which field was just copied, e.g. `${userId}:email` — used to show brief confirmation
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  async function copyToClipboard(value: string, fieldKey: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(fieldKey);
+      window.setTimeout(() => {
+        setCopiedField((current) => (current === fieldKey ? null : current));
+      }, 1200);
+    } catch {
+      // Clipboard may be unavailable (insecure context). Fallback: select the text node.
+      const range = document.createRange();
+      range.selectNodeContents(e.currentTarget as Node);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }
 
   useEffect(() => {
     fetchUsers();
@@ -422,8 +445,43 @@ export default function UsersManager() {
                           )}
                         </div>
                         {user.email && (
-                          <div className="text-xs text-gray-400 truncate">
-                            {user.email}
+                          <div className="text-xs text-gray-400 truncate flex items-center gap-1.5">
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => copyToClipboard(user.email!, `${user.id}:email`, e)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  copyToClipboard(user.email!, `${user.id}:email`, e as unknown as React.MouseEvent);
+                                }
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-medium flex-shrink-0 transition-colors w-12 text-center"
+                              aria-label="Copy email"
+                            >
+                              {copiedField === `${user.id}:email` ? "Copied" : "Copy"}
+                            </span>
+                            <span className="truncate">{user.email}</span>
+                          </div>
+                        )}
+                        {user.phone && (
+                          <div className="text-xs text-emerald-600 truncate flex items-center gap-1.5">
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => copyToClipboard(user.phone!, `${user.id}:phone`, e)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  copyToClipboard(user.phone!, `${user.id}:phone`, e as unknown as React.MouseEvent);
+                                }
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[10px] font-medium flex-shrink-0 transition-colors w-12 text-center"
+                              aria-label="Copy phone"
+                            >
+                              {copiedField === `${user.id}:phone` ? "Copied" : "Copy"}
+                            </span>
+                            <span className="truncate">{user.phone}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
