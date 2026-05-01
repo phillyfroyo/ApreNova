@@ -89,13 +89,13 @@ export default function LanguageSelectPage() {
       audioHeadline: "Entrena tu oído con audiolibros completos a tu nivel.",
       audioBody:
         "Cada historia se reproduce como un audiolibro real — narrado, sincronizado por oración, con palabras resaltadas mientras se hablan. Escucha en el camino. Lee al mismo tiempo. Pausa para buscar una palabra.",
+      audioCaption: "El Mago de Oz, Nivel A1 (Principiante) — narración lenta",
       // Section 5 — Vocab
       vocabHeadline:
-        "Guarda las palabras que te detienen. Repásalas en automático.",
+        "Las palabras que guardas regresan justo antes de que las olvides.",
       vocabBody:
-        "Toca cualquier palabra para traducir. Toca guardar. La app usa repetición espaciada para devolverlas en el momento correcto — la forma comprobada para fijar el vocabulario.",
-      vocabLabelA: "Toca para guardar",
-      vocabLabelB: "Repasa en el momento correcto",
+        "Esto es repetición espaciada — la forma comprobada para fijar el vocabulario. Cada palabra que guardas vuelve en el momento correcto, ni antes ni después.",
+      vocabCaption: "Repasa en menos de un minuto al día",
       // Founder section
       founderHeadline: "El discurso del fundador, desde un pesero en CDMX",
       founderBody:
@@ -130,11 +130,11 @@ export default function LanguageSelectPage() {
       audioHeadline: "Train your ear with full audiobooks at your level.",
       audioBody:
         "Every story plays as a real audiobook — narrated, sentence-synced, with words highlighted as they're spoken. Listen on your commute. Read along. Pause to look up a word.",
-      vocabHeadline: "Save the words that stump you. Review them on autopilot.",
+      audioCaption: "The Wizard of Oz, Level A1 (Beginner)",
+      vocabHeadline: "The words you save come back the day before you'd forget them.",
       vocabBody:
-        "Tap any word to translate. Tap save. The app uses spaced repetition to bring them back at the right moment — the science-backed way to make vocabulary stick.",
-      vocabLabelA: "Tap to save",
-      vocabLabelB: "Review at the right time",
+        "That's spaced repetition — the science-backed way to make vocabulary stick. Every word you save returns at the right moment, not before, not after.",
+      vocabCaption: "Review in under a minute a day",
       founderHeadline: "Founder's pitch, from a pesero in CDMX",
       founderBody:
         "This is how I got the first 94 users — climbing onto peseros with a mic in hand. If you saw me, thanks for being here.",
@@ -437,13 +437,17 @@ export default function LanguageSelectPage() {
         <SectionBlock>
           <SectionHeadline>{t.audioHeadline}</SectionHeadline>
           <SectionBody>{t.audioBody}</SectionBody>
-          <div className="mt-6">
-            <DemoFeatureFrame
-              videoSrc={preferredLang === "en" ? "/landing/audio-playback.mp4" : null}
-              placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
-              lang={preferredLang}
-            />
-          </div>
+          <p className="mt-6 text-center text-sm font-medium text-gray-700 mb-3">
+            {t.audioCaption}
+          </p>
+          <ScrubberVideo
+            key={preferredLang}
+            src={
+              preferredLang === "en"
+                ? "/landing/audiobook-en.mp4"
+                : "/landing/audiobook-es-slow.mp4"
+            }
+          />
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -452,10 +456,18 @@ export default function LanguageSelectPage() {
         <SectionBlock>
           <SectionHeadline>{t.vocabHeadline}</SectionHeadline>
           <SectionBody>{t.vocabBody}</SectionBody>
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-            <CefrLevelComparison label={t.vocabLabelA} src="/landing/vocab-save.png" />
-            <CefrLevelComparison label={t.vocabLabelB} src="/landing/vocab-review.png" />
-          </div>
+          <p className="mt-6 text-center text-sm font-medium text-gray-700 mb-3">
+            {t.vocabCaption}
+          </p>
+          <DemoFeatureFrame
+            videoSrc={
+              preferredLang === "en"
+                ? "/landing/flashcard-en.mp4"
+                : "/landing/flashcard-es.mp4"
+            }
+            placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
+            lang={preferredLang}
+          />
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -646,14 +658,8 @@ function DemoFeatureFrame({
   );
 }
 
-// Founder video — autoplay muted, loop, with a manual mute/unmute toggle.
-// IntersectionObserver auto-mutes + pauses when the video scrolls out of
-// view so a user who unmuted to listen doesn't get audio bleeding from a
-// off-screen video while they read other sections.
-//
-// `lang` selects which subtitle-baked file plays. Changing lang remounts
-// the component (via `key` at the call site) so playback state doesn't
-// leak across language switches.
+// Founder video — thin wrapper that picks the right localized source and
+// hands it to ScrubberVideo. Remount via `key` at call site on lang change.
 interface FounderVideoProps {
   lang: PreferredLanguage;
 }
@@ -663,6 +669,18 @@ function FounderVideo({ lang }: FounderVideoProps) {
     lang === "en"
       ? "/landing/pesero-speech-en.mp4"
       : "/landing/pesero-speech-es.mp4";
+  return <ScrubberVideo src={videoSrc} />;
+}
+
+// Phone-framed video player with a draggable scrubber, play/pause on tap,
+// and a mute toggle. Autoplays muted on mount; IntersectionObserver pauses
+// + re-mutes when scrolled out of view so audio doesn't bleed across
+// off-screen videos.
+interface ScrubberVideoProps {
+  src: string;
+}
+
+function ScrubberVideo({ src }: ScrubberVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [muted, setMuted] = useState(true);
@@ -786,7 +804,7 @@ function FounderVideo({ lang }: FounderVideoProps) {
       >
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={src}
           autoPlay
           muted
           loop
