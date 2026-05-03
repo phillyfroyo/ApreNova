@@ -557,6 +557,63 @@ function SectionBody({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Shared video element + loading spinner overlay. Spinner shows until the
+// `playing` event fires (only signal that frames are actually moving) and
+// reappears on `waiting` if playback stalls mid-stream. `pause` only
+// re-shows the spinner when readyState < HAVE_FUTURE_DATA — distinguishes
+// a buffering stall from an intentional pause (user tap, IntersectionObserver,
+// autoplay-blocked first frame). `onError` clears the spinner so a broken
+// asset doesn't spin forever.
+interface VideoWithLoaderProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
+  videoRef?: React.Ref<HTMLVideoElement>;
+}
+
+function VideoWithLoader({
+  videoRef,
+  onPlaying,
+  onWaiting,
+  onPause,
+  onError,
+  className,
+  ...videoProps
+}: VideoWithLoaderProps) {
+  const [loading, setLoading] = useState(true);
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        {...videoProps}
+        onPlaying={(e) => {
+          setLoading(false);
+          onPlaying?.(e);
+        }}
+        onWaiting={(e) => {
+          setLoading(true);
+          onWaiting?.(e);
+        }}
+        onPause={(e) => {
+          if (e.currentTarget.readyState < 3) setLoading(true);
+          onPause?.(e);
+        }}
+        onError={(e) => {
+          setLoading(false);
+          onError?.(e);
+        }}
+        className={className}
+      />
+      {loading && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-800/60">
+          <div
+            className="w-8 h-8 rounded-full border-2 border-white/30 border-t-white animate-spin"
+            aria-label="Loading video"
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
 interface CefrLevelComparisonProps {
   label: string;
   src: string;
@@ -570,9 +627,9 @@ function CefrLevelComparison({ label, src }: CefrLevelComparisonProps) {
 
   return (
     <figure className="flex flex-col items-center">
-      <div className="w-full aspect-[2/3] rounded-2xl bg-gray-100 overflow-hidden shadow-md">
+      <div className="relative w-full aspect-[2/3] rounded-2xl bg-gray-100 overflow-hidden shadow-md">
         {isVideo ? (
-          <video
+          <VideoWithLoader
             src={src}
             autoPlay
             muted
@@ -621,7 +678,7 @@ function DemoFeatureFrame({
         style={{ aspectRatio: "344 / 610" }}
       >
         {videoSrc ? (
-          <video
+          <VideoWithLoader
             key={`${videoSrc}-${lang}`}
             src={videoSrc}
             autoPlay
@@ -802,8 +859,8 @@ function ScrubberVideo({ src }: ScrubberVideoProps) {
         className="relative overflow-hidden rounded-[20px] bg-gray-800"
         style={{ aspectRatio: "9 / 16" }}
       >
-        <video
-          ref={videoRef}
+        <VideoWithLoader
+          videoRef={videoRef}
           src={src}
           autoPlay
           muted
@@ -897,7 +954,7 @@ function DemoVideoFrame({ lang }: DemoVideoFrameProps) {
       style={{ width: "260px" }}
     >
       <div className="relative overflow-hidden rounded-[20px] bg-gray-800" style={{ aspectRatio: "344 / 610" }}>
-        <video
+        <VideoWithLoader
           // `key` forces remount on lang change so a fresh video loads
           // instead of the browser hanging on the old <video> element.
           key={lang}
