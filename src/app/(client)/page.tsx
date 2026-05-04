@@ -1,7 +1,7 @@
 // src/app/(client)/page.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Logo from "@/components/Logo";
@@ -391,24 +391,22 @@ export default function LanguageSelectPage() {
         <SectionBlock>
           <SectionHeadline>{t.cefrHeadline}</SectionHeadline>
           <SectionBody>{t.cefrBody}</SectionBody>
-          <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 w-full">
-            <CefrLevelComparison
-              label={t.cefrLabelA}
-              src={
+          <LazyMount minHeight={310}>
+            <CefrPair
+              labelA={t.cefrLabelA}
+              srcA={
                 preferredLang === "en"
                   ? "/landing/cefr-en-a1.mp4"
                   : "/landing/cefr-es-a1.mp4"
               }
-            />
-            <CefrLevelComparison
-              label={t.cefrLabelB}
-              src={
+              labelB={t.cefrLabelB}
+              srcB={
                 preferredLang === "en"
                   ? "/landing/cefr-en-b2.mp4"
                   : "/landing/cefr-es-b2.mp4"
               }
             />
-          </div>
+          </LazyMount>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -420,15 +418,17 @@ export default function LanguageSelectPage() {
           <p className="mt-6 text-center text-sm font-medium text-gray-700 mb-3">
             {t.uploadCaption}
           </p>
-          <DemoFeatureFrame
-            videoSrc={
-              preferredLang === "en"
-                ? "/landing/upload-flow-en.mp4"
-                : "/landing/upload-flow-es.mp4"
-            }
-            placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
-            lang={preferredLang}
-          />
+          <LazyMount minHeight={480}>
+            <DemoFeatureFrame
+              videoSrc={
+                preferredLang === "en"
+                  ? "/landing/upload-flow-en.mp4"
+                  : "/landing/upload-flow-es.mp4"
+              }
+              placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
+              lang={preferredLang}
+            />
+          </LazyMount>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -440,14 +440,16 @@ export default function LanguageSelectPage() {
           <p className="mt-6 text-center text-sm font-medium text-gray-700 mb-3">
             {t.audioCaption}
           </p>
-          <ScrubberVideo
-            key={preferredLang}
-            src={
-              preferredLang === "en"
-                ? "/landing/audiobook-en.mp4"
-                : "/landing/audiobook-es-slow.mp4"
-            }
-          />
+          <LazyMount minHeight={480}>
+            <ScrubberVideo
+              key={preferredLang}
+              src={
+                preferredLang === "en"
+                  ? "/landing/audiobook-en.mp4"
+                  : "/landing/audiobook-es-slow.mp4"
+              }
+            />
+          </LazyMount>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -459,15 +461,17 @@ export default function LanguageSelectPage() {
           <p className="mt-6 text-center text-sm font-medium text-gray-700 mb-3">
             {t.vocabCaption}
           </p>
-          <DemoFeatureFrame
-            videoSrc={
-              preferredLang === "en"
-                ? "/landing/flashcard-en.mp4"
-                : "/landing/flashcard-es.mp4"
-            }
-            placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
-            lang={preferredLang}
-          />
+          <LazyMount minHeight={480}>
+            <DemoFeatureFrame
+              videoSrc={
+                preferredLang === "en"
+                  ? "/landing/flashcard-en.mp4"
+                  : "/landing/flashcard-es.mp4"
+              }
+              placeholderLabel={preferredLang === "en" ? "Coming soon" : "Próximamente"}
+              lang={preferredLang}
+            />
+          </LazyMount>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -476,9 +480,11 @@ export default function LanguageSelectPage() {
         <SectionBlock>
           <SectionHeadline>{t.founderHeadline}</SectionHeadline>
           <SectionBody>{t.founderBody}</SectionBody>
-          <div className="mt-6">
-            <FounderVideo key={preferredLang} lang={preferredLang} />
-          </div>
+          <LazyMount minHeight={480}>
+            <div className="mt-6">
+              <FounderVideo key={preferredLang} lang={preferredLang} />
+            </div>
+          </LazyMount>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -557,12 +563,243 @@ function SectionBody({ children }: { children: React.ReactNode }) {
   );
 }
 
+// SVG spinner with a gradient-faded arc — no hard seam between the bright
+// segment and the track, so it reads as a smooth fade rather than the
+// chunky CSS-border spinner's notch on the opposite side. The gradient is
+// scoped per-instance via a unique id so multiple spinners on screen
+// don't collide on the gradient definition.
+function Spinner({ size = 32 }: { size?: number }) {
+  const id = React.useId();
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 50 50"
+      className="animate-spin"
+      aria-label="Loading video"
+      role="status"
+    >
+      <defs>
+        <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <circle
+        cx="25"
+        cy="25"
+        r="20"
+        fill="none"
+        stroke={`url(#${id})`}
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray="90 200"
+      />
+    </svg>
+  );
+}
+
+// Defers rendering its children until the wrapper scrolls within
+// `rootMargin` of the viewport. Once mounted, stays mounted (no re-mount
+// churn on scroll-out). Reserves layout space via `minHeight` so the page
+// doesn't jump as videos pop in. Intended for heavy <video> elements
+// below the fold — keeps them out of the initial bandwidth race.
+interface LazyMountProps {
+  children: React.ReactNode;
+  minHeight: number;
+  rootMargin?: string;
+}
+
+function LazyMount({ children, minHeight, rootMargin = "300px" }: LazyMountProps) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setMounted(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMounted(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rootMargin]);
+
+  return (
+    <div ref={wrapperRef} style={{ minHeight: mounted ? undefined : minHeight }}>
+      {mounted ? children : null}
+    </div>
+  );
+}
+
+// Shared video element + loading spinner overlay. Defers playback until
+// `canplaythrough` fires (the browser estimates the video can play to the
+// end without re-buffering) — avoids the choppy play/stall/play cycle on
+// slow connections. Spinner stays up until the actual `playing` event,
+// and re-shows on `waiting` (mid-stream buffer underrun) or on `pause`
+// when readyState < HAVE_FUTURE_DATA (distinguishes a buffer stall from
+// an intentional pause: user tap, IntersectionObserver pause, etc).
+//
+// `playWhenReady` (default true) lets a parent gate playback across
+// multiple videos — set to false until both are ready, then flip to true
+// to start them in sync. `onReady` fires once `canplaythrough` has been
+// observed so the parent can track per-child readiness.
+interface VideoWithLoaderProps
+  extends Omit<React.VideoHTMLAttributes<HTMLVideoElement>, "autoPlay"> {
+  videoRef?: React.Ref<HTMLVideoElement>;
+  playWhenReady?: boolean;
+  onReady?: () => void;
+}
+
+function VideoWithLoader({
+  videoRef,
+  playWhenReady = true,
+  onReady,
+  onPlaying,
+  onWaiting,
+  onPause,
+  onError,
+  preload = "auto",
+  className,
+  ...videoProps
+}: VideoWithLoaderProps) {
+  const internalRef = useRef<HTMLVideoElement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  const src = videoProps.src;
+
+  // Reset ready state when the source changes (lang toggle without remount,
+  // e.g. CefrPair's children). canplaythrough will fire again for the new
+  // src and flip this back to true.
+  useEffect(() => {
+    setReady(false);
+    setLoading(true);
+  }, [src]);
+
+  // Bridge our internal ref to the optional external one passed by parents
+  // (e.g. ScrubberVideo needs the element to wire up its scrubber).
+  const setRef = (el: HTMLVideoElement | null) => {
+    internalRef.current = el;
+    if (typeof videoRef === "function") videoRef(el);
+    else if (videoRef && "current" in videoRef)
+      (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+  };
+
+  // Once both conditions hold (canplaythrough fired AND parent says go),
+  // kick off playback. Re-runs whenever `playWhenReady` flips so paired
+  // videos start together.
+  useEffect(() => {
+    if (!ready || !playWhenReady) return;
+    const v = internalRef.current;
+    if (!v) return;
+    v.play().catch(() => {
+      // autoplay can be blocked; spinner stays until user interacts
+    });
+  }, [ready, playWhenReady]);
+
+  return (
+    <>
+      <video
+        ref={setRef}
+        {...videoProps}
+        preload={preload}
+        onCanPlayThrough={(e) => {
+          if (!ready) {
+            setReady(true);
+            onReady?.();
+          }
+          videoProps.onCanPlayThrough?.(e);
+        }}
+        onPlaying={(e) => {
+          setLoading(false);
+          onPlaying?.(e);
+        }}
+        onWaiting={(e) => {
+          setLoading(true);
+          onWaiting?.(e);
+        }}
+        onPause={(e) => {
+          if (e.currentTarget.readyState < 3) setLoading(true);
+          onPause?.(e);
+        }}
+        onError={(e) => {
+          setLoading(false);
+          onError?.(e);
+        }}
+        className={className}
+      />
+      {loading && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-800/60">
+          <Spinner />
+        </div>
+      )}
+    </>
+  );
+}
+
+// Coordinates the side-by-side CEFR demo videos so they start in lockstep.
+// Each child fires `onReady` on its own `canplaythrough`; once both have
+// fired, we flip `playWhenReady` to true and they play simultaneously.
+// Source videos are paired demos of the same scene at different levels —
+// if their durations match, looping stays in sync naturally.
+interface CefrPairProps {
+  labelA: string;
+  srcA: string;
+  labelB: string;
+  srcB: string;
+}
+
+function CefrPair({ labelA, srcA, labelB, srcB }: CefrPairProps) {
+  const [readyA, setReadyA] = useState(false);
+  const [readyB, setReadyB] = useState(false);
+  const bothReady = readyA && readyB;
+
+  // Reset readiness when sources change (language toggle) so we re-gate
+  // playback until both new videos report canplaythrough again.
+  useEffect(() => {
+    setReadyA(false);
+    setReadyB(false);
+  }, [srcA, srcB]);
+
+  return (
+    <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4 w-full">
+      <CefrLevelComparison
+        label={labelA}
+        src={srcA}
+        playWhenReady={bothReady}
+        onReady={() => setReadyA(true)}
+      />
+      <CefrLevelComparison
+        label={labelB}
+        src={srcB}
+        playWhenReady={bothReady}
+        onReady={() => setReadyB(true)}
+      />
+    </div>
+  );
+}
+
 interface CefrLevelComparisonProps {
   label: string;
   src: string;
+  playWhenReady?: boolean;
+  onReady?: () => void;
 }
 
-function CefrLevelComparison({ label, src }: CefrLevelComparisonProps) {
+function CefrLevelComparison({
+  label,
+  src,
+  playWhenReady,
+  onReady,
+}: CefrLevelComparisonProps) {
   // Renders either a static image or a looping silent video, picked from
   // the file extension. If the asset isn't present yet (recording not
   // captured), the gray placeholder + caption keep the layout intact.
@@ -570,15 +807,15 @@ function CefrLevelComparison({ label, src }: CefrLevelComparisonProps) {
 
   return (
     <figure className="flex flex-col items-center">
-      <div className="w-full aspect-[2/3] rounded-2xl bg-gray-100 overflow-hidden shadow-md">
+      <div className="relative w-full aspect-[2/3] rounded-2xl bg-gray-100 overflow-hidden shadow-md">
         {isVideo ? (
-          <video
+          <VideoWithLoader
             src={src}
-            autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            playWhenReady={playWhenReady}
+            onReady={onReady}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -621,14 +858,12 @@ function DemoFeatureFrame({
         style={{ aspectRatio: "344 / 610" }}
       >
         {videoSrc ? (
-          <video
+          <VideoWithLoader
             key={`${videoSrc}-${lang}`}
             src={videoSrc}
-            autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
             className="w-full h-full object-cover"
           />
         ) : (
@@ -802,14 +1037,12 @@ function ScrubberVideo({ src }: ScrubberVideoProps) {
         className="relative overflow-hidden rounded-[20px] bg-gray-800"
         style={{ aspectRatio: "9 / 16" }}
       >
-        <video
-          ref={videoRef}
+        <VideoWithLoader
+          videoRef={videoRef}
           src={src}
-          autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
           onClick={togglePlay}
           className="w-full h-full object-cover cursor-pointer"
         />
@@ -897,16 +1130,14 @@ function DemoVideoFrame({ lang }: DemoVideoFrameProps) {
       style={{ width: "260px" }}
     >
       <div className="relative overflow-hidden rounded-[20px] bg-gray-800" style={{ aspectRatio: "344 / 610" }}>
-        <video
+        <VideoWithLoader
           // `key` forces remount on lang change so a fresh video loads
           // instead of the browser hanging on the old <video> element.
           key={lang}
           src={videoSrc}
-          autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
           className="w-full h-full object-cover"
         />
       </div>

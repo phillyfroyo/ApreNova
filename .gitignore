@@ -36,8 +36,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# Claude Code local settings (may contain secrets in permissions)
-.claude/settings.local.json
+# Claude Code local settings + runtime state (per-user, never committed)
+.claude/
 
 # typescript
 *.tsbuildinfo
@@ -56,9 +56,6 @@ src/dev/InfraPage.txt
 # User-uploaded thumbnails
 /public/images/user-thumbnails/
 .env
-
-# Claude Code local settings (may contain sensitive info from conversations)
-.claude/settings.local.json
 
 # Sentry Config File
 .env.sentry-build-plugin
