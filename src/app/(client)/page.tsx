@@ -85,6 +85,7 @@ export default function LanguageSelectPage() {
       uploadBody:
         "Pega un artículo. Sube un PDF. Sube un capítulo de tu novela favorita. Lo reescribiremos a tu nivel, lo traduciremos línea por línea, y lo convertiremos en un lector con audio en menos de un minuto.",
       uploadCaption: "De pegar a leer en menos de un minuto",
+      uploadVideoCaption: "Frankenstein, reescrito y traducido a A2 (En Desarrollo)",
       // Section 4 — Audio
       audioHeadline: "Entrena tu oído con audiolibros completos a tu nivel.",
       audioBody:
@@ -127,6 +128,7 @@ export default function LanguageSelectPage() {
       uploadBody:
         "Paste an article. Drop in a PDF. Upload a chapter from your favorite novel. We'll rewrite it to your level, translate every line, and turn it into a reader with audio in under a minute.",
       uploadCaption: "From paste to reading in under a minute",
+      uploadVideoCaption: "Frankenstein, rewritten and translated to A2 (Developing)",
       audioHeadline: "Train your ear with full audiobooks at your level.",
       audioBody:
         "Every story plays as a real audiobook — narrated, sentence-synced, with words highlighted as they're spoken. Listen on your commute. Read along. Pause to look up a word.",
@@ -429,6 +431,9 @@ export default function LanguageSelectPage() {
               lang={preferredLang}
             />
           </LazyMount>
+          <p className="mt-3 text-center text-xs font-medium text-gray-600 italic">
+            {t.uploadVideoCaption}
+          </p>
         </SectionBlock>
 
         {/* ─────────────────────────────────────────────────────────────
