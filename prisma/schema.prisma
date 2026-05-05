@@ -187,6 +187,7 @@ model User {
   tourStep2CompletedAt DateTime?
   tourStep3CompletedAt DateTime?
   tourCompletedAt      DateTime?
+  pixelMilestones      String[]            @default([])
   Account           Account[]
   ApiCost           ApiCost[]
   CompletedStory    CompletedStory[]

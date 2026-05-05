@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import type { NextRequest } from 'next/server';
+import { sendCapiEvent, extractCapiUserContext } from '@/lib/meta-capi';
+import { newEventId } from '@/lib/meta-event-id';
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req });
@@ -39,6 +41,27 @@ export async function GET(req: NextRequest) {
   });
 
   if (!userWithLevel?.quizLevel) {
+    const eventId = newEventId();
+    const ctx = extractCapiUserContext(req);
+    const userRecord = await prisma.user.findUnique({
+      where: { email: token.email },
+      select: { id: true, email: true, phone: true },
+    });
+    if (userRecord) {
+      await sendCapiEvent({
+        eventName: 'CompleteRegistration',
+        eventId,
+        eventSourceUrl: req.url,
+        customData: { method: 'google' },
+        userData: {
+          email: userRecord.email,
+          phone: userRecord.phone,
+          externalId: userRecord.id,
+          ...ctx,
+        },
+      });
+    }
+
     if (quizLevelParam) {
       // User completed onboarding before signing up — save the level to DB
       await prisma.user.update({
@@ -46,10 +69,16 @@ export async function GET(req: NextRequest) {
         data: { quizLevel: quizLevelParam },
       });
       // Go to stories since onboarding is complete
-      return NextResponse.redirect(new URL(`/${lang}/stories`, req.url));
+      const dest = new URL(`/${lang}/stories`, req.url);
+      dest.searchParams.set('newUser', '1');
+      dest.searchParams.set('newUserEid', eventId);
+      return NextResponse.redirect(dest);
     }
     // New user without level — send to root for onboarding step 1
-    return NextResponse.redirect(new URL('/', req.url));
+    const dest = new URL('/', req.url);
+    dest.searchParams.set('newUser', '1');
+    dest.searchParams.set('newUserEid', eventId);
+    return NextResponse.redirect(dest);
   }
 
   // Existing user with level - go to dashboard
