@@ -12,6 +12,7 @@ import { t } from '@/lib/t';
 import LanguageDropdown from '@/components/LanguageDropdown';
 import type { Language } from '@/types/i18n';
 import { AUTH_ERROR_CODES, getAuthErrorMessage, type AuthErrorCode } from '@/lib/auth-errors';
+import { trackEventDeduped } from '@/lib/meta-pixel';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
@@ -246,6 +247,7 @@ export default function AuthForm({ mode, lang }: AuthFormProps) {
         });
 
         if (result?.ok) {
+          trackEventDeduped('CompleteRegistration', { method: 'credentials' });
           // If user completed onboarding before signup, save level and go to stories
           // Only check sessionStorage (per-tab) — localStorage may have stale values from previous sessions
           const quizLevel = sessionStorage.getItem('quizLevel');

@@ -7,6 +7,9 @@ import SessionTracker from '@/components/SessionTracker';
 import StoryUploadWrapper from '@/components/user-stories/StoryUploadWrapper';
 import AudioPlayerWrapper from '@/components/AudioPlayerWrapper';
 import { TourProvider } from '@/components/tour/TourProvider';
+import MetaPixel from '@/components/MetaPixel';
+import NewUserPixelEvent from '@/components/NewUserPixelEvent';
+import { Suspense } from 'react';
 import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
 
 export const metadata = {
@@ -35,6 +38,10 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground font-sans transition-none">
+        <MetaPixel />
+        <Suspense fallback={null}>
+          <NewUserPixelEvent />
+        </Suspense>
         <SessionWrapper>
           <TourProvider>
             <StoryUploadWrapper>
