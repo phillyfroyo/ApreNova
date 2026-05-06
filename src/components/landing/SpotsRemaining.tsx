@@ -1,26 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 type Lang = 'es' | 'en';
 
 const COPY: Record<
   Lang,
   {
-    headline: (cap: number) => string;
+    headline: (cap: number) => ReactNode;
     liveCount: (n: number) => string;
     full: string;
   }
 > = {
   es: {
-    headline: (cap) =>
-      `Cuentana es completamente GRATIS para los primeros ${cap.toLocaleString('es-MX')} usuarios.`,
+    // Each half is nowrap; the <wbr> between them is the only legal break point.
+    // Result: one line on wide screens, clean break at GRATIS on narrow.
+    headline: (cap) => (
+      <>
+        <span className="whitespace-nowrap">Cuentana es GRATIS</span>
+        <wbr />{' '}
+        <span className="whitespace-nowrap">
+          para los primeros {cap.toLocaleString('es-MX')} usuarios.
+        </span>
+      </>
+    ),
     liveCount: (n) => `Usuarios en vivo: ${n.toLocaleString('es-MX')}`,
     full: 'Los cupos gratuitos se han agotado.',
   },
   en: {
-    headline: (cap) =>
-      `Cuentana is completely FREE for the first ${cap.toLocaleString('en-US')} users.`,
+    headline: (cap) => (
+      <>
+        <span className="whitespace-nowrap">Cuentana is FREE</span>
+        <wbr />{' '}
+        <span className="whitespace-nowrap">
+          for the first {cap.toLocaleString('en-US')} users.
+        </span>
+      </>
+    ),
     liveCount: (n) => `Live user count: ${n.toLocaleString('en-US')}`,
     full: 'Free spots have all been claimed.',
   },
