@@ -45,9 +45,9 @@ export async function POST(req: Request) {
 
     const hashed = await hash(password, 10);
 
-    // Grant premium to first 100 users
+    // Grant premium to first 1,000 users
     const userCount = await prisma.user.count();
-    const isEarlyAdopter = userCount < 100;
+    const isEarlyAdopter = userCount < 1000;
 
     await prisma.user.create({
       data: {

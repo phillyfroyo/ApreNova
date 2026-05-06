@@ -119,10 +119,10 @@ export const authOptions: AuthOptions = {
   },
 
   events: {
-    // Grant premium to first 100 users (Google OAuth signups)
+    // Grant premium to first 1,000 users (Google OAuth signups)
     createUser: async ({ user }) => {
       const userCount = await prisma.user.count();
-      if (userCount <= 100) {
+      if (userCount < 1000) {
         await prisma.user.update({
           where: { id: user.id },
           data: { isPremium: true },
