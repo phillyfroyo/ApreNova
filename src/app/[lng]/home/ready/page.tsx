@@ -137,6 +137,12 @@ export default function ReadyPage() {
                       </svg>
                       {t(typedLang, "onboarding", "createAccountBenefit3")}
                     </li>
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {t(typedLang, "onboarding", "createAccountBenefit4")}
+                    </li>
                   </ul>
 
                   <Link

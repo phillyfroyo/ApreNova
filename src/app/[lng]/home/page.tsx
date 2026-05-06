@@ -189,9 +189,7 @@ export default function OnboardingHome() {
           {/* Level selection - single column, full width */}
           <div className="space-y-3">
             {LEVELS.map((level) => {
-              // Strip "A1 - " prefix from level name since badge already shows CEFR code
-              const fullName = t(typedLang, "levels", level) || "";
-              const displayName = fullName.replace(/^[A-C]\d\s*[-–—]\s*/, "");
+              const displayName = t(typedLang, "levels", level) || "";
               const isExampleOpen = exampleOpen === level;
               const example = LEVEL_EXAMPLES[level];
               // Show target language first (the one user is learning)

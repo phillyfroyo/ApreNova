@@ -106,8 +106,7 @@ export default function SettingsLevelDisplay() {
           {LEVELS.map((level) => {
             const cefrCode = toCEFR(level);
             const isCurrentLevel = cefrCode === currentLevel;
-            const fullName = t(typedLang, "levels", level) || "";
-            const displayName = fullName.replace(/^[A-C]\d\s*[-–—]\s*/, "");
+            const displayName = t(typedLang, "levels", level) || "";
             const isExampleOpen = exampleOpen === level;
             const example = LEVEL_EXAMPLES[level];
             const primaryText = typedLang === "en" ? example.es : example.en;
