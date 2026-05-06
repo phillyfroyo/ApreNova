@@ -203,9 +203,9 @@ settings: {
   currentLevel: "Nivel actual",
   levelUndefined: "Nivel actual: indefinido. Haz el quiz",
   changeLevel: "Haz el quiz para cambiar tu nivel",
-  earlyAdopterTitle: "Eres uno de nuestros primeros 100 usuarios!",
+  earlyAdopterTitle: "Eres uno de nuestros primeros 1,000 usuarios!",
   earlyAdopterMessage: "Gracias por apoyarnos desde el principio. Disfrutas de acceso gratuito como adoptor temprano.",
-  earlyAdopterPremium: "Tienes acceso premium gratuito como uno de nuestros primeros 100 usuarios. No necesitas suscripción.",
+  earlyAdopterPremium: "Tienes acceso premium gratuito como uno de nuestros primeros 1,000 usuarios. No necesitas suscripción.",
 },
 
 stats: {
