@@ -7,6 +7,7 @@ import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { AuthOptions, SessionStrategy } from "next-auth";
 import { getEnv } from "@/lib/env-validation";
+import { EARLY_ADOPTER_CAP } from "@/lib/early-adopter";
 
 const providers: any[] = [
   GoogleProvider({
@@ -119,10 +120,10 @@ export const authOptions: AuthOptions = {
   },
 
   events: {
-    // Grant premium to first 1,000 users (Google OAuth signups)
+    // Grant premium to first EARLY_ADOPTER_CAP users (Google OAuth signups)
     createUser: async ({ user }) => {
       const userCount = await prisma.user.count();
-      if (userCount < 1000) {
+      if (userCount < EARLY_ADOPTER_CAP) {
         await prisma.user.update({
           where: { id: user.id },
           data: { isPremium: true },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { AUTH_ERROR_CODES, isValidEmail } from "@/lib/auth-errors";
+import { EARLY_ADOPTER_CAP } from "@/lib/early-adopter";
 
 export async function POST(req: Request) {
   let body;
@@ -45,9 +46,9 @@ export async function POST(req: Request) {
 
     const hashed = await hash(password, 10);
 
-    // Grant premium to first 1,000 users
+    // Grant premium to first EARLY_ADOPTER_CAP users
     const userCount = await prisma.user.count();
-    const isEarlyAdopter = userCount < 1000;
+    const isEarlyAdopter = userCount < EARLY_ADOPTER_CAP;
 
     await prisma.user.create({
       data: {
