@@ -41,21 +41,18 @@ export function trackCustomEvent(
   window.fbq!('trackCustom', name, params ?? {}, options);
 }
 
-// Fires Pixel + CAPI with a shared event_id so Meta dedupes them.
-// `name` must be a standard event in the ALLOWED_EVENTS list of /api/meta/track.
-export function trackEventDeduped(
+function generateEventId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function mirrorToCapi(
   name: string,
-  params?: Record<string, unknown>,
+  eventId: string,
+  params: Record<string, unknown> | undefined,
+  isCustom: boolean,
 ): void {
-  const eventId =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  trackEvent(name, params, eventId);
-
-  // Mirror to CAPI server-side. Fire-and-forget — don't block the UI.
-  // Use keepalive so the request survives navigation away from the page.
   fetch('/api/meta/track', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -64,7 +61,30 @@ export function trackEventDeduped(
       event_id: eventId,
       custom_data: params,
       event_source_url: typeof window !== 'undefined' ? window.location.href : undefined,
+      is_custom: isCustom,
     }),
     keepalive: true,
   }).catch(() => {});
+}
+
+// Fires Pixel + CAPI with a shared event_id so Meta dedupes them.
+// `name` must be a standard event in the ALLOWED_EVENTS list of /api/meta/track.
+export function trackEventDeduped(
+  name: string,
+  params?: Record<string, unknown>,
+): void {
+  const eventId = generateEventId();
+  trackEvent(name, params, eventId);
+  mirrorToCapi(name, eventId, params, false);
+}
+
+// Same as trackEventDeduped but for custom (non-standard) events.
+// `name` must be in CUSTOM_EVENTS in /api/meta/track.
+export function trackCustomEventDeduped(
+  name: string,
+  params?: Record<string, unknown>,
+): void {
+  const eventId = generateEventId();
+  trackCustomEvent(name, params, eventId);
+  mirrorToCapi(name, eventId, params, true);
 }

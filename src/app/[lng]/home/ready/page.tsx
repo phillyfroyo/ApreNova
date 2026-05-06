@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 import { t } from "@/lib/t";
 import Link from "next/link";
+import { trackCustomEventDeduped } from "@/lib/meta-pixel";
 
 type Level = "l1" | "l2" | "l3" | "l4" | "l5";
 
@@ -27,6 +28,14 @@ export default function ReadyPage() {
   }, []);
 
   const handleContinue = () => {
+    router.push(`/${typedLang}/stories`);
+  };
+
+  const handleSkipAsGuest = () => {
+    trackCustomEventDeduped('ContinuedAsGuest', {
+      level,
+      lang: typedLang,
+    });
     router.push(`/${typedLang}/stories`);
   };
 
@@ -128,6 +137,12 @@ export default function ReadyPage() {
                       </svg>
                       {t(typedLang, "onboarding", "createAccountBenefit3")}
                     </li>
+                    <li className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {t(typedLang, "onboarding", "createAccountBenefit4")}
+                    </li>
                   </ul>
 
                   <Link
@@ -149,7 +164,7 @@ export default function ReadyPage() {
 
                 {/* Skip for now option */}
                 <button
-                  onClick={handleContinue}
+                  onClick={handleSkipAsGuest}
                   className="w-full text-center text-gray-500 hover:text-gray-700 py-2 text-sm transition-colors"
                 >
                   {t(typedLang, "onboarding", "skipForNow")} →

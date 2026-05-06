@@ -8,6 +8,7 @@ import Logo from "@/components/Logo";
 import { motion } from "framer-motion";
 import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 import { updateNativeLanguage } from "@/lib/updateLanguage";
+import SpotsRemaining from "@/components/landing/SpotsRemaining";
 
 type PreferredLanguage = 'es' | 'en';
 
@@ -67,7 +68,6 @@ export default function LanguageSelectPage() {
   const content = {
     es: {
       question: "¿Cuál es tu lengua materna?",
-      questionSecondary: "What is your native language?",
       loginText: "¿Ya tienes una cuenta? Inicia sesión",
       tagline: "Aprende idiomas con historias.",
       heroPromise:
@@ -113,7 +113,6 @@ export default function LanguageSelectPage() {
     },
     en: {
       question: "What is your native language?",
-      questionSecondary: "¿Cuál es tu lengua materna?",
       loginText: "Already have an account? Log in",
       tagline: "Learn language through stories.",
       heroPromise:
@@ -193,13 +192,10 @@ export default function LanguageSelectPage() {
         >
           {/* Main selection card - glass effect */}
           <div className="glass-card rounded-2xl shadow-lg px-5 py-6">
-            {/* Question - primary language first */}
-            <h1 className="text-xl font-bold text-center text-gray-900 mb-1 leading-tight">
+            {/* Question */}
+            <h1 className="text-xl font-bold text-center text-gray-900 mb-5 leading-tight">
               {t.question}
             </h1>
-            <p className="text-center text-gray-500 text-sm mb-5">
-              {t.questionSecondary}
-            </p>
 
             {/* Language buttons - order based on preference */}
             <div className="space-y-3">
@@ -322,6 +318,11 @@ export default function LanguageSelectPage() {
             ) : null}
           </div>
         </motion.div>
+
+        {/* Spots remaining — under the card, frames the offer */}
+        <div className="mt-4 w-full max-w-sm">
+          <SpotsRemaining lang={preferredLang} />
+        </div>
 
         {/* Language toggle — small segmented control under the card */}
         <motion.div

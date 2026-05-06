@@ -97,19 +97,19 @@ story: {
 
 levels: {
   // Legacy keys for backwards compatibility
-  l1: "A1 - Foundations",
-  l2: "A2 - Developing",
-  l3: "B1 - Independent",
-  l4: "B2 - Upper-Intermediate",
-  l5: "C1 - Advanced",
-  l6: "C2 - Near-Native",
+  l1: "Foundations",
+  l2: "Developing",
+  l3: "Independent",
+  l4: "Upper-Intermediate",
+  l5: "Advanced",
+  l6: "Near-Native",
   // CEFR codes
-  A1: "A1 - Foundations",
-  A2: "A2 - Developing",
-  B1: "B1 - Independent",
-  B2: "B2 - Upper-Intermediate",
-  C1: "C1 - Advanced",
-  C2: "C2 - Near-Native",
+  A1: "Foundations",
+  A2: "Developing",
+  B1: "Independent",
+  B2: "Upper-Intermediate",
+  C1: "Advanced",
+  C2: "Near-Native",
   // CEFR labels (for dropdown displays)
   cefrLabels: {
     l1: "A1",
@@ -166,11 +166,12 @@ onboarding: {
   selectLevel: "Select",
   allSetTitle: "You're All Set",
   levelSetTo: "Your level is set to",
-  createAccountTitle: "Create a Free Account",
-  createAccountBenefit1: "Save your progress across devices",
-  createAccountBenefit2: "Upload your own stories",
-  createAccountBenefit3: "Build your personal vocabulary list",
-  createAccountCta: "Create Account",
+  createAccountTitle: "Create your free account",
+  createAccountBenefit1: "Free Premium for early users — limited spots",
+  createAccountBenefit2: "Listen to full audiobooks at your level",
+  createAccountBenefit3: "Upload any text and read it at your level",
+  createAccountBenefit4: "Save words, test your knowledge, build a personal list",
+  createAccountCta: "Create free account",
   skipForNow: "Continue without an account",
 },
 
@@ -202,9 +203,9 @@ settings: {
   currentLevel: "Current Level",
   levelUndefined: "Current Level: Undefined. Take the Quiz",
   changeLevel: "Take the quiz to change your level",
-  earlyAdopterTitle: "You're one of our first 100 users!",
+  earlyAdopterTitle: "You're one of our first 1,000 users!",
   earlyAdopterMessage: "Thanks for being here from the start. You have free access as an early adopter.",
-  earlyAdopterPremium: "You have free premium access as one of our first 100 users. No subscription needed.",
+  earlyAdopterPremium: "You have free premium access as one of our first 1,000 users. No subscription needed.",
   },
 
 stats: {

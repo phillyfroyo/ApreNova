@@ -7,11 +7,15 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { sendCapiEvent, extractCapiUserContext } from '@/lib/meta-capi';
 
-const ALLOWED_EVENTS = new Set([
+const ALLOWED_STANDARD_EVENTS = new Set([
   'PageView',
   'ViewContent',
   'CompleteRegistration',
   'Lead',
+]);
+
+const ALLOWED_CUSTOM_EVENTS = new Set([
+  'ContinuedAsGuest',
 ]);
 
 export async function POST(req: Request) {
@@ -22,9 +26,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { event_name, event_id, custom_data, event_source_url } = body ?? {};
+  const { event_name, event_id, custom_data, event_source_url, is_custom } = body ?? {};
 
-  if (typeof event_name !== 'string' || !ALLOWED_EVENTS.has(event_name)) {
+  const isCustom = is_custom === true;
+  const allowed = isCustom
+    ? ALLOWED_CUSTOM_EVENTS.has(event_name)
+    : ALLOWED_STANDARD_EVENTS.has(event_name);
+
+  if (typeof event_name !== 'string' || !allowed) {
     return NextResponse.json({ error: 'Invalid event_name' }, { status: 400 });
   }
   if (typeof event_id !== 'string' || !event_id) {
