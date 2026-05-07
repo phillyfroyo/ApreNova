@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import { processUserStory } from "@/lib/user-stories/pipeline";
+import { inngest } from "@/lib/inngest/client";
 
 // POST: Trigger story processing
 // This can be called automatically after story creation or manually to retry
@@ -64,9 +64,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Start processing in background
-    processUserStory(storyId).catch((error) => {
-      console.error("[API/process] Failed:", error.message);
+    // Hand off to Inngest. The orchestrator runs as chained background steps;
+    // this route returns immediately while the work runs to completion in the
+    // background.
+    await inngest.send({
+      name: "user-story/process",
+      data: { storyId, userId: session.user.id },
     });
 
     return NextResponse.json({
