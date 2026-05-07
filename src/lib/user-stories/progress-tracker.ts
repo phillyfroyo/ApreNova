@@ -86,6 +86,10 @@ export interface ProcessingProgress {
   };
   // Alignment issue tracking
   hasAlignmentIssues?: boolean;
+  // Inngest pipeline: per-chapter rewritten text, keyed by 0-indexed chapter
+  // number. Written by the rewrite step, read by the translate step. Not used
+  // by the legacy in-process pipeline.
+  rewriteCache?: Record<string, string>;
 }
 
 // Story-level progress phases

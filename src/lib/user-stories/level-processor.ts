@@ -282,7 +282,9 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * For poetry: Uses chapter-level processing with explicit markers for ~99% cost reduction.
  * Falls back to poem-level then stanza-level if markers aren't preserved.
  */
-async function rewriteChapterWithChunking(
+// Exported for the Inngest pipeline (per-chapter steps). Existing callers
+// inside this module continue to use it unchanged.
+export async function rewriteChapterWithChunking(
   chapterText: string,
   detectedLevel: string,
   targetLevel: string,
@@ -633,162 +635,25 @@ export async function translateLevelChapters(
         throw new StoryCancelledError(storyId);
       }
 
-      const chapter = chapters[i];
-      const chapterText = chapter.text;
-
-      // Update story-level progress with chapter info (shows which chapter is being worked on)
-      await updateStoryProgress(storyId, "translating_chapter", {
-        chapterCurrent: i + 1,
+      const result = await translateAndStoreSingleChapter({
+        storyId,
+        userId,
+        levelId,
+        level,
+        storySlug,
+        chapter: chapters[i],
+        chapterIndex: i,
         chapterTotal: chapters.length,
-        currentLevel: level,
-      });
-
-      // NOTE: Don't update level progress here - wait until chapter is complete
-      // The chapter count should only increment AFTER content is written to the database
-
-      // For prose: translate the chapter text directly (same as admin pipeline)
-      // For poems/scripts: preprocess first to extract stanza/speaker metadata
-      let processedLines: string[];
-      let lineMetadata = new Map<number, LineMetadata>();
-      let speakerNames: string[] = [];
-
-      let filteredSourceLines: string[];
-      let filteredTranslatedLines: string[];
-
-      if (needsMetadata) {
-        // Poems/scripts need special preprocessing for stanza/speaker metadata
-        const preprocessed = preprocessChapterForStoryType(
-          chapterText,
-          storyType,
-          { sourceFormat, rawHtml }
-        );
-        processedLines = preprocessed.processedLines;
-        lineMetadata = preprocessed.lineMetadata;
-        speakerNames = preprocessed.speakerNames;
-
-        // Translate the processed lines using shared translateChapter
-        const textToTranslate = processedLines.join('\n');
-        const result = await translateChapter(textToTranslate, sourceLanguage, level, {
-          storyId: ctx.storyId, userId: ctx.userId, isPoetry
-        });
-
-        // For poetry, preserve blank lines (they mark stanza breaks)
-        filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
-        filteredTranslatedLines = isPoetry
-          ? result.translatedText.split('\n')
-          : collapseConsecutiveBlanks(result.translatedText.split('\n'));
-      } else {
-        // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
-        const result = await translateChapter(chapterText, sourceLanguage, level, {
-          storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
-        });
-
-        // Clean source text and collapse consecutive blanks to single paragraph breaks
-        const cleanedSource = cleanText(chapterText);
-        filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
-        filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
-      }
-
-      // Detect alignment issues
-      const alignmentResult = detectAlignmentIssues(filteredSourceLines, filteredTranslatedLines);
-      if (alignmentResult.hasIssues) {
-        console.warn(`[Translate] Ch ${i + 1} alignment: ${alignmentResult.issueCount} issues`);
-      }
-
-      // Build processed chapter (basic version for backward compatibility)
-      const chapterData: ProcessedChapter = {
-        sourceLines: filteredSourceLines,
-        translatedLines: filteredTranslatedLines,
-        metadata: chapter.metadata,
-      };
-      processedChapters.push(chapterData);
-
-      // Build extended chapter data with line metadata if needed
-      if (needsMetadata && lineMetadata.size > 0) {
-        // For scripts, we also need to translate stage directions
-        const translatedStageDirections = new Map<number, string>();
-
-        // Collect stage directions that need translation
-        const stageDirectionsToTranslate: { idx: number; direction: string }[] = [];
-        lineMetadata.forEach((meta, idx) => {
-          if (meta.stageDirection) {
-            stageDirectionsToTranslate.push({ idx, direction: meta.stageDirection });
-          }
-        });
-
-        // Batch translate stage directions if any exist (stage directions are prose, not poetry)
-        if (stageDirectionsToTranslate.length > 0) {
-          const directionsText = stageDirectionsToTranslate.map(d => d.direction).join('\n');
-          try {
-            const dirResult = await translateChapter(directionsText, sourceLanguage, level, {
-              storyId: ctx.storyId, userId: ctx.userId, isPoetry: false
-            });
-            // Map back to line indices
-            const dirLines = dirResult.translatedText.split('\n');
-            stageDirectionsToTranslate.forEach((d, translateIdx) => {
-              if (dirLines[translateIdx]) {
-                translatedStageDirections.set(d.idx, dirLines[translateIdx]);
-              }
-            });
-          } catch (err) {
-            console.warn(`[LevelProcessor] Stage direction translation failed, using originals`);
-          }
-        }
-
-        const chapterDataWithMeta: ProcessedChapterDataWithMetadata = {
-          sourceLines: filteredSourceLines,
-          translatedLines: filteredTranslatedLines,
-          metadata: chapter.metadata,
-          lineMetadata,
-          translatedStageDirections,
-        };
-        processedChaptersWithMetadata.push(chapterDataWithMeta);
-      } else {
-        // No special metadata - just copy basic data
-        processedChaptersWithMetadata.push({
-          sourceLines: filteredSourceLines,
-          translatedLines: filteredTranslatedLines,
-          metadata: chapter.metadata,
-        });
-      }
-
-      // Build chapter content immediately and write directly to content field
-      // This is the single source of truth - same content used for reading during and after processing
-      const builtChapter = buildSingleChapterContent(
-        filteredSourceLines,
-        filteredTranslatedLines,
         sourceLanguage,
-        structureType || "prose",
-        lineMetadata.size > 0 ? lineMetadata : undefined
-      );
-
-      console.log(`[TranslateLevelChapters] Built chapter ${i + 1}: ${Object.keys(builtChapter.pages).length} pages` +
-        (builtChapter.poems ? `, ${builtChapter.poems.length} poems` : ""));
-
-      // Write chapter directly to the content field (single source of truth)
-      await tracker.updateChapterContent(
-        i + 1, // 1-based chapter number
-        {
-          pages: builtChapter.pages as any,
-          metadata: chapter.metadata,
-          poems: builtChapter.poems,
-          alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
-        },
-        {
-          storySlug,
-          level: levelStringToNumber(level),
-          hasChapters,
-          structureType: structureType || "prose",
-        }
-      );
-
-      // Also update progress tracker with chapter data for ComparisonModal
-      // Use the same filtered lines as stored content so progress viewer matches final output
-      await tracker.updateTranslationProgress(i + 1, {
-        sourceLines: filteredSourceLines,
-        translatedLines: filteredTranslatedLines,
-        alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
+        storyType,
+        structureType,
+        hasChapters,
+        sourceFormat,
+        rawHtml,
+        tracker,
       });
+      processedChapters.push(result.processedChapter);
+      processedChaptersWithMetadata.push(result.processedChapterWithMetadata);
 
       await delay(USER_STORY_LIMITS.MIN_DELAY_BETWEEN_AI_CALLS_MS);
     }
@@ -807,6 +672,204 @@ export async function translateLevelChapters(
     }
     return { success: false, processedChapters: [], error: error.message };
   }
+}
+
+/**
+ * Translate, build, and persist content for a single chapter at a single level.
+ * Extracted from translateLevelChapters() so the Inngest pipeline can run one
+ * step per chapter; the existing batch function calls this in a loop.
+ *
+ * Caller is responsible for cancellation checks before each invocation and
+ * for rate-limit delays between chapters.
+ */
+export interface TranslateAndStoreSingleChapterParams {
+  storyId: string;
+  userId: string;
+  levelId: string;
+  level: string;
+  storySlug: string;
+  chapter: ParsedChapter;
+  chapterIndex: number; // 0-based
+  chapterTotal: number;
+  sourceLanguage: "en" | "es";
+  storyType?: StoryType | null;
+  structureType?: "prose" | "anthology" | "epic" | "script";
+  hasChapters: boolean;
+  sourceFormat?: SourceFormat | null;
+  rawHtml?: string | null;
+  tracker: LevelProgressTracker;
+}
+
+export interface TranslateAndStoreSingleChapterResult {
+  processedChapter: ProcessedChapter;
+  processedChapterWithMetadata: ProcessedChapterDataWithMetadata;
+}
+
+export async function translateAndStoreSingleChapter(
+  params: TranslateAndStoreSingleChapterParams,
+): Promise<TranslateAndStoreSingleChapterResult> {
+  const {
+    storyId,
+    userId,
+    levelId: _levelId,
+    level,
+    storySlug,
+    chapter,
+    chapterIndex,
+    chapterTotal,
+    sourceLanguage,
+    storyType,
+    structureType,
+    hasChapters,
+    sourceFormat,
+    rawHtml,
+    tracker,
+  } = params;
+
+  const ctx: CostContext = { storyId, userId };
+  const isPoetry = storyType === 'poem' || storyType === 'song-lyrics' || storyType === 'epic';
+  const needsMetadata = !!storyType && (
+    storyType === 'poem' ||
+    storyType === 'song-lyrics' ||
+    storyType === 'epic' ||
+    storyType === 'movie-script' ||
+    storyType === 'tv-script' ||
+    storyType === 'dialogue'
+  );
+
+  const chapterText = chapter.text;
+  const chapterNumber = chapterIndex + 1; // 1-based for progress + DB
+
+  // Update story-level progress with chapter info (shows which chapter is being worked on)
+  await updateStoryProgress(storyId, "translating_chapter", {
+    chapterCurrent: chapterNumber,
+    chapterTotal,
+    currentLevel: level,
+  });
+
+  let processedLines: string[];
+  let lineMetadata = new Map<number, LineMetadata>();
+  let filteredSourceLines: string[];
+  let filteredTranslatedLines: string[];
+
+  if (needsMetadata) {
+    // Poems/scripts need special preprocessing for stanza/speaker metadata
+    const preprocessed = preprocessChapterForStoryType(
+      chapterText,
+      storyType,
+      { sourceFormat, rawHtml }
+    );
+    processedLines = preprocessed.processedLines;
+    lineMetadata = preprocessed.lineMetadata;
+
+    const textToTranslate = processedLines.join('\n');
+    const result = await translateChapter(textToTranslate, sourceLanguage, level, {
+      storyId: ctx.storyId, userId: ctx.userId, isPoetry,
+    });
+
+    // For poetry, preserve blank lines (they mark stanza breaks)
+    filteredSourceLines = isPoetry ? processedLines : collapseConsecutiveBlanks(processedLines);
+    filteredTranslatedLines = isPoetry
+      ? result.translatedText.split('\n')
+      : collapseConsecutiveBlanks(result.translatedText.split('\n'));
+  } else {
+    // Prose: use shared translateChapter (handles chunking, alignment, cleaning)
+    const result = await translateChapter(chapterText, sourceLanguage, level, {
+      storyId: ctx.storyId, userId: ctx.userId, isPoetry: false,
+    });
+
+    const cleanedSource = cleanText(chapterText);
+    filteredSourceLines = collapseConsecutiveBlanks(cleanedSource.split('\n'));
+    filteredTranslatedLines = collapseConsecutiveBlanks(result.translatedText.split('\n'));
+  }
+
+  // Detect alignment issues
+  const alignmentResult = detectAlignmentIssues(filteredSourceLines, filteredTranslatedLines);
+  if (alignmentResult.hasIssues) {
+    console.warn(`[Translate] Ch ${chapterNumber} alignment: ${alignmentResult.issueCount} issues`);
+  }
+
+  const processedChapter: ProcessedChapter = {
+    sourceLines: filteredSourceLines,
+    translatedLines: filteredTranslatedLines,
+    metadata: chapter.metadata,
+  };
+
+  let processedChapterWithMetadata: ProcessedChapterDataWithMetadata;
+  if (needsMetadata && lineMetadata.size > 0) {
+    // For scripts, we also need to translate stage directions
+    const translatedStageDirections = new Map<number, string>();
+    const stageDirectionsToTranslate: { idx: number; direction: string }[] = [];
+    lineMetadata.forEach((meta, idx) => {
+      if (meta.stageDirection) {
+        stageDirectionsToTranslate.push({ idx, direction: meta.stageDirection });
+      }
+    });
+
+    if (stageDirectionsToTranslate.length > 0) {
+      const directionsText = stageDirectionsToTranslate.map(d => d.direction).join('\n');
+      try {
+        const dirResult = await translateChapter(directionsText, sourceLanguage, level, {
+          storyId: ctx.storyId, userId: ctx.userId, isPoetry: false,
+        });
+        const dirLines = dirResult.translatedText.split('\n');
+        stageDirectionsToTranslate.forEach((d, translateIdx) => {
+          if (dirLines[translateIdx]) {
+            translatedStageDirections.set(d.idx, dirLines[translateIdx]);
+          }
+        });
+      } catch (err) {
+        console.warn(`[LevelProcessor] Stage direction translation failed, using originals`);
+      }
+    }
+
+    processedChapterWithMetadata = {
+      sourceLines: filteredSourceLines,
+      translatedLines: filteredTranslatedLines,
+      metadata: chapter.metadata,
+      lineMetadata,
+      translatedStageDirections,
+    };
+  } else {
+    processedChapterWithMetadata = {
+      sourceLines: filteredSourceLines,
+      translatedLines: filteredTranslatedLines,
+      metadata: chapter.metadata,
+    };
+  }
+
+  // Build chapter content immediately and write directly to content field
+  const builtChapter = buildSingleChapterContent(
+    filteredSourceLines,
+    filteredTranslatedLines,
+    sourceLanguage,
+    structureType || "prose",
+    lineMetadata.size > 0 ? lineMetadata : undefined,
+  );
+
+  await tracker.updateChapterContent(
+    chapterNumber,
+    {
+      pages: builtChapter.pages as any,
+      metadata: chapter.metadata,
+      poems: builtChapter.poems,
+      alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
+    },
+    {
+      storySlug,
+      level: levelStringToNumber(level),
+      hasChapters,
+      structureType: structureType || "prose",
+    },
+  );
+
+  await tracker.updateTranslationProgress(chapterNumber, {
+    sourceLines: filteredSourceLines,
+    translatedLines: filteredTranslatedLines,
+    alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
+  });
+
+  return { processedChapter, processedChapterWithMetadata };
 }
 
 // ============================================================================
