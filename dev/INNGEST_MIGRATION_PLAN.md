@@ -173,6 +173,39 @@ Debugging info to grab if a run fails:
 - Vercel runtime logs around `/api/inngest`
 - The story ID
 
+## Future scope: chapter audio generation
+
+Long chapters fail to generate audio in production for the same reason
+long stories fail to upload — Azure Speech + R2 upload runs inside a
+single HTTP request that exceeds Vercel's per-invocation cap. This
+migration will need a second pass for the chapter audio generation
+pipeline, using the same Inngest pattern.
+
+Step boundaries will likely be one Inngest step per line (or per small
+batch of lines): generate TTS via Azure → upload mp3 to R2 → write
+metadata to DB. The cancellation, progress-tracking, and per-step
+retry stories all carry over.
+
+### Cleanups to bundle while we're touching these flows
+
+**Story upload:**
+- Loading % indicator can exceed 100% mid-upload. 100% should be
+  a hard ceiling; clamp the displayed value.
+- Mobile view of the upload flow needs polish, especially the
+  success modal — currently doesn't lay out cleanly on small screens.
+
+**Chapter audio generation:**
+- Allow collapsing the loading modal so users can navigate the app
+  while audio generates in the background — same pattern as story
+  upload's collapsible loader. Higher value here than for upload
+  because users want to *read* while audio renders, rather than
+  staring at a spinner.
+- Add a bilingual mode for the non-audiobook story view, mirroring
+  the existing audiobook bilingual mode. Add a `EN + ES` toggle
+  button at the top of the story page next to "Listen". Should be
+  small — the bilingual rendering logic already exists in the
+  audiobook codepath.
+
 ## Cost tracking
 
 Free tier: 50,000 step runs/month. At 98 users with light upload
