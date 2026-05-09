@@ -275,6 +275,20 @@ export const processUserStoryFn = inngest.createFunction(
     const levelTasks = levelsToProcess.map(async (level) => {
       const isDetectedLevel = level === detectedLevel;
 
+      // Init the level once before any chapter work runs. This sets
+      // levelStatus = PROCESSING and seeds processingProgress.translateProgress
+      // and (if rewriting) rewriteProgress. Per-chapter steps then only
+      // *update* progress, never reset it — which is what was making the
+      // front-end Start Reading buttons flicker.
+      await step.run(`begin-${level}`, async () => {
+        await beginLevelStep({
+          storyId,
+          level,
+          chapterCount: parsed.chapterCount,
+          isDetectedLevel,
+        });
+      });
+
       // Rewrite each chapter sequentially (non-detected only).
       if (!isDetectedLevel) {
         for (let i = 0; i < parsed.chapterCount; i++) {
@@ -440,6 +454,37 @@ function parseChaptersFromStory(input: {
   };
 }
 
+// One-time level initialization step. Called once before any chapter
+// step for this level runs. Sets levelStatus = PROCESSING and seeds
+// processingProgress fields (translateProgress, rewriteProgress) so the
+// front-end has stable state to render against. Per-chapter steps only
+// *update* these fields after this — they never reset them.
+async function beginLevelStep(input: {
+  storyId: string;
+  level: string;
+  chapterCount: number;
+  isDetectedLevel: boolean;
+}): Promise<void> {
+  const story = await prisma.userStory.findUnique({
+    where: { id: input.storyId },
+    select: {
+      UserStoryLevel: { where: { level: input.level }, select: { id: true } },
+    },
+  });
+  const levelRecord = story?.UserStoryLevel[0];
+  if (!levelRecord) {
+    console.warn(`[Inngest] Level record missing for ${input.level}, skipping begin`);
+    return;
+  }
+
+  const tracker = new LevelProgressTracker(levelRecord.id, input.chapterCount);
+  await tracker.startProcessing();
+  if (!input.isDetectedLevel) {
+    await tracker.startRewriting();
+  }
+  await tracker.startTranslating();
+}
+
 // Rewrites a single chapter and stashes the result in
 // UserStoryLevel.processingProgress.rewriteCache[chapterIndex] so the
 // subsequent translate step can read it. Returns true on success, false
@@ -571,12 +616,13 @@ async function translateChapterStep(input: {
     ? { text: cached, metadata: originalChapter.metadata }
     : originalChapter;
 
+  // The level-init step (run once before the chapter loop) is responsible
+  // for calling startProcessing / startTranslating. We DO NOT call those
+  // from inside the per-chapter step — they pass explicit
+  // { translateProgress: { ... currentChapter: 0, chaptersCompleted: 0 } }
+  // to mergeProgress, which clobbers the running totals every time and
+  // makes the front-end "Start Reading" buttons flicker.
   const tracker = new LevelProgressTracker(levelRecord.id, chapters.originalChapters.length);
-  // The first translate step for a level still needs to mark it PROCESSING
-  // and TRANSLATING. mergeProgress is a no-op for fields it doesn't change,
-  // so calling these on every step is safe.
-  await tracker.startProcessing();
-  await tracker.startTranslating();
 
   try {
     await translateAndStoreSingleChapter({
