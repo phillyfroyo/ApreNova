@@ -58,7 +58,10 @@ export const processUserStoryFn = inngest.createFunction(
     //   STREAMING_LIMITS.QUEUE_BACKPRESSURE_THRESHOLD pattern.
     concurrency: [
       { key: 'event.data.userId', limit: 3 },
-      { scope: 'fn', limit: 8 },
+      // Inngest free plan caps function concurrency at 5; setting it
+      // explicitly here matches what the platform actually enforces and
+      // avoids a "limit clamped" warning on sync.
+      { scope: 'fn', limit: 5 },
     ],
   },
   async ({ event, step, logger }) => {
