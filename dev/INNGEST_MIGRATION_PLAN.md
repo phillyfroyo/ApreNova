@@ -136,12 +136,34 @@ flag propagates).
 
 ## Open work / known gaps
 
-- **Streaming parallelism lost.** The legacy `processLevelStreaming`
-  ran rewrite chapter N+1 in parallel with translate chapter N for
-  ~50% wall-clock savings. Current Inngest version runs them
-  sequentially within a level. Across levels they can run concurrently
-  via Inngest, but within a level it's serial. Phase 4 will add this
-  back if needed.
+- **Cross-level parallelism is in; chapter-parallelism within a level
+  is not.** Current orchestrator runs the two levels concurrently
+  (`Promise.all` over level tasks) — for a 2-level upload, total run
+  ≈ max(level A time, level B time) instead of the sum. Within a
+  level, chapters stay sequential.
+
+  Chapter-parallelism within a level was attempted and reverted before
+  shipping because of a concurrency hazard in `LevelProgressTracker`:
+
+  - `updateChapterContent`, `updateTranslationProgress`, and
+    `mergeProgress` all do read-modify-write of JSON columns
+    (`level.content` and `level.processingProgress`).
+  - Parallel translate steps for the same level read the same JSON
+    snapshot, then each writes the full column back, silently
+    clobbering each other's chapter slots.
+  - Production's "streaming parallelism" doesn't hit this race because
+    rewrite and translate write to *different keys* on the JSON
+    columns and chapters within each phase are sequential.
+
+  To enable chapter-parallelism safely, the three tracker methods need
+  atomic Postgres `jsonb_set`-based variants (the pattern is already in
+  `mergeRewriteCache` in `process-user-story.ts`). Estimated 2-3 hours
+  including test cases that actually exercise the parallel paths.
+
+  Wall-clock impact deferred: maybe another ~50% speedup on multi-
+  chapter levels (especially the detected-level translate pass which
+  has no rewrite dependency), but level-parallelism alone already
+  cuts the worst-case 25-min runs to ~17 min.
 
 - **Vercel deployment protection** is currently disabled (turned off
   during Phase 1 testing so Inngest could reach the preview URL).

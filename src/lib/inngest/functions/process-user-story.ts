@@ -49,10 +49,17 @@ export const processUserStoryFn = inngest.createFunction(
   {
     id: 'process-user-story',
     triggers: [{ event: 'user-story/process' }],
-    // Anthropic + OpenAI rate limits are real. Keep concurrent stories per
-    // user modest; one user uploading multiple long stories shouldn't 429
-    // their own queue.
-    concurrency: [{ key: 'event.data.userId', limit: 3 }],
+    // Anthropic + OpenAI rate limits are real. Two layers of concurrency
+    // control:
+    // - Per-user limit: one user uploading multiple long stories shouldn't
+    //   stomp their own queue
+    // - Per-run step limit: caps in-flight LLM calls when chapters fan out
+    //   in parallel within a single story. Mirrors the production
+    //   STREAMING_LIMITS.QUEUE_BACKPRESSURE_THRESHOLD pattern.
+    concurrency: [
+      { key: 'event.data.userId', limit: 3 },
+      { scope: 'fn', limit: 8 },
+    ],
   },
   async ({ event, step, logger }) => {
     const { storyId } = event.data as { storyId: string; userId?: string };
@@ -254,86 +261,81 @@ export const processUserStoryFn = inngest.createFunction(
       };
     });
 
-    // Step 7+8: Per-chapter fan-out. For each level we run one step per
-    // chapter (rewrite + translate, or just translate for the detected level),
-    // then a single build-and-save step at the end of the level.
-    const levelResults: Record<string, boolean> = {};
+    // Step 7+8: Cross-level parallelism mirrors the production
+    // processAllLevels parallelTasks pattern (pipeline.ts). Each level runs
+    // as its own task; the detected-level translate-only path runs
+    // concurrently with the user-level rewrite+translate path. Within a
+    // level, chapters stay sequential — the level's existing
+    // LevelProgressTracker does read-modify-write on shared JSON columns
+    // and isn't safe under parallel chapter writes. The function-level
+    // concurrency cap (limit: 8) prevents in-flight LLM calls from
+    // exceeding rate limits across the parallel level tasks.
     await updateStoryProgress(storyId, 'rewriting_levels');
 
-    for (const level of levelsToProcess) {
-      if (await checkCancelled(storyId, logger)) {
-        return { cancelled: true };
-      }
-
+    const levelTasks = levelsToProcess.map(async (level) => {
       const isDetectedLevel = level === detectedLevel;
-      let levelOk = true;
 
-      // For non-detected levels, rewrite each chapter to the target level.
+      // Rewrite each chapter sequentially (non-detected only).
       if (!isDetectedLevel) {
         for (let i = 0; i < parsed.chapterCount; i++) {
-          if (await checkCancelled(storyId, logger)) return { cancelled: true };
-          const ok = await step.run(
-            `rewrite-${level}-ch${i}`,
-            async () => {
-              return await rewriteChapterStep({
-                storyId,
-                level,
-                detectedLevel,
-                chapterIndex: i,
-                sourceLanguage,
-                storyType: storyType as StoryType | null,
-              });
-            },
-          );
+          const ok = await step.run(`rewrite-${level}-ch${i}`, async () => {
+            return await rewriteChapterStep({
+              storyId,
+              level,
+              detectedLevel,
+              chapterIndex: i,
+              sourceLanguage,
+              storyType: storyType as StoryType | null,
+            });
+          });
           if (!ok) {
-            levelOk = false;
-            break;
+            // Translate falls back to original text for missing cache slots,
+            // so a single rewrite failure isn't fatal — we keep going.
+            console.warn(`[Inngest] rewrite-${level}-ch${i} failed; translate will use original text`);
           }
         }
       }
 
-      // Translate each chapter (using rewritten text for non-detected levels,
-      // original text for the detected level).
-      if (levelOk) {
-        for (let i = 0; i < parsed.chapterCount; i++) {
-          if (await checkCancelled(storyId, logger)) return { cancelled: true };
-          const ok = await step.run(
-            `translate-${level}-ch${i}`,
-            async () => {
-              return await translateChapterStep({
-                storyId,
-                level,
-                chapterIndex: i,
-                chapterTotal: parsed.chapterCount,
-                sourceLanguage,
-                storyType: storyType as StoryType | null,
-                structureType: parsed.structureType,
-                hasChapters: parsed.hasChapters,
-              });
-            },
-          );
-          if (!ok) {
-            levelOk = false;
-            break;
-          }
-        }
-      }
-
-      // Build and save the assembled level content.
-      if (levelOk) {
-        if (await checkCancelled(storyId, logger)) return { cancelled: true };
-        await step.run(`build-${level}`, async () => {
-          await runBuildLevel({
+      // Translate each chapter sequentially.
+      let anyTranslateSucceeded = false;
+      for (let i = 0; i < parsed.chapterCount; i++) {
+        const ok = await step.run(`translate-${level}-ch${i}`, async () => {
+          return await translateChapterStep({
             storyId,
             level,
+            chapterIndex: i,
+            chapterTotal: parsed.chapterCount,
             sourceLanguage,
+            storyType: storyType as StoryType | null,
             structureType: parsed.structureType,
             hasChapters: parsed.hasChapters,
           });
         });
+        if (ok) anyTranslateSucceeded = true;
       }
 
-      levelResults[level] = levelOk;
+      if (!anyTranslateSucceeded) {
+        return { level, success: false };
+      }
+
+      // Build and save the assembled level content.
+      await step.run(`build-${level}`, async () => {
+        await runBuildLevel({
+          storyId,
+          level,
+          sourceLanguage,
+          structureType: parsed.structureType,
+          hasChapters: parsed.hasChapters,
+        });
+      });
+
+      return { level, success: true };
+    });
+
+    const settled = await Promise.all(levelTasks);
+    const levelResults: Record<string, boolean> = {};
+    for (const result of settled) {
+      levelResults[result.level] = result.success;
     }
 
     // Step 9: Finalize.
@@ -611,35 +613,44 @@ async function translateChapterStep(input: {
   }
 }
 
-// Read-modify-write of a single slot in
-// UserStoryLevel.processingProgress.rewriteCache. Concurrent writes for the
-// same level only happen across distinct chapter indices, so the
-// last-writer-wins risk is bounded to the rest of the JSON object — and
-// rewriteCache is the only chapter-keyed field we mutate from per-chapter
-// steps. Other fields (rewriteData, completedData, etc.) are written by the
-// translate step's tracker, which runs after the rewrite step for any given
-// chapter, so there's no overlapping mutation.
+// Atomic single-slot write into
+// UserStoryLevel.processingProgress.rewriteCache.{chapterIndex}. Uses
+// Postgres jsonb_set so concurrent rewrite steps for the same level (now
+// that chapters fan out in parallel) don't clobber each other's writes,
+// which a naive read-modify-write JSON update would do.
+//
+// jsonb_set with create_missing=true initializes the rewriteCache object
+// on first write. The two-step approach below ensures rewriteCache exists
+// as an object before we set a key inside it.
 async function mergeRewriteCache(
   levelId: string,
   chapterIndex: number,
   rewrittenText: string,
 ): Promise<void> {
-  const level = await prisma.userStoryLevel.findUnique({
-    where: { id: levelId },
-    select: { processingProgress: true },
-  });
-  if (!level) return;
-  const existing = (level.processingProgress ?? {}) as Record<string, unknown> & {
-    rewriteCache?: Record<string, string>;
-  };
-  const cache = { ...(existing.rewriteCache ?? {}) };
-  cache[String(chapterIndex)] = rewrittenText;
-  await prisma.userStoryLevel.update({
-    where: { id: levelId },
-    data: {
-      processingProgress: { ...existing, rewriteCache: cache },
-    },
-  });
+  const slotKey = String(chapterIndex);
+  // Step 1: ensure rewriteCache exists as an object. coalesce the column
+  // to '{}' first so this works even when processingProgress is null.
+  await prisma.$executeRaw`
+    UPDATE "UserStoryLevel"
+    SET "processingProgress" = jsonb_set(
+      coalesce("processingProgress", '{}'::jsonb),
+      '{rewriteCache}',
+      coalesce("processingProgress"->'rewriteCache', '{}'::jsonb),
+      true
+    )
+    WHERE "id" = ${levelId}
+  `;
+  // Step 2: set the chapter slot inside rewriteCache.
+  await prisma.$executeRaw`
+    UPDATE "UserStoryLevel"
+    SET "processingProgress" = jsonb_set(
+      "processingProgress",
+      ARRAY['rewriteCache', ${slotKey}],
+      to_jsonb(${rewrittenText}::text),
+      true
+    )
+    WHERE "id" = ${levelId}
+  `;
 }
 
 async function runBuildLevel(input: {
