@@ -84,6 +84,7 @@ function buildPerLevelSubtitleRows(
   streams: StreamProgress[] | undefined,
   detectedLevel: string | undefined,
   lng: Language,
+  storyComplete: boolean,
 ): SubtitleRow[] {
   if (!streams || streams.length === 0 || !detectedLevel) return [];
 
@@ -101,23 +102,24 @@ function buildPerLevelSubtitleRows(
   const rows: SubtitleRow[] = [];
 
   // Row 1: detected level translate state
-  rows.push(formatTranslateRow(detectedTranslate, lng));
+  rows.push(formatTranslateRow(detectedTranslate, lng, storyComplete));
 
-  // Row 2: rewritten level rewrite state. Persist as "Rewrite complete ✓"
-  // once all chapters rewritten.
+  // Row 2: rewritten level rewrite state.
   if (rewrittenRewrite) {
-    rows.push(formatRewriteRow(rewrittenRewrite, lng));
+    rows.push(formatRewriteRow(rewrittenRewrite, lng, storyComplete));
   }
 
   // Row 3: rewritten level translate state — only once rewrite is fully
-  // complete or translate has started for this level.
+  // complete or translate has started. Always shown when the story is fully
+  // complete so the user sees the final checkmark even if a final poll
+  // never landed.
   const rewriteFullyDone =
     !!rewrittenRewrite &&
     rewrittenRewrite.totalChapters > 0 &&
     rewrittenRewrite.currentChapter >= rewrittenRewrite.totalChapters;
   const translateStarted = rewrittenTranslate.currentChapter > 0;
-  if (rewriteFullyDone || translateStarted) {
-    rows.push(formatTranslateRow(rewrittenTranslate, lng));
+  if (storyComplete || rewriteFullyDone || translateStarted) {
+    rows.push(formatTranslateRow(rewrittenTranslate, lng, storyComplete));
   }
 
   return rows;
@@ -127,8 +129,15 @@ type SubtitleRow =
   | { kind: 'progress'; text: string }
   | { kind: 'complete'; text: string };
 
-function formatTranslateRow(stream: StreamProgress, lng: Language): SubtitleRow {
+function formatTranslateRow(
+  stream: StreamProgress,
+  lng: Language,
+  storyComplete: boolean,
+): SubtitleRow {
+  // storyComplete means every level finished, even if a final poll didn't
+  // capture this level's READY status before the widget re-rendered.
   const isComplete =
+    storyComplete ||
     stream.levelStatus === "READY" ||
     (stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters);
   if (isComplete) {
@@ -150,9 +159,14 @@ function formatTranslateRow(stream: StreamProgress, lng: Language): SubtitleRow 
   };
 }
 
-function formatRewriteRow(stream: StreamProgress, lng: Language): SubtitleRow {
+function formatRewriteRow(
+  stream: StreamProgress,
+  lng: Language,
+  storyComplete: boolean,
+): SubtitleRow {
   const isComplete =
-    stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters;
+    storyComplete ||
+    (stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters);
   if (isComplete) {
     return {
       kind: 'complete',
@@ -1070,6 +1084,7 @@ export default function FloatingProgressWidget() {
                   progress.streams,
                   progress.detectedLevel,
                   lng as Language,
+                  progress.stage === "review" || progress.stage === "finalizing",
                 );
                 if (perLevelRows.length >= 2) {
                   return (
