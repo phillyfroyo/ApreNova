@@ -985,6 +985,21 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
           // Check level statuses to determine progress
           const levels = storyStatus.levels || [];
+          // [RewriteRowDebug] One-line diagnostic for the "Rewriting chapter
+          // 5 of 5" stuck-row bug. Logs each level's rewriteProgress and
+          // translateProgress on every poll. Remove once diagnosed.
+          console.log('[RewriteRowDebug] ' + JSON.stringify(
+            levels.map((l: any) => ({
+              level: l.level,
+              status: l.status,
+              rewriteProgress: (l.processingProgress as any)?.rewriteProgress,
+              translateProgress: (l.processingProgress as any)?.translateProgress,
+              totalChapters: (l.processingProgress as any)?.totalChapters,
+              rewriteDataLen: Array.isArray((l.processingProgress as any)?.rewriteData)
+                ? (l.processingProgress as any).rewriteData.length
+                : null,
+            })),
+          ));
           const processingLevel = levels.find((l: any) => l.status === "PROCESSING");
           const completedLevels = levels.filter((l: any) => l.status === "READY").length;
           // We only process 1-2 levels (detected + user's level if different)
