@@ -130,10 +130,12 @@ function formatTranslateRow(stream: StreamProgress, lng: Language): string {
   if (isComplete) {
     return `${stream.level}: ${t(lng, "upload", "translationComplete")} ✓`;
   }
-  // current chapter being translated = chaptersCompleted + 1, capped at total
-  const current = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
+  // currentChapter is now the count of completed chapters (derived from
+  // filled slots in completedData). Under parallel execution there isn't a
+  // single "next" chapter — many are in flight — so we just show "X/N"
+  // where X is the cumulative completed count.
   return `${stream.level}: ${t(lng, "upload", "translatingChapterOf", {
-    current,
+    current: stream.currentChapter,
     total: stream.totalChapters || 0,
   })}`;
 }
@@ -144,9 +146,8 @@ function formatRewriteRow(stream: StreamProgress, lng: Language): string {
   if (isComplete) {
     return `${stream.level}: ${t(lng, "upload", "rewriteComplete")} ✓`;
   }
-  const current = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
   return `${stream.level}: ${t(lng, "upload", "rewritingChapterOf", {
-    current,
+    current: stream.currentChapter,
     total: stream.totalChapters || 0,
   })}`;
 }

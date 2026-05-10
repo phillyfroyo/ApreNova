@@ -485,8 +485,16 @@ export class LevelProgressTracker {
             // Preserve chapter data for preview modal
             rewriteData: existing.rewriteData,
             completedData: existing.completedData,
-            rewriteProgress: existing.rewriteProgress,
-            translateProgress: existing.translateProgress,
+            // Clamp progress counters to total at completion. Without this,
+            // a transient failure on the per-chapter counter-update step
+            // would leave the UI stuck at "X/N" forever even though the
+            // level is READY.
+            rewriteProgress: existing.rewriteProgress
+              ? { ...existing.rewriteProgress, currentChapter: this.totalChapters, chaptersCompleted: this.totalChapters }
+              : existing.rewriteProgress,
+            translateProgress: existing.translateProgress
+              ? { ...existing.translateProgress, currentChapter: this.totalChapters, chaptersCompleted: this.totalChapters }
+              : existing.translateProgress,
           } as any,
         },
       });
@@ -638,13 +646,12 @@ export class LevelProgressTracker {
   /**
    * Atomically write one chapter's translation data to
    * processingProgress.completedData[chapterIndex] plus update
-   * translateProgress and currentChapter. Uses jsonb_set for the indexed slot
-   * so concurrent chapters don't clobber each other's array entries.
+   * translateProgress.chaptersCompleted to the current count of non-null
+   * slots in completedData (so it reflects "X of N done", monotonically
+   * increasing under parallel chapter execution).
    *
-   * Note on currentChapter: under parallel chapters, currentChapter and
-   * translateProgress.chaptersCompleted are last-writer-wins — the values
-   * may oscillate as chapters finish out of order. Final state is correct
-   * once markComplete fires; intermediate UI display may be slightly noisy.
+   * currentChapter is GREATEST-clamped so it represents the highest
+   * chapter touched so far — never goes backwards.
    */
   async updateTranslationProgressAtomic(
     chapterNumber: number,
@@ -652,27 +659,51 @@ export class LevelProgressTracker {
   ): Promise<void> {
     const chapterIndex = chapterNumber - 1;
     const dataJson = JSON.stringify(chapterData);
-    const updateJson = JSON.stringify({
-      stage: "translating",
-      currentChapter: chapterNumber,
-      totalChapters: this.totalChapters,
-      translateProgress: {
-        currentChapter: chapterNumber,
-        chaptersCompleted: chapterNumber,
-      },
-    });
     try {
+      // Step 1: write this chapter's data into its slot, ensuring the array
+      // and surrounding state exist. stage/totalChapters are idempotent.
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
         SET "processingProgress" = jsonb_set(
           jsonb_set(
-            coalesce("processingProgress", '{}'::jsonb),
+            coalesce("processingProgress", '{}'::jsonb)
+              || jsonb_build_object('stage', 'translating', 'totalChapters', ${this.totalChapters}::int),
             '{completedData}',
             coalesce("processingProgress"->'completedData', '[]'::jsonb),
             true
-          ) || ${updateJson}::jsonb,
+          ),
           ARRAY['completedData', ${chapterIndex}::text],
           ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+      // Step 2: derive chaptersCompleted from the actual filled-slot count
+      // and clamp currentChapter to the running max.
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            "processingProgress",
+            '{translateProgress}',
+            jsonb_build_object(
+              'currentChapter', GREATEST(
+                coalesce(("processingProgress"->'translateProgress'->>'currentChapter')::int, 0),
+                ${chapterNumber}::int
+              ),
+              'chaptersCompleted', (
+                SELECT count(*)::int
+                FROM jsonb_array_elements("processingProgress"->'completedData') AS elem
+                WHERE elem != 'null'::jsonb
+              )
+            ),
+            true
+          ),
+          '{currentChapter}',
+          to_jsonb(GREATEST(
+            coalesce(("processingProgress"->>'currentChapter')::int, 0),
+            ${chapterNumber}::int
+          )),
           true
         )
         WHERE "id" = ${this.levelId}
@@ -688,8 +719,8 @@ export class LevelProgressTracker {
 
   /**
    * Atomically write one chapter's rewrite data to
-   * processingProgress.rewriteData[chapterIndex] plus update rewriteProgress.
-   * Same shape as updateTranslationProgressAtomic.
+   * processingProgress.rewriteData[chapterIndex] and derive
+   * rewriteProgress.chaptersCompleted from the array's filled-slot count.
    */
   async updateRewriteProgressAtomic(
     chapterNumber: number,
@@ -697,26 +728,39 @@ export class LevelProgressTracker {
   ): Promise<void> {
     const chapterIndex = chapterNumber - 1;
     const dataJson = JSON.stringify(chapterData);
-    const updateJson = JSON.stringify({
-      stage: "rewriting",
-      totalChapters: this.totalChapters,
-      rewriteProgress: {
-        currentChapter: chapterNumber,
-        chaptersCompleted: chapterNumber,
-      },
-    });
     try {
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
         SET "processingProgress" = jsonb_set(
           jsonb_set(
-            coalesce("processingProgress", '{}'::jsonb),
+            coalesce("processingProgress", '{}'::jsonb)
+              || jsonb_build_object('stage', 'rewriting', 'totalChapters', ${this.totalChapters}::int),
             '{rewriteData}',
             coalesce("processingProgress"->'rewriteData', '[]'::jsonb),
             true
-          ) || ${updateJson}::jsonb,
+          ),
           ARRAY['rewriteData', ${chapterIndex}::text],
           ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          "processingProgress",
+          '{rewriteProgress}',
+          jsonb_build_object(
+            'currentChapter', GREATEST(
+              coalesce(("processingProgress"->'rewriteProgress'->>'currentChapter')::int, 0),
+              ${chapterNumber}::int
+            ),
+            'chaptersCompleted', (
+              SELECT count(*)::int
+              FROM jsonb_array_elements("processingProgress"->'rewriteData') AS elem
+              WHERE elem != 'null'::jsonb
+            )
+          ),
           true
         )
         WHERE "id" = ${this.levelId}
