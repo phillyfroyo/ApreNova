@@ -303,6 +303,30 @@ function StartReadingButtons({
   const rewrittenReady = rewrittenStream?.levelStatus === "PROCESSING" &&
     (rewrittenStream.currentChapter > 0 || (Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0));
 
+  // [FlickerDebug] Hypothesis 2 + 3: log which streams the widget picked,
+  // their levelStatus, and the resulting Ready flags on every render. If a
+  // poll causes originalReady to flip false → true → false across renders,
+  // we'll see it here.
+  console.log('[FlickerDebug] widget render', {
+    detectedLevel,
+    userLevel,
+    streamCount: translationStreams.length,
+    streamLevels: translationStreams.map((s) => ({
+      level: s.level,
+      type: s.type,
+      levelStatus: s.levelStatus,
+      currentChapter: s.currentChapter,
+    })),
+    originalStream: originalStream
+      ? { level: originalStream.level, levelStatus: originalStream.levelStatus, currentChapter: originalStream.currentChapter }
+      : null,
+    rewrittenStream: rewrittenStream
+      ? { level: rewrittenStream.level, levelStatus: rewrittenStream.levelStatus, currentChapter: rewrittenStream.currentChapter }
+      : null,
+    originalReady,
+    rewrittenReady,
+  });
+
   // Get total chapters for display (prefer originalStream, fall back to rewrittenStream, then progress)
   const totalChapters = originalStream?.totalChapters || rewrittenStream?.totalChapters || progress.totalChapters || 0;
 

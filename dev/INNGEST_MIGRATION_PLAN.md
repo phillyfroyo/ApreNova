@@ -190,25 +190,36 @@ uploads is expensive to diagnose. Tagged as Phase 4 follow-up.
   (chapters can land out of order). All consumers null-guard skipped
   slots.
 
-- **Rewrite output: chapter headers merging into first paragraph.**
-  Observed on a 14-chapter / 25k-word C1→A1 upload. The A1 rewrite
-  writes each chapter's title/header into the first paragraph of the
-  rewritten text instead of preserving it as its own line, the way
-  the original C1 source and the translations do. The translated
-  output is fine, only the rewrite is affected.
+- **Rewrite output: chapter headers merging into first paragraph
+  (PRE-EXISTING, not migration-caused).** Observed on a Hemingway
+  novel (*A Farewell to Arms*) C1→A1 upload, both in the rendered
+  story page and the comparison modal. The A1 rewrite writes
+  `CAPÍTULO I En agosto, vivimos en una casa...` as a single first
+  paragraph, instead of the title sitting on its own line above a
+  blank line above the body the way the C1 original does.
 
-  Could be related to our work (the per-chapter rewrite path now uses
-  exported `rewriteChapterWithChunking` and we changed how chapters
-  are passed between steps), or could be a pre-existing
-  story-specific bug surfaced for the first time. Hard to say without
-  comparing against the same story uploaded under the legacy
-  pipeline. Worth a focused look at:
-  - `rewriteChapterWithChunking` in `level-processor.ts` — does it
-    preserve chapter metadata (`{ number, title, subtitle }`) or only
-    the text?
-  - The translate step receives `chapter` with metadata via
-    `translateAndStoreSingleChapter`, but does the rewrite step's
-    cached text round-trip preserve the header line?
+  Diagnosis: the story is being detected as `storyType: "epic"`
+  (visible in the rendered page header showing "Canto 1, Section 1"
+  navigation labels). When `storyType === 'epic'`, the rewrite step
+  sets `isPoetry = true` and routes through `rewritePoetryChapter()`,
+  which uses poem/stanza marker preservation — NOT the prose
+  paragraph-marker system (`splitPreservingSpacing` +
+  `[P1] [P2]` markers + `reassembleWithSpacing`) in
+  `src/lib/story-processing/rewriting.ts:201-340`. The prose path
+  preserves structure correctly; the poetry path doesn't preserve
+  chapter headers.
+
+  Two underlying bugs, both in shared code outside the migration:
+  1. `detectStoryType` is misclassifying long prose as `epic`. Look
+     at `src/lib/user-stories/metadata.ts:193` and the prompt it
+     uses.
+  2. The poetry rewrite path doesn't preserve chapter-header lines.
+     `rewritePoetryChapter` in `src/lib/story-processing/rewriting.ts:698`.
+
+  Both would fire on `main` too — they just never showed up because
+  long stories failed to complete under the legacy pipeline. Both are
+  out of scope for this branch but block the migration's main-branch
+  merge from a quality standpoint.
 
 - **Vercel deployment protection** is currently disabled (turned off
   during Phase 1 testing so Inngest could reach the preview URL).
