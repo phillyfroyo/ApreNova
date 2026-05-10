@@ -577,6 +577,8 @@ upload: {
   waitingForFirstChapter: "Waiting for first chapter to complete...",
   rewritingChapterOf: "Rewriting chapter {current} of {total}",
   translatingChapterOf: "Translating chapter {current} of {total}",
+  translationComplete: "Translation complete",
+  rewriteComplete: "Rewrite complete",
   stanzaBreak: "⸺ stanza break ⸺",
   paragraphBreak: "⸺ paragraph break ⸺",
   // StreamSelector

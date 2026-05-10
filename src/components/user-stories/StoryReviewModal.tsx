@@ -290,8 +290,15 @@ export default function StoryReviewModal() {
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          {/* Thumbnail */}
-          <div className="flex gap-6">
+          {/* Thumbnail. On mobile, stack title/desc on top and the
+              thumbnail/upload column below — there isn't enough width for
+              the desktop side-by-side layout. flex-col-reverse + md:flex-row
+              keeps the desktop visual order while letting mobile flow
+              vertically with title/desc first. On mobile only, the
+              Detected Language/Level cards sit stacked to the right of the
+              thumbnail (the desktop 2-col grid further down is hidden). */}
+          <div className="flex flex-col-reverse md:flex-row gap-6">
+            <div className="flex flex-row gap-3 md:contents">
             <div className="flex-shrink-0">
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -391,13 +398,40 @@ export default function StoryReviewModal() {
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
-                    {lng === "es" ? "Generar con IA" : "Generate with AI"}
+                    {lng === "es" ? "Generar" : "Generate"}
                   </>
                 )}
               </button>
               <p className="text-xs text-gray-400 mt-1 text-center">
                 {lng === "es" ? "Opcional" : "Optional"}
               </p>
+            </div>
+
+            {/* Mobile-only: Detected Language/Level stacked next to the
+                thumbnail. Hidden on desktop where the 2-col grid below
+                takes over (also see md:hidden on that grid). */}
+            <div className="flex-1 flex flex-col gap-3 md:hidden">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">
+                  {lng === "es" ? "Idioma detectado" : "Detected Language"}
+                </div>
+                <div className="font-medium text-gray-800 flex items-center gap-2">
+                  <span className="text-lg">
+                    {storyData.sourceLanguage === "es" ? "🇪🇸" : "🇺🇸"}
+                  </span>
+                  {storyData.sourceLanguage === "es" ? "Español" : "English"}
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">
+                  {lng === "es" ? "Nivel detectado" : "Detected Level"}
+                </div>
+                <div className="font-medium text-gray-800">
+                  {getCEFRLabel(toCEFR(storyData.detectedLevel), lng as "en" | "es")}
+                </div>
+              </div>
+            </div>
+
             </div>
 
             {/* Title and Description */}
@@ -514,8 +548,9 @@ export default function StoryReviewModal() {
             );
           })()}
 
-          {/* Detected info */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Detected info — desktop only. On mobile, this content
+              renders as a stacked column next to the thumbnail above. */}
+          <div className="hidden md:grid grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-xl">
               <div className="text-xs text-gray-500 mb-1">
                 {lng === "es" ? "Idioma detectado" : "Detected Language"}

@@ -70,8 +70,14 @@ export interface ProcessingProgress {
   currentChapter: number;
   totalChapters: number;
   chaptersCompleted: number[];
-  completedData?: ChapterTranslationData[];
-  rewriteData?: ChapterRewriteData[];
+  // completedData and rewriteData were arrays under the legacy in-process
+  // pipeline (chapters always sequential). Under the Inngest pipeline they
+  // are objects keyed by 0-indexed chapter number — Postgres jsonb_set
+  // can't safely write to array-by-index in parallel, but it can update
+  // distinct object keys atomically. The legacy methods still write arrays;
+  // the atomic methods (and consumers downstream) handle both shapes.
+  completedData?: ChapterTranslationData[] | Record<string, ChapterTranslationData>;
+  rewriteData?: ChapterRewriteData[] | Record<string, ChapterRewriteData>;
   // Extended fields for detailed UI
   stepLabel?: string;
   // Streaming pipeline: track rewrite progress separately from stage
@@ -86,6 +92,41 @@ export interface ProcessingProgress {
   };
   // Alignment issue tracking
   hasAlignmentIssues?: boolean;
+  // Inngest pipeline: per-chapter rewritten text, keyed by 0-indexed chapter
+  // number. Written by the rewrite step, read by the translate step. Not used
+  // by the legacy in-process pipeline.
+  rewriteCache?: Record<string, string>;
+}
+
+/**
+ * Normalize completedData / rewriteData to an array sorted by chapter index.
+ * Handles both shapes:
+ * - Legacy: array (chapters always in order, may have nulls under sparse writes)
+ * - Inngest: object keyed by 0-indexed chapter number
+ */
+export function chapterMapToArray<T>(
+  data: T[] | Record<string, T> | undefined | null,
+): T[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data.filter((x): x is T => x != null);
+  return Object.keys(data)
+    .map((k) => parseInt(k, 10))
+    .filter((n) => !Number.isNaN(n))
+    .sort((a, b) => a - b)
+    .map((idx) => data[String(idx)])
+    .filter((x): x is T => x != null);
+}
+
+/** Count of filled chapter slots, regardless of array vs object shape. */
+export function chapterMapCount(
+  data: unknown[] | Record<string, unknown> | undefined | null,
+): number {
+  if (!data) return 0;
+  if (Array.isArray(data)) return data.filter((x) => x != null).length;
+  if (typeof data === "object") {
+    return Object.values(data as Record<string, unknown>).filter((x) => x != null).length;
+  }
+  return 0;
 }
 
 // Story-level progress phases
@@ -481,8 +522,16 @@ export class LevelProgressTracker {
             // Preserve chapter data for preview modal
             rewriteData: existing.rewriteData,
             completedData: existing.completedData,
-            rewriteProgress: existing.rewriteProgress,
-            translateProgress: existing.translateProgress,
+            // Clamp progress counters to total at completion. Without this,
+            // a transient failure on the per-chapter counter-update step
+            // would leave the UI stuck at "X/N" forever even though the
+            // level is READY.
+            rewriteProgress: existing.rewriteProgress
+              ? { ...existing.rewriteProgress, currentChapter: this.totalChapters, chaptersCompleted: this.totalChapters }
+              : existing.rewriteProgress,
+            translateProgress: existing.translateProgress
+              ? { ...existing.translateProgress, currentChapter: this.totalChapters, chaptersCompleted: this.totalChapters }
+              : existing.translateProgress,
           } as any,
         },
       });
@@ -557,6 +606,215 @@ export class LevelProgressTracker {
     } catch (error: any) {
       if (error?.code === "P2025") {
         console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping mergeProgress`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // ATOMIC VARIANTS (concurrency-safe for parallel per-chapter steps)
+  //
+  // The methods above (mergeProgress, updateChapterContent, updateTranslation
+  // Progress, updateRewriteProgress) all do read-modify-write of a JSON column,
+  // which silently clobbers concurrent writes from parallel chapters within
+  // the same level. The methods below perform the same writes via Postgres
+  // jsonb_set in a single atomic UPDATE, so they're safe under parallel
+  // chapter execution.
+  //
+  // Used by the Inngest pipeline (where chapters fan out in parallel) and
+  // also by the legacy translateAndStoreSingleChapter call path (where the
+  // atomic version is harmless — chapters are sequential in legacy code).
+  // ==========================================================================
+
+  /**
+   * Atomically write one chapter's content to UserStoryLevel.content.chapters[N].
+   * Top-level metadata (storySlug, level, hasChapters, structureType) is set
+   * on every call (idempotent — values don't change across chapters).
+   */
+  async updateChapterContentAtomic(
+    chapterNumber: number,
+    chapterContent: {
+      pages: Record<number, BuiltPageContent>;
+      metadata?: { number: number; title: string; subtitle?: string };
+      poems?: PoemInfo[];
+      alignmentIssues?: ChapterAlignmentResult;
+    },
+    contentMetadata: {
+      storySlug: string;
+      level: number;
+      hasChapters: boolean;
+      structureType?: "prose" | "anthology" | "epic" | "script";
+    },
+  ): Promise<void> {
+    const chapterJson = JSON.stringify(chapterContent);
+    const metaJson = JSON.stringify({
+      storySlug: contentMetadata.storySlug,
+      level: contentMetadata.level,
+      hasChapters: contentMetadata.hasChapters,
+      structureType: contentMetadata.structureType ?? "prose",
+    });
+    try {
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "content" = jsonb_set(
+          jsonb_set(
+            coalesce("content", '{}'::jsonb),
+            '{chapters}',
+            coalesce("content"->'chapters', '{}'::jsonb),
+            true
+          ) || ${metaJson}::jsonb,
+          ARRAY['chapters', ${chapterNumber}::text],
+          ${chapterJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      // Soft-fail on missing row (story or level was deleted mid-pipeline)
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateChapterContentAtomic`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically write one chapter's translation data to
+   * processingProgress.completedData[chapterIndex] plus update
+   * translateProgress.chaptersCompleted to the current count of non-null
+   * slots in completedData (so it reflects "X of N done", monotonically
+   * increasing under parallel chapter execution).
+   *
+   * currentChapter is GREATEST-clamped so it represents the highest
+   * chapter touched so far — never goes backwards.
+   */
+  async updateTranslationProgressAtomic(
+    chapterNumber: number,
+    chapterData: ChapterTranslationData,
+  ): Promise<void> {
+    const chapterIndex = chapterNumber - 1;
+    const slotKey = String(chapterIndex);
+    const dataJson = JSON.stringify(chapterData);
+    try {
+      // Step 1: write this chapter's data into completedData[chapterIndex]
+      // as an object key (NOT array index — jsonb_set with an out-of-bounds
+      // array index appends and ignores the index, losing chapters).
+      // Existing array shape is overwritten with an empty object on first
+      // write so we always work in object form going forward.
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            coalesce("processingProgress", '{}'::jsonb)
+              || jsonb_build_object('stage', 'translating', 'totalChapters', ${this.totalChapters}::int),
+            '{completedData}',
+            CASE
+              WHEN jsonb_typeof("processingProgress"->'completedData') = 'object'
+                THEN "processingProgress"->'completedData'
+              ELSE '{}'::jsonb
+            END,
+            true
+          ),
+          ARRAY['completedData', ${slotKey}],
+          ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+      // Step 2: derive chaptersCompleted from the count of object keys.
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            "processingProgress",
+            '{translateProgress}',
+            jsonb_build_object(
+              'currentChapter', GREATEST(
+                coalesce(("processingProgress"->'translateProgress'->>'currentChapter')::int, 0),
+                ${chapterNumber}::int
+              ),
+              'chaptersCompleted', (
+                SELECT count(*)::int
+                FROM jsonb_object_keys("processingProgress"->'completedData')
+              )
+            ),
+            true
+          ),
+          '{currentChapter}',
+          to_jsonb(GREATEST(
+            coalesce(("processingProgress"->>'currentChapter')::int, 0),
+            ${chapterNumber}::int
+          )),
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateTranslationProgressAtomic`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically write one chapter's rewrite data to
+   * processingProgress.rewriteData[chapterIndex] and derive
+   * rewriteProgress.chaptersCompleted from the array's filled-slot count.
+   */
+  async updateRewriteProgressAtomic(
+    chapterNumber: number,
+    chapterData: ChapterRewriteData,
+  ): Promise<void> {
+    const chapterIndex = chapterNumber - 1;
+    const slotKey = String(chapterIndex);
+    const dataJson = JSON.stringify(chapterData);
+    try {
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            coalesce("processingProgress", '{}'::jsonb)
+              || jsonb_build_object('stage', 'rewriting', 'totalChapters', ${this.totalChapters}::int),
+            '{rewriteData}',
+            CASE
+              WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'object'
+                THEN "processingProgress"->'rewriteData'
+              ELSE '{}'::jsonb
+            END,
+            true
+          ),
+          ARRAY['rewriteData', ${slotKey}],
+          ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          "processingProgress",
+          '{rewriteProgress}',
+          jsonb_build_object(
+            'currentChapter', GREATEST(
+              coalesce(("processingProgress"->'rewriteProgress'->>'currentChapter')::int, 0),
+              ${chapterNumber}::int
+            ),
+            'chaptersCompleted', (
+              SELECT count(*)::int
+              FROM jsonb_object_keys("processingProgress"->'rewriteData')
+            )
+          ),
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateRewriteProgressAtomic`);
         return;
       }
       throw error;

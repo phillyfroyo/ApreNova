@@ -68,6 +68,45 @@ ADMIN PIPELINE (src/app/admin/upload-story/hooks/useTranslationPipeline.ts):
 - NEVER add translation post-processing (alignment, cleaning, blank-line filtering) to pipeline-specific code — put it in the shared module
 - Files in `src/lib/story-processing/` are marked with `⚠️ SHARED MODULE` headers
 
+### User Story Pipeline runs on Inngest (CRITICAL):
+
+**User-uploaded stories are processed by Inngest, not inline inside the HTTP request.**
+
+`POST /api/user-stories/process` calls `inngest.send({ name: "user-story/process", data: { storyId, userId } })` and returns immediately. The actual processing (detect language → metadata → level → parse chapters → rewrite → translate → build) runs as a chain of Inngest steps, each of which is its own short Vercel invocation.
+
+```
+ENTRY POINT:
+  src/app/api/user-stories/process/route.ts
+    → inngest.send("user-story/process", { storyId, userId })
+
+ORCHESTRATOR:
+  src/lib/inngest/functions/process-user-story.ts
+    → processUserStoryFn (Inngest function)
+    → fans out per-chapter and per-level steps
+
+WEBHOOK (Inngest cloud → Vercel):
+  src/app/api/inngest/route.ts
+    → registers all Inngest functions
+
+SHARED PIPELINE LOGIC (unchanged, called from inside steps):
+  src/lib/user-stories/level-processor.ts
+    → rewriteChapterWithChunking() — used by rewrite step
+    → translateAndStoreSingleChapter() — used by translate step
+    → buildAndSaveLevel() — used by build step
+  src/lib/user-stories/progress-tracker.ts
+    → LevelProgressTracker (level lifecycle: startProcessing/Translating, etc.)
+    → updateStoryProgress() — story-wide progress writes
+```
+
+**Rules:**
+- The DB is the state machine. Inngest events carry only `{ storyId, userId }`. Each step reads inputs from the DB and writes outputs back. Step return values are kept small.
+- Per-chapter rewritten text is staged in `UserStoryLevel.processingProgress.rewriteCache` (a `Record<string, string>` keyed by 0-indexed chapter number). Written by the rewrite step via atomic `jsonb_set`, read by the translate step.
+- `LevelProgressTracker` lifecycle methods (`startProcessing`, `startRewriting`, `startTranslating`) MUST be called from a one-time `begin-{level}` step, NOT from per-chapter steps. They write resets to `processingProgress` that race the per-chapter updates and cause front-end flicker.
+- Levels run in parallel (via `Promise.all` over level tasks). Chapters within a level run sequentially because the existing tracker methods do read-modify-write on shared JSON columns and aren't safe under parallel chapter writes. Adding chapter-parallelism within a level requires atomic `jsonb_set` variants of the tracker methods — documented as deferred work in `dev/INNGEST_MIGRATION_PLAN.md`.
+- The legacy `processUserStory()` in `src/lib/user-stories/pipeline.ts` is still exported but no longer called from production code paths. Kept as fallback for ad-hoc reprocessing scripts.
+- Cancellation: the existing `cancelledAt` flag still works. Each step calls `isStoryCancelled(storyId)` between phases and exits cleanly via `StoryCancelledError`.
+- Frontend doesn't change. It polls `/api/user-stories/{id}/status` and reads progress from the same DB fields the orchestrator writes.
+
 ---
 
 ## CRITICAL: Dev Tools Must Use Production Algorithms

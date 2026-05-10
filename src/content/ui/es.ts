@@ -578,6 +578,8 @@ upload: {
   waitingForFirstChapter: "Esperando a que se complete el primer capítulo...",
   rewritingChapterOf: "Reescribiendo capítulo {current} de {total}",
   translatingChapterOf: "Traduciendo capítulo {current} de {total}",
+  translationComplete: "Traducción completa",
+  rewriteComplete: "Reescritura completa",
   stanzaBreak: "⸺ salto de estrofa ⸺",
   paragraphBreak: "⸺ salto de párrafo ⸺",
   // StreamSelector
