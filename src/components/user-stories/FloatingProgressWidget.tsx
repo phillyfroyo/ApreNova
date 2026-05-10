@@ -295,35 +295,22 @@ function StartReadingButtons({
     }
   }
 
-  // Check if each stream is ready for reading
-  // Ready = has levelStatus "PROCESSING" AND at least 1 completed chapter
-  // Use currentChapter (completed count) since chapters array may be empty with new incremental content writing
-  const originalReady = originalStream?.levelStatus === "PROCESSING" &&
-    (originalStream.currentChapter > 0 || (Array.isArray(originalStream.chapters) && originalStream.chapters.length > 0));
-  const rewrittenReady = rewrittenStream?.levelStatus === "PROCESSING" &&
-    (rewrittenStream.currentChapter > 0 || (Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0));
-
-  // [FlickerDebug] Inline JSON so the values are visible in pasted logs
-  // without needing to click each {…} to expand.
-  console.log('[FlickerDebug] widget render ' + JSON.stringify({
-    detectedLevel,
-    userLevel,
-    streamCount: translationStreams.length,
-    streamLevels: translationStreams.map((s) => ({
-      level: s.level,
-      type: s.type,
-      levelStatus: s.levelStatus,
-      currentChapter: s.currentChapter,
-    })),
-    originalStream: originalStream
-      ? { level: originalStream.level, levelStatus: originalStream.levelStatus, currentChapter: originalStream.currentChapter }
-      : null,
-    rewrittenStream: rewrittenStream
-      ? { level: rewrittenStream.level, levelStatus: rewrittenStream.levelStatus, currentChapter: rewrittenStream.currentChapter }
-      : null,
-    originalReady,
-    rewrittenReady,
-  }));
+  // A stream is ready to read whenever it has at least one completed chapter
+  // — regardless of whether the level is still PROCESSING or has fully
+  // finished (READY). Earlier the gate also required levelStatus ===
+  // "PROCESSING", which caused the button to disable the moment the level
+  // finished but before the rest of the story did. Once a chapter exists
+  // it's readable; the level's own status doesn't gate that.
+  const hasOriginalContent = !!originalStream && (
+    originalStream.currentChapter > 0 ||
+    (Array.isArray(originalStream.chapters) && originalStream.chapters.length > 0)
+  );
+  const hasRewrittenContent = !!rewrittenStream && (
+    rewrittenStream.currentChapter > 0 ||
+    (Array.isArray(rewrittenStream.chapters) && rewrittenStream.chapters.length > 0)
+  );
+  const originalReady = hasOriginalContent;
+  const rewrittenReady = hasRewrittenContent;
 
   // Get total chapters for display (prefer originalStream, fall back to rewrittenStream, then progress)
   const totalChapters = originalStream?.totalChapters || rewrittenStream?.totalChapters || progress.totalChapters || 0;

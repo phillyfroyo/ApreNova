@@ -990,20 +990,6 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
           // We only process 1-2 levels (detected + user's level if different)
           const totalLevelsToProcess = userLevel && userLevel !== detectedLevel ? 2 : 1;
 
-          // [FlickerDebug] Inline JSON so pasted logs don't need expanding.
-          console.log('[FlickerDebug] poll ' + JSON.stringify({
-            attempts,
-            levels: levels.map((l: any) => ({
-              level: l.level,
-              status: l.status,
-              translateChaptersCompleted: (l.processingProgress as any)?.translateProgress?.chaptersCompleted,
-              rewriteChaptersCompleted: (l.processingProgress as any)?.rewriteProgress?.chaptersCompleted,
-              completedDataLen: Array.isArray((l.processingProgress as any)?.completedData)
-                ? (l.processingProgress as any).completedData.length
-                : null,
-            })),
-          }));
-
           // Build streams for parallel progress tracking
           const streams = buildStreamsFromLevels(levels, detectedLevel);
 

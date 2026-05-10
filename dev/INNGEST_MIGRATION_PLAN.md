@@ -134,39 +134,29 @@ writes progress to the same DB fields the existing UI reads.
 Cancellation also unchanged (frontend POSTs to `/cancel`, the cancel
 flag propagates).
 
-## Known UX issue: Start Reading button briefly disables on level switch
+## Resolved: Start Reading button disables when its level finishes
 
-When both levels are processing in parallel and the second level (A1)
-finishes its first chapter, the first level's (B2) "Start Reading"
-button momentarily disables before re-enabling. Symptoms:
+**Root cause:** the widget's gate condition required
+`levelStatus === "PROCESSING"` AND at least one completed chapter. The
+moment a level transitioned to `READY`, that gate failed and the
+button disabled — even though the chapters were still readable. The
+intent was "show this button only while a level is still processing,"
+but in a multi-level upload one level finishes well before the other
+and the user is stuck without a way to read the completed level.
 
-- B2 finishes ch1 → B2 button enables ✓
-- A1 finishes ch1 → A1 button enables ✓ but B2 button briefly grays
-- Clicking B2's button when visible *did* successfully open the story
-  with all completed chapters present — so the data is correct, this
-  is purely a UI state bug.
+Diagnosed via `[FlickerDebug]` console logs that captured the exact
+poll where B2 transitioned `PROCESSING → READY` with same
+`completedDataLen=2`, and `originalReady` flipped `true → false` in
+the widget render that followed.
 
-The fix for the per-chapter flicker (begin-{level} init step that no
-longer resets translateProgress every chapter) cleared the original
-"flickering every chapter" symptom. The remaining glitch is on the
-single moment the second level becomes ready.
-
-We dug into the front-end code in `FloatingProgressWidget.tsx` and
-`StoryUploadContext.tsx` (`buildStreamsFromLevels`) without finding the
-exact code path that re-disables B2 when A1's poll lands. Possible
-candidates we couldn't rule out:
-
-- A polling-snapshot timing where the per-level `levelStatus` field
-  briefly reads as something other than `"PROCESSING"`
-- The fallback stream-finding logic in the widget (line 280 in
-  `FloatingProgressWidget.tsx`) returning a different `originalStream`
-  reference for one render
-- React state mutation ordering when both level streams update from a
-  single poll
-
-Migration was shipped without a fix because the data is correct, the
-glitch is brief, and live-instrumenting React state during long
-uploads is expensive to diagnose. Tagged as Phase 4 follow-up.
+**Fix:** dropped the `levelStatus === "PROCESSING"` requirement.
+A stream is now ready to read whenever it has at least one completed
+chapter, regardless of whether the level is still processing or
+finished. (`FloatingProgressWidget.tsx`, `originalReady`/
+`rewrittenReady` logic.) The widget itself is hidden when
+`progress.stage === "complete"` — the post-upload `SuccessBanner`
+takes over at that point — so this doesn't cause buttons to hang
+around forever.
 
 ## Open work / known gaps
 
