@@ -175,10 +175,21 @@ around forever.
   14-chapter, 2-level upload that previously took 22-25 min, this
   should drop to roughly 9-12 min in practice.
 
-  Side effect: the per-chapter `completedData` and `rewriteData`
-  arrays in `processingProgress` are now sparse indexed arrays
-  (chapters can land out of order). All consumers null-guard skipped
-  slots.
+  Side effect: the per-chapter `completedData` and `rewriteData` are
+  now **objects keyed by 0-indexed chapter number** instead of arrays.
+  Reason: Postgres `jsonb_set` with an out-of-bounds array index
+  appends and *ignores* the index (documented behavior), so parallel
+  per-chapter writes to an array silently lost data — chapters
+  finishing out of order would either append (extending the array but
+  to the wrong slot) or replace whichever slot already existed at the
+  array's current length. We confirmed this experimentally by tracing
+  rewriteData state across writes. Object-keyed `jsonb_set` updates
+  are safe under parallel writes because each updates a distinct path.
+
+  Consumers normalize either shape (legacy array, Inngest object) via
+  `chapterMapToArray` and `chapterMapCount` exported from
+  `progress-tracker.ts`. The legacy in-process pipeline still writes
+  array shape; both shapes are supported indefinitely.
 
 - **Rewrite output: chapter headers merging into first paragraph
   (PRE-EXISTING, not migration-caused).** Observed on a Hemingway

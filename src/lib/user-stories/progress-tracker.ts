@@ -70,8 +70,14 @@ export interface ProcessingProgress {
   currentChapter: number;
   totalChapters: number;
   chaptersCompleted: number[];
-  completedData?: ChapterTranslationData[];
-  rewriteData?: ChapterRewriteData[];
+  // completedData and rewriteData were arrays under the legacy in-process
+  // pipeline (chapters always sequential). Under the Inngest pipeline they
+  // are objects keyed by 0-indexed chapter number — Postgres jsonb_set
+  // can't safely write to array-by-index in parallel, but it can update
+  // distinct object keys atomically. The legacy methods still write arrays;
+  // the atomic methods (and consumers downstream) handle both shapes.
+  completedData?: ChapterTranslationData[] | Record<string, ChapterTranslationData>;
+  rewriteData?: ChapterRewriteData[] | Record<string, ChapterRewriteData>;
   // Extended fields for detailed UI
   stepLabel?: string;
   // Streaming pipeline: track rewrite progress separately from stage
@@ -90,6 +96,37 @@ export interface ProcessingProgress {
   // number. Written by the rewrite step, read by the translate step. Not used
   // by the legacy in-process pipeline.
   rewriteCache?: Record<string, string>;
+}
+
+/**
+ * Normalize completedData / rewriteData to an array sorted by chapter index.
+ * Handles both shapes:
+ * - Legacy: array (chapters always in order, may have nulls under sparse writes)
+ * - Inngest: object keyed by 0-indexed chapter number
+ */
+export function chapterMapToArray<T>(
+  data: T[] | Record<string, T> | undefined | null,
+): T[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data.filter((x): x is T => x != null);
+  return Object.keys(data)
+    .map((k) => parseInt(k, 10))
+    .filter((n) => !Number.isNaN(n))
+    .sort((a, b) => a - b)
+    .map((idx) => data[String(idx)])
+    .filter((x): x is T => x != null);
+}
+
+/** Count of filled chapter slots, regardless of array vs object shape. */
+export function chapterMapCount(
+  data: unknown[] | Record<string, unknown> | undefined | null,
+): number {
+  if (!data) return 0;
+  if (Array.isArray(data)) return data.filter((x) => x != null).length;
+  if (typeof data === "object") {
+    return Object.values(data as Record<string, unknown>).filter((x) => x != null).length;
+  }
+  return 0;
 }
 
 // Story-level progress phases
@@ -658,10 +695,14 @@ export class LevelProgressTracker {
     chapterData: ChapterTranslationData,
   ): Promise<void> {
     const chapterIndex = chapterNumber - 1;
+    const slotKey = String(chapterIndex);
     const dataJson = JSON.stringify(chapterData);
     try {
-      // Step 1: write this chapter's data into its slot, ensuring the array
-      // and surrounding state exist. stage/totalChapters are idempotent.
+      // Step 1: write this chapter's data into completedData[chapterIndex]
+      // as an object key (NOT array index — jsonb_set with an out-of-bounds
+      // array index appends and ignores the index, losing chapters).
+      // Existing array shape is overwritten with an empty object on first
+      // write so we always work in object form going forward.
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
         SET "processingProgress" = jsonb_set(
@@ -669,17 +710,20 @@ export class LevelProgressTracker {
             coalesce("processingProgress", '{}'::jsonb)
               || jsonb_build_object('stage', 'translating', 'totalChapters', ${this.totalChapters}::int),
             '{completedData}',
-            coalesce("processingProgress"->'completedData', '[]'::jsonb),
+            CASE
+              WHEN jsonb_typeof("processingProgress"->'completedData') = 'object'
+                THEN "processingProgress"->'completedData'
+              ELSE '{}'::jsonb
+            END,
             true
           ),
-          ARRAY['completedData', ${chapterIndex}::text],
+          ARRAY['completedData', ${slotKey}],
           ${dataJson}::jsonb,
           true
         )
         WHERE "id" = ${this.levelId}
       `;
-      // Step 2: derive chaptersCompleted from the actual filled-slot count
-      // and clamp currentChapter to the running max.
+      // Step 2: derive chaptersCompleted from the count of object keys.
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
         SET "processingProgress" = jsonb_set(
@@ -693,8 +737,7 @@ export class LevelProgressTracker {
               ),
               'chaptersCompleted', (
                 SELECT count(*)::int
-                FROM jsonb_array_elements("processingProgress"->'completedData') AS elem
-                WHERE elem != 'null'::jsonb
+                FROM jsonb_object_keys("processingProgress"->'completedData')
               )
             ),
             true
@@ -727,32 +770,8 @@ export class LevelProgressTracker {
     chapterData: ChapterRewriteData,
   ): Promise<void> {
     const chapterIndex = chapterNumber - 1;
+    const slotKey = String(chapterIndex);
     const dataJson = JSON.stringify(chapterData);
-    // [RewriteWriteDebug] BEFORE: read current state
-    const beforeRows = await prisma.$queryRaw<Array<{
-      level: string;
-      pre_array_type: string | null;
-      pre_array_length: number | null;
-      pre_array_non_null: number | null;
-      pre_completed: number | null;
-    }>>`
-      SELECT
-        "level",
-        jsonb_typeof("processingProgress"->'rewriteData') AS pre_array_type,
-        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array'
-          THEN jsonb_array_length("processingProgress"->'rewriteData')
-          ELSE NULL
-        END AS pre_array_length,
-        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array' THEN (
-          SELECT count(*)::int FROM jsonb_array_elements("processingProgress"->'rewriteData') AS e
-          WHERE e != 'null'::jsonb
-        ) ELSE NULL END AS pre_array_non_null,
-        (("processingProgress"->'rewriteProgress'->>'chaptersCompleted')::int) AS pre_completed
-      FROM "UserStoryLevel"
-      WHERE "id" = ${this.levelId}
-    `;
-    console.log(`[RewriteWriteDebug] BEFORE ch${chapterNumber} levelId=${this.levelId} ${JSON.stringify(beforeRows[0])}`);
-
     try {
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
@@ -761,10 +780,14 @@ export class LevelProgressTracker {
             coalesce("processingProgress", '{}'::jsonb)
               || jsonb_build_object('stage', 'rewriting', 'totalChapters', ${this.totalChapters}::int),
             '{rewriteData}',
-            coalesce("processingProgress"->'rewriteData', '[]'::jsonb),
+            CASE
+              WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'object'
+                THEN "processingProgress"->'rewriteData'
+              ELSE '{}'::jsonb
+            END,
             true
           ),
-          ARRAY['rewriteData', ${chapterIndex}::text],
+          ARRAY['rewriteData', ${slotKey}],
           ${dataJson}::jsonb,
           true
         )
@@ -782,8 +805,7 @@ export class LevelProgressTracker {
             ),
             'chaptersCompleted', (
               SELECT count(*)::int
-              FROM jsonb_array_elements("processingProgress"->'rewriteData') AS elem
-              WHERE elem != 'null'::jsonb
+              FROM jsonb_object_keys("processingProgress"->'rewriteData')
             )
           ),
           true
@@ -797,29 +819,6 @@ export class LevelProgressTracker {
       }
       throw error;
     }
-
-    // [RewriteWriteDebug] AFTER: read what we actually persisted
-    const afterRows = await prisma.$queryRaw<Array<{
-      post_array_type: string | null;
-      post_array_length: number | null;
-      post_array_non_null: number | null;
-      post_completed: number | null;
-    }>>`
-      SELECT
-        jsonb_typeof("processingProgress"->'rewriteData') AS post_array_type,
-        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array'
-          THEN jsonb_array_length("processingProgress"->'rewriteData')
-          ELSE NULL
-        END AS post_array_length,
-        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array' THEN (
-          SELECT count(*)::int FROM jsonb_array_elements("processingProgress"->'rewriteData') AS e
-          WHERE e != 'null'::jsonb
-        ) ELSE NULL END AS post_array_non_null,
-        (("processingProgress"->'rewriteProgress'->>'chaptersCompleted')::int) AS post_completed
-      FROM "UserStoryLevel"
-      WHERE "id" = ${this.levelId}
-    `;
-    console.log(`[RewriteWriteDebug] AFTER  ch${chapterNumber} levelId=${this.levelId} ${JSON.stringify(afterRows[0])}`);
   }
 }
 

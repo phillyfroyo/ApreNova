@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import type { ChapterAlignmentResult } from "@/lib/user-stories/alignment-check";
+import { chapterMapToArray, chapterMapCount } from "@/lib/user-stories/progress-tracker";
 import { toCEFR, getCEFRLabel } from "@/lib/cefr";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
@@ -314,8 +315,8 @@ function buildStreamsFromLevels(
       currentChapter?: number;
       totalChapters?: number;
       chaptersCompleted?: number[];
-      completedData?: { sourceLines: string[]; translatedLines: string[] }[];
-      rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
+      completedData?: { sourceLines: string[]; translatedLines: string[] }[] | Record<string, { sourceLines: string[]; translatedLines: string[] }>;
+      rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[] | Record<string, { originalLines: string[]; rewrittenLines: string[] }>;
       // Streaming pipeline progress tracking
       rewriteProgress?: { currentChapter: number; chaptersCompleted: number };
       translateProgress?: { currentChapter: number; chaptersCompleted: number };
@@ -327,15 +328,21 @@ function buildStreamsFromLevels(
     const needsRewrite = !isDetectedLevel;
     const totalChapters = levelProgress.totalChapters || 0;
 
-    // Use streaming progress fields if available, fall back to data array length
+    // rewriteData and completedData can be either an array (legacy pipeline)
+    // or an object keyed by chapter index (Inngest pipeline). Count via the
+    // shape-agnostic helper.
+    const rewriteDataCount = chapterMapCount(levelProgress.rewriteData);
+    const completedDataCount = chapterMapCount(levelProgress.completedData);
+    const rewriteDataArr = chapterMapToArray(levelProgress.rewriteData);
+    const completedDataArr = chapterMapToArray(levelProgress.completedData);
+
+    // Use streaming progress fields if available, fall back to data count
     const rewriteChaptersCount = levelProgress.rewriteProgress?.chaptersCompleted
-      ?? levelProgress.rewriteData?.length
-      ?? 0;
+      ?? rewriteDataCount;
     const translateChaptersCount = levelProgress.translateProgress?.chaptersCompleted
-      ?? levelProgress.completedData?.length
-      ?? 0;
-    const hasRewriteData = rewriteChaptersCount > 0 || levelProgress.rewriteData?.length;
-    const hasTranslateData = translateChaptersCount > 0 || levelProgress.completedData?.length;
+      ?? completedDataCount;
+    const hasRewriteData = rewriteChaptersCount > 0 || rewriteDataCount > 0;
+    const hasTranslateData = translateChaptersCount > 0 || completedDataCount > 0;
     const isComplete = levelProgress.stage === 'complete' || level.status === 'READY';
 
     // Add rewrite stream if this level needs rewriting
@@ -344,7 +351,7 @@ function buildStreamsFromLevels(
     // 2. Has rewrite data
     // 3. Currently rewriting
     // 4. Level is complete (means it was rewritten successfully)
-    if (needsRewrite && (levelProgress.rewriteProgress || levelProgress.rewriteData?.length || levelProgress.stage === 'rewriting' || isComplete)) {
+    if (needsRewrite && (levelProgress.rewriteProgress || rewriteDataCount > 0 || levelProgress.stage === 'rewriting' || isComplete)) {
       // Use rewriteProgress for reliable status in streaming mode
       const rewriteAllDone = rewriteChaptersCount >= totalChapters && totalChapters > 0;
 
@@ -364,7 +371,7 @@ function buildStreamsFromLevels(
         levelStatus: level.status,
         currentChapter: rewriteChaptersCount,
         totalChapters: totalChapters,
-        chapters: levelProgress.rewriteData || [],
+        chapters: rewriteDataArr,
         label: `Rewrite ${detectedLevel || '?'} → ${level.level}`,
       });
     }
@@ -394,13 +401,12 @@ function buildStreamsFromLevels(
         (needsRewrite && rewriteChaptersCount > 0) ? 'waiting' :  // Streaming: waiting for rewrite
         'waiting';
 
-      // Check if any completed chapter has alignment issues
-      // Optional-chain on `ch` because the Inngest pipeline writes
-      // completedData as a sparse indexed array (chapter index → data).
-      // Missing chapters appear as null entries; skip them.
-      const translationHasAlignmentIssues = levelProgress.completedData?.some(
-        (ch: any) => ch?.alignmentIssues?.hasIssues
-      ) || false;
+      // Check if any completed chapter has alignment issues. completedData
+      // can be either an array or an object — completedDataArr already
+      // normalized it.
+      const translationHasAlignmentIssues = completedDataArr.some(
+        (ch: any) => ch?.alignmentIssues?.hasIssues,
+      );
 
       streams.push({
         id: `translate-${level.level}`,
@@ -410,7 +416,7 @@ function buildStreamsFromLevels(
         levelStatus: level.status,
         currentChapter: translateChaptersCount,
         totalChapters: totalChapters,
-        chapters: levelProgress.completedData || [],
+        chapters: completedDataArr,
         label: isDetectedLevel ? `Translate ${level.level} (original)` : `Translate ${level.level} (rewritten)`,
         hasAlignmentIssues: translationHasAlignmentIssues || undefined,
       });
@@ -985,21 +991,6 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
 
           // Check level statuses to determine progress
           const levels = storyStatus.levels || [];
-          // [RewriteRowDebug] One-line diagnostic for the "Rewriting chapter
-          // 5 of 5" stuck-row bug. Logs each level's rewriteProgress and
-          // translateProgress on every poll. Remove once diagnosed.
-          console.log('[RewriteRowDebug] ' + JSON.stringify(
-            levels.map((l: any) => ({
-              level: l.level,
-              status: l.status,
-              rewriteProgress: (l.processingProgress as any)?.rewriteProgress,
-              translateProgress: (l.processingProgress as any)?.translateProgress,
-              totalChapters: (l.processingProgress as any)?.totalChapters,
-              rewriteDataLen: Array.isArray((l.processingProgress as any)?.rewriteData)
-                ? (l.processingProgress as any).rewriteData.length
-                : null,
-            })),
-          ));
           const processingLevel = levels.find((l: any) => l.status === "PROCESSING");
           const completedLevels = levels.filter((l: any) => l.status === "READY").length;
           // We only process 1-2 levels (detected + user's level if different)
@@ -1076,8 +1067,8 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
               currentChapter: number;
               totalChapters: number;
               chaptersCompleted: number[];
-              completedData?: { sourceLines: string[]; translatedLines: string[] }[];
-              rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[];
+              completedData?: { sourceLines: string[]; translatedLines: string[] }[] | Record<string, { sourceLines: string[]; translatedLines: string[] }>;
+              rewriteData?: { originalLines: string[]; rewrittenLines: string[] }[] | Record<string, { originalLines: string[]; rewrittenLines: string[] }>;
             };
 
             // Record when processing started (first time we see a level processing)
@@ -1126,7 +1117,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 detectedLevel,
                 currentChapter: progress.currentChapter,
                 totalChapters: progress.totalChapters,
-                rewriteChapters: progress.rewriteData || [],
+                rewriteChapters: chapterMapToArray(progress.rewriteData),
                 message: getStageMessage("rewriting-levels", {
                   userLevel: userLevel || undefined,
                   detectedLevel,
@@ -1150,7 +1141,7 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
                 detectedLevel,
                 currentChapter: progress.currentChapter,
                 totalChapters: progress.totalChapters,
-                completedChapters: progress.completedData || [],
+                completedChapters: chapterMapToArray(progress.completedData),
                 message: getStageMessage("translating", {
                   userLevel: userLevel || undefined,
                   detectedLevel,

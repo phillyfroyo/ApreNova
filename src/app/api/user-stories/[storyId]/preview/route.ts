@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { chapterMapToArray } from "@/lib/user-stories/progress-tracker";
 
 interface RouteParams {
   params: Promise<{ storyId: string }>;
@@ -162,10 +163,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     const processingProgress = levelData.processingProgress as {
-      completedData?: ChapterTranslationData[];
-      rewriteData?: ChapterRewriteData[];
+      completedData?: ChapterTranslationData[] | Record<string, ChapterTranslationData>;
+      rewriteData?: ChapterRewriteData[] | Record<string, ChapterRewriteData>;
       totalChapters?: number;
     } | null;
+    const completedDataArr = chapterMapToArray(processingProgress?.completedData);
+    const rewriteDataArr = chapterMapToArray(processingProgress?.rewriteData);
 
     // For translation preview
     if (type === "translating") {
@@ -181,10 +184,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
 
       // Fall back to processingProgress.completedData (during processing, before content is built)
-      if (processingProgress?.completedData && processingProgress.completedData.length > 0) {
+      if (completedDataArr.length > 0) {
         return NextResponse.json({
-          chapters: processingProgress.completedData,
-          totalChapters: processingProgress.totalChapters || processingProgress.completedData.length,
+          chapters: completedDataArr,
+          totalChapters: processingProgress?.totalChapters || completedDataArr.length,
           source: "processingProgress",
         });
       }
@@ -200,10 +203,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // For rewrite preview
     if (type === "rewriting") {
       // Try processingProgress.rewriteData
-      if (processingProgress?.rewriteData && processingProgress.rewriteData.length > 0) {
+      if (rewriteDataArr.length > 0) {
         return NextResponse.json({
-          chapters: processingProgress.rewriteData,
-          totalChapters: processingProgress.totalChapters || processingProgress.rewriteData.length,
+          chapters: rewriteDataArr,
+          totalChapters: processingProgress?.totalChapters || rewriteDataArr.length,
           source: "processingProgress",
         });
       }
