@@ -620,8 +620,8 @@ export function ComparisonModal({
       >
         {/* Line number + row actions */}
         <div
-          className={`select-none text-gray-400 text-right pr-2 shrink-0 py-1 ${isBlankLine ? 'bg-gray-100' : 'bg-gray-50'} border-r border-gray-200 relative`}
-          style={{ width: "5.5rem" }}
+          className={`select-none text-gray-400 text-right pr-1 md:pr-2 shrink-0 py-1 ${isBlankLine ? 'bg-gray-100' : 'bg-gray-50'} border-r border-gray-200 relative`}
+          style={{ width: "var(--line-col-w)" }}
         >
           <span className="group-hover:invisible">{isBlankLine ? '—' : idx + 1}</span>
 
@@ -674,7 +674,7 @@ export function ComparisonModal({
             isBlankLine ? 'bg-gray-50' : ''
           } ${canEditLeft ? 'cursor-pointer hover:bg-blue-50' : ''
           } ${isEditingLeft ? 'p-0' : ''}`}
-          style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 2.75rem)` }}
+          style={{ width: `calc(var(--split-pos, ${splitPosition}%) - var(--line-col-half))` }}
           onClick={() => !isEditingLeft && handleCellClick(idx, 'left')}
         >
           {isEditingLeft ? (
@@ -691,8 +691,7 @@ export function ComparisonModal({
                     handleCellCancel();
                   }
                 }}
-                className="w-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={Math.max(1, editingCell.initialValue.split('\n').length)}
+                className="w-full h-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="flex gap-1 p-1 bg-gray-100 border-t">
                 <button
@@ -742,8 +741,7 @@ export function ComparisonModal({
                     handleCellCancel();
                   }
                 }}
-                className="w-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={Math.max(1, editingCell.initialValue.split('\n').length)}
+                className="w-full h-full min-h-[2rem] p-1 text-sm font-mono border-2 border-blue-400 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="flex gap-1 p-1 bg-gray-100 border-t">
                 <button
@@ -813,7 +811,7 @@ export function ComparisonModal({
             <span className="text-lg font-semibold">
               {level !== null ? `Level ${level} Comparison` : "Comparison"}
             </span>
-            <span className="text-sm bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="hidden md:flex text-sm bg-white/20 px-3 py-1 rounded-full items-center gap-1.5">
               {leftTrimmed} → {rightTrimmed} Total lines
               {leftTrimmed !== rightTrimmed && (
                 <>
@@ -824,7 +822,7 @@ export function ComparisonModal({
                 </>
               )}
             </span>
-            <span className="text-sm bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="hidden md:flex text-sm bg-white/20 px-3 py-1 rounded-full items-center gap-1.5">
               {leftContent} → {rightContent} Content lines
               {leftContent !== rightContent && (
                 <>
@@ -1011,22 +1009,22 @@ export function ComparisonModal({
         {/* Content */}
         <div
           ref={containerRef}
-          className="flex-1 flex flex-col overflow-hidden"
+          className="flex-1 flex flex-col overflow-hidden [--line-col-w:1.75rem] [--line-col-half:0.875rem] md:[--line-col-w:5.5rem] md:[--line-col-half:2.75rem]"
           style={{ "--split-pos": `${splitPosition}%` } as React.CSSProperties}
         >
           {/* Column Headers */}
           <div className="flex shrink-0 border-b border-gray-300">
             {/* Line number header */}
-            <div className="bg-gray-100 text-gray-500 text-xs font-medium py-2 text-center border-r border-gray-200" style={{ width: "5.5rem" }}>
+            <div className="bg-gray-100 text-gray-500 text-xs font-medium py-2 text-center border-r border-gray-200 shrink-0" style={{ width: "var(--line-col-w)" }}>
               #
             </div>
             {/* Left header */}
             <div
               className="bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 border-r border-gray-200 flex items-center justify-between"
-              style={{ width: `calc(var(--split-pos, ${splitPosition}%) - 2.75rem)` }}
+              style={{ width: `calc(var(--split-pos, ${splitPosition}%) - var(--line-col-half))` }}
             >
               <span>{leftTitle}</span>
-              <span className="text-gray-400 text-xs">{leftTrimmed} total · {leftContent} content</span>
+              <span className="hidden md:inline text-gray-400 text-xs">{leftTrimmed} total · {leftContent} content</span>
             </div>
             {/* Draggable divider */}
             <div
@@ -1036,7 +1034,7 @@ export function ComparisonModal({
             {/* Right header */}
             <div className="bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 flex-1 flex items-center justify-between">
               <span>{rightTitle}</span>
-              <span className="text-indigo-400 text-xs">{rightTrimmed} total · {rightContent} content</span>
+              <span className="hidden md:inline text-indigo-400 text-xs">{rightTrimmed} total · {rightContent} content</span>
             </div>
           </div>
 

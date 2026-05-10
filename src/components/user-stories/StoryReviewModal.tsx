@@ -290,8 +290,15 @@ export default function StoryReviewModal() {
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          {/* Thumbnail */}
-          <div className="flex gap-6">
+          {/* Thumbnail. On mobile, stack title/desc on top and the
+              thumbnail/upload column below — there isn't enough width for
+              the desktop side-by-side layout. flex-col-reverse + md:flex-row
+              keeps the desktop visual order while letting mobile flow
+              vertically with title/desc first. On mobile only, the
+              Detected Language/Level cards sit stacked to the right of the
+              thumbnail (the desktop 2-col grid further down is hidden). */}
+          <div className="flex flex-col-reverse md:flex-row gap-6">
+            <div className="flex flex-row gap-3 md:contents">
             <div className="flex-shrink-0">
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -398,6 +405,33 @@ export default function StoryReviewModal() {
               <p className="text-xs text-gray-400 mt-1 text-center">
                 {lng === "es" ? "Opcional" : "Optional"}
               </p>
+            </div>
+
+            {/* Mobile-only: Detected Language/Level stacked next to the
+                thumbnail. Hidden on desktop where the 2-col grid below
+                takes over (also see md:hidden on that grid). */}
+            <div className="flex-1 flex flex-col gap-3 md:hidden">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">
+                  {lng === "es" ? "Idioma detectado" : "Detected Language"}
+                </div>
+                <div className="font-medium text-gray-800 flex items-center gap-2">
+                  <span className="text-lg">
+                    {storyData.sourceLanguage === "es" ? "🇪🇸" : "🇺🇸"}
+                  </span>
+                  {storyData.sourceLanguage === "es" ? "Español" : "English"}
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <div className="text-xs text-gray-500 mb-1">
+                  {lng === "es" ? "Nivel detectado" : "Detected Level"}
+                </div>
+                <div className="font-medium text-gray-800">
+                  {getCEFRLabel(toCEFR(storyData.detectedLevel), lng as "en" | "es")}
+                </div>
+              </div>
+            </div>
+
             </div>
 
             {/* Title and Description */}
@@ -514,8 +548,9 @@ export default function StoryReviewModal() {
             );
           })()}
 
-          {/* Detected info */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Detected info — desktop only. On mobile, this content
+              renders as a stacked column next to the thumbnail above. */}
+          <div className="hidden md:grid grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-xl">
               <div className="text-xs text-gray-500 mb-1">
                 {lng === "es" ? "Idioma detectado" : "Detected Language"}
