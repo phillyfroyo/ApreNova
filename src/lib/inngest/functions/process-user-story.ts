@@ -342,8 +342,12 @@ export const processUserStoryFn = inngest.createFunction(
         return { level, success: false };
       }
 
-      // Build and save the assembled level content.
+      // Build and save the assembled level content. Update story-level
+      // progress to "building_levels" so the front-end shows a
+      // "Finalizing..." title between the last translate chapter and
+      // the final "complete" marker.
       await step.run(`build-${level}`, async () => {
+        await updateStoryProgress(storyId, 'building_levels');
         await runBuildLevel({
           storyId,
           level,

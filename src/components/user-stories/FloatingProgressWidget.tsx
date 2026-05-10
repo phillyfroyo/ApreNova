@@ -68,6 +68,89 @@ const MIN_STEP_DURATION = 800;
 // Animation time (must match CSS animation duration)
 const ANIMATION_DURATION = 350;
 
+// Build per-level subtitle rows for "both" mode uploads. Returns an array of
+// localized strings; the renderer shows each on its own line. Returns [] for
+// uploads that should fall back to the single-row subtitle (single-level
+// uploads, or pre-level-work phases).
+//
+// Layout when both modes are active:
+//   Row 1: "<detected>: Translating chapter X/N"  → "...: Translation complete ✓"
+//   Row 2 (rewritten level): "<rewritten>: Rewriting chapter X/N"
+//                          → "...: Rewrite complete ✓" once rewrite finishes
+//   Row 3 (rewritten level translate): hidden until rewrite is fully done,
+//                                      then "<rewritten>: Translating chapter X/N"
+//                                      → "...: Translation complete ✓"
+function buildPerLevelSubtitleRows(
+  streams: StreamProgress[] | undefined,
+  detectedLevel: string | undefined,
+  lng: Language,
+): string[] {
+  if (!streams || streams.length === 0 || !detectedLevel) return [];
+
+  const translateStreams = streams.filter((s) => s.type === "translating");
+  const rewriteStreams = streams.filter((s) => s.type === "rewriting");
+
+  const detectedTranslate = translateStreams.find((s) => s.level === detectedLevel);
+  const rewrittenTranslate = translateStreams.find((s) => s.level !== detectedLevel);
+  const rewrittenRewrite = rewriteStreams[0]; // there's at most one rewrite stream
+
+  // If we don't have at least one detected and one rewritten level, this is
+  // a single-level upload — fall back to the single-row subtitle.
+  if (!detectedTranslate || !rewrittenTranslate) return [];
+
+  const rows: string[] = [];
+
+  // Row 1: detected level translate state
+  rows.push(formatTranslateRow(detectedTranslate, lng));
+
+  // Row 2: rewritten level rewrite state. Persist as "Rewrite complete ✓"
+  // once all chapters rewritten.
+  if (rewrittenRewrite) {
+    rows.push(formatRewriteRow(rewrittenRewrite, lng));
+  }
+
+  // Row 3: rewritten level translate state — only once rewrite is fully
+  // complete or translate has started for this level.
+  const rewriteFullyDone =
+    !!rewrittenRewrite &&
+    rewrittenRewrite.totalChapters > 0 &&
+    rewrittenRewrite.currentChapter >= rewrittenRewrite.totalChapters;
+  const translateStarted = rewrittenTranslate.currentChapter > 0;
+  if (rewriteFullyDone || translateStarted) {
+    rows.push(formatTranslateRow(rewrittenTranslate, lng));
+  }
+
+  return rows;
+}
+
+function formatTranslateRow(stream: StreamProgress, lng: Language): string {
+  const isComplete =
+    stream.levelStatus === "READY" ||
+    (stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters);
+  if (isComplete) {
+    return `${stream.level}: ${t(lng, "upload", "translationComplete")} ✓`;
+  }
+  // current chapter being translated = chaptersCompleted + 1, capped at total
+  const current = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
+  return `${stream.level}: ${t(lng, "upload", "translatingChapterOf", {
+    current,
+    total: stream.totalChapters || 0,
+  })}`;
+}
+
+function formatRewriteRow(stream: StreamProgress, lng: Language): string {
+  const isComplete =
+    stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters;
+  if (isComplete) {
+    return `${stream.level}: ${t(lng, "upload", "rewriteComplete")} ✓`;
+  }
+  const current = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
+  return `${stream.level}: ${t(lng, "upload", "rewritingChapterOf", {
+    current,
+    total: stream.totalChapters || 0,
+  })}`;
+}
+
 
 // Success banner - simple notification after story is confirmed
 function SuccessBanner({
@@ -959,30 +1042,54 @@ export default function FloatingProgressWidget() {
                       currentLevel: progress.currentLevel,
                     }) || progress.message}
               </p>
-              {/* Step label (subtitle) with cylinder animation - fixed height container */}
-              <div className="h-5 relative overflow-hidden" style={{ perspective: "200px" }}>
-                {/* Exiting label */}
-                {previousStepLabel && isAnimating && (
-                  <p className="text-sm text-gray-500 truncate absolute inset-0 animate-subtitle-exit">
-                    {localizeStepLabel(previousStepLabel, lng as Language)}
-                  </p>
-                )}
-                {/* Current/entering label - use absolute during animation to prevent layout shift */}
-                {displayedStepLabel && (
-                  <p
-                    className={`text-sm text-gray-500 truncate ${isAnimating ? 'absolute inset-0 animate-subtitle-enter' : ''}`}
-                  >
-                    {localizeStepLabel(displayedStepLabel, lng as Language)}
-                  </p>
-                )}
-                {/* Chapter progress if no step label but in chapter processing */}
-                {!displayedStepLabel && !previousStepLabel && (progress.stage === "rewriting-levels" || progress.stage === "translating") &&
-                  progress.currentChapter && progress.totalChapters && (
-                  <p className="text-sm text-gray-500">
-                    {t(lng as Language, "upload", "chapterProgress", { current: progress.currentChapter, total: progress.totalChapters })}
-                  </p>
-                )}
-              </div>
+              {/* Step label (subtitle). When both levels are being processed
+                  (a "both" mode upload past the metadata phase), render
+                  per-level rows so the user can see each level's phase
+                  separately instead of a single line that bounces between
+                  levels. Otherwise fall back to the single-row label. */}
+              {(() => {
+                const perLevelRows = buildPerLevelSubtitleRows(
+                  progress.streams,
+                  progress.detectedLevel,
+                  lng as Language,
+                );
+                if (perLevelRows.length >= 2) {
+                  return (
+                    <div className="space-y-0.5">
+                      {perLevelRows.map((row, i) => (
+                        <p key={i} className="text-sm text-gray-500 truncate">
+                          {row}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="h-5 relative overflow-hidden" style={{ perspective: "200px" }}>
+                    {/* Exiting label */}
+                    {previousStepLabel && isAnimating && (
+                      <p className="text-sm text-gray-500 truncate absolute inset-0 animate-subtitle-exit">
+                        {localizeStepLabel(previousStepLabel, lng as Language)}
+                      </p>
+                    )}
+                    {/* Current/entering label - use absolute during animation to prevent layout shift */}
+                    {displayedStepLabel && (
+                      <p
+                        className={`text-sm text-gray-500 truncate ${isAnimating ? 'absolute inset-0 animate-subtitle-enter' : ''}`}
+                      >
+                        {localizeStepLabel(displayedStepLabel, lng as Language)}
+                      </p>
+                    )}
+                    {/* Chapter progress if no step label but in chapter processing */}
+                    {!displayedStepLabel && !previousStepLabel && (progress.stage === "rewriting-levels" || progress.stage === "translating") &&
+                      progress.currentChapter && progress.totalChapters && (
+                      <p className="text-sm text-gray-500">
+                        {t(lng as Language, "upload", "chapterProgress", { current: progress.currentChapter, total: progress.totalChapters })}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
