@@ -728,6 +728,31 @@ export class LevelProgressTracker {
   ): Promise<void> {
     const chapterIndex = chapterNumber - 1;
     const dataJson = JSON.stringify(chapterData);
+    // [RewriteWriteDebug] BEFORE: read current state
+    const beforeRows = await prisma.$queryRaw<Array<{
+      level: string;
+      pre_array_type: string | null;
+      pre_array_length: number | null;
+      pre_array_non_null: number | null;
+      pre_completed: number | null;
+    }>>`
+      SELECT
+        "level",
+        jsonb_typeof("processingProgress"->'rewriteData') AS pre_array_type,
+        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array'
+          THEN jsonb_array_length("processingProgress"->'rewriteData')
+          ELSE NULL
+        END AS pre_array_length,
+        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array' THEN (
+          SELECT count(*)::int FROM jsonb_array_elements("processingProgress"->'rewriteData') AS e
+          WHERE e != 'null'::jsonb
+        ) ELSE NULL END AS pre_array_non_null,
+        (("processingProgress"->'rewriteProgress'->>'chaptersCompleted')::int) AS pre_completed
+      FROM "UserStoryLevel"
+      WHERE "id" = ${this.levelId}
+    `;
+    console.log(`[RewriteWriteDebug] BEFORE ch${chapterNumber} levelId=${this.levelId} ${JSON.stringify(beforeRows[0])}`);
+
     try {
       await prisma.$executeRaw`
         UPDATE "UserStoryLevel"
@@ -772,6 +797,29 @@ export class LevelProgressTracker {
       }
       throw error;
     }
+
+    // [RewriteWriteDebug] AFTER: read what we actually persisted
+    const afterRows = await prisma.$queryRaw<Array<{
+      post_array_type: string | null;
+      post_array_length: number | null;
+      post_array_non_null: number | null;
+      post_completed: number | null;
+    }>>`
+      SELECT
+        jsonb_typeof("processingProgress"->'rewriteData') AS post_array_type,
+        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array'
+          THEN jsonb_array_length("processingProgress"->'rewriteData')
+          ELSE NULL
+        END AS post_array_length,
+        CASE WHEN jsonb_typeof("processingProgress"->'rewriteData') = 'array' THEN (
+          SELECT count(*)::int FROM jsonb_array_elements("processingProgress"->'rewriteData') AS e
+          WHERE e != 'null'::jsonb
+        ) ELSE NULL END AS post_array_non_null,
+        (("processingProgress"->'rewriteProgress'->>'chaptersCompleted')::int) AS post_completed
+      FROM "UserStoryLevel"
+      WHERE "id" = ${this.levelId}
+    `;
+    console.log(`[RewriteWriteDebug] AFTER  ch${chapterNumber} levelId=${this.levelId} ${JSON.stringify(afterRows[0])}`);
   }
 }
 
