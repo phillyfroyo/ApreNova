@@ -1234,8 +1234,13 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             streams: finalStreams,
             detectedLevel: storyStatus.detectedLevel,
           });
-          setShowReviewModal(true);
           setIsMinimized(false);
+          // Hold for ~1.5s so the floating progress widget can display its
+          // "Wrapping things up..." + all-rows-complete state before the
+          // review modal covers it. Without this beat, the widget's
+          // completion frame is rendered but immediately hidden behind the
+          // modal, so users never see the satisfying ✓ row pattern.
+          setTimeout(() => setShowReviewModal(true), 1500);
           break;
         } else if (storyStatus.status === "FAILED") {
           console.error("[StoryUpload] Story processing failed on server");
@@ -1515,8 +1520,15 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
             description: storyStatus.description || prev.description,
             detectedLevel: storyStatus.detectedLevel || prev.detectedLevel,
           } : null);
-          updateProgress("review", 100);
-          setShowReviewModal(true);
+          // Build final streams so the widget shows all-✓ end-state.
+          const finalLevels = storyStatus.levels || [];
+          const finalStreams = buildStreamsFromLevels(finalLevels, storyStatus.detectedLevel);
+          updateProgress("review", 100, {
+            streams: finalStreams,
+            detectedLevel: storyStatus.detectedLevel,
+          });
+          // Same 1.5s widget-completion-beat as the primary polling path.
+          setTimeout(() => setShowReviewModal(true), 1500);
           return;
         } else if (storyStatus.status === "FAILED") {
           updateProgress("error", 0, { error: "Story processing failed" });
