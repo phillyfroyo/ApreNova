@@ -190,6 +190,26 @@ uploads is expensive to diagnose. Tagged as Phase 4 follow-up.
   (chapters can land out of order). All consumers null-guard skipped
   slots.
 
+- **Rewrite output: chapter headers merging into first paragraph.**
+  Observed on a 14-chapter / 25k-word C1→A1 upload. The A1 rewrite
+  writes each chapter's title/header into the first paragraph of the
+  rewritten text instead of preserving it as its own line, the way
+  the original C1 source and the translations do. The translated
+  output is fine, only the rewrite is affected.
+
+  Could be related to our work (the per-chapter rewrite path now uses
+  exported `rewriteChapterWithChunking` and we changed how chapters
+  are passed between steps), or could be a pre-existing
+  story-specific bug surfaced for the first time. Hard to say without
+  comparing against the same story uploaded under the legacy
+  pipeline. Worth a focused look at:
+  - `rewriteChapterWithChunking` in `level-processor.ts` — does it
+    preserve chapter metadata (`{ number, title, subtitle }`) or only
+    the text?
+  - The translate step receives `chapter` with metadata via
+    `translateAndStoreSingleChapter`, but does the rewrite step's
+    cached text round-trip preserve the header line?
+
 - **Vercel deployment protection** is currently disabled (turned off
   during Phase 1 testing so Inngest could reach the preview URL).
   Worth re-enabling on production, but only after we're confident the
