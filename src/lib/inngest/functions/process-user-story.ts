@@ -15,7 +15,7 @@
 
 import { inngest } from '../client';
 import { prisma } from '@/lib/prisma';
-import { detectLanguage, detectCEFRLevel } from '@/lib/story-processing';
+import { detectLanguage, detectCEFRLevel, cleanText } from '@/lib/story-processing';
 import { processText, type FileType, type ContentType } from '@/lib/text-processing';
 import { toCEFR } from '@/lib/cefr';
 import {
@@ -264,16 +264,21 @@ export const processUserStoryFn = inngest.createFunction(
       };
     });
 
-    // Step 7+8: Cross-level parallelism mirrors the production
-    // processAllLevels parallelTasks pattern (pipeline.ts). Each level runs
-    // as its own task; the detected-level translate-only path runs
-    // concurrently with the user-level rewrite+translate path. Within a
-    // level, chapters stay sequential — the level's existing
-    // LevelProgressTracker does read-modify-write on shared JSON columns
-    // and isn't safe under parallel chapter writes. The function-level
-    // concurrency cap (limit: 8) prevents in-flight LLM calls from
-    // exceeding rate limits across the parallel level tasks.
+    // Step 7+8: Two-axis parallelism.
+    // - Across levels: each level runs as its own task (Promise.all over
+    //   level tasks), so detected-level translate runs concurrently with
+    //   user-level rewrite+translate.
+    // - Within a level: chapters fan out in parallel for both rewrite and
+    //   translate phases (Promise.all over chapter steps). Safe because
+    //   the per-chapter writes go through atomic jsonb_set helpers in
+    //   LevelProgressTracker (updateChapterContentAtomic etc.) instead of
+    //   the legacy read-modify-write methods.
+    // The function-level concurrency cap (limit: 5) caps in-flight LLM
+    // calls so we don't blow Anthropic/OpenAI rate limits when many
+    // chapter steps fire at once.
     await updateStoryProgress(storyId, 'rewriting_levels');
+
+    const chapterIndices = Array.from({ length: parsed.chapterCount }, (_, i) => i);
 
     const levelTasks = levelsToProcess.map(async (level) => {
       const isDetectedLevel = level === detectedLevel;
@@ -281,8 +286,7 @@ export const processUserStoryFn = inngest.createFunction(
       // Init the level once before any chapter work runs. This sets
       // levelStatus = PROCESSING and seeds processingProgress.translateProgress
       // and (if rewriting) rewriteProgress. Per-chapter steps then only
-      // *update* progress, never reset it — which is what was making the
-      // front-end Start Reading buttons flicker.
+      // *update* progress, never reset it.
       await step.run(`begin-${level}`, async () => {
         await beginLevelStep({
           storyId,
@@ -292,46 +296,49 @@ export const processUserStoryFn = inngest.createFunction(
         });
       });
 
-      // Rewrite each chapter sequentially (non-detected only).
+      // Wave 1 (non-detected only): rewrite all chapters in parallel.
       if (!isDetectedLevel) {
-        for (let i = 0; i < parsed.chapterCount; i++) {
-          const ok = await step.run(`rewrite-${level}-ch${i}`, async () => {
-            return await rewriteChapterStep({
-              storyId,
-              level,
-              detectedLevel,
-              chapterIndex: i,
-              sourceLanguage,
-              storyType: storyType as StoryType | null,
-            });
-          });
-          if (!ok) {
-            // Translate falls back to original text for missing cache slots,
-            // so a single rewrite failure isn't fatal — we keep going.
-            console.warn(`[Inngest] rewrite-${level}-ch${i} failed; translate will use original text`);
-          }
+        const rewriteResults = await Promise.all(
+          chapterIndices.map((i) =>
+            step.run(`rewrite-${level}-ch${i}`, async () => {
+              return await rewriteChapterStep({
+                storyId,
+                level,
+                detectedLevel,
+                chapterIndex: i,
+                sourceLanguage,
+                storyType: storyType as StoryType | null,
+              });
+            }),
+          ),
+        );
+        const failedRewrites = rewriteResults.filter((ok) => !ok).length;
+        if (failedRewrites > 0) {
+          console.warn(
+            `[Inngest] ${failedRewrites}/${parsed.chapterCount} rewrites failed for ${level}; translate will fall back to original text for those chapters`,
+          );
         }
       }
 
-      // Translate each chapter sequentially.
-      let anyTranslateSucceeded = false;
-      for (let i = 0; i < parsed.chapterCount; i++) {
-        const ok = await step.run(`translate-${level}-ch${i}`, async () => {
-          return await translateChapterStep({
-            storyId,
-            level,
-            chapterIndex: i,
-            chapterTotal: parsed.chapterCount,
-            sourceLanguage,
-            storyType: storyType as StoryType | null,
-            structureType: parsed.structureType,
-            hasChapters: parsed.hasChapters,
-          });
-        });
-        if (ok) anyTranslateSucceeded = true;
-      }
+      // Wave 2: translate all chapters in parallel.
+      const translateResults = await Promise.all(
+        chapterIndices.map((i) =>
+          step.run(`translate-${level}-ch${i}`, async () => {
+            return await translateChapterStep({
+              storyId,
+              level,
+              chapterIndex: i,
+              chapterTotal: parsed.chapterCount,
+              sourceLanguage,
+              storyType: storyType as StoryType | null,
+              structureType: parsed.structureType,
+              hasChapters: parsed.hasChapters,
+            });
+          }),
+        ),
+      );
 
-      if (!anyTranslateSucceeded) {
+      if (!translateResults.some(Boolean)) {
         return { level, success: false };
       }
 
@@ -346,7 +353,7 @@ export const processUserStoryFn = inngest.createFunction(
         });
       });
 
-      return { level, success: true };
+      return { level, success: translateResults.every(Boolean) };
     });
 
     const settled = await Promise.all(levelTasks);
@@ -551,6 +558,17 @@ async function rewriteChapterStep(input: {
       isPoetry,
     );
     await mergeRewriteCache(levelRecord.id, input.chapterIndex, rewrittenText);
+
+    // Surface rewrite progress to the front-end. Without this the UI's
+    // rewrite counter sticks at 0/N for the entire rewrite phase because
+    // it reads from rewriteData.length / rewriteProgress.chaptersCompleted.
+    const tracker = new LevelProgressTracker(levelRecord.id, chapters.originalChapters.length);
+    const cleanedOriginal = cleanText(chapter.text);
+    const cleanedRewritten = cleanText(rewrittenText);
+    await tracker.updateRewriteProgressAtomic(input.chapterIndex + 1, {
+      originalLines: cleanedOriginal.split('\n'),
+      rewrittenLines: cleanedRewritten.split('\n'),
+    });
     return true;
   } catch (err: any) {
     if (err instanceof StoryCancelledError) throw err;

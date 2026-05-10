@@ -395,8 +395,11 @@ function buildStreamsFromLevels(
         'waiting';
 
       // Check if any completed chapter has alignment issues
+      // Optional-chain on `ch` because the Inngest pipeline writes
+      // completedData as a sparse indexed array (chapter index → data).
+      // Missing chapters appear as null entries; skip them.
       const translationHasAlignmentIssues = levelProgress.completedData?.some(
-        (ch: any) => ch.alignmentIssues?.hasIssues
+        (ch: any) => ch?.alignmentIssues?.hasIssues
       ) || false;
 
       streams.push({
@@ -1605,10 +1608,17 @@ export function StoryUploadProvider({ children }: { children: React.ReactNode })
       chapters = fetchedChapters;
     }
 
-    // Convert chapter arrays to text strings for ComparisonModal
+    // Convert chapter arrays to text strings for ComparisonModal. Filter
+    // out null entries first — the Inngest pipeline writes completedData
+    // and rewriteData as sparse indexed arrays, so chapters that haven't
+    // landed yet appear as nulls.
     const chapterArrays = isRewriting
-      ? rewriteChapters.map(ch => ({ left: ch.originalLines || [], right: ch.rewrittenLines || [] }))
-      : chapters.map(ch => ({ left: ch.sourceLines || [], right: ch.translatedLines || [] }));
+      ? rewriteChapters
+          .filter((ch): ch is NonNullable<typeof ch> => ch != null)
+          .map(ch => ({ left: ch.originalLines || [], right: ch.rewrittenLines || [] }))
+      : chapters
+          .filter((ch): ch is NonNullable<typeof ch> => ch != null)
+          .map(ch => ({ left: ch.sourceLines || [], right: ch.translatedLines || [] }));
     const { leftText, rightText } = chaptersToText(chapterArrays);
 
     // Determine titles

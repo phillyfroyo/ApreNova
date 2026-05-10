@@ -566,6 +566,169 @@ export class LevelProgressTracker {
       throw error;
     }
   }
+
+  // ==========================================================================
+  // ATOMIC VARIANTS (concurrency-safe for parallel per-chapter steps)
+  //
+  // The methods above (mergeProgress, updateChapterContent, updateTranslation
+  // Progress, updateRewriteProgress) all do read-modify-write of a JSON column,
+  // which silently clobbers concurrent writes from parallel chapters within
+  // the same level. The methods below perform the same writes via Postgres
+  // jsonb_set in a single atomic UPDATE, so they're safe under parallel
+  // chapter execution.
+  //
+  // Used by the Inngest pipeline (where chapters fan out in parallel) and
+  // also by the legacy translateAndStoreSingleChapter call path (where the
+  // atomic version is harmless — chapters are sequential in legacy code).
+  // ==========================================================================
+
+  /**
+   * Atomically write one chapter's content to UserStoryLevel.content.chapters[N].
+   * Top-level metadata (storySlug, level, hasChapters, structureType) is set
+   * on every call (idempotent — values don't change across chapters).
+   */
+  async updateChapterContentAtomic(
+    chapterNumber: number,
+    chapterContent: {
+      pages: Record<number, BuiltPageContent>;
+      metadata?: { number: number; title: string; subtitle?: string };
+      poems?: PoemInfo[];
+      alignmentIssues?: ChapterAlignmentResult;
+    },
+    contentMetadata: {
+      storySlug: string;
+      level: number;
+      hasChapters: boolean;
+      structureType?: "prose" | "anthology" | "epic" | "script";
+    },
+  ): Promise<void> {
+    const chapterJson = JSON.stringify(chapterContent);
+    const metaJson = JSON.stringify({
+      storySlug: contentMetadata.storySlug,
+      level: contentMetadata.level,
+      hasChapters: contentMetadata.hasChapters,
+      structureType: contentMetadata.structureType ?? "prose",
+    });
+    try {
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "content" = jsonb_set(
+          jsonb_set(
+            coalesce("content", '{}'::jsonb),
+            '{chapters}',
+            coalesce("content"->'chapters', '{}'::jsonb),
+            true
+          ) || ${metaJson}::jsonb,
+          ARRAY['chapters', ${chapterNumber}::text],
+          ${chapterJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      // Soft-fail on missing row (story or level was deleted mid-pipeline)
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateChapterContentAtomic`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically write one chapter's translation data to
+   * processingProgress.completedData[chapterIndex] plus update
+   * translateProgress and currentChapter. Uses jsonb_set for the indexed slot
+   * so concurrent chapters don't clobber each other's array entries.
+   *
+   * Note on currentChapter: under parallel chapters, currentChapter and
+   * translateProgress.chaptersCompleted are last-writer-wins — the values
+   * may oscillate as chapters finish out of order. Final state is correct
+   * once markComplete fires; intermediate UI display may be slightly noisy.
+   */
+  async updateTranslationProgressAtomic(
+    chapterNumber: number,
+    chapterData: ChapterTranslationData,
+  ): Promise<void> {
+    const chapterIndex = chapterNumber - 1;
+    const dataJson = JSON.stringify(chapterData);
+    const updateJson = JSON.stringify({
+      stage: "translating",
+      currentChapter: chapterNumber,
+      totalChapters: this.totalChapters,
+      translateProgress: {
+        currentChapter: chapterNumber,
+        chaptersCompleted: chapterNumber,
+      },
+    });
+    try {
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            coalesce("processingProgress", '{}'::jsonb),
+            '{completedData}',
+            coalesce("processingProgress"->'completedData', '[]'::jsonb),
+            true
+          ) || ${updateJson}::jsonb,
+          ARRAY['completedData', ${chapterIndex}::text],
+          ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateTranslationProgressAtomic`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically write one chapter's rewrite data to
+   * processingProgress.rewriteData[chapterIndex] plus update rewriteProgress.
+   * Same shape as updateTranslationProgressAtomic.
+   */
+  async updateRewriteProgressAtomic(
+    chapterNumber: number,
+    chapterData: ChapterRewriteData,
+  ): Promise<void> {
+    const chapterIndex = chapterNumber - 1;
+    const dataJson = JSON.stringify(chapterData);
+    const updateJson = JSON.stringify({
+      stage: "rewriting",
+      totalChapters: this.totalChapters,
+      rewriteProgress: {
+        currentChapter: chapterNumber,
+        chaptersCompleted: chapterNumber,
+      },
+    });
+    try {
+      await prisma.$executeRaw`
+        UPDATE "UserStoryLevel"
+        SET "processingProgress" = jsonb_set(
+          jsonb_set(
+            coalesce("processingProgress", '{}'::jsonb),
+            '{rewriteData}',
+            coalesce("processingProgress"->'rewriteData', '[]'::jsonb),
+            true
+          ) || ${updateJson}::jsonb,
+          ARRAY['rewriteData', ${chapterIndex}::text],
+          ${dataJson}::jsonb,
+          true
+        )
+        WHERE "id" = ${this.levelId}
+      `;
+    } catch (error: any) {
+      if (error?.code === "P2025" || error?.meta?.code === "P2025") {
+        console.log(`[LevelProgressTracker] Level ${this.levelId} was deleted, skipping updateRewriteProgressAtomic`);
+        return;
+      }
+      throw error;
+    }
+  }
 }
 
 // ============================================================================

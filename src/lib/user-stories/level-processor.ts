@@ -847,7 +847,10 @@ export async function translateAndStoreSingleChapter(
     lineMetadata.size > 0 ? lineMetadata : undefined,
   );
 
-  await tracker.updateChapterContent(
+  // Use atomic variants so this function is safe to call from parallel
+  // chapter steps (Inngest path). Sequential callers (legacy translate
+  // loop) get the same correct behavior with no downside.
+  await tracker.updateChapterContentAtomic(
     chapterNumber,
     {
       pages: builtChapter.pages as any,
@@ -863,7 +866,7 @@ export async function translateAndStoreSingleChapter(
     },
   );
 
-  await tracker.updateTranslationProgress(chapterNumber, {
+  await tracker.updateTranslationProgressAtomic(chapterNumber, {
     sourceLines: filteredSourceLines,
     translatedLines: filteredTranslatedLines,
     alignmentIssues: alignmentResult.hasIssues ? alignmentResult : undefined,
@@ -901,6 +904,12 @@ export function assembleContentFromBuiltPages(
     const chapterData = completedData[i];
     const chapterNum = i + 1;
 
+    // Indexed-slot writes from parallel chapter steps can leave null
+    // entries if a chapter hasn't landed yet. Skip those rather than crash.
+    if (!chapterData) {
+      continue;
+    }
+
     if (!chapterData.builtPages) {
       // This shouldn't happen in normal flow, but log a warning
       console.warn(`[assembleContentFromBuiltPages] Chapter ${chapterNum} missing builtPages`);
@@ -924,8 +933,9 @@ export function assembleContentFromBuiltPages(
     chapters[chapterNum] = chapterContent;
   }
 
-  // Check if any chapter has alignment issues
-  const hasAlignmentIssues = completedData.some(ch => ch.alignmentIssues?.hasIssues);
+  // Check if any chapter has alignment issues. Optional-chain on `ch`
+  // because indexed-slot writes can leave nulls in the array.
+  const hasAlignmentIssues = completedData.some(ch => ch?.alignmentIssues?.hasIssues);
 
   const content: LevelContent = {
     storySlug,

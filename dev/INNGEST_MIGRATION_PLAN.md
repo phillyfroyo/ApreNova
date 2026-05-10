@@ -170,34 +170,25 @@ uploads is expensive to diagnose. Tagged as Phase 4 follow-up.
 
 ## Open work / known gaps
 
-- **Cross-level parallelism is in; chapter-parallelism within a level
-  is not.** Current orchestrator runs the two levels concurrently
-  (`Promise.all` over level tasks) — for a 2-level upload, total run
-  ≈ max(level A time, level B time) instead of the sum. Within a
-  level, chapters stay sequential.
+- **Two-axis parallelism shipped.** Levels run concurrently, chapters
+  within a level also fan out in parallel for both rewrite and
+  translate phases. Concurrent JSON column writes are safe because the
+  per-chapter writes go through atomic `jsonb_set`-based methods on
+  `LevelProgressTracker` (`updateChapterContentAtomic`,
+  `updateTranslationProgressAtomic`, `updateRewriteProgressAtomic`).
+  These methods replace the legacy read-modify-write equivalents in
+  the Inngest path. The legacy methods stay for ad-hoc reprocessing
+  scripts that still call `processUserStory()` directly.
 
-  Chapter-parallelism within a level was attempted and reverted before
-  shipping because of a concurrency hazard in `LevelProgressTracker`:
+  Inngest free-tier function concurrency is capped at 5, so 5 chapter
+  steps are in flight at any moment across both levels. For a typical
+  14-chapter, 2-level upload that previously took 22-25 min, this
+  should drop to roughly 9-12 min in practice.
 
-  - `updateChapterContent`, `updateTranslationProgress`, and
-    `mergeProgress` all do read-modify-write of JSON columns
-    (`level.content` and `level.processingProgress`).
-  - Parallel translate steps for the same level read the same JSON
-    snapshot, then each writes the full column back, silently
-    clobbering each other's chapter slots.
-  - Production's "streaming parallelism" doesn't hit this race because
-    rewrite and translate write to *different keys* on the JSON
-    columns and chapters within each phase are sequential.
-
-  To enable chapter-parallelism safely, the three tracker methods need
-  atomic Postgres `jsonb_set`-based variants (the pattern is already in
-  `mergeRewriteCache` in `process-user-story.ts`). Estimated 2-3 hours
-  including test cases that actually exercise the parallel paths.
-
-  Wall-clock impact deferred: maybe another ~50% speedup on multi-
-  chapter levels (especially the detected-level translate pass which
-  has no rewrite dependency), but level-parallelism alone already
-  cuts the worst-case 25-min runs to ~17 min.
+  Side effect: the per-chapter `completedData` and `rewriteData`
+  arrays in `processingProgress` are now sparse indexed arrays
+  (chapters can land out of order). All consumers null-guard skipped
+  slots.
 
 - **Vercel deployment protection** is currently disabled (turned off
   during Phase 1 testing so Inngest could reach the preview URL).
