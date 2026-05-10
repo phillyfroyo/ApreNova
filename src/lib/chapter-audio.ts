@@ -191,7 +191,7 @@ const MAX_CHUNK_CHARS_NORMAL = 7500;
 const MAX_CHUNK_CHARS_SLOW = 5250;
 const MAX_VOICE_ELEMENTS = 49; // Azure allows max 50; keep 1 headroom
 
-function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
+export function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
   const LOCALE_MAP: Record<string, string> = { "es-ES": "es-MX" };
   return entries.map((entry) => ({
     text: entry.text,
@@ -204,6 +204,150 @@ function toSSMLSegments(entries: SpeechPlanEntry[]): ChapterSSMLSegment[] {
     speakerName: entry.speakerName,
     stageDirection: entry.stageDirection,
   }));
+}
+
+// ============================================================================
+// Inngest-pipeline helpers: extracted from generateChapterAudio so each
+// chunk can run in its own Inngest step. The synchronous in-process
+// generateChapterAudio (below) calls these in a loop.
+// ============================================================================
+
+export interface PlannedChapter {
+  chunks: SpeechPlanEntry[][];
+  totalSentences: number;
+  totalCharacters: number;
+}
+
+/**
+ * Load chapter content, build the speech plan, and split it into chunks
+ * respecting Azure's per-synthesis character + voice-element limits. Pure;
+ * does no Azure or R2 work.
+ */
+export async function planAndChunkChapter(
+  request: ChapterAudioRequest,
+): Promise<PlannedChapter> {
+  const pages = await loadChapterContent(request.storySlug, request.level, request.chapter);
+  const plan = buildSpeechPlan(pages, request.mode, request.speed);
+  if (plan.length === 0) {
+    throw new Error(
+      `No speakable content found for ${request.storySlug}/${request.level} chapter ${request.chapter}`,
+    );
+  }
+  const totalSentences = plan.length;
+  const totalCharacters = plan.reduce((sum, entry) => sum + entry.text.length, 0);
+
+  const maxChunkChars = request.speed === "slow" ? MAX_CHUNK_CHARS_SLOW : MAX_CHUNK_CHARS_NORMAL;
+  const chunks: SpeechPlanEntry[][] = [];
+  let chunkStart = 0;
+  while (chunkStart < plan.length) {
+    let voiceCount = 0;
+    let lastVoice: string | null = null;
+    let chunkEnd = chunkStart;
+    let chunkChars = 0;
+    while (chunkEnd < plan.length) {
+      const entry = plan[chunkEnd];
+      if (entry.voice !== lastVoice) {
+        if (voiceCount >= MAX_VOICE_ELEMENTS) break;
+        voiceCount++;
+        lastVoice = entry.voice;
+      }
+      if (chunkChars + entry.text.length > maxChunkChars && chunkEnd > chunkStart) break;
+      chunkChars += entry.text.length;
+      chunkEnd++;
+    }
+    const chunk = plan.slice(chunkStart, chunkEnd);
+    if (chunkStart > 0 && chunk.length > 0) {
+      chunk[0] = { ...chunk[0], breakBeforeMs: 0 };
+    }
+    chunks.push(chunk);
+    chunkStart = chunkEnd;
+  }
+
+  return { chunks, totalSentences, totalCharacters };
+}
+
+export interface ChunkAudioResult {
+  /** MP3 bytes for this chunk. */
+  audioBuffer: Buffer;
+  /** Sentence timings already offset by `timeOffset`. */
+  sentenceTimings: SentenceTiming[];
+  /** Wall-clock audio duration of this chunk (seconds). */
+  duration: number;
+}
+
+/**
+ * Synthesize one chunk (MP3 + WAV in parallel) and run forced alignment
+ * on the WAV. Returns the MP3 buffer and offset-adjusted sentence timings.
+ * Falls back to bookmark timings if alignment fails.
+ */
+export async function generateChunkAudio(
+  chunk: SpeechPlanEntry[],
+  isBilingual: boolean,
+  timeOffset: number,
+  chunkLabel: string = "",
+): Promise<ChunkAudioResult> {
+  const speech = getAzureSpeechService();
+  const ssmlSegments = toSSMLSegments(chunk);
+
+  const [result, wavBuffer] = await Promise.all([
+    speech.generateChapterBuffer(ssmlSegments),
+    speech.generateChapterBufferWav(ssmlSegments),
+  ]);
+  const audioBuffer = Buffer.from(result.buffer);
+
+  // Bookmark-based fallback timings
+  const bookmarkTimings: SentenceTiming[] = chunk.map((entry, i) => {
+    const timing = result.sentenceTimings[i];
+    return {
+      pageNumber: entry.pageNumber,
+      lineIndex: entry.lineIndex,
+      language: entry.langKey,
+      startTime: timing.startTime + timeOffset,
+      endTime: timing.endTime + timeOffset,
+      text: entry.text,
+      wordTimings: timing.wordTimings.map((wt) => ({
+        ...wt,
+        startTime: wt.startTime + timeOffset,
+        endTime: wt.endTime + timeOffset,
+      })),
+    };
+  });
+
+  let sentenceTimings: SentenceTiming[];
+  try {
+    const chunkSentenceInfo = chunk.map((entry) => ({
+      text: entry.text,
+      language: entry.langKey as "en" | "es",
+      pageNumber: entry.pageNumber,
+      lineIndex: entry.lineIndex,
+    }));
+    const chunkBookmarkTimings = bookmarkTimings.map((bt) => ({
+      startTime: bt.startTime,
+      endTime: bt.endTime,
+    }));
+    const aligned = await alignChunkSentences(
+      wavBuffer,
+      chunkSentenceInfo,
+      timeOffset,
+      isBilingual,
+      chunkBookmarkTimings,
+    );
+    sentenceTimings = chunk.map((_, i) => {
+      const a = aligned[i];
+      const b = bookmarkTimings[i];
+      if (a.wordTimings.length > 0) {
+        return { ...b, startTime: a.startTime, endTime: a.endTime, wordTimings: a.wordTimings };
+      }
+      return b;
+    });
+    const alignedCount = aligned.filter((r) => r.wordTimings.length > 0).length;
+    console.log(`[chapter-audio]${chunkLabel ? ` ${chunkLabel}:` : ""} ${alignedCount}/${chunk.length} sentences aligned via PA`);
+  } catch (err) {
+    console.error(`[chapter-audio]${chunkLabel ? ` ${chunkLabel}:` : ""} alignment failed, using bookmarks:`, err);
+    sentenceTimings = bookmarkTimings;
+  }
+
+  return { audioBuffer, sentenceTimings, duration: result.totalDuration };
 }
 
 // ============================================================================
@@ -228,56 +372,13 @@ export async function generateChapterAudio(
     return cached;
   }
 
-  // 2. Load content
-  const pages = await loadChapterContent(request.storySlug, request.level, request.chapter);
-
-  // 3. Build speech plan
-  const plan = buildSpeechPlan(pages, request.mode, request.speed);
-  if (plan.length === 0) {
-    throw new Error(`No speakable content found for ${request.storySlug}/${request.level} chapter ${request.chapter}`);
-  }
-  const totalSentences = plan.length;
-  const totalCharacters = plan.reduce((sum, entry) => sum + entry.text.length, 0);
+  // 2-4. Plan + chunk (shared with the Inngest pipeline)
+  const { chunks, totalSentences, totalCharacters } = await planAndChunkChapter(request);
   const generationStartTime = Date.now();
 
   onProgress?.({ status: "generating", sentencesComplete: 0, sentencesTotal: totalSentences });
 
-  // 4. Split plan into chunks (respecting character count and voice element limits)
-  const maxChunkChars = request.speed === "slow" ? MAX_CHUNK_CHARS_SLOW : MAX_CHUNK_CHARS_NORMAL;
-  const chunks: SpeechPlanEntry[][] = [];
-  let chunkStart = 0;
-
-  while (chunkStart < plan.length) {
-    let voiceCount = 0;
-    let lastVoice: string | null = null;
-    let chunkEnd = chunkStart;
-    let chunkChars = 0;
-
-    while (chunkEnd < plan.length) {
-      const entry = plan[chunkEnd];
-      // Check voice element limit
-      if (entry.voice !== lastVoice) {
-        if (voiceCount >= MAX_VOICE_ELEMENTS) break;
-        voiceCount++;
-        lastVoice = entry.voice;
-      }
-      // Check character limit (always include at least one segment per chunk)
-      if (chunkChars + entry.text.length > maxChunkChars && chunkEnd > chunkStart) break;
-      chunkChars += entry.text.length;
-      chunkEnd++;
-    }
-
-    const chunk = plan.slice(chunkStart, chunkEnd);
-    // First entry of a continuation chunk shouldn't have a break (start of new synthesis)
-    if (chunkStart > 0 && chunk.length > 0) {
-      chunk[0] = { ...chunk[0], breakBeforeMs: 0 };
-    }
-    chunks.push(chunk);
-    chunkStart = chunkEnd;
-  }
-
-  // 5. Synthesize each chunk (MP3 for storage + WAV for alignment), run forced alignment
-  const speech = getAzureSpeechService();
+  // 5. Synthesize each chunk + run forced alignment (one chunk at a time)
   const isBilingual = request.mode === "bilingual-en" || request.mode === "bilingual-es";
   const audioBuffers: Buffer[] = [];
   const allSentenceTimings: SentenceTiming[] = [];
@@ -286,82 +387,14 @@ export async function generateChapterAudio(
 
   for (let c = 0; c < chunks.length; c++) {
     const chunk = chunks[c];
-    const ssmlSegments = toSSMLSegments(chunk);
-
-    // Synthesize MP3 + WAV in parallel (same SSML, independent Azure TTS calls)
-    const [result, wavBuffer] = await Promise.all([
-      speech.generateChapterBuffer(ssmlSegments),
-      speech.generateChapterBufferWav(ssmlSegments),
-    ]);
-    audioBuffers.push(Buffer.from(result.buffer));
-
-    // Build bookmark-based sentence timings (fallback if alignment fails)
-    const bookmarkTimings: SentenceTiming[] = [];
-    for (let i = 0; i < chunk.length; i++) {
-      const entry = chunk[i];
-      const timing = result.sentenceTimings[i];
-      bookmarkTimings.push({
-        pageNumber: entry.pageNumber,
-        lineIndex: entry.lineIndex,
-        language: entry.langKey,
-        startTime: timing.startTime + timeOffset,
-        endTime: timing.endTime + timeOffset,
-        text: entry.text,
-        wordTimings: timing.wordTimings.map(wt => ({
-          ...wt,
-          startTime: wt.startTime + timeOffset,
-          endTime: wt.endTime + timeOffset,
-        })),
-      });
-    }
-
-    console.log(`[chapter-audio] chunk ${c+1}/${chunks.length}: duration=${result.totalDuration.toFixed(3)}s timeOffset=${timeOffset.toFixed(3)}s`);
-
-    // Run Azure Pronunciation Assessment on WAV for forced alignment
-    onProgress?.({ status: "aligning", sentencesComplete: Math.round(totalSentences * (c / chunks.length)), sentencesTotal: totalSentences });
-    try {
-      console.log(`[chapter-audio] chunk ${c+1}: WAV ${(wavBuffer.byteLength / 1024 / 1024).toFixed(1)}MB, running PA...`);
-
-      const chunkSentenceInfo = chunk.map(entry => ({
-        text: entry.text,
-        language: entry.langKey as "en" | "es",
-        pageNumber: entry.pageNumber,
-        lineIndex: entry.lineIndex,
-      }));
-
-      // Pass bookmark timings so PA can filter words by time window (bilingual)
-      const chunkBookmarkTimings = bookmarkTimings.map(bt => ({
-        startTime: bt.startTime,
-        endTime: bt.endTime,
-      }));
-
-      const alignedResults = await alignChunkSentences(
-        wavBuffer, chunkSentenceInfo, timeOffset, isBilingual, chunkBookmarkTimings
-      );
-
-      // Merge: use PA timestamps where available, bookmark as fallback
-      for (let i = 0; i < chunk.length; i++) {
-        const aligned = alignedResults[i];
-        const bookmark = bookmarkTimings[i];
-
-        if (aligned.wordTimings.length > 0) {
-          allSentenceTimings.push({
-            ...bookmark,
-            startTime: aligned.startTime,
-            endTime: aligned.endTime,
-            wordTimings: aligned.wordTimings,
-          });
-        } else {
-          allSentenceTimings.push(bookmark);
-        }
-      }
-
-      const alignedCount = alignedResults.filter(r => r.wordTimings.length > 0).length;
-      console.log(`[chapter-audio] chunk ${c+1}: ${alignedCount}/${chunk.length} sentences aligned via PA`);
-    } catch (err) {
-      console.error(`[chapter-audio] Alignment failed for chunk ${c+1}, using bookmarks:`, err);
-      allSentenceTimings.push(...bookmarkTimings);
-    }
+    onProgress?.({
+      status: "aligning",
+      sentencesComplete: Math.round(totalSentences * (c / chunks.length)),
+      sentencesTotal: totalSentences,
+    });
+    const chunkResult = await generateChunkAudio(chunk, isBilingual, timeOffset, `chunk ${c + 1}/${chunks.length}`);
+    audioBuffers.push(chunkResult.audioBuffer);
+    allSentenceTimings.push(...chunkResult.sentenceTimings);
 
     // Build page boundaries
     for (const st of allSentenceTimings.slice(-chunk.length)) {
@@ -378,7 +411,7 @@ export async function generateChapterAudio(
       }
     }
 
-    timeOffset += result.totalDuration;
+    timeOffset += chunkResult.duration;
   }
 
   // Enforce non-overlapping, monotonic sentence timings.

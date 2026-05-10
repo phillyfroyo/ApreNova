@@ -190,6 +190,7 @@ model User {
   pixelMilestones      String[]            @default([])
   Account           Account[]
   ApiCost           ApiCost[]
+  AudioGenerationJob AudioGenerationJob[]
   CompletedStory    CompletedStory[]
   DeletedUserStory  DeletedUserStory[]
   PageVisit         PageVisit[]
@@ -438,6 +439,51 @@ model TtsGenerationStat {
 
   @@index([mode, speed])
   @@index([createdAt])
+}
+
+// ============================================================================
+// AudioGenerationJob: state machine for the Inngest-driven chapter-audio
+// generation pipeline. The HTTP route creates a row, fires an Inngest event,
+// and returns the jobId. Inngest steps update progress + chunk metadata.
+// The frontend polls /api/azure-tts/chapter/status to render progress and
+// pick up the final audioUrl when status flips to COMPLETE.
+// ============================================================================
+model AudioGenerationJob {
+  id                String   @id @default(cuid())
+
+  // Request params (also the R2 cache key)
+  storySlug         String
+  level             String
+  chapter           Int
+  mode              String   // "en" | "es" | "bilingual-en" | "bilingual-es"
+  speed             String   // "normal" | "slow"
+
+  // Lifecycle
+  status            String   // "QUEUED" | "PROCESSING" | "COMPLETE" | "FAILED"
+
+  // Progress (read by the polling status endpoint)
+  totalSentences    Int?
+  sentencesComplete Int?
+  totalChunks       Int?
+  chunksComplete    Int?
+  currentStep       String?  // e.g. "preparing", "chunk-3", "assembling"
+
+  // Final result
+  audioUrl          String?
+  errorMessage      String?
+
+  // Intermediate state used by Inngest steps to communicate with each other.
+  // Shape: { partUrls: string[], partTimings: SentenceTiming[][], partDurations: number[], totalCharacters: number, generationStartMs: number }
+  chunkData         Json?
+
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  User              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Find in-flight job for the same request to deduplicate concurrent callers
+  @@index([storySlug, level, chapter, mode, speed, status])
+  @@index([userId, createdAt])
 }
 
 model DraftStory {

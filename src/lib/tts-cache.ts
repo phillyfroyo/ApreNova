@@ -412,6 +412,67 @@ export class TTSCacheService {
     }
   }
 
+  // ==========================================================================
+  // Chunk-part files for Inngest-driven chapter audio generation.
+  // Each chunk's MP3 buffer is written here by a chunk step. The assemble
+  // step downloads them, concatenates, uploads the final canonical chapter
+  // audio, then deletes the parts. Keys live next to the canonical chapter
+  // audio so they're easy to spot when debugging.
+  // ==========================================================================
+  private getChapterPartKey(request: ChapterAudioRequest, chunkIndex: number): string {
+    const base = this.getChapterCacheKey(request);
+    return `${base}.part-${chunkIndex}.mp3`;
+  }
+
+  public async saveChapterAudioPart(
+    request: ChapterAudioRequest,
+    chunkIndex: number,
+    audioBuffer: Buffer,
+  ): Promise<string> {
+    const key = this.getChapterPartKey(request, chunkIndex);
+    await this.client.send(new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: audioBuffer,
+      ContentType: 'audio/mpeg',
+      // Short cache; these parts get deleted by the assemble step.
+      CacheControl: 'private, max-age=3600',
+    }));
+    return `${R2_PUBLIC_URL}/${key}`;
+  }
+
+  public async getChapterAudioPart(
+    request: ChapterAudioRequest,
+    chunkIndex: number,
+  ): Promise<Buffer | null> {
+    try {
+      const key = this.getChapterPartKey(request, chunkIndex);
+      const response = await this.client.send(
+        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+      );
+      const bytes = await response.Body?.transformToByteArray();
+      return bytes ? Buffer.from(bytes) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public async deleteChapterAudioParts(
+    request: ChapterAudioRequest,
+    totalChunks: number,
+  ): Promise<void> {
+    await Promise.all(
+      Array.from({ length: totalChunks }, (_, i) =>
+        this.client
+          .send(new DeleteObjectCommand({
+            Bucket: BUCKET,
+            Key: this.getChapterPartKey(request, i),
+          }))
+          .catch(() => {}),
+      ),
+    );
+  }
+
   public async saveDraftAudio(draftId: string, audioBuffer: Buffer): Promise<string> {
     const key = `draft-audio/${draftId}.mp3`;
     await this.client.send(new PutObjectCommand({

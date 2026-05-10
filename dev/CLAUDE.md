@@ -107,6 +107,45 @@ SHARED PIPELINE LOGIC (unchanged, called from inside steps):
 - Cancellation: the existing `cancelledAt` flag still works. Each step calls `isStoryCancelled(storyId)` between phases and exits cleanly via `StoryCancelledError`.
 - Frontend doesn't change. It polls `/api/user-stories/{id}/status` and reads progress from the same DB fields the orchestrator writes.
 
+### Chapter Audio Generation runs on Inngest (CRITICAL):
+
+**Chapter audio generation is processed by Inngest, not inline inside the HTTP request.**
+
+`POST /api/azure-tts/chapter` either returns the cached audio URL inline (R2 cache hit) or creates an `AudioGenerationJob` row, fires `audio/chapter.generate`, and returns `202 + { jobId }`. The client polls `/api/azure-tts/chapter/status?jobId=X` for progress and the final URL.
+
+```
+ENTRY POINT:
+  src/app/api/azure-tts/chapter/route.ts
+    → cache check → return inline if hit
+    → otherwise: create AudioGenerationJob, inngest.send("audio/chapter.generate")
+
+ORCHESTRATOR:
+  src/lib/inngest/functions/process-chapter-audio.ts
+    → processChapterAudioFn (Inngest function)
+    → prepare → chunk-N (sequential) → assemble
+
+STATUS ENDPOINT (polled by client):
+  src/app/api/azure-tts/chapter/status/route.ts
+
+SHARED PIPELINE LOGIC (reused inside Inngest steps):
+  src/lib/chapter-audio.ts
+    → planAndChunkChapter() — load content, build plan, chunk
+    → generateChunkAudio() — synthesize MP3+WAV, run forced alignment
+    → generateChapterAudio() — legacy synchronous version, still exported
+  src/lib/tts-cache.ts
+    → saveChapterAudio / getChapterCached — canonical R2 storage
+    → saveChapterAudioPart / getChapterAudioPart / deleteChapterAudioParts
+      — temporary R2 part files used between Inngest steps
+```
+
+**Rules:**
+- `AudioGenerationJob` is the state machine. The job row carries progress, intermediate chunk metadata (in the `chunkData` JSON field), and the final `audioUrl`. Chunks live in R2 as temporary part files (`{cacheKey}.part-{N}.mp3`), deleted by the assemble step on success.
+- **Chunks run sequentially**, not in parallel. Azure Speech rate limits are easy to hit when both synthesis and forced-alignment fire concurrently; sequential keeps the quota safe.
+- **De-duplicate concurrent requests** for the same `(storySlug, level, chapter, mode, speed)` by looking up existing `QUEUED` / `PROCESSING` jobs before creating a new one. Multiple callers poll the same job.
+- **The cache check stays inline** in the HTTP route. The streaming NDJSON UX is gone; clients always either get an immediate cached URL or a jobId to poll.
+- **`onFailure` handler** on the Inngest function marks the job FAILED so the polling client sees an error instead of hanging.
+- The legacy `generateChapterAudio()` is still exported for ad-hoc scripts and the (no-longer-used) synchronous path. It calls the same `planAndChunkChapter` + `generateChunkAudio` helpers.
+
 ---
 
 ## CRITICAL: Dev Tools Must Use Production Algorithms
