@@ -84,7 +84,7 @@ function buildPerLevelSubtitleRows(
   streams: StreamProgress[] | undefined,
   detectedLevel: string | undefined,
   lng: Language,
-): string[] {
+): SubtitleRow[] {
   if (!streams || streams.length === 0 || !detectedLevel) return [];
 
   const translateStreams = streams.filter((s) => s.type === "translating");
@@ -98,7 +98,7 @@ function buildPerLevelSubtitleRows(
   // a single-level upload — fall back to the single-row subtitle.
   if (!detectedTranslate || !rewrittenTranslate) return [];
 
-  const rows: string[] = [];
+  const rows: SubtitleRow[] = [];
 
   // Row 1: detected level translate state
   rows.push(formatTranslateRow(detectedTranslate, lng));
@@ -123,33 +123,50 @@ function buildPerLevelSubtitleRows(
   return rows;
 }
 
-function formatTranslateRow(stream: StreamProgress, lng: Language): string {
+type SubtitleRow =
+  | { kind: 'progress'; text: string }
+  | { kind: 'complete'; text: string };
+
+function formatTranslateRow(stream: StreamProgress, lng: Language): SubtitleRow {
   const isComplete =
     stream.levelStatus === "READY" ||
     (stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters);
   if (isComplete) {
-    return `${stream.level}: ${t(lng, "upload", "translationComplete")} ✓`;
+    return {
+      kind: 'complete',
+      text: `${stream.level}: ${t(lng, "upload", "translationComplete")}`,
+    };
   }
-  // currentChapter is now the count of completed chapters (derived from
-  // filled slots in completedData). Under parallel execution there isn't a
-  // single "next" chapter — many are in flight — so we just show "X/N"
-  // where X is the cumulative completed count.
-  return `${stream.level}: ${t(lng, "upload", "translatingChapterOf", {
-    current: stream.currentChapter,
-    total: stream.totalChapters || 0,
-  })}`;
+  // Under parallel execution chaptersCompleted is the count of finished
+  // chapters. Display N+1 (clamped to total) so "Translating chapter X/N"
+  // reads naturally — X is roughly the next chapter to finish.
+  const display = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
+  return {
+    kind: 'progress',
+    text: `${stream.level}: ${t(lng, "upload", "translatingChapterOf", {
+      current: display,
+      total: stream.totalChapters || 0,
+    })}`,
+  };
 }
 
-function formatRewriteRow(stream: StreamProgress, lng: Language): string {
+function formatRewriteRow(stream: StreamProgress, lng: Language): SubtitleRow {
   const isComplete =
     stream.totalChapters > 0 && stream.currentChapter >= stream.totalChapters;
   if (isComplete) {
-    return `${stream.level}: ${t(lng, "upload", "rewriteComplete")} ✓`;
+    return {
+      kind: 'complete',
+      text: `${stream.level}: ${t(lng, "upload", "rewriteComplete")}`,
+    };
   }
-  return `${stream.level}: ${t(lng, "upload", "rewritingChapterOf", {
-    current: stream.currentChapter,
-    total: stream.totalChapters || 0,
-  })}`;
+  const display = Math.min(stream.currentChapter + 1, Math.max(stream.totalChapters, 1));
+  return {
+    kind: 'progress',
+    text: `${stream.level}: ${t(lng, "upload", "rewritingChapterOf", {
+      current: display,
+      total: stream.totalChapters || 0,
+    })}`,
+  };
 }
 
 
@@ -1059,7 +1076,10 @@ export default function FloatingProgressWidget() {
                     <div className="space-y-0.5">
                       {perLevelRows.map((row, i) => (
                         <p key={i} className="text-sm text-gray-500 truncate">
-                          {row}
+                          {row.text}
+                          {row.kind === 'complete' && (
+                            <span className="text-green-500 ml-1">✓</span>
+                          )}
                         </p>
                       ))}
                     </div>
