@@ -354,6 +354,10 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
     };
 
     try {
+      // POST to kick off generation. Three possible responses:
+      //  - 200 + { status: "COMPLETE", audioUrl, metadata, cached: true } — already cached
+      //  - 202 + { status: "QUEUED" | "PROCESSING", jobId } — generating now
+      //  - 4xx/5xx — error
       const response = await fetch("/api/azure-tts/chapter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,64 +370,105 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
         throw new Error(err.error || `HTTP ${response.status}`);
       }
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
+      const initial = await response.json();
       let audioUrl = "";
       let chapterMetadata: ChapterAudioMetadata | null = null;
       let wasCached = false;
-      let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      if (initial.status === "COMPLETE" && initial.audioUrl) {
+        // Cache hit — straight to playback
+        audioUrl = initial.audioUrl;
+        chapterMetadata = initial.metadata;
+        wasCached = !!initial.cached;
+      } else if (initial.jobId) {
+        // Polling path. Inngest is generating; poll status every 3s until
+        // COMPLETE or FAILED. The simulated-progress system fills the
+        // visual gap between poll responses so the bar feels continuous.
+        const jobId = initial.jobId as string;
+        const POLL_INTERVAL_MS = 3_000;
+        let lastTotal = 0;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        while (true) {
+          if (abortController.signal.aborted) return;
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+          if (abortController.signal.aborted) return;
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const data = JSON.parse(line);
+          const statusRes = await fetch(`/api/azure-tts/chapter/status?jobId=${encodeURIComponent(jobId)}`, {
+            signal: abortController.signal,
+          });
+          if (!statusRes.ok) {
+            const err = await statusRes.json().catch(() => ({}));
+            throw new Error(err.error || `Status check failed (HTTP ${statusRes.status})`);
+          }
+          const status = await statusRes.json();
 
-          if (data.type === "progress") {
-            if (data.sentencesTotal && data.sentencesComplete === 0) {
-              clearTimeout(timeoutId);
-              // Scale timeout: 120s base + 5s per segment. Bilingual chapters
-              // with forced alignment (dual synthesis + dual PA) can take 8-10min.
-              timeoutMs = 120_000 + data.sentencesTotal * 5_000;
-              console.log(`[ChapterAudio] ${data.sentencesTotal} segments — timeout set to ${Math.round(timeoutMs / 1000)}s`);
-              timeoutId = setTimeout(abortOnTimeout, timeoutMs);
-              startSimulatedProgress(data.sentencesTotal);
+          if (status.totalSentences && status.totalSentences !== lastTotal) {
+            // First time we see totals — extend the abort timeout and kick
+            // off the simulated-progress animation.
+            clearTimeout(timeoutId);
+            timeoutMs = 120_000 + status.totalSentences * 5_000;
+            console.log(`[ChapterAudio] ${status.totalSentences} segments — timeout set to ${Math.round(timeoutMs / 1000)}s`);
+            timeoutId = setTimeout(abortOnTimeout, timeoutMs);
+            startSimulatedProgress(status.totalSentences);
+            lastTotal = status.totalSentences;
+            setState(prev => ({
+              ...prev,
+              status: "generating",
+              progress: {
+                status: "generating",
+                sentencesComplete: status.sentencesComplete || 0,
+                sentencesTotal: status.totalSentences,
+              },
+            }));
+          } else if (status.sentencesComplete != null && status.totalSentences) {
+            // Server progress beats simulated progress: if the real
+            // sentencesComplete is ahead of the simulated value, jump
+            // forward.
+            if (status.sentencesComplete > simulatedComplete) {
+              simulatedComplete = status.sentencesComplete;
               setState(prev => ({
                 ...prev,
-                status: "generating",
-                progress: { status: "generating", sentencesComplete: 0, sentencesTotal: data.sentencesTotal },
+                progress: {
+                  status: "generating",
+                  sentencesComplete: status.sentencesComplete,
+                  sentencesTotal: status.totalSentences,
+                },
               }));
             }
-          } else if (data.type === "complete") {
-            stopSimulatedProgress();
-            audioUrl = data.audioUrl;
-            chapterMetadata = data.metadata;
-            wasCached = !!data.cached;
+          }
 
-            // Debug: log first 6 sentence timings to verify bilingual ordering
-            if (data.metadata?.sentenceTimings) {
+          if (status.status === "COMPLETE" && status.audioUrl) {
+            stopSimulatedProgress();
+            audioUrl = status.audioUrl;
+            // Metadata comes through the status endpoint server-side so we
+            // don't need a cross-origin fetch to R2 (which CORS blocks
+            // unless the bucket is configured to allow it).
+            if (!status.metadata) {
+              throw new Error("Status endpoint did not return chapter metadata");
+            }
+            chapterMetadata = status.metadata;
+            wasCached = false;
+            if (chapterMetadata?.sentenceTimings) {
               console.log("[ChapterAudio] First 6 sentences in metadata:");
-              for (const s of data.metadata.sentenceTimings.slice(0, 6)) {
+              for (const s of chapterMetadata.sentenceTimings.slice(0, 6)) {
                 console.log(`  [${s.startTime.toFixed(2)}-${s.endTime.toFixed(2)}] lang=${s.language} line=${s.lineIndex} "${s.text.substring(0, 35)}"`);
               }
             }
-            if (data.metadata?.totalSentences) {
-              const total = data.metadata.totalSentences;
+            if (chapterMetadata?.totalSentences) {
+              const total = chapterMetadata.totalSentences;
               setState(prev => ({
                 ...prev,
                 progress: { status: "complete", sentencesComplete: total, sentencesTotal: total },
               }));
             }
-          } else if (data.type === "error") {
-            throw new Error(data.error);
+            break;
+          }
+          if (status.status === "FAILED") {
+            throw new Error(status.errorMessage || "Chapter audio generation failed");
           }
         }
+      } else {
+        throw new Error("Unexpected server response");
       }
 
       clearTimeout(timeoutId);

@@ -1,13 +1,17 @@
 // src/app/api/azure-tts/chapter/route.ts
-// Streams NDJSON progress during chapter audio generation.
-// Final line contains { type: "complete", audioUrl, metadata }.
+//
+// Trigger chapter audio generation. Cache check returns the URL inline if
+// the audio is already in R2. Otherwise creates an AudioGenerationJob and
+// fires an Inngest event; the client polls
+// /api/azure-tts/chapter/status?jobId=X for progress and the final URL.
 
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { getRateLimiter, getClientIdentifier, createRateLimitHeaders } from "@/lib/rate-limiter";
-import { generateChapterAudio } from "@/lib/chapter-audio";
 import { getTTSCacheService } from "@/lib/tts-cache";
+import { inngest } from "@/lib/inngest/client";
+import { prisma } from "@/lib/prisma";
 import type { ChapterAudioRequest, ChapterAudioMode } from "@/types/chapter-audio";
 import type { TTSSpeed } from "@/types/azure-tts";
 
@@ -16,7 +20,6 @@ const VALID_SPEEDS: TTSSpeed[] = ["normal", "slow"];
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new Response(JSON.stringify({ error: "Authentication required" }), {
@@ -25,7 +28,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Parse and validate request
     const body = await request.json();
     const { storySlug, level, chapter, mode, speed } = body;
 
@@ -46,24 +48,46 @@ export async function POST(request: NextRequest) {
     }
 
     const chapterRequest: ChapterAudioRequest = { storySlug, level, chapter, mode, speed };
+    const userId = session.user.id;
 
-    // Quick check: if already cached, return immediately (no rate limit needed)
+    // Cache hit → return the URL immediately, no job needed.
     const cache = getTTSCacheService();
     const cached = await cache.getChapterCached(chapterRequest);
     if (cached) {
       return new Response(
-        JSON.stringify({ type: "complete", audioUrl: cached.audioUrl, metadata: cached.metadata, cached: true }) + "\n",
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/x-ndjson",
-            "Cache-Control": "no-cache",
-          },
-        }
+        JSON.stringify({
+          status: "COMPLETE",
+          audioUrl: cached.audioUrl,
+          metadata: cached.metadata,
+          cached: true,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // Rate limit only actual generation (2 req/min — chapter gen is heavy)
+    // De-duplicate concurrent requests for the same audio: if there's
+    // already an in-flight job (this user or another) for the same params,
+    // return its jobId so all callers poll the same job.
+    const existingInflight = await prisma.audioGenerationJob.findFirst({
+      where: {
+        storySlug,
+        level,
+        chapter,
+        mode,
+        speed,
+        status: { in: ["QUEUED", "PROCESSING"] },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existingInflight) {
+      return new Response(
+        JSON.stringify({ status: existingInflight.status, jobId: existingInflight.id }),
+        { status: 202, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // Rate-limit new-job creation only. Returning an existing in-flight
+    // job is cheap so we don't gate that path.
     const rateLimiter = getRateLimiter("batch");
     const clientId = getClientIdentifier(request);
     const rateResult = rateLimiter.isAllowed(clientId);
@@ -77,44 +101,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Stream NDJSON progress
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const result = await generateChapterAudio(chapterRequest, (progress) => {
-            const line = JSON.stringify({ type: "progress", ...progress }) + "\n";
-            controller.enqueue(encoder.encode(line));
-          });
-
-          const completeLine = JSON.stringify({
-            type: "complete",
-            audioUrl: result.audioUrl,
-            metadata: result.metadata,
-            cached: result.cached,
-          }) + "\n";
-          controller.enqueue(encoder.encode(completeLine));
-          controller.close();
-        } catch (err: any) {
-          const errorLine = JSON.stringify({
-            type: "error",
-            error: err.message || "Chapter generation failed",
-          }) + "\n";
-          controller.enqueue(encoder.encode(errorLine));
-          controller.close();
-        }
+    // Create the job row, then fire the Inngest event.
+    const job = await prisma.audioGenerationJob.create({
+      data: {
+        storySlug,
+        level,
+        chapter,
+        mode,
+        speed,
+        status: "QUEUED",
+        userId,
       },
     });
 
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/x-ndjson",
-        "Cache-Control": "no-cache",
-        "Transfer-Encoding": "chunked",
-        ...createRateLimitHeaders(rateResult.info),
-      },
+    await inngest.send({
+      name: "audio/chapter.generate",
+      data: { jobId: job.id, userId },
     });
+
+    return new Response(
+      JSON.stringify({ status: "QUEUED", jobId: job.id }),
+      {
+        status: 202,
+        headers: {
+          "Content-Type": "application/json",
+          ...createRateLimitHeaders(rateResult.info),
+        },
+      },
+    );
   } catch (err: any) {
     console.error("[chapter/route] Error:", err);
     return new Response(JSON.stringify({ error: err.message || "Internal server error" }), {
