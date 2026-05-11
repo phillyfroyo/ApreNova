@@ -252,13 +252,25 @@ Debugging info to grab if a run fails:
 - Vercel runtime logs around `/api/inngest`
 - The story ID
 
-## Chapter audio generation migration ⚙️ In progress (branch: inngest-audio-pipeline)
+## Chapter audio generation migration ✅ Done (2026-05-11, branch: inngest-audio-pipeline)
 
-Long chapters fail in production for the same reason long stories
-used to — Azure Speech synthesis + forced alignment + R2 upload
-exceed Vercel's per-invocation cap. On Hobby with Fluid Compute the
-wall is **300 seconds**; Gatsby-length bilingual chapters take ~12
-minutes, failing at exactly the 5-min mark.
+Long chapters were failing in production for the same reason long
+stories used to — Azure Speech synthesis + forced alignment + R2
+upload exceed Vercel's per-invocation cap. On Hobby with Fluid
+Compute the wall is **300 seconds**; Gatsby-length bilingual chapters
+take ~12 minutes, failing at exactly the 5-min mark.
+
+**Verified working:**
+- Cache hit: inline (no Inngest), ~instant
+- Short uncached chapter (1 chunk): 53s total
+- Long bilingual Gatsby chapter: **11m 9s, 10 sequential chunks, all
+  steps under 1:30**. Previously failed at 5min with zero output.
+
+**One bug found during testing**: the frontend was fetching
+`.meta.json` directly from R2, which CORS-blocks because the bucket
+isn't configured for browser cross-origin reads. Fixed by inlining
+the metadata in the status endpoint response. See the resolved CORS
+note below.
 
 The migration mirrors the user-story pattern but with audio-specific
 differences:
@@ -320,6 +332,96 @@ Step boundaries:
   button at the top of the story page next to "Listen". Should be
   small — the bilingual rendering logic already exists in the
   audiobook codepath.
+
+## Future work to be done
+
+Tracked-but-deferred items from across both migrations. None of
+these block shipping; they're for when we have spare cycles or when
+user complaints surface.
+
+### Parallelism for chapter audio chunks
+
+Audio generation today runs chunks sequentially within a chapter.
+A 10-chunk Gatsby chapter is ~11 minutes wall-clock. Parallelizing
+chunks (Promise.all + bump `concurrency: { scope: 'fn', limit }` from
+5 to something higher) could cut that to ~3-4 minutes for the same
+chapter.
+
+Trade-off: parallel Azure Speech + Pronunciation Assessment calls
+can hit Azure rate limits, especially for bilingual chapters which
+already do dual synthesis + dual PA per chunk. Sequential was the
+deliberate choice during the initial migration.
+
+**When to do it**: when users start complaining about audio wait
+times, or when our Azure quota grows enough to absorb ~5x peak
+concurrent synthesis calls. Estimated 30-60 min of work plus rate-
+limit testing.
+
+### Story upload: rewrite folds chapter title into first paragraph
+
+Pre-existing bug surfaced by the Inngest migration (long stories
+finally complete, so the bug is finally visible). Discovered on a
+14-chapter / 25k-word C1→A1 upload of *A Farewell to Arms*.
+
+Root cause (per the diagnosis in this doc's "Open work" section):
+the story is being detected as `storyType: "epic"` (visible in
+"Canto 1, Section 1" navigation labels), which routes the rewrite
+through `rewritePoetryChapter()` instead of the prose path's
+paragraph-marker preservation. The poetry path doesn't preserve
+chapter-header lines.
+
+Two underlying bugs:
+1. `detectStoryType` is misclassifying long prose novels as `epic`.
+   See `src/lib/user-stories/metadata.ts` and the prompt it uses.
+2. The poetry rewrite path doesn't preserve chapter-header lines.
+   See `rewritePoetryChapter` in
+   `src/lib/story-processing/rewriting.ts:698`.
+
+Both are pre-existing — they exist on `main` and would fire today
+on any uploaded prose long enough to be misclassified. Fixing
+either independently helps; fixing both is the complete answer.
+
+### Audio job cleanup (orphaned part files)
+
+If an Inngest run fails mid-chapter (after some chunks have uploaded
+their MP3 parts to R2 but before `assemble` runs), the part files
+stay in R2 forever costing storage. The `onFailure` handler currently
+marks the job FAILED but doesn't sweep parts.
+
+Low impact at our scale — part files are ~1-5MB each and failures
+are rare. Worth a scheduled cleanup job (Inngest's cron support) at
+some point: scan for FAILED jobs older than 24h, delete their parts.
+
+### Chapter-parallelism within a story-upload level
+
+Documented earlier in this doc. Atomic-jsonb-set methods on
+`LevelProgressTracker` could enable parallel chapter processing
+within a level. Currently sequential within a level, parallel across
+levels.
+
+Estimated 2-3 hours including test cases. Defer until story uploads
+are slow enough to justify the work. Today's level-parallel + dual
+levels concurrent setup hits ~17 min for a 25k-word story, which is
+acceptable.
+
+### Vercel deployment protection on production
+
+Currently disabled (turned off in Phase 1 of the user-story
+migration so Inngest could reach preview URLs for testing). Worth
+re-enabling on production now that Inngest is synced via dev/prod
+environments and the keys are stable. Inngest's signed webhook calls
+authenticate independently of Vercel auth, so this should be safe to
+turn back on.
+
+### Periodic audio cache pre-warm
+
+Today, every chapter audio is generated on first request — the
+listener waits ~11 minutes for the first listen of a long chapter.
+A Phase 4-ish project: pre-bake audio for high-traffic chapters via
+a scheduled Inngest cron, so users always get a cache hit. Cheap to
+build (re-use the same `audio/chapter.generate` event); expensive to
+operate (lots of Azure spend for chapters nobody actually listens
+to). Defer until we have usage data to target the pre-warm.
 
 ## Cost tracking
 
