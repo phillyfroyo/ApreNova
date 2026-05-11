@@ -11,6 +11,8 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { getTTSCacheService } from "@/lib/tts-cache";
+import type { ChapterAudioRequest } from "@/types/chapter-audio";
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +45,12 @@ export async function GET(request: NextRequest) {
         currentStep: true,
         audioUrl: true,
         errorMessage: true,
+        // Needed to look up the metadata from R2 server-side on COMPLETE
+        storySlug: true,
+        level: true,
+        chapter: true,
+        mode: true,
+        speed: true,
       },
     });
 
@@ -53,10 +61,41 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return new Response(JSON.stringify(job), {
-      status: 200,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    });
+    // On COMPLETE, fetch the metadata server-side and include it inline
+    // so the client doesn't need a cross-origin fetch to R2 (which CORS
+    // blocks unless the R2 bucket is configured to allow it).
+    let metadata = null;
+    if (job.status === "COMPLETE" && job.audioUrl) {
+      const cache = getTTSCacheService();
+      const chapterRequest: ChapterAudioRequest = {
+        storySlug: job.storySlug,
+        level: job.level,
+        chapter: job.chapter,
+        mode: job.mode as ChapterAudioRequest["mode"],
+        speed: job.speed as ChapterAudioRequest["speed"],
+      };
+      const cached = await cache.getChapterCached(chapterRequest);
+      metadata = cached?.metadata ?? null;
+    }
+
+    return new Response(
+      JSON.stringify({
+        id: job.id,
+        status: job.status,
+        totalSentences: job.totalSentences,
+        sentencesComplete: job.sentencesComplete,
+        totalChunks: job.totalChunks,
+        chunksComplete: job.chunksComplete,
+        currentStep: job.currentStep,
+        audioUrl: job.audioUrl,
+        errorMessage: job.errorMessage,
+        metadata,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      },
+    );
   } catch (err: any) {
     console.error("[chapter/status/route] Error:", err);
     return new Response(JSON.stringify({ error: err.message || "Internal server error" }), {

@@ -252,18 +252,54 @@ Debugging info to grab if a run fails:
 - Vercel runtime logs around `/api/inngest`
 - The story ID
 
-## Future scope: chapter audio generation
+## Chapter audio generation migration ⚙️ In progress (branch: inngest-audio-pipeline)
 
-Long chapters fail to generate audio in production for the same reason
-long stories fail to upload — Azure Speech + R2 upload runs inside a
-single HTTP request that exceeds Vercel's per-invocation cap. This
-migration will need a second pass for the chapter audio generation
-pipeline, using the same Inngest pattern.
+Long chapters fail in production for the same reason long stories
+used to — Azure Speech synthesis + forced alignment + R2 upload
+exceed Vercel's per-invocation cap. On Hobby with Fluid Compute the
+wall is **300 seconds**; Gatsby-length bilingual chapters take ~12
+minutes, failing at exactly the 5-min mark.
 
-Step boundaries will likely be one Inngest step per line (or per small
-batch of lines): generate TTS via Azure → upload mp3 to R2 → write
-metadata to DB. The cancellation, progress-tracking, and per-step
-retry stories all carry over.
+The migration mirrors the user-story pattern but with audio-specific
+differences:
+
+- **`AudioGenerationJob` table** is the state machine. The HTTP route
+  creates a row, fires `audio/chapter.generate`, and returns 202 with
+  a jobId. The frontend polls `/api/azure-tts/chapter/status?jobId=X`
+  every 3s.
+- **Cache check stays inline** in `POST /api/azure-tts/chapter`. An
+  R2 cache hit returns the URL directly without going through Inngest.
+- **Concurrent same-request dedup**: before creating a new job, the
+  route looks for an existing QUEUED/PROCESSING job for the same
+  `(storySlug, level, chapter, mode, speed)` and returns its jobId
+  if found. Multiple users polling the same job is fine.
+- **Per-chunk steps**: each chunk runs a `chunk-N` step that
+  synthesizes MP3+WAV in parallel, runs forced alignment, uploads the
+  MP3 part to a temporary R2 key. Chunks process **sequentially** to
+  avoid Azure rate limits.
+- **Part-file assembly**: per-chunk MP3s live in R2 as
+  `{cacheKey}.part-{N}.mp3`. The final `assemble` step downloads them
+  all, concatenates, builds metadata, uploads to the canonical R2
+  audio + meta keys, deletes the part files.
+- **No streaming UX**: the old NDJSON progress stream is gone.
+  Replaced with polling. Existing simulated-progress animation in
+  `useChapterAudio` fills the gap between poll responses.
+- **Metadata served via status endpoint, not direct R2 fetch**: R2
+  doesn't have CORS configured for browser cross-origin reads, so the
+  status endpoint server-side-fetches the metadata blob via
+  `cache.getChapterCached()` and inlines it in the response. Caught
+  this during first test.
+- **Free win**: if the user closes the tab mid-generation, Inngest
+  keeps grinding and the result lands in R2 cache for the next caller.
+  Previously the work died when the HTTP stream consumer disconnected.
+
+Step boundaries:
+1. `prepare` — load content, build plan, chunk, write totals to job
+2. `chunk-N` × N — synthesize + align one chunk, upload part to R2,
+   update progress
+3. `assemble` — download parts, concatenate, build metadata, upload
+   canonical R2 audio + meta, mark COMPLETE, delete parts
+4. `onFailure` handler marks job FAILED so client doesn't hang
 
 ### Cleanups to bundle while we're touching these flows
 

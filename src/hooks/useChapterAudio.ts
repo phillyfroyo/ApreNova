@@ -440,13 +440,13 @@ export function useChapterAudio(options: UseChapterAudioOptions = {}) {
           if (status.status === "COMPLETE" && status.audioUrl) {
             stopSimulatedProgress();
             audioUrl = status.audioUrl;
-            // Fetch the metadata blob from R2 alongside the audio URL.
-            // The metadata is served from the canonical R2 metadata key.
-            const metaRes = await fetch(audioUrl.replace(/\.mp3(\?.*)?$/, ".meta.json"));
-            if (!metaRes.ok) {
-              throw new Error(`Failed to fetch chapter metadata (HTTP ${metaRes.status})`);
+            // Metadata comes through the status endpoint server-side so we
+            // don't need a cross-origin fetch to R2 (which CORS blocks
+            // unless the bucket is configured to allow it).
+            if (!status.metadata) {
+              throw new Error("Status endpoint did not return chapter metadata");
             }
-            chapterMetadata = await metaRes.json();
+            chapterMetadata = status.metadata;
             wasCached = false;
             if (chapterMetadata?.sentenceTimings) {
               console.log("[ChapterAudio] First 6 sentences in metadata:");
