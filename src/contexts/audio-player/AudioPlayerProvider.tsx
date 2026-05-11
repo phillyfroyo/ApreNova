@@ -216,6 +216,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     currentPageSentences: [],
     storyMap: null,
     isVisible: false,
+    isGeneratingWidgetVisible: false,
     highlightedSentenceIndex: null, highlightedLanguage: null,
     error: null,
     playbackRate: DEFAULT_PLAYBACK_RATE,
@@ -582,7 +583,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       playbackRate: effectiveRate,
       storyMap: options.storyMap,
       currentPageSentences: options.sentences,
-      isVisible: true,
+      // isGeneratingWidgetVisible stays as caller set it (true for uncached/picker confirm path,
+      // false for cache-hit path). Bar appears later when hook reports "playing".
       error: null,
       highlightedSentenceIndex: null, highlightedLanguage: null,
       chapterCurrentTime: 0,
@@ -626,6 +628,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   }, [chapterAudio, lng, router]);
 
   const startContinuousPlayback = useCallback(async (options: StartPlaybackOptions) => {
+    const s0 = stateRef.current;
+    // Single-active-generation guard. If a chapter is currently generating (widget is visible),
+    // and the user is trying to start a different chapter's audio, refuse. They must finish or
+    // cancel the in-flight one first.
+    if (s0.isGeneratingWidgetVisible && s0.position) {
+      const same = s0.position.storySlug === options.storySlug &&
+                   s0.position.level === options.level &&
+                   s0.position.chapter === options.chapter;
+      if (!same) return;
+    }
+
     stopTTS();
     chapterAudio.stop();
     pendingSeekTimeRef.current = null;
@@ -662,10 +675,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       // Variant is cached — play immediately
       beginPlayback(options, bookmarkChapter, bookmarkPage, bookmarkAudioTime);
     } else {
-      // Not cached — show settings picker so user can choose before generating
+      // Not cached — show settings picker so user can choose before generating.
+      // Widget tracks generation; bar stays hidden until playback starts.
       setState(prev => ({
         ...prev,
-        isVisible: true,
+        isGeneratingWidgetVisible: true,
         pendingPlayback: {
           options,
           resolvedChapter: bookmarkChapter,
@@ -688,6 +702,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const estimatedMs = mode === "bilingual"
       ? (speed === "slow" ? est.bilingualSlow : est.bilingualNormal)
       : (speed === "slow" ? est.targetSlow : est.targetNormal);
+    // confirmAndPlay only fires when the picker was shown, which only happens for uncached
+    // variants. Make sure the generation widget is visible for both pre-play and mid-play paths,
+    // and hide the bar until playback actually starts (the "playing" effect re-shows it).
+    setState(prev => ({ ...prev, isGeneratingWidgetVisible: true, isVisible: false }));
     beginPlayback(pending.options, pending.resolvedChapter, pending.resolvedPage, pending.bookmarkAudioTime, modeOverride, speedOverride, pending.seekToPosition, estimatedMs ?? undefined);
   }, [beginPlayback]);
 
@@ -698,8 +716,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setState(prev => ({
       ...prev,
       pendingPlayback: null,
-      // If picker was shown mid-playback, keep player visible
+      // If picker was shown mid-playback, keep player visible.
+      // If shown pre-play (no generation yet), clear the widget too.
       isVisible: midPlayback ? prev.isVisible : false,
+      isGeneratingWidgetVisible: midPlayback ? prev.isGeneratingWidgetVisible : false,
     }));
     // Only resume if audio was actually playing when the picker opened
     if (midPlayback && pending?.wasPlaying) {
@@ -760,6 +780,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       ...prev,
       position: null,
       isVisible: false,
+      isGeneratingWidgetVisible: false,
       highlightedSentenceIndex: null, highlightedLanguage: null,
       error: null,
       currentPageSentences: [],
@@ -1035,8 +1056,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (s.playbackMode === "chapter" && s.position && storySlug && level) {
       const sameStory = s.position.storySlug === storySlug;
       const sameLevel = s.position.level === level;
+      // While a chapter is still generating (or ready-to-play but not yet started),
+      // the widget owns the lifecycle — we don't want nav to tear down generation.
+      const inGenerationPhase = s.isGeneratingWidgetVisible;
 
       if (!sameStory || !sameLevel) {
+        if (inGenerationPhase) {
+          // Keep widget + generation running. Just update the view-side state.
+          setState(prev => ({ ...prev, currentPageSentences: sentences }));
+          return;
+        }
         // Different story or different level — stop + close player, save bookmark
         saveAudioBookmark();
         chapterAudio.stop();
@@ -1060,6 +1089,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const samePage = s.position.chapter === chapter && s.position.page === page;
       const isNavigating = navigatingToPageRef.current !== null;
       if (!samePage && !isNavigating) {
+        if (inGenerationPhase) {
+          // Same story+level but different page/chapter; generation still going.
+          // Don't pause (nothing is playing yet). Just update view.
+          return;
+        }
         // Different page/chapter of same story+level — pause, keep player open
         saveAudioBookmark();
         chapterAudio.pause(); // hook sets "paused"
@@ -1146,12 +1180,23 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [effectiveStatus, clearHighlight]);
 
+  // ---- Show bar / hide widget once playback actually starts ----
+  // The widget covers the pre-playback generation phase. Once the hook reports
+  // "playing", the bar takes over: flip isVisible true and hide the widget.
+  useEffect(() => {
+    if (effectiveStatus === "playing" && state.playbackMode === "chapter") {
+      if (!state.isVisible || state.isGeneratingWidgetVisible) {
+        setState(prev => ({ ...prev, isVisible: true, isGeneratingWidgetVisible: false }));
+      }
+    }
+  }, [effectiveStatus, state.playbackMode, state.isVisible, state.isGeneratingWidgetVisible]);
+
   // ---- Auto-hide after finish ----
   useEffect(() => {
     if (effectiveStatus === "finished") {
       const timer = setTimeout(() => {
         setStatusOverride("idle");
-        setState(prev => ({ ...prev, isVisible: false, position: null, highlightedSentenceIndex: null, highlightedLanguage: null }));
+        setState(prev => ({ ...prev, isVisible: false, isGeneratingWidgetVisible: false, position: null, highlightedSentenceIndex: null, highlightedLanguage: null }));
         persistState(null, state.mode);
       }, 5000);
       return () => clearTimeout(timer);
@@ -1171,6 +1216,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     nextPage,
     prevPage,
     isPlaying: effectiveStatus === "playing",
+    isGeneratingActive: state.isGeneratingWidgetVisible,
     setPlaybackRate,
     seekToTime,
     confirmAndPlay,

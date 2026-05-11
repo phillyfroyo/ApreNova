@@ -70,6 +70,9 @@ export interface AudioPlayerState {
   currentPageSentences: StoryLine[];
   storyMap: StoryMapForNav | null;
   isVisible: boolean;
+  /** Floating widget shown while a chapter is generating. Independent of `isVisible` (the playback bar):
+   *  the widget is visible during pre-play generation; the bar only appears once playback actually starts. */
+  isGeneratingWidgetVisible: boolean;
   highlightedSentenceIndex: number | null;
   highlightedLanguage: "en" | "es" | null;
   error: string | null;
@@ -110,6 +113,9 @@ export interface AudioPlayerContextType {
   nextPage: () => void;
   prevPage: () => void;
   isPlaying: boolean;
+  /** True while a chapter audio generation is in flight (widget visible, not yet playing).
+   *  Use this to disable Listen buttons on other chapters while one is being generated. */
+  isGeneratingActive: boolean;
   setPlaybackRate: (rate: number) => void;
   seekToTime: (time: number) => void;
   confirmAndPlay: (modeOverride?: AudioLanguageMode, speedOverride?: number) => void;
