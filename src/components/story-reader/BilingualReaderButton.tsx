@@ -23,7 +23,7 @@ export default function BilingualReaderButton({ typedLang }: BilingualReaderButt
       aria-pressed={enabled}
       className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
         enabled
-          ? "text-white bg-indigo-600 hover:bg-indigo-700 border-indigo-600 shadow-sm"
+          ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-600"
           : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border-indigo-200"
       }`}
     >
