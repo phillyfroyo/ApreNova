@@ -160,14 +160,6 @@ export default function StoryLine({
             </div>
           </div>
         )}
-
-        {/* Per-line static translation (skip for stanza poems) */}
-        {!isInsideStanza && (
-          <div data-static-translation={lineIndex} className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-2 w-[calc(100%+16px)] relative">
-            <button onClick={() => { const el = document.querySelector(`[data-static-translation="${lineIndex}"]`) as HTMLElement | null; if (el) el.classList.add("hidden"); }} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm" data-translation-control="close">✕</button>
-            <span className="text-lg font-medium text-gray-900 pr-6" style={{ wordSpacing: "0.15em" }}>{s[typedLang]}</span>
-          </div>
-        )}
       </div>
     </div>
   );

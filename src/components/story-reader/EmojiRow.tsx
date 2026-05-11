@@ -1,7 +1,7 @@
 // src/components/story-reader/EmojiRow.tsx
 "use client";
 
-import { Volume2, Loader2, Turtle, BookmarkPlus, MessageCircle, Languages, PenLine, X } from "lucide-react";
+import { Volume2, Loader2, Turtle, BookmarkPlus, MessageCircle, Languages, X } from "lucide-react";
 import { useStoryReader } from "@/contexts/StoryReaderContext";
 
 interface EmojiRowProps {
@@ -95,19 +95,6 @@ export default function EmojiRow({ lineIndex, sentenceText, translatedText, isVi
         title="Translate"
       >
         <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${selText}`} strokeWidth={1.5} />
-      </button>
-
-      {/* Pencil */}
-      <button
-        onClick={() => {
-          const el = document.querySelector(`[data-static-translation="${lineIndex}"]`) as HTMLElement | null;
-          if (el) requestAnimationFrame(() => el.classList.toggle("hidden"));
-        }}
-        className="inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded"
-        data-translation-control="pencil"
-        title="Toggle full line translation"
-      >
-        <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
       </button>
 
       {/* Progress bar */}

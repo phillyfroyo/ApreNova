@@ -1,7 +1,7 @@
 // src/components/story-reader/StanzaEmojiRow.tsx
 "use client";
 
-import { Volume2, Loader2, Turtle, BookmarkPlus, MessageCircle, Languages, PenLine, X } from "lucide-react";
+import { Volume2, Loader2, Turtle, BookmarkPlus, MessageCircle, Languages, X } from "lucide-react";
 import { useStoryReader } from "@/contexts/StoryReaderContext";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 
@@ -16,7 +16,7 @@ export default function StanzaEmojiRow({ stanzaIdx, stanza, linesInStanza }: Sta
     typedLang, oppositeLang, currentLevel,
     wordSelections, activeAudio, activeStanzaLine, playbackState,
     savingWord, translationData, skipGlobalClickRef,
-    showStanzaEmojis, stanzaTranslationRefs,
+    showStanzaEmojis,
     stanzaAITranslation, setStanzaAITranslation,
     handlePlay, handleSaveWord, handleTranslationData, openStoryTutor, setTutorContext,
     stop, setActiveAudio, renderProgressBar,
@@ -166,9 +166,6 @@ export default function StanzaEmojiRow({ stanzaIdx, stanza, linesInStanza }: Sta
         </button>
         <button onClick={handleStanzaTranslate} className={`inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition-all duration-200 ease-in-out relative rounded ${selBg}`} data-translation-control="translate" title={hasSelection ? "Translate selection" : "Translate full stanza"}>
           <Languages className={`w-5 h-5 transition-colors duration-200 ease-in-out ${selText}`} strokeWidth={1.5} />
-        </button>
-        <button onClick={() => { const el = stanzaTranslationRefs.current[stanzaIdx]; if (el) requestAnimationFrame(() => el.classList.toggle("hidden")); }} className="inline-flex items-center justify-center h-7 w-7 hover:scale-110 transition rounded" data-translation-control="pencil" title="Toggle stanza translation">
-          <PenLine className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
         </button>
         <div className="relative flex-1 flex items-center h-[30px] ml-3">
           {stanzaHasAudio && activeAudio ? (
