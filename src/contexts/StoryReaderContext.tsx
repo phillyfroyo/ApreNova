@@ -161,7 +161,6 @@ export interface StoryReaderContextValue {
   setStanzaExampleMap: React.Dispatch<React.SetStateAction<Record<string, { english: string; spanish: string }>>>;
   visibleStanzaExamples: Set<number>;
   toggleStanzaExample: (i: number) => void;
-  stanzaTranslationRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   manualTranslateFunctions: Record<number, () => void>;
   setManualTranslateFunctions: React.Dispatch<React.SetStateAction<Record<number, () => void>>>;
   translationData: Record<number, { word: string; translation: string; enrichedData?: any } | null>;

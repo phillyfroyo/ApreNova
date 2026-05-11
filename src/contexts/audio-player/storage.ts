@@ -4,6 +4,7 @@ import { DEFAULT_PLAYBACK_RATE } from "./types";
 
 const SPEED_STORAGE_KEY = 'cuentana_playback_speed';
 const LANGUAGE_MODE_KEY = 'cuentana_language_mode';
+const BILINGUAL_READING_KEY = 'cuentana_bilingual_reading';
 const STORAGE_KEY = "cuentana_audio_player";
 
 export function loadPlaybackRate(): number {
@@ -31,6 +32,20 @@ export function loadLanguageMode(): AudioLanguageMode {
 export function saveLanguageMode(mode: AudioLanguageMode) {
   try {
     localStorage.setItem(LANGUAGE_MODE_KEY, mode);
+  } catch (e) {}
+}
+
+/** Bilingual reading mode — whether the page renders both languages, independent of audio. */
+export function loadBilingualReading(): boolean {
+  try {
+    return localStorage.getItem(BILINGUAL_READING_KEY) === "true";
+  } catch (e) {}
+  return false;
+}
+
+export function saveBilingualReading(enabled: boolean) {
+  try {
+    localStorage.setItem(BILINGUAL_READING_KEY, enabled ? "true" : "false");
   } catch (e) {}
 }
 

@@ -1,11 +1,11 @@
 // src/components/audio-player/SettingsPicker.tsx
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
-import type { AudioLanguageMode, VariantCacheStatus } from "@/contexts/audio-player/types";
+import type { AudioLanguageMode, VariantCacheStatus, AllLevelsCacheStatus } from "@/contexts/audio-player/types";
 
 type VariantKey = "target-normal" | "target-slow" | "bilingual-normal" | "bilingual-slow";
 
@@ -24,7 +24,18 @@ interface SettingsPickerProps {
   initialSpeed: number;
   initialMode: AudioLanguageMode;
   cacheStatus: VariantCacheStatus;
-  onConfirm: (speed: number, mode: AudioLanguageMode) => void;
+  /** The user's currently-active level, used to highlight the matching tab. */
+  currentLevel: string;
+  /** Page in the current level — used to compute the target page on a different CEFR level (clamped). */
+  currentPage: number;
+  /** Per-level cache snapshot. When provided, CEFR tabs appear above the variant grid. */
+  allLevels?: AllLevelsCacheStatus;
+  /** Confirm playback at a specific level. levelOverride is set when the user picked a non-current tab. */
+  onConfirm: (
+    speed: number,
+    mode: AudioLanguageMode,
+    levelOverride?: { level: string; page: number },
+  ) => void;
   onDismiss: () => void;
 }
 
@@ -43,11 +54,19 @@ function formatEstimate(ms: number): string {
 }
 
 export default function SettingsPicker({
-  lng, initialSpeed, initialMode, cacheStatus, onConfirm, onDismiss,
+  lng, initialSpeed, initialMode, cacheStatus, currentLevel, currentPage, allLevels, onConfirm, onDismiss,
 }: SettingsPickerProps) {
   const [selected, setSelected] = useState<VariantKey>(getSelectedKey(initialMode, initialSpeed));
+  const [activeLevel, setActiveLevel] = useState<string>(currentLevel);
 
-  const estimates = cacheStatus.estimates ?? {};
+  // Per-tab cache snapshot. For the current level we use cacheStatus directly (it has the
+  // up-to-date estimates from the same fetch). For other levels we use allLevels.
+  const activeSnapshot = useMemo(() => {
+    if (activeLevel === currentLevel) return cacheStatus;
+    return allLevels?.cacheStatusByLevel[activeLevel] ?? cacheStatus;
+  }, [activeLevel, currentLevel, cacheStatus, allLevels]);
+
+  const estimates = activeSnapshot.estimates ?? {};
 
   const variants: Variant[] = [
     {
@@ -56,7 +75,7 @@ export default function SettingsPicker({
       descKey: "variantStandardDesc",
       mode: "target-only",
       speed: 1.0,
-      cached: cacheStatus.target.normal,
+      cached: activeSnapshot.target.normal,
       estimateMs: estimates.targetNormal ?? null,
     },
     {
@@ -65,7 +84,7 @@ export default function SettingsPicker({
       descKey: "variantSlowDesc",
       mode: "target-only",
       speed: 0.7,
-      cached: cacheStatus.target.slow,
+      cached: activeSnapshot.target.slow,
       estimateMs: estimates.targetSlow ?? null,
     },
     {
@@ -74,7 +93,7 @@ export default function SettingsPicker({
       descKey: "variantStandardBilingualDesc",
       mode: "bilingual",
       speed: 1.0,
-      cached: cacheStatus.bilingual.normal,
+      cached: activeSnapshot.bilingual.normal,
       estimateMs: estimates.bilingualNormal ?? null,
     },
     {
@@ -83,12 +102,43 @@ export default function SettingsPicker({
       descKey: "variantSlowBilingualDesc",
       mode: "bilingual",
       speed: 0.7,
-      cached: cacheStatus.bilingual.slow,
+      cached: activeSnapshot.bilingual.slow,
       estimateMs: estimates.bilingualSlow ?? null,
     },
   ];
 
   const selectedVariant = variants.find(v => v.key === selected)!;
+
+  // Tab list: ordered as in availableLevels. Hide tabs entirely if only one level is available.
+  const tabs = (allLevels?.availableLevels ?? []).filter(l => allLevels?.cacheStatusByLevel[l] || l === currentLevel);
+  const showTabs = tabs.length > 1;
+
+  // For a level's tab indicator: dot if any variant cached.
+  const levelHasAnyCached = (level: string): boolean => {
+    const snap = level === currentLevel ? cacheStatus : allLevels?.cacheStatusByLevel[level];
+    if (!snap) return false;
+    return snap.target.normal || snap.target.slow || snap.bilingual.normal || snap.bilingual.slow;
+  };
+
+  // Page clamp when jumping levels. Use the target level's pageCount if available; fall back to currentPage.
+  const computeTargetPage = (level: string): number => {
+    if (level === currentLevel) return currentPage;
+    const entry = allLevels?.cacheStatusByLevel[level];
+    if (!entry || entry.pageCount <= 0) return currentPage;
+    return Math.min(currentPage, entry.pageCount);
+  };
+
+  const handleConfirm = () => {
+    if (activeLevel === currentLevel) {
+      onConfirm(selectedVariant.speed, selectedVariant.mode);
+    } else {
+      onConfirm(
+        selectedVariant.speed,
+        selectedVariant.mode,
+        { level: activeLevel, page: computeTargetPage(activeLevel) },
+      );
+    }
+  };
 
   // Build the generation notice text
   const noticeText = (() => {
@@ -108,6 +158,37 @@ export default function SettingsPicker({
         <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
           {t(lng, "audioPlayer", "audioSettings")}
         </h3>
+
+        {/* CEFR level tabs — let users browse cached audio at other levels */}
+        {showTabs && (
+          <div className="flex items-center justify-center gap-1.5 mb-4" role="tablist">
+            {tabs.map(level => {
+              const isActive = level === activeLevel;
+              const isCurrent = level === currentLevel;
+              const hasCached = levelHasAnyCached(level);
+              return (
+                <button
+                  key={level}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveLevel(level)}
+                  className={`relative flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : isCurrent
+                        ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <span>{level}</span>
+                  {hasCached && (
+                    <Check className={`w-3 h-3 ${isActive ? "text-white" : "text-green-500"}`} strokeWidth={3} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Variant list */}
         <div className="flex flex-col gap-2">
@@ -167,7 +248,7 @@ export default function SettingsPicker({
               {t(lng, "audioPlayer", "cancel")}
             </button>
             <button
-              onClick={() => onConfirm(selectedVariant.speed, selectedVariant.mode)}
+              onClick={handleConfirm}
               className="min-w-[160px] inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors"
             >
               {selectedVariant.cached ? t(lng, "audioPlayer", "startListening") : t(lng, "audioPlayer", "startGenerating")}

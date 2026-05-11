@@ -117,7 +117,6 @@ export default function StoryLayoutWithAzureTTS({
   const [visibleStanzaExamples, setVisibleStanzaExamples] = useState<Set<number>>(new Set());
   const toggleStanzaExample = (i: number) =>
     setVisibleStanzaExamples((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; });
-  const stanzaTranslationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [manualTranslateFunctions, setManualTranslateFunctions] = useState<Record<number, () => void>>({});
   const [translationData, setTranslationData] = useState<Record<number, { word: string; translation: string; enrichedData?: any } | null>>({});
   const [clearSelectionFunctions, setClearSelectionFunctions] = useState<Record<number, () => void>>({});
@@ -400,7 +399,7 @@ export default function StoryLayoutWithAzureTTS({
     stanzaAITranslation, setStanzaAITranslation,
     stanzaExampleMap, setStanzaExampleMap,
     visibleStanzaExamples, toggleStanzaExample,
-    stanzaTranslationRefs, manualTranslateFunctions, setManualTranslateFunctions,
+    manualTranslateFunctions, setManualTranslateFunctions,
     translationData, setTranslationData,
     clearSelectionFunctions, setClearSelectionFunctions, translationRefs,
     saveToast, setSaveToast, savingWord, setSavingWord,

@@ -17,7 +17,6 @@ export default function StanzaTranslationCard({ stanzaIdx, stanza }: StanzaTrans
     stanzaAITranslation, setStanzaAITranslation,
     stanzaExampleMap, setStanzaExampleMap,
     visibleStanzaExamples, toggleStanzaExample,
-    stanzaTranslationRefs,
   } = useStoryReader();
 
   const aiTranslation = stanzaAITranslation[stanzaIdx];
@@ -199,13 +198,6 @@ export default function StanzaTranslationCard({ stanzaIdx, stanza }: StanzaTrans
         </div>
       )}
 
-      {/* Static stanza translation (pencil) */}
-      <div ref={el => { stanzaTranslationRefs.current[stanzaIdx] = el; }} className="hidden px-2 mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 -ml-[7px] relative">
-        <button onClick={() => { const el = stanzaTranslationRefs.current[stanzaIdx]; if (el) el.classList.add("hidden"); }} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm" data-translation-control="close">✕</button>
-        <div className="text-lg font-medium text-gray-900 whitespace-pre-line pr-6" style={{ wordSpacing: "0.15em" }}>
-          {stanza.filter(l => !l.isStanzaBreak && l[typedLang]?.trim()).map((line, idx) => <p key={idx}>{line[typedLang]}</p>)}
-        </div>
-      </div>
     </div>
   );
 }

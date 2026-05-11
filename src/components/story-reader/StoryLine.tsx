@@ -82,7 +82,10 @@ export default function StoryLine({
     && pos?.chapter === chapterNumber
     && pos?.page === pageNumber;
   const isAudioActive = isAudioOnThisPage && audioPlayer.state.isVisible;
-  const isBilingualMode = isAudioActive && audioPlayer.state.mode === "bilingual";
+  // Bilingual rendering is now driven by an explicit reader-mode toggle, independent of
+  // whether audio is playing. Audio in bilingual mode auto-enables this flag on activation
+  // (see AudioPlayerProvider) but the user can toggle it freely thereafter.
+  const isBilingualMode = audioPlayer.state.bilingualReadingMode;
 
   return (
     <div
@@ -155,14 +158,6 @@ export default function StoryLine({
               <span className="text-gray-700"> {t(typedLang, "translator", "or")} </span>
               <Link href={`/${typedLang}/auth/signup`} className="text-indigo-600 hover:underline font-medium">{t(typedLang, "translator", "createAccount")}</Link>
             </div>
-          </div>
-        )}
-
-        {/* Per-line static translation (skip for stanza poems) */}
-        {!isInsideStanza && (
-          <div data-static-translation={lineIndex} className="translation hidden bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 mt-1 -ml-2 w-[calc(100%+16px)] relative">
-            <button onClick={() => { const el = document.querySelector(`[data-static-translation="${lineIndex}"]`) as HTMLElement | null; if (el) el.classList.add("hidden"); }} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm" data-translation-control="close">✕</button>
-            <span className="text-lg font-medium text-gray-900 pr-6" style={{ wordSpacing: "0.15em" }}>{s[typedLang]}</span>
           </div>
         )}
       </div>

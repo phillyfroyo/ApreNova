@@ -12,7 +12,7 @@ import type { Language } from "@/types/i18n";
 import TransportControls from "./TransportControls";
 import SettingsControls from "./SettingsControls";
 import ToastNotification from "./ToastNotification";
-import ChapterLoadingOverlay, { getLoadingLabels } from "./ChapterLoadingOverlay";
+import { getLoadingLabels } from "./ChapterLoadingOverlay";
 import SettingsPicker from "./SettingsPicker";
 import { useDragToMinimize } from "./useDragToMinimize";
 import { useBottomNavDetection } from "./useBottomNavDetection";
@@ -42,7 +42,11 @@ export default function AudioPlayerBar() {
   const { barRef, progress, isDragging, minimized, setMinimized, transitionClass } = useDragToMinimize();
   const hasBottomNav = useBottomNavDetection();
 
-  if (!state.isVisible) return null;
+  // The bar appears once playback starts. Before that, the SettingsPicker may need to render
+  // (its own visibility is driven by state.pendingPlayback). Render a minimal wrapper for the
+  // picker in that pre-playback case; otherwise show the full bar.
+  const pickerOnly = !state.isVisible && state.pendingPlayback;
+  if (!state.isVisible && !pickerOnly) return null;
 
   const { status, position, mode, currentPageSentences, highlightedSentenceIndex, playbackRate, playbackMode, chapterCurrentTime, chapterDuration } = state;
 
@@ -154,6 +158,27 @@ export default function AudioPlayerBar() {
   const fadeOut = 1 - Math.min(1, progress * 2.5);
   const fadeIn = Math.max(0, (progress - 0.5) * 2);
 
+  // If we're only here for the picker (pre-playback), render just the picker.
+  if (pickerOnly && state.pendingPlayback) {
+    return (
+      <SettingsPicker
+        lng={lng}
+        initialSpeed={playbackRate}
+        initialMode={mode}
+        cacheStatus={state.pendingPlayback.cacheStatus}
+        currentLevel={state.pendingPlayback.options.level}
+        currentPage={state.pendingPlayback.resolvedPage}
+        allLevels={state.pendingPlayback.allLevels}
+        onConfirm={(newSpeed, newMode, levelOverride) => {
+          savePlaybackRate(newSpeed);
+          saveLanguageMode(newMode);
+          confirmAndPlay(newMode, newSpeed, levelOverride);
+        }}
+        onDismiss={dismissPicker}
+      />
+    );
+  }
+
   return (
     <>
       {/* Settings picker — shown when variant is not cached, before generation starts */}
@@ -163,29 +188,17 @@ export default function AudioPlayerBar() {
           initialSpeed={playbackRate}
           initialMode={mode}
           cacheStatus={state.pendingPlayback.cacheStatus}
-          onConfirm={(newSpeed, newMode) => {
+          currentLevel={state.pendingPlayback.options.level}
+          currentPage={state.pendingPlayback.resolvedPage}
+          allLevels={state.pendingPlayback.allLevels}
+          onConfirm={(newSpeed, newMode, levelOverride) => {
             // Persist selections to localStorage
             savePlaybackRate(newSpeed);
             saveLanguageMode(newMode);
             // Start playback with chosen settings
-            confirmAndPlay(newMode, newSpeed);
+            confirmAndPlay(newMode, newSpeed, levelOverride);
           }}
           onDismiss={dismissPicker}
-        />
-      )}
-
-      {/* Chapter generation loading overlay — shown during generation, ready, error, or variant reload */}
-      {(status === "generating" || status === "ready" || status === "error" || (status === "loading" && state.generationLabel)) && position && (
-        <ChapterLoadingOverlay
-          chapterNumber={position.chapter}
-          progress={state.chapterGenerationProgress}
-          storyType={storyMeta?.type}
-          isReady={status === "ready"}
-          isError={status === "error"}
-          lng={lng}
-          onStartListening={resumePlayback}
-          onCancel={stopPlayback}
-          label={state.generationLabel}
         />
       )}
 

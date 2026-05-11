@@ -689,6 +689,7 @@ audioPlayer: {
   variantSlowDesc: "Velocidad 0.7x, solo inglés",
   variantStandardBilingualDesc: "Velocidad normal, inglés + español",
   variantSlowBilingualDesc: "Velocidad 0.7x, inglés + español",
+  generationInFlightElsewhere: "Otro capítulo se está generando. Espera o cancélalo primero.",
 },
 };
 

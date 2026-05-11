@@ -54,6 +54,8 @@ export interface PendingPlayback {
   /** Whether audio was playing (vs paused) when the picker opened. Only relevant when seekToPosition is set. */
   wasPlaying?: boolean;
   cacheStatus: VariantCacheStatus;
+  /** Per-level cache snapshot for the CEFR tabs in the picker. */
+  allLevels?: AllLevelsCacheStatus;
 }
 
 export const DEFAULT_CACHE_STATUS: VariantCacheStatus = {
@@ -61,6 +63,14 @@ export const DEFAULT_CACHE_STATUS: VariantCacheStatus = {
   bilingual: { normal: false, slow: false },
   estimates: { targetNormal: null, targetSlow: null, bilingualNormal: null, bilingualSlow: null },
 };
+
+/** Per-level cache snapshot used by the SettingsPicker CEFR tabs.
+ *  Lets the user browse other CEFR levels for cached audio of the same chapter. */
+export interface AllLevelsCacheStatus {
+  /** Levels that exist for this story and have the requested chapter. */
+  availableLevels: string[];
+  cacheStatusByLevel: Record<string, VariantCacheStatus & { pageCount: number }>;
+}
 
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
@@ -70,6 +80,9 @@ export interface AudioPlayerState {
   currentPageSentences: StoryLine[];
   storyMap: StoryMapForNav | null;
   isVisible: boolean;
+  /** Floating widget shown while a chapter is generating. Independent of `isVisible` (the playback bar):
+   *  the widget is visible during pre-play generation; the bar only appears once playback actually starts. */
+  isGeneratingWidgetVisible: boolean;
   highlightedSentenceIndex: number | null;
   highlightedLanguage: "en" | "es" | null;
   error: string | null;
@@ -82,6 +95,9 @@ export interface AudioPlayerState {
   generationLabel: string | null;
   /** When set, the settings picker is shown before playback starts */
   pendingPlayback: PendingPlayback | null;
+  /** Whether the story page renders both languages. Independent of audio mode.
+   *  Auto-enabled when bilingual audio starts, but can be toggled freely after that. */
+  bilingualReadingMode: boolean;
 }
 
 export interface StartPlaybackOptions {
@@ -110,11 +126,20 @@ export interface AudioPlayerContextType {
   nextPage: () => void;
   prevPage: () => void;
   isPlaying: boolean;
+  /** True while a chapter audio generation is in flight (widget visible, not yet playing).
+   *  Use this to disable Listen buttons on other chapters while one is being generated. */
+  isGeneratingActive: boolean;
   setPlaybackRate: (rate: number) => void;
   seekToTime: (time: number) => void;
-  confirmAndPlay: (modeOverride?: AudioLanguageMode, speedOverride?: number) => void;
+  confirmAndPlay: (
+    modeOverride?: AudioLanguageMode,
+    speedOverride?: number,
+    levelOverride?: { level: string; page: number },
+  ) => void;
   dismissPicker: () => void;
   registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => void;
+  /** Set the bilingual reading mode. Persists to localStorage. */
+  setBilingualReadingMode: (enabled: boolean) => void;
 }
 
 // ============================================================================
