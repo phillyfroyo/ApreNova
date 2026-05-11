@@ -14,7 +14,7 @@ import type { ChapterAudioMode } from "@/types/chapter-audio";
 import type { AudioPlayerState, AudioPlayerStatus, AudioPlayerContextType, StartPlaybackOptions, AudioPlayerPosition, AudioLanguageMode, PendingPlayback } from "./types";
 import { DEFAULT_PLAYBACK_RATE, DEFAULT_CACHE_STATUS } from "./types";
 import type { VariantCacheStatus, AllLevelsCacheStatus } from "./types";
-import { loadPlaybackRate, savePlaybackRate, loadLanguageMode, saveLanguageMode, persistState } from "./storage";
+import { loadPlaybackRate, savePlaybackRate, loadLanguageMode, saveLanguageMode, loadBilingualReading, saveBilingualReading, persistState } from "./storage";
 import { getContentSentences } from "./helpers";
 
 // ============================================================================
@@ -220,6 +220,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     storyMap: null,
     isVisible: false,
     isGeneratingWidgetVisible: false,
+    bilingualReadingMode: false,
     highlightedSentenceIndex: null, highlightedLanguage: null,
     error: null,
     playbackRate: DEFAULT_PLAYBACK_RATE,
@@ -231,7 +232,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   });
 
   useEffect(() => {
-    setState(prev => ({ ...prev, playbackRate: loadPlaybackRate(), mode: loadLanguageMode() }));
+    setState(prev => ({
+      ...prev,
+      playbackRate: loadPlaybackRate(),
+      mode: loadLanguageMode(),
+      bilingualReadingMode: loadBilingualReading(),
+    }));
   }, []);
 
   const stateRef = useRef(state);
@@ -1268,6 +1274,25 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [effectiveStatus, state.mode]);
 
+  // ---- Bilingual reading mode setter ----
+  const setBilingualReadingMode = useCallback((enabled: boolean) => {
+    saveBilingualReading(enabled);
+    setState(prev => ({ ...prev, bilingualReadingMode: enabled }));
+  }, []);
+
+  // ---- Auto-enable bilingual reading when bilingual audio starts ----
+  // Reader follows audio at the moment of activation; after that, the two are independent
+  // (user can toggle reader off while bilingual audio keeps playing, or vice versa).
+  const lastAudioModeRef = useRef<typeof state.mode>(state.mode);
+  useEffect(() => {
+    const transitionedToBilingual = lastAudioModeRef.current !== "bilingual" && state.mode === "bilingual";
+    lastAudioModeRef.current = state.mode;
+    if (transitionedToBilingual && state.isVisible && !state.bilingualReadingMode) {
+      saveBilingualReading(true);
+      setState(prev => ({ ...prev, bilingualReadingMode: true }));
+    }
+  }, [state.mode, state.isVisible, state.bilingualReadingMode]);
+
   const value: AudioPlayerContextType = {
     state: { ...state, status: effectiveStatus },
     startContinuousPlayback,
@@ -1289,6 +1314,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => {
       sentenceElementsRef.current = refs;
     },
+    setBilingualReadingMode,
   };
 
   return (

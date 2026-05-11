@@ -95,6 +95,9 @@ export interface AudioPlayerState {
   generationLabel: string | null;
   /** When set, the settings picker is shown before playback starts */
   pendingPlayback: PendingPlayback | null;
+  /** Whether the story page renders both languages. Independent of audio mode.
+   *  Auto-enabled when bilingual audio starts, but can be toggled freely after that. */
+  bilingualReadingMode: boolean;
 }
 
 export interface StartPlaybackOptions {
@@ -135,6 +138,8 @@ export interface AudioPlayerContextType {
   ) => void;
   dismissPicker: () => void;
   registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => void;
+  /** Set the bilingual reading mode. Persists to localStorage. */
+  setBilingualReadingMode: (enabled: boolean) => void;
 }
 
 // ============================================================================

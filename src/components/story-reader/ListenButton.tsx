@@ -3,6 +3,7 @@
 
 import { Headphones, Loader2 } from "lucide-react";
 import { t } from "@/lib/t";
+import BilingualReaderButton from "./BilingualReaderButton";
 import type { Language } from "@/types/i18n";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 import type { StoryMapType } from "@/contexts/StoryReaderContext";
@@ -67,6 +68,7 @@ export default function ListenButton({
 
   return (
     <div className="flex items-center justify-end gap-3 pr-4">
+      <BilingualReaderButton typedLang={typedLang} />
       {isListening ? (
         <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-full border border-indigo-200">
           <Headphones className="w-4 h-4" />

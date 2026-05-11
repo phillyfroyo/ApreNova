@@ -82,7 +82,10 @@ export default function StoryLine({
     && pos?.chapter === chapterNumber
     && pos?.page === pageNumber;
   const isAudioActive = isAudioOnThisPage && audioPlayer.state.isVisible;
-  const isBilingualMode = isAudioActive && audioPlayer.state.mode === "bilingual";
+  // Bilingual rendering is now driven by an explicit reader-mode toggle, independent of
+  // whether audio is playing. Audio in bilingual mode auto-enables this flag on activation
+  // (see AudioPlayerProvider) but the user can toggle it freely thereafter.
+  const isBilingualMode = audioPlayer.state.bilingualReadingMode;
 
   return (
     <div
