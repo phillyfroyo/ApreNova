@@ -166,10 +166,13 @@ export default function AudioPlayerBar() {
         initialSpeed={playbackRate}
         initialMode={mode}
         cacheStatus={state.pendingPlayback.cacheStatus}
-        onConfirm={(newSpeed, newMode) => {
+        currentLevel={state.pendingPlayback.options.level}
+        currentPage={state.pendingPlayback.resolvedPage}
+        allLevels={state.pendingPlayback.allLevels}
+        onConfirm={(newSpeed, newMode, levelOverride) => {
           savePlaybackRate(newSpeed);
           saveLanguageMode(newMode);
-          confirmAndPlay(newMode, newSpeed);
+          confirmAndPlay(newMode, newSpeed, levelOverride);
         }}
         onDismiss={dismissPicker}
       />
@@ -185,12 +188,15 @@ export default function AudioPlayerBar() {
           initialSpeed={playbackRate}
           initialMode={mode}
           cacheStatus={state.pendingPlayback.cacheStatus}
-          onConfirm={(newSpeed, newMode) => {
+          currentLevel={state.pendingPlayback.options.level}
+          currentPage={state.pendingPlayback.resolvedPage}
+          allLevels={state.pendingPlayback.allLevels}
+          onConfirm={(newSpeed, newMode, levelOverride) => {
             // Persist selections to localStorage
             savePlaybackRate(newSpeed);
             saveLanguageMode(newMode);
             // Start playback with chosen settings
-            confirmAndPlay(newMode, newSpeed);
+            confirmAndPlay(newMode, newSpeed, levelOverride);
           }}
           onDismiss={dismissPicker}
         />

@@ -54,6 +54,8 @@ export interface PendingPlayback {
   /** Whether audio was playing (vs paused) when the picker opened. Only relevant when seekToPosition is set. */
   wasPlaying?: boolean;
   cacheStatus: VariantCacheStatus;
+  /** Per-level cache snapshot for the CEFR tabs in the picker. */
+  allLevels?: AllLevelsCacheStatus;
 }
 
 export const DEFAULT_CACHE_STATUS: VariantCacheStatus = {
@@ -61,6 +63,14 @@ export const DEFAULT_CACHE_STATUS: VariantCacheStatus = {
   bilingual: { normal: false, slow: false },
   estimates: { targetNormal: null, targetSlow: null, bilingualNormal: null, bilingualSlow: null },
 };
+
+/** Per-level cache snapshot used by the SettingsPicker CEFR tabs.
+ *  Lets the user browse other CEFR levels for cached audio of the same chapter. */
+export interface AllLevelsCacheStatus {
+  /** Levels that exist for this story and have the requested chapter. */
+  availableLevels: string[];
+  cacheStatusByLevel: Record<string, VariantCacheStatus & { pageCount: number }>;
+}
 
 export interface AudioPlayerState {
   status: AudioPlayerStatus;
@@ -118,7 +128,11 @@ export interface AudioPlayerContextType {
   isGeneratingActive: boolean;
   setPlaybackRate: (rate: number) => void;
   seekToTime: (time: number) => void;
-  confirmAndPlay: (modeOverride?: AudioLanguageMode, speedOverride?: number) => void;
+  confirmAndPlay: (
+    modeOverride?: AudioLanguageMode,
+    speedOverride?: number,
+    levelOverride?: { level: string; page: number },
+  ) => void;
   dismissPicker: () => void;
   registerSentenceElements: (refs: React.MutableRefObject<(HTMLDivElement | null)[]>) => void;
 }
