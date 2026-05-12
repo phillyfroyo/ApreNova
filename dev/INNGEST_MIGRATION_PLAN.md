@@ -313,25 +313,42 @@ Step boundaries:
    canonical R2 audio + meta, mark COMPLETE, delete parts
 4. `onFailure` handler marks job FAILED so client doesn't hang
 
-### Cleanups to bundle while we're touching these flows
+### Cleanups bundled with the audio migration ✅ Done (2026-05-11/12, branch: inngest-audio-pipeline)
 
-**Story upload:**
-- Loading % indicator can exceed 100% mid-upload. 100% should be
-  a hard ceiling; clamp the displayed value.
-- Mobile view of the upload flow needs polish, especially the
-  success modal — currently doesn't lay out cleanly on small screens.
+**Story upload (status as of audio-branch merge):**
+- ✅ Mobile polish on the upload flow + success modal — done.
+- ⏸ Loading % can still exceed 100% mid-upload. Still worth clamping
+  to a 100 ceiling. Small UX item, do when next touching the upload
+  flow.
 
 **Chapter audio generation:**
-- Allow collapsing the loading modal so users can navigate the app
-  while audio generates in the background — same pattern as story
-  upload's collapsible loader. Higher value here than for upload
-  because users want to *read* while audio renders, rather than
-  staring at a spinner.
-- Add a bilingual mode for the non-audiobook story view, mirroring
-  the existing audiobook bilingual mode. Add a `EN + ES` toggle
-  button at the top of the story page next to "Listen". Should be
-  small — the bilingual rendering logic already exists in the
-  audiobook codepath.
+- ✅ Minimizable generation widget. Bottom-right pill when minimized,
+  persists across navigation, shows progress and a "Start Listening"
+  state when done. Bar only appears once playback actually starts;
+  widget owns the pre-play phase. Single-active-generation guard
+  prevents starting a second generation while one is in flight.
+  Lives in `src/components/audio-player/ChapterGenerationWidget.tsx`
+  + `ChapterLoadingOverlay.tsx` (the underlying two-state UI).
+- ✅ Bilingual reading-mode toggle next to Listen on every story
+  page. Auth-gated? No — visible to everyone. Decoupled from audio:
+  bilingual audio auto-enables the reader once, then user can toggle
+  freely (turn reader off mid-bilingual-audio, or enable reader with
+  target-only audio). Persists to localStorage.
+  `src/components/story-reader/BilingualReaderButton.tsx`.
+
+**Additional reader UX improvements shipped on the same branch:**
+- ✅ CEFR-level tabs in the SettingsPicker. When a chapter isn't
+  cached at the user's level, tabs above the variant grid let them
+  jump to another CEFR level where audio is already cached. Eager
+  per-level fetch in one round-trip; new endpoint
+  `/api/azure-tts/chapter-cache-status-all-levels`. Built-in and
+  user stories supported. Page is clamped to that level's max.
+- ✅ Removed the pencil emoji button on per-line and per-stanza
+  rows. It was the only entry point to the baked-in static
+  translation before; with bilingual reading mode now available
+  with one click, and smart-translate-on-full-line already using
+  static translation without an API call, the pencil had no
+  remaining unique role.
 
 ## Future work to be done
 
