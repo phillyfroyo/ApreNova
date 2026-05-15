@@ -21,6 +21,7 @@ import { t } from "@/lib/t";
 import { getStoryTitle, getStoryDisplayTitle } from "@/lib/stories";
 import { updateNativeLanguage } from '@/lib/updateLanguage'
 import UploadStoryButton from "@/components/user-stories/UploadStoryButton"
+import NewStoryCard from "@/components/user-stories/NewStoryCard"
 import UserStoryCard from "@/components/user-stories/UserStoryCard"
 import UserStoryDetailModal from "@/components/user-stories/UserStoryDetailModal"
 import { useStoryUpload } from "@/contexts/StoryUploadContext"
@@ -333,23 +334,26 @@ useEffect(() => {
     />
     <div className="px-2 py-4 sm:p-8 relative min-h-screen">
 
-{/* Top right controls: Filter, Upload button + My Stories */}
+{/* Top right controls: Filter (hidden until library is large enough to need it), Upload button + My Stories */}
 <div className="absolute top-4 right-4 flex items-center gap-3 z-10">
-  <button
-    onClick={() => setShowFilters(!showFilters)}
-    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-      activeFilterCount > 0
-        ? "bg-purple-600 text-white"
-        : "bg-white text-gray-700 hover:bg-gray-50"
-    }`}
-  >
-    <span>🏷️</span>
-    {activeFilterCount > 0 ? (
-      <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
-    ) : (
-      <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
-    )}
-  </button>
+  {/* Filter button — hidden for now; restore when content library is large enough. */}
+  {false && (
+    <button
+      onClick={() => setShowFilters(!showFilters)}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+        activeFilterCount > 0
+          ? "bg-purple-600 text-white"
+          : "bg-white text-gray-700 hover:bg-gray-50"
+      }`}
+    >
+      <span>🏷️</span>
+      {activeFilterCount > 0 ? (
+        <span>{activeFilterCount} {typedLang === "es" ? "filtros" : "filters"}</span>
+      ) : (
+        <span>{typedLang === "es" ? "Filtrar" : "Filter"}</span>
+      )}
+    </button>
+  )}
   <UploadStoryButton />
   <Link
     href={`/${typedLang}/my-stories`}
@@ -487,14 +491,16 @@ useEffect(() => {
   </AnimatePresence>
 </div>
 
-{/* My Stories Section - only show if user has stories and not viewing a source filter */}
-{userStories.length > 0 && !sourceFilter && (
+{/* My Stories Section — always render (except when filtering by source) so the
+    NewStoryCard placeholder keeps the upload feature discoverable for users
+    who haven't uploaded anything yet. Gated on !userStoriesLoading so the
+    placeholder doesn't render before the rest of the page content loads. */}
+{!userStoriesLoading && !sourceFilter && (
   <div className="mb-6 px-1 sm:px-4">
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-xl font-semibold flex items-center gap-2">
         <span>📚</span>
         {typedLang === "es" ? "Mis Historias" : "My Stories"}
-        <span className="text-sm font-normal text-gray-500">({userStories.length})</span>
       </h2>
     </div>
     <div
@@ -511,6 +517,7 @@ useEffect(() => {
       }}
       className="hide-scrollbar"
     >
+      <NewStoryCard lang={typedLang} />
       {userStories.slice(0, 8).map((story) => (
         <UserStoryCard
           key={story.id}
@@ -570,9 +577,6 @@ useEffect(() => {
                     {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
                   </>
                 )}
-                <span className="text-sm font-normal text-gray-500">
-                  ({sourceFilter === "cuentana" ? cuentanaOriginals.length : sourceFilter === "gutenberg" ? gutenbergStories.length : otherExternalStories.length})
-                </span>
               </h2>
             </div>
 
@@ -603,7 +607,6 @@ useEffect(() => {
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>🎨</span>
                     {typedLang === "es" ? "Originales de Cuentana" : "Cuentana Originals"}
-                    <span className="text-sm font-normal text-gray-500">({cuentanaOriginals.length})</span>
                   </h2>
                   {cuentanaOriginals.length > 8 && (
                     <Link
@@ -654,7 +657,6 @@ useEffect(() => {
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>📖</span>
                     {typedLang === "es" ? "La Colección Project Gutenberg" : "The Project Gutenberg Collection"}
-                    <span className="text-sm font-normal text-gray-500">({gutenbergStories.length})</span>
                   </h2>
                   {gutenbergStories.length > 8 && (
                     <Link
@@ -704,7 +706,6 @@ useEffect(() => {
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <span>📖</span>
                     {typedLang === "es" ? "Clásicos Literarios" : "Literary Classics"}
-                    <span className="text-sm font-normal text-gray-500">({otherExternalStories.length})</span>
                   </h2>
                   {otherExternalStories.length > 8 && (
                     <Link
