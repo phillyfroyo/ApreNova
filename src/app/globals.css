@@ -186,7 +186,7 @@ body {
    row looks like a group of cute characters trying — and slightly
    failing — to coordinate. Fires once per step 1/3 trigger.
 
-   The CSS uses :nth-child so all 6 row positions count regardless of
+   The CSS uses :nth-child so all 5 row positions count regardless of
    element type (some icons sit inside wrapper divs, some are direct
    buttons). */
 @keyframes tour-emoji-bounce-once {
@@ -207,13 +207,12 @@ body {
 }
 /* Per-position delays. Hand-tuned to feel like mistimed friends jumping:
    speaker leads, translate jumps surprisingly early, save and turtle
-   trade out of order, pencil drags. */
+   trade out of order, tutor drags last. */
 [data-tour-emoji-wave="true"] > *:nth-child(1) { animation-delay:   0ms; } /* speaker */
 [data-tour-emoji-wave="true"] > *:nth-child(2) { animation-delay: 220ms; } /* turtle */
 [data-tour-emoji-wave="true"] > *:nth-child(3) { animation-delay: 110ms; } /* save (wrapper div) — early, before turtle */
-[data-tour-emoji-wave="true"] > *:nth-child(4) { animation-delay: 360ms; } /* tutor */
+[data-tour-emoji-wave="true"] > *:nth-child(4) { animation-delay: 360ms; } /* tutor — drags last */
 [data-tour-emoji-wave="true"] > *:nth-child(5) { animation-delay: 280ms; } /* translate — early, before tutor */
-[data-tour-emoji-wave="true"] > *:nth-child(6) { animation-delay: 470ms; } /* pencil — drags last */
 
 /* Icon bounce: a ball losing momentum. One tall jump, two diminishing
    dribbles, then a long rest before repeating. Total cycle is ~3.5s —
