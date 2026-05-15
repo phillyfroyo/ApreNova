@@ -13,6 +13,7 @@ import MetaPixel from '@/components/MetaPixel';
 import NewUserPixelEvent from '@/components/NewUserPixelEvent';
 import { Suspense } from 'react';
 import { Alice, Open_Sans, Inter, Crimson_Text } from 'next/font/google';
+import JsonLd from '@/components/JsonLd';
 
 // Base URL drives canonical + OG absolute URLs across the app.
 const SITE_URL = 'https://cuentana.app';
@@ -77,6 +78,36 @@ export default async function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Orbitron&family=Raleway&family=Fredoka&family=Baloo+2&family=Press+Start+2P&family=Playfair+Display&family=Quicksand&family=Exo+2&family=Lora&family=Merriweather&family=Changa+One&family=Audiowide&family=Oswald&display=swap"
           rel="stylesheet"
+        />
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'WebSite',
+                '@id': `${SITE_URL}/#website`,
+                url: SITE_URL,
+                name: 'Cuentana',
+                description: 'Learn Spanish through curated stories at every CEFR level.',
+                inLanguage: ['en', 'es'],
+                potentialAction: {
+                  '@type': 'SearchAction',
+                  target: {
+                    '@type': 'EntryPoint',
+                    urlTemplate: `${SITE_URL}/${lang}/stories?q={search_term_string}`,
+                  },
+                  'query-input': 'required name=search_term_string',
+                },
+              },
+              {
+                '@type': 'Organization',
+                '@id': `${SITE_URL}/#organization`,
+                name: 'Cuentana',
+                url: SITE_URL,
+                logo: `${SITE_URL}/images/logo.png`,
+              },
+            ],
+          }}
         />
       </head>
       <body className="bg-background text-foreground font-sans transition-none">

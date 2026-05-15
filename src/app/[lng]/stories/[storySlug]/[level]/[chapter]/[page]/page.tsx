@@ -7,8 +7,9 @@ import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
 import { getStoryContent } from "@/lib/getStoryContent";
-import { STORY_METADATA, getStoryTitle } from "@/lib/stories";
+import { STORY_METADATA, getStoryTitle, getAuthorName } from "@/lib/stories";
 import StoryLayoutWithAzureTTS from "@/components/StoryLayoutWithAzureTTS";
+import JsonLd from "@/components/JsonLd";
 import type { Language } from "@/types/i18n";
 import { getStoryMap } from "@/lib/getStoryMap";
 import LevelUnavailablePage from "@/components/LevelUnavailablePage";
@@ -119,19 +120,70 @@ export default async function Page({ params }: { params: Promise<RouteParams> })
 
   if (!story || !story.lines) return notFound();
 
+  // ---- JSON-LD structured data for SEO rich results ----
+  const storyTitle = getStoryTitle(lng, storySlug);
+  const storyUrl = `${SITE_URL}${getNavigationUrl(lng as Language, storySlug, cefrLevel, 1, 1, false)}`;
+  const author = storyMeta.origin.isOriginal
+    ? "Cuentana"
+    : storyMeta.origin.attribution
+      ? getAuthorName(storyMeta.origin.attribution)
+      : "Unknown";
+  const targetLanguage = lng === "es" ? "English" : "Spanish";
+  const targetLanguageCode = lng === "es" ? "en" : "es";
+  const storyImage = storyMeta.image?.startsWith("/") ? `${SITE_URL}${storyMeta.image}` : storyMeta.image;
+
+  const jsonLdGraph = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Book",
+        "@id": `${storyUrl}#book`,
+        name: storyTitle,
+        author: { "@type": "Person", name: author },
+        inLanguage: targetLanguageCode,
+        url: storyUrl,
+        ...(storyImage ? { image: storyImage } : {}),
+        ...(storyMeta.descriptions?.summary ? { description: storyMeta.descriptions.summary } : {}),
+      },
+      {
+        "@type": "LearningResource",
+        "@id": `${storyUrl}#learning-resource`,
+        name: `${storyTitle} — ${cefrLevel} ${targetLanguage}`,
+        url: storyUrl,
+        inLanguage: targetLanguageCode,
+        learningResourceType: "Reading material",
+        educationalLevel: `CEFR ${cefrLevel}`,
+        teaches: targetLanguage,
+        about: { "@id": `${storyUrl}#book` },
+        isAccessibleForFree: true,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/${lng}` },
+          { "@type": "ListItem", position: 2, name: "Stories", item: `${SITE_URL}/${lng}/stories` },
+          { "@type": "ListItem", position: 3, name: storyTitle, item: storyUrl },
+        ],
+      },
+    ],
+  };
+
   return (
-    <StoryLayoutWithAzureTTS
-      title={getStoryTitle(lng, storySlug)}
-      storySlug={storySlug}
-      sentences={story.lines}
-      stanzas={story.stanzas}
-      initialLevel={cefrLevel}
-      storyMap={storyMap}
-      availableLevels={storyMeta.levels}
-      storyType={storyMeta.type}
-      structureType={storyMeta.structureType}
-      detectedLevel={storyMeta.originalLevel}
-    />
+    <>
+      <JsonLd data={jsonLdGraph} />
+      <StoryLayoutWithAzureTTS
+        title={storyTitle}
+        storySlug={storySlug}
+        sentences={story.lines}
+        stanzas={story.stanzas}
+        initialLevel={cefrLevel}
+        storyMap={storyMap}
+        availableLevels={storyMeta.levels}
+        storyType={storyMeta.type}
+        structureType={storyMeta.structureType}
+        detectedLevel={storyMeta.originalLevel}
+      />
+    </>
   );
 }
 
