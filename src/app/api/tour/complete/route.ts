@@ -9,9 +9,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const step = body?.step;
 
-    if (step !== 1 && step !== 2 && step !== 3) {
+    if (step !== 1 && step !== 2 && step !== 3 && step !== 4) {
       return NextResponse.json(
-        { error: "Invalid step. Must be 1, 2, or 3." },
+        { error: "Invalid step. Must be 1, 2, 3, or 4." },
         { status: 400 }
       );
     }
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
         tourStep1CompletedAt: true,
         tourStep2CompletedAt: true,
         tourStep3CompletedAt: true,
+        tourStep4CompletedAt: true,
         tourCompletedAt: true,
       },
     });
@@ -36,7 +37,10 @@ export async function POST(req: Request) {
     if (step === 1 && !current.tourStep1CompletedAt) data.tourStep1CompletedAt = now;
     if (step === 2 && !current.tourStep2CompletedAt) data.tourStep2CompletedAt = now;
     if (step === 3 && !current.tourStep3CompletedAt) data.tourStep3CompletedAt = now;
+    if (step === 4 && !current.tourStep4CompletedAt) data.tourStep4CompletedAt = now;
 
+    // tourCompletedAt fires when the sequential 1→2→3 path is done.
+    // Step 4 is independent and doesn't gate completion.
     const willHaveStep1 = current.tourStep1CompletedAt || data.tourStep1CompletedAt;
     const willHaveStep2 = current.tourStep2CompletedAt || data.tourStep2CompletedAt;
     const willHaveStep3 = current.tourStep3CompletedAt || data.tourStep3CompletedAt;
@@ -55,6 +59,7 @@ export async function POST(req: Request) {
         step1CompletedAt: current.tourStep1CompletedAt?.toISOString() ?? null,
         step2CompletedAt: current.tourStep2CompletedAt?.toISOString() ?? null,
         step3CompletedAt: current.tourStep3CompletedAt?.toISOString() ?? null,
+        step4CompletedAt: current.tourStep4CompletedAt?.toISOString() ?? null,
         tourCompletedAt: current.tourCompletedAt?.toISOString() ?? null,
         nextStep: null,
       };
@@ -75,6 +80,7 @@ export async function POST(req: Request) {
         tourStep1CompletedAt: true,
         tourStep2CompletedAt: true,
         tourStep3CompletedAt: true,
+        tourStep4CompletedAt: true,
         tourCompletedAt: true,
       },
     });
@@ -88,6 +94,7 @@ export async function POST(req: Request) {
       step1CompletedAt: updated.tourStep1CompletedAt?.toISOString() ?? null,
       step2CompletedAt: updated.tourStep2CompletedAt?.toISOString() ?? null,
       step3CompletedAt: updated.tourStep3CompletedAt?.toISOString() ?? null,
+      step4CompletedAt: updated.tourStep4CompletedAt?.toISOString() ?? null,
       tourCompletedAt: updated.tourCompletedAt?.toISOString() ?? null,
       nextStep,
     };

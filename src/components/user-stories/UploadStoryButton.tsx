@@ -5,6 +5,11 @@ import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTourState } from "@/components/tour/TourProvider";
+
+/** Tour step 4: shown while step 1 is complete AND step 4 isn't. The button pulses + spins
+ *  for 10 seconds, then auto-completes. Clicking the button completes early. */
+const STEP4_HOLD_MS = 10000;
 
 export default function UploadStoryButton() {
   const { setShowUploadModal, isUploading } = useStoryUpload();
@@ -13,6 +18,31 @@ export default function UploadStoryButton() {
   const [showAuthPopover, setShowAuthPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // ---- Tour step 4 ----
+  // Fires whenever the user has step 1 done but step 4 isn't. Independent of nextStep
+  // (the sequential 1→2→3 path) — runs in parallel so we catch users who stop the in-story
+  // tour midway. Pulse+spin for 10s, then auto-complete; click completes early.
+  const { state: tourState, disabled: tourDisabled, markStepComplete } = useTourState();
+  const shouldShowStep4 =
+    !tourDisabled &&
+    !!tourState?.step1CompletedAt &&
+    !tourState?.step4CompletedAt &&
+    !isUploading;
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    if (!shouldShowStep4) {
+      setAnimating(false);
+      return;
+    }
+    setAnimating(true);
+    const timer = setTimeout(() => {
+      setAnimating(false);
+      markStepComplete(4).catch(() => {});
+    }, STEP4_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [shouldShowStep4, markStepComplete]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -34,6 +64,11 @@ export default function UploadStoryButton() {
   }, [showAuthPopover]);
 
   const handleClick = () => {
+    // Clicking the upload button is the organic completion path for step 4.
+    if (shouldShowStep4) {
+      setAnimating(false);
+      markStepComplete(4).catch(() => {});
+    }
     // If not logged in, show auth popover
     if (!session?.user) {
       setShowAuthPopover(true);
@@ -52,6 +87,7 @@ export default function UploadStoryButton() {
         ref={buttonRef}
         onClick={handleClick}
         disabled={isUploading}
+        data-tour-upload-pulse={animating ? "true" : undefined}
         className="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-default"
         title={isSpanish ? "Subir historia" : "Upload story"}
       >

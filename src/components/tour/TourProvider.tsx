@@ -11,14 +11,18 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 
-export type TourStep = 1 | 2 | 3;
+export type TourStep = 1 | 2 | 3 | 4;
+/** Sequential steps that determine nextStep (1→2→3). Step 4 fires by its own rule
+ *  (whenever step1 is done and step4 is not, on every /stories visit). */
+export type SequentialTourStep = 1 | 2 | 3;
 
 export interface TourState {
   step1CompletedAt: string | null;
   step2CompletedAt: string | null;
   step3CompletedAt: string | null;
+  step4CompletedAt: string | null;
   tourCompletedAt: string | null;
-  nextStep: TourStep | null;
+  nextStep: SequentialTourStep | null;
 }
 
 interface TourContextValue {
@@ -33,6 +37,7 @@ const EMPTY_STATE: TourState = {
   step1CompletedAt: null,
   step2CompletedAt: null,
   step3CompletedAt: null,
+  step4CompletedAt: null,
   tourCompletedAt: null,
   nextStep: 1,
 };
@@ -102,6 +107,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
             step1CompletedAt: step === 1 ? base.step1CompletedAt ?? now : base.step1CompletedAt,
             step2CompletedAt: step === 2 ? base.step2CompletedAt ?? now : base.step2CompletedAt,
             step3CompletedAt: step === 3 ? base.step3CompletedAt ?? now : base.step3CompletedAt,
+            step4CompletedAt: step === 4 ? base.step4CompletedAt ?? now : base.step4CompletedAt,
             nextStep: null,
           };
           if (!updated.step1CompletedAt) updated.nextStep = 1;

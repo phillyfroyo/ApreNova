@@ -6,7 +6,12 @@ export interface TourStateResponse {
   step1CompletedAt: string | null;
   step2CompletedAt: string | null;
   step3CompletedAt: string | null;
+  /** Step 4 (upload-story showcase) fires when step1 is done AND step4 is not, on every visit
+   *  to /stories. Independent of nextStep; it doesn't gate the sequential 1→2→3 flow. */
+  step4CompletedAt: string | null;
   tourCompletedAt: string | null;
+  /** Next sequential step the user must do to progress 1→2→3. Step 4 fires by its own rule
+   *  and is NOT included here. */
   nextStep: 1 | 2 | 3 | null;
 }
 
@@ -14,6 +19,7 @@ function buildResponse(user: {
   tourStep1CompletedAt: Date | null;
   tourStep2CompletedAt: Date | null;
   tourStep3CompletedAt: Date | null;
+  tourStep4CompletedAt: Date | null;
   tourCompletedAt: Date | null;
 }): TourStateResponse {
   let nextStep: 1 | 2 | 3 | null = null;
@@ -25,6 +31,7 @@ function buildResponse(user: {
     step1CompletedAt: user.tourStep1CompletedAt?.toISOString() ?? null,
     step2CompletedAt: user.tourStep2CompletedAt?.toISOString() ?? null,
     step3CompletedAt: user.tourStep3CompletedAt?.toISOString() ?? null,
+    step4CompletedAt: user.tourStep4CompletedAt?.toISOString() ?? null,
     tourCompletedAt: user.tourCompletedAt?.toISOString() ?? null,
     nextStep,
   };
@@ -40,6 +47,7 @@ export async function GET() {
         tourStep1CompletedAt: true,
         tourStep2CompletedAt: true,
         tourStep3CompletedAt: true,
+        tourStep4CompletedAt: true,
         tourCompletedAt: true,
       },
     });
