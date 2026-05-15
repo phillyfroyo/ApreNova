@@ -54,6 +54,13 @@ export const metadata: Metadata = {
     images: ['/images/og-default.png'],
   },
   robots: { index: true, follow: true },
+  // GOOGLE_SITE_VERIFICATION is set in Vercel env vars (Production only) once
+  // Search Console gives you the verification code. When unset, the meta tag
+  // is omitted entirely; when set, it's emitted so Search Console can verify
+  // ownership on the next deploy. See dev/SEO_PLAN.md for the playbook.
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 const alice = Alice({ subsets: ['latin'], weight: '400' });

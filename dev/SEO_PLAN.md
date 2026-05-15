@@ -63,7 +63,7 @@ the story. Fixing per-page metadata unlocks everything else.
 
 ## Stages
 
-### Stage 1 — Crawlability foundation ⏸ Not started
+### Stage 1 — Crawlability foundation ✅ Done (2026-05-15)
 
 Get Google's bots able to discover and crawl our pages. None of this
 helps until pages have per-page metadata (Stage 2), so it's sequenced
@@ -83,7 +83,7 @@ first because metadata work depends on the same routes being indexable.
 - [ ] Verify both files render correctly at `/robots.txt` and
       `/sitemap.xml` in production.
 
-### Stage 2 — Per-page metadata ⏸ Not started
+### Stage 2 — Per-page metadata ✅ Done (2026-05-15)
 
 The big one. Every story page gets a unique title, description, and
 canonical URL. This is the work that actually moves the needle for
@@ -126,7 +126,7 @@ canonical URL. This is the work that actually moves the needle for
       `robots: { index: false, follow: false }` metadata to prevent
       indexing even if the auth gate is later removed.
 
-### Stage 3 — Structured data ⏸ Not started
+### Stage 3 — Structured data ✅ Done (2026-05-15)
 
 JSON-LD structured data unlocks "rich results" in Google search —
 larger snippets with author, language, level, etc. Lower priority than
@@ -145,22 +145,112 @@ Stage 2 but valuable once metadata is in place.
 - [ ] Validate with [Schema.org Validator](https://validator.schema.org/)
       and Google's [Rich Results Test](https://search.google.com/test/rich-results).
 
-### Stage 4 — Submit to Google ⏸ Not started
+### Stage 4 — Submit to Google ⏸ Awaiting deploy + manual steps
 
 All the metadata in the world doesn't matter if Google hasn't been
-told to look.
+told to look. This stage is **mostly manual work in the Google Search
+Console UI** — there's no API path for "verify a domain and request
+indexing." The code-side prep is done: a `<meta name="google-site-verification">`
+tag is wired up via `GOOGLE_SITE_VERIFICATION` env var so HTML-tag
+verification is a paste-and-deploy.
 
-- [ ] Verify domain ownership for both `cuentana.app` and `cuentana.org`
-      in Google Search Console.
-- [ ] Submit `https://cuentana.app/sitemap.xml` to Search Console.
-- [ ] Configure preferred domain (or rely on canonical tags from
-      Stage 2 — both approaches work).
-- [ ] Manually request indexing for ~3 sample story URLs (the popular
-      ones from `STORY_METADATA`) to seed initial crawls.
-- [ ] Submit the same for `cuentana.org` OR set up a 301 redirect from
-      `.org` → `.app` (cleaner long-term; consider this).
-- [ ] Set up Bing Webmaster Tools too (small effort, ~10% search
-      market share). Same sitemap.
+#### Pre-flight (verify the deploy works first)
+
+Before opening Search Console, sanity-check the production build:
+
+- [ ] After deploying this branch to production, `curl https://cuentana.app/robots.txt`
+      — should return the rules + sitemap pointer.
+- [ ] `curl https://cuentana.app/sitemap.xml` — should return ~84 URLs
+      with hreflang alternates.
+- [ ] Open any story page in a browser, view source — confirm the
+      `<title>`, `<meta name="description">`, `<link rel="canonical">`,
+      `<link rel="alternate" hreflang="en|es">`, and the JSON-LD
+      `<script type="application/ld+json">` blocks are all present.
+- [ ] Paste a story URL into [Rich Results Test](https://search.google.com/test/rich-results)
+      — should detect Book, LearningResource, BreadcrumbList, plus the
+      inherited WebSite + Organization.
+
+#### Playbook — Search Console setup
+
+For each of the two domains (`cuentana.app` first, `cuentana.org`
+second):
+
+1. Go to [Google Search Console](https://search.google.com/search-console).
+   Sign in with the Google account that owns the marketing presence
+   (recommend a dedicated `seo@cuentana.app` or similar, not a
+   personal account).
+2. Click **Add property** → choose **URL prefix** (NOT Domain — the
+   URL prefix method is simpler and supports the meta-tag verification
+   we've wired up). Enter `https://cuentana.app` (and later
+   `https://cuentana.org`).
+3. Search Console shows verification options. Pick **HTML tag**. It
+   gives you a string like `<meta name="google-site-verification" content="abc123..." />`.
+   Copy the `content` value only (just `abc123...`).
+4. In Vercel dashboard for the cuentana project → Settings → Environment
+   Variables, add:
+   - Name: `GOOGLE_SITE_VERIFICATION`
+   - Value: the `abc123...` string from step 3
+   - Environment: **Production** only (no need on Preview/Dev)
+5. Redeploy production from Vercel. Once the deploy completes, the
+   verification meta tag will be in the HTML.
+6. Back in Search Console, click **Verify**. Should succeed.
+
+If verifying `cuentana.org` later: the env var is shared across both
+domains since both serve the same Vercel deployment. The meta tag
+will be present on both. Just add the `.org` property in Search
+Console and click Verify — should succeed without code changes.
+
+If Google needs a different verification value per domain, switch to
+DNS TXT record verification (managed at your domain registrar /
+Cloudflare). Worth noting: each meta tag value can only verify one
+domain at a time, so we may need to add a second env var or switch
+strategies for the second domain.
+
+#### Playbook — Sitemap submission
+
+1. In Search Console, with `cuentana.app` selected, go to **Sitemaps**
+   in the left nav.
+2. Under "Add a new sitemap," enter `sitemap.xml` (just the path,
+   prefix is filled in automatically).
+3. Submit. Status should turn "Success" within a few hours; "Couldn't
+   fetch" means the URL isn't accessible — recheck the pre-flight
+   curls.
+4. Repeat for `cuentana.org`. (Or set up the 301 redirect — see
+   "Decisions deferred" below.)
+
+#### Playbook — Request indexing for sample stories
+
+Google will crawl from the sitemap automatically, but manually
+requesting a few URLs seeds the initial crawl faster.
+
+1. In Search Console → **URL Inspection** in the left nav.
+2. Paste a story URL — for example: `https://cuentana.app/en/stories/the-last-word/B1/ch1/page-1`
+3. After Google fetches it, click **Request Indexing**. Queue is a
+   few minutes per URL with a daily limit (~10-20 manual requests).
+4. Do this for ~3 stories at A2 and B1 levels in both English and
+   Spanish — the ones most likely to convert "spanish reading
+   material A2" searches.
+
+#### Playbook — Bing Webmaster Tools
+
+Optional but cheap (~10 min). Bing has ~10% of search traffic.
+
+1. Go to [Bing Webmaster Tools](https://www.bing.com/webmasters).
+2. Sign in. Click **Import from GSC** to inherit Search Console
+   verification — saves the verification round-trip.
+3. Submit the sitemap URL.
+
+#### After submission
+
+- Re-crawl latency for an existing brand search ("Cuentana"): 1–3
+  days. So the first thing to watch for: searching `"the last word"
+  cuentana` should start landing on the actual story page within a
+  week.
+- For zero-history search queries ("A2 spanish reading material"):
+  weeks to months. Don't expect traffic immediately; we're planting
+  the seed.
+- Check Search Console weekly for: indexed page count climbing,
+  crawl errors, queries appearing in the Performance report.
 
 ### Stage 5+ — Deferred to August or later
 
@@ -210,27 +300,48 @@ For each stage, before marking done:
   Probably a Stage 5 task once we know which stories matter most.
 
 - **Domain consolidation.** Long-term, running both `.app` and `.org`
-  is awkward. Should `.org` redirect 301 to `.app`? That's the cleanest
-  outcome but it's a marketing decision (do users associate the brand
-  with one over the other?). Out of scope for this doc.
+  is awkward. The current setup uses canonical tags on every page
+  pointing to `cuentana.app`, which tells Google "the .app version is
+  authoritative even when this page is served from .org." That handles
+  the SEO duplicate-content concern.
+  However, a **301 redirect from `.org` → `.app`** would be cleaner:
+  one canonical domain, no duplicate Search Console properties, no
+  ambiguity for users sharing links. Setup at the Vercel/DNS level
+  (probably cleanest as a Vercel project-level redirect rule).
+  Marketing decision: do users associate the brand with one over the
+  other? Defer to a separate conversation.
 
-## File map (anticipated)
+## File map (as shipped)
 
 New:
-- `src/app/robots.ts`
-- `src/app/sitemap.ts`
+- `middleware.ts` — sets `x-cuentana-lang` + `x-cuentana-pathname`
+  headers per request so layouts can render language-aware
+  `<html lang>` and hreflang alternates.
+- `src/app/robots.ts` — auto-generated robots.txt.
+- `src/app/sitemap.ts` — auto-generated sitemap.xml (~84 URLs).
+- `src/app/[lng]/my-stories/layout.tsx` — `noindex` belt-and-suspenders
+  for user-uploaded story routes.
+- `src/app/[lng]/stories/StoriesPageClient.tsx` — moved client-side
+  logic for the stories home (was `page.tsx`, now a child of the new
+  server wrapper).
+- `src/app/[lng]/stories/page.tsx` — server-component wrapper that
+  exports `generateMetadata` for the stories home.
+- `src/components/JsonLd.tsx` — helper that renders a JSON-LD
+  `<script>` block.
 
 Modified:
-- `src/app/layout.tsx` — root metadata, fix `<html lang>`
-- `src/app/[lng]/layout.tsx` — hreflang, language-aware lang attribute
-- `src/app/[lng]/stories/page.tsx` — refactor into server component for
-  metadata
+- `src/app/layout.tsx` — adds `metadataBase`, title template, full
+  default metadata, dynamic `<html lang>`, `<meta google-site-verification>`
+  via env var, and a site-wide `WebSite` + `Organization` JSON-LD
+  `@graph` block.
+- `src/app/[lng]/layout.tsx` — `generateMetadata` emitting default
+  hreflang alternates derived from the pathname header.
 - `src/app/[lng]/stories/[storySlug]/[level]/[chapter]/[page]/page.tsx`
-  — add `generateMetadata` + JSON-LD
-- `src/app/[lng]/my-stories/[storyId]/[level]/[chapter]/[page]/page.tsx`
-  — add `noindex` metadata
+  — adds `generateMetadata` (per-story title, description, canonical,
+  hreflang, OG, Twitter) and a JSON-LD `@graph` block with `Book`,
+  `LearningResource`, `BreadcrumbList`.
 
 Untouched:
 - All other routes (auth, settings, admin, etc.) — these inherit from
-  root metadata, which improves in Stage 2.
-- `STORY_METADATA` — descriptions hand-tuning deferred to Stage 5.
+  root metadata.
+- `STORY_METADATA` — hand-tuned hooks/summaries are a Stage 5 task.
