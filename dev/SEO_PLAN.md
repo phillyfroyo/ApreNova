@@ -145,7 +145,11 @@ Stage 2 but valuable once metadata is in place.
 - [ ] Validate with [Schema.org Validator](https://validator.schema.org/)
       and Google's [Rich Results Test](https://search.google.com/test/rich-results).
 
-### Stage 4 — Submit to Google ⏸ Awaiting deploy + manual steps
+### Stage 4 — Submit to Google ▶ In progress (2026-05-16)
+
+Verification kicked off 2026-05-16: `GOOGLE_SITE_VERIFICATION` set in
+Vercel Production for `cuentana.app` (HTML-tag method). This commit
+triggers the redeploy that publishes the meta tag.
 
 All the metadata in the world doesn't matter if Google hasn't been
 told to look. This stage is **mostly manual work in the Google Search
