@@ -186,6 +186,7 @@ model User {
   tourStep1CompletedAt DateTime?
   tourStep2CompletedAt DateTime?
   tourStep3CompletedAt DateTime?
+  tourStep4CompletedAt DateTime?
   tourCompletedAt      DateTime?
   pixelMilestones      String[]            @default([])
   Account           Account[]

@@ -5,14 +5,42 @@ import { useStoryUpload } from "@/contexts/StoryUploadContext";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTourState } from "@/components/tour/TourProvider";
+
+/** Tour step 4: shown while step 1 is complete AND step 4 isn't. The button pulses + spins
+ *  on a perpetual loop until the user clicks it — completion requires opening the upload
+ *  modal at least once so users learn what it is. */
 
 export default function UploadStoryButton() {
-  const { setShowUploadModal, isUploading } = useStoryUpload();
+  const { setShowUploadModal, isUploading, showUploadModal } = useStoryUpload();
   const { data: session } = useSession();
   const { lng } = useParams();
   const [showAuthPopover, setShowAuthPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // ---- Tour step 4 ----
+  // Fires whenever the user has step 1 done but step 4 isn't. Independent of nextStep
+  // (the sequential 1→2→3 path) — runs in parallel so we catch users who stop the in-story
+  // tour midway. Pulse+spin for 10s, then auto-complete; click completes early.
+  const { state: tourState, disabled: tourDisabled, markStepComplete } = useTourState();
+  const shouldShowStep4 =
+    !tourDisabled &&
+    !!tourState?.step1CompletedAt &&
+    !tourState?.step4CompletedAt &&
+    !isUploading;
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    // Once the user opens the upload modal, the hint has done its job.
+    // Stop the animation; click handler also marks step 4 complete so it
+    // won't fire on future /stories visits.
+    if (showUploadModal) {
+      setAnimating(false);
+      return;
+    }
+    setAnimating(shouldShowStep4);
+  }, [shouldShowStep4, showUploadModal]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -34,6 +62,11 @@ export default function UploadStoryButton() {
   }, [showAuthPopover]);
 
   const handleClick = () => {
+    // Clicking the upload button is the organic completion path for step 4.
+    if (shouldShowStep4) {
+      setAnimating(false);
+      markStepComplete(4).catch(() => {});
+    }
     // If not logged in, show auth popover
     if (!session?.user) {
       setShowAuthPopover(true);
@@ -47,12 +80,13 @@ export default function UploadStoryButton() {
   const isSpanish = lng === "es";
 
   return (
-    <div className="relative">
+    <div className="relative group">
       <button
         ref={buttonRef}
         onClick={handleClick}
         disabled={isUploading}
-        className="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-default"
+        data-tour-upload-pulse={animating ? "true" : undefined}
+        className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-default"
         title={isSpanish ? "Subir historia" : "Upload story"}
       >
         {isUploading ? (
@@ -65,14 +99,18 @@ export default function UploadStoryButton() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
           </svg>
         )}
-
-        {/* Hover tooltip (only when popover is not shown) */}
-        {!showAuthPopover && (
-          <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {isSpanish ? "Subir historia" : "Upload story"}
-          </span>
-        )}
       </button>
+
+      {/* Hover tooltip — sibling of the button (not a child) so the tour's
+          rotate transform on the button doesn't drag the tooltip along.
+          Hidden entirely on touch devices via @media (hover: hover) — on
+          mobile, a tap fires a transient :hover state that briefly flashes
+          the tooltip on modal close, which is jarring. */}
+      {!showAuthPopover && (
+        <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+          {isSpanish ? "Subir historia" : "Upload story"}
+        </span>
+      )}
 
       {/* Auth required popover */}
       {showAuthPopover && (
