@@ -145,11 +145,17 @@ Stage 2 but valuable once metadata is in place.
 - [ ] Validate with [Schema.org Validator](https://validator.schema.org/)
       and Google's [Rich Results Test](https://search.google.com/test/rich-results).
 
-### Stage 4 — Submit to Google ▶ In progress (2026-05-16)
+### Stage 4 — Submit to Google ✅ Done for `cuentana.app` (2026-05-16)
 
-Verification kicked off 2026-05-16: `GOOGLE_SITE_VERIFICATION` set in
-Vercel Production for `cuentana.app` (HTML-tag method). This commit
-triggers the redeploy that publishes the meta tag.
+Completed 2026-05-16:
+- `GOOGLE_SITE_VERIFICATION` set in Vercel Production; meta tag live on
+  `cuentana.app`. Search Console ownership verified (HTML-tag method).
+- Sitemap submitted to Search Console — accepted, awaiting first crawl.
+- Bing Webmaster Tools: verification imported from GSC, sitemap
+  submitted.
+
+Still pending: `cuentana.org` property (separate verification + sitemap),
+and `/[lng]/my-stories` `noindex` belt-and-suspenders — see Stage 5+.
 
 All the metadata in the world doesn't matter if Google hasn't been
 told to look. This stage is **mostly manual work in the Google Search
@@ -273,6 +279,20 @@ These are the slow-compounding items. Don't touch now; they're the
   language-learning blogs. This is the slowest-compounding channel and
   the most external.
 - **`hreflang` x-default** — when we have more than two languages.
+- **Consolidate story URL emission to `getNavigationUrl()`.** Discovered
+  2026-05-16: the route accepts both short form (`/A2/1/1`) and long
+  form (`/A2/ch1/page-1`) and `page.tsx` normalizes them, so they
+  serve identical content. The canonical tag points to the long form
+  everywhere, so SEO impact is currently neutralized — but several
+  call sites still emit the short form:
+  - `src/app/[lng]/dashboard/page.tsx:280` (bookmark resume links)
+  - `src/app/admin/upload-story/StoryManager.tsx:780` (admin viewer)
+  - `src/components/LevelUnavailablePage.tsx:84` (level selector)
+  - `src/utils/getStoryUrl.ts` (deprecated helper — delete)
+  - `src/lib/stories.ts:317` (deprecated helper — delete)
+
+  Migrate all to `getNavigationUrl()` (`src/utils/storyNavigation.ts:56`)
+  so shared links use the canonical form. ~30 min cleanup, low urgency.
 
 ## Verification
 
