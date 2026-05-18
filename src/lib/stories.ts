@@ -238,6 +238,17 @@ export const STORY_METADATA: StoryMetadata[] = [
     targetAudience: "all",
   },
   {
+    slug: "saturday-morning",
+    image: "/images/saturday-morning-thumbnail2.png",
+    levels: ["A1", "A2", "B1", "B2", "C1"],
+    originalLevel: "C1",
+    isPremiumOnly: false,
+    type: "short-story",
+    origin: { isOriginal: true },
+    tags: ["reflective","contemporary","urban"],
+    targetAudience: "all",
+  },
+  {
     slug: "diego-unplugged",
     image: "/images/diego-unplugged-thumbnail.png",
     levels: ["A1", "A2", "B1", "B2", "C1"],

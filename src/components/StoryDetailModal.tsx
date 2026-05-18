@@ -426,6 +426,7 @@ export default function StoryDetailModal({
                     {story.levels.map((lvl, idx) => {
                       const cefrLevel = toCEFR(lvl);
                       const colorClass = CEFR_BADGE_COLORS[cefrLevel] || "bg-gray-100 text-gray-800";
+                      const isOriginal = story.originalLevel && cefrLevel === story.originalLevel;
                       return (
                         <button
                           key={idx}
@@ -458,7 +459,7 @@ export default function StoryDetailModal({
                           className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass} cursor-pointer hover:scale-105 transition-transform`}
                           title={typedLang === "es" ? `Leer en nivel ${cefrLevel}` : `Read at ${cefrLevel} level`}
                         >
-                          {getCEFRLabel(cefrLevel, typedLang)}
+                          {getCEFRLabel(cefrLevel, typedLang)}{isOriginal ? ` ${t(typedLang, "stories", "originalLevel")}` : ""}
                         </button>
                       );
                     })}

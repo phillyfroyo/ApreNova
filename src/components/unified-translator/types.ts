@@ -38,4 +38,5 @@ export interface UnifiedTranslatorProps {
   externalSelection?: { start: number; end: number } | null;
   onWordClick?: (wordIndex: number) => void;
   parentHasSelection?: boolean;
+  italic?: boolean;
 }

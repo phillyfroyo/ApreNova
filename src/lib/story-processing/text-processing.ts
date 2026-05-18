@@ -160,6 +160,8 @@ export interface StoryLine {
   isStageDirectionOnly?: boolean; // True if line is ONLY a stage direction (no dialogue)
   // Editorial note support (for poetry anthologies)
   isEditorialNote?: boolean;    // True for editorial notes - render in italics, not rewritten
+  // Whole-line emphasis (e.g. epigraphs). Renders the entire line in italics in both languages.
+  italic?: boolean;
 }
 
 export interface PageContent {

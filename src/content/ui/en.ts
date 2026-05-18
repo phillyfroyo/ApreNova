@@ -63,6 +63,7 @@ stories: {
   readMore: "Read more",
   readLess: "Read less",
   availableLevels: "Available in levels:",
+  originalLevel: "(Original)",
   level: "Level",
   storiesAll: "Stories",
   aiTutor: "AI Tutor",
@@ -609,6 +610,11 @@ storiesMetadata: {
     title: "Diego Unplugged",
     hook: "A teenager drops his phone out a window and is forced to survive a month without it.",
     description: "Diego never goes anywhere without his phone. Not to the kitchen, not to bed, not even across the street. Then one summer evening, it slips from his hands and shatters on the sidewalk two stories below. His parents won't pay for the repair. It will take a month of work to save up. At first, the silence is unbearable. Food tastes like nothing, music falls flat, and his hands keep reaching for something that isn't there. But slowly, the world starts to get louder — in ways he never expected.",
+  },
+  "saturday-morning": {
+    title: "Saturday Morning",
+    hook: "An ordinary Saturday morning, told one quiet detail at a time — and one of thousands of lives running side by side in the same city. Nothing happens. Everything happens.",
+    description: "The first in a series of small, parallel-lives vignettes — quiet snapshots of the people whose paths cross, almost cross, and one day will. Maya is the same girl from The Last Word; somewhere across the city, Diego is making coffee too.",
   },
   "el-viaje-magico": {
     title: "The Magic Journey",

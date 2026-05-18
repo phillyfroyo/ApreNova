@@ -63,6 +63,7 @@ tour: {
   readMore: "Leer más",
   readLess: "Leer menos",
   availableLevels: "Disponible en niveles:",
+  originalLevel: "(Original)",
   level: "Nivel",
   storiesAll: "Historias",
   aiTutor: "Tutor IA",
@@ -610,6 +611,11 @@ storiesMetadata: {
     title: "Diego Desconectado",
     hook: "Un adolescente deja caer su teléfono por la ventana y tiene que sobrevivir un mes sin él.",
     description: "Diego nunca va a ningún lado sin su teléfono. Ni a la cocina, ni a la cama, ni siquiera al cruzar la calle. Entonces, una noche de verano, se le resbala de las manos y se estrella contra la acera dos pisos más abajo. Sus padres no van a pagar la reparación. Le tomará un mes de trabajo ahorrar lo suficiente. Al principio, el silencio es insoportable. La comida no tiene sabor, la música suena plana, y sus manos siguen buscando algo que ya no está. Pero poco a poco, el mundo empieza a sonar más fuerte — de maneras que nunca esperó.",
+  },
+  "saturday-morning": {
+    title: "Mañana de Sábado",
+    hook: "Una mañana de sábado cualquiera, contada un detalle a la vez — y una de miles de vidas paralelas que corren lado a lado en la misma ciudad. No pasa nada. Pasa todo.",
+    description: "La primera de una serie de pequeñas viñetas de vidas paralelas — instantáneas silenciosas de las personas cuyos caminos se cruzan, casi se cruzan, y un día se encontrarán. Maya es la misma chica de La Última Palabra; en algún lugar al otro lado de la ciudad, Diego también está preparando café.",
   },
   "el-viaje-magico": {
     title: "El Viaje Mágico",

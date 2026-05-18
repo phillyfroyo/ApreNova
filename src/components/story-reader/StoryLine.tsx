@@ -121,10 +121,11 @@ export default function StoryLine({
       {/* Text content */}
       <div className={`w-full px-2 relative ${isScriptType && s.speaker ? "pl-4" : ""}`} data-text-content={lineIndex}>
         {/* Target language (always shown) */}
-        <div className="rounded-lg" data-target-line>
+        <div className={`rounded-lg ${s.italic ? "italic" : ""}`} data-target-line>
           <UnifiedTranslator
             sentence={s[oppositeLang]}
             staticTranslation={s[typedLang]}
+            italic={!!s.italic}
             enabled={!isAnyDropdownOpen && !menuOpen}
             readOnlyMode={translationMode === "free"}
             autoTriggerAll={premiumTriggers[lineIndex] || false}
@@ -144,7 +145,7 @@ export default function StoryLine({
         {/* Native language (bilingual mode only) */}
         {isBilingualMode && s[typedLang]?.trim() && (
           <div className={`${isInsideStanza ? "mt-0.5" : "mt-1"} rounded-lg`} data-native-line>
-            <p className="text-sm text-gray-400 leading-relaxed">{s[typedLang]}</p>
+            <p className={`text-sm text-gray-400 leading-relaxed ${s.italic ? "italic" : ""}`}>{s[typedLang]}</p>
           </div>
         )}
 

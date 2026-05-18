@@ -76,13 +76,13 @@ export default function StoryHeader({
             />
 
             <Dropdown
-              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}${detectedLevel && currentLevel === detectedLevel ? " (Original)" : ""}`}
+              label={`${t(typedLang, "story", "levelSelect")} ▾ ${getCEFRLabel(currentLevel as CEFRCode, typedLang)}${detectedLevel && currentLevel === detectedLevel ? ` ${t(typedLang, "stories", "originalLevel")}` : ""}`}
               variant="glass"
               options={ALL_CEFR_LEVELS.map((level) => {
                 const isAvailable = !availableLevels || availableLevels.includes(level);
                 const isOriginal = detectedLevel && level === detectedLevel;
                 const notAvailableText = typedLang === "es" ? "(no disponible)" : "(not available)";
-                const originalText = "(Original)";
+                const originalText = t(typedLang, "stories", "originalLevel");
 
                 let label = getCEFRLabel(level, typedLang);
                 if (isOriginal) label += ` ${originalText}`;
