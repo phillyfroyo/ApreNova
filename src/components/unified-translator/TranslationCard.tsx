@@ -39,7 +39,7 @@ export default function TranslationCard({
   return (
     <div
       ref={tooltipRef}
-      className="mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative w-[calc(100%+16px)] -ml-2"
+      className="mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative w-[calc(100%+16px)] -ml-2 not-italic"
       data-tooltip
     >
       {/* Close button */}
