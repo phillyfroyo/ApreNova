@@ -270,6 +270,97 @@ These are the slow-compounding items. Don't touch now; they're the
 - **Content optimization** — story descriptions written specifically
   to rank (e.g. "Beginner Spanish A2 reading"), level-specific landing
   pages, language-pair pages.
+
+  **2026-05-18 backfill note:** Audited `STORY_METADATA` and discovered
+  that despite the Stage 2 plumbing reading from
+  `storyMeta.descriptions?.hook` / `?.summary` (see
+  `[storySlug]/[level]/[chapter]/[page]/page.tsx:42-48`), **zero stories
+  had `descriptions` set at all** — every page was falling through to
+  the generic template. Trail-blazed the field shape on
+  `saturday-morning` (commit forthcoming) as a reference:
+  ```ts
+  descriptions: {
+    hook: "One-liner under ~110 chars.",
+    summary: "~280-char pitch. Names the central image; surfaces the
+      learner-facing features (audio/translation/bilingual); mentions
+      level range. The route slices at 300 chars.",
+  },
+  ```
+  Note: `descriptions` is language-agnostic (one string, used regardless
+  of `lng`); the template fallback adapts per language but the
+  hand-tuned string does not. Writing in English is the right call —
+  most "learn Spanish via stories" search traffic queries in English.
+
+  **Remaining backfill: 8 stories.** Aventura, the-last-word,
+  diego-unplugged, my-day-3, poems-by-emily-dickinson-complete,
+  the-great-gatsby-a-8, the-adventures-of-tom-sawyer,
+  the-wonderful-wizard-of-oz. The in-app hook/description in
+  `src/content/ui/{en,es}.ts` is a good starting draft for Cuentana
+  originals; for non-Cuentana classics, lean on the author + year +
+  one-sentence hook that names the central conflict.
+
+
+- **Story landing page (info card with its own URL).** Discovered
+  2026-05-18 during a discussion of where Google-referred users should
+  land for specific-story searches. Today's sitemap (and the route
+  shipped in Stage 1) points specific-story queries at the **reader**
+  (`/[lng]/stories/[slug]/[level]/1/1`) — so someone Googling "great
+  gatsby simplified A2 spanish" lands inside chapter 1, page 1 of the
+  reader with no orientation, no "what is this app," no visible level
+  picker. Jarring for cold visitors who don't know Cuentana yet.
+
+  Meanwhile `StoryDetailModal` (`src/components/StoryDetailModal.tsx`)
+  — the info card with title, hook, description, level badges, author/
+  origin, rights statement — is **purely client-side modal state on
+  `/[lng]/stories`**. It has no URL, so Google can't link to it.
+
+  **Recommended structure** (hybrid):
+  1. Add a real route `/[lng]/stories/[storySlug]` that server-renders
+     the info-card UI plus a clear "Start reading" CTA into the reader
+     at the user's current/default level (or a level picker if no
+     bookmark exists).
+  2. Keep the modal experience inside `/stories` for in-app flow (no
+     change). The new route is for search-landing.
+  3. Add `generateMetadata` on the new route with per-story title +
+     description (already plumbed via `storyMeta.descriptions`).
+  4. Add JSON-LD: `Book` + `BreadcrumbList` (no `LearningResource`
+     here since no specific level is implied yet).
+  5. Update sitemap priorities:
+
+     | Pri | URL | Audience |
+     |---|---|---|
+     | 1.0 | `/en` | Brand search |
+     | 0.9 | `/en/stories` | Browse intent |
+     | **0.8** | **`/en/stories/[storySlug]` (NEW)** | **Specific-story search → land on info card** |
+     | 0.7 | `/en/stories/[storySlug]/[level]/1/1` | Returning user / deep crawl (demoted) |
+
+  6. Update `[storySlug]/[level]/[chapter]/[page]/page.tsx`'s canonical
+     to point at the new info-card URL when the searcher is cold
+     (no session), so Google consolidates link equity on the info page.
+     For warm users (existing session/bookmark), canonical stays on the
+     reader to avoid redirect loops on direct bookmark visits.
+
+  **Why this beats just changing copy or templates:** the info card
+  does real orienting work — shows level badges, author, hook,
+  "Start reading" affordance. Spending 30 seconds there before clicking
+  in is the difference between "I get what this is" and a bounce.
+
+  **Scope estimate:** ~3-4 hours. The info card UI already exists;
+  this is mostly making it a server-rendered route + sitemap update +
+  canonical logic.
+
+  **Don't ship this without `descriptions:` backfilled on every story**
+  (see Content optimization above) — the new landing page lives or
+  dies on the quality of that hand-tuned summary.
+
+- **Level-landing pages.** Same conversation flagged that "A2 Spanish
+  reading content" searches currently land on `/[lng]/stories` with no
+  level filter applied. Long-tail SEO opportunity: dedicated landing
+  pages at `/[lng]/stories/level/[cefr]` (e.g. `/en/stories/level/A2`)
+  that show only A2 stories with a level-specific title/description.
+  Compounds with the per-story info pages above. Lower priority than
+  the info-card landing route.
+
 - **Internal linking taxonomy** — story → author → language → level
   hub pages. Today there's no `/[lng]/authors/[author]` route or
   similar.

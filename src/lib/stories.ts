@@ -250,6 +250,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["reflective","contemporary","urban"],
     targetAudience: "all",
     addedAt: "2026-05-18",
+    descriptions: {
+      hook: "An ordinary Saturday morning, told one quiet detail at a time. Nothing happens. Everything happens.",
+      summary: "A short, reflective vignette for Spanish learners: Maya's Saturday morning told in small, repeating details — the vendor's call, the green motorcycle, the light on the wall. Read at A1–C1 with built-in translation, word-by-word audio, and bilingual mode. The first in a series of parallel-lives stories from Cuentana.",
+    },
   },
   {
     slug: "diego-unplugged",
