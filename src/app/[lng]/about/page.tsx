@@ -73,8 +73,11 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             {t(typedLang, 'about', 'whatIs')}
           </h2>
+          <p className="text-gray-700 leading-relaxed mb-4">
+            {t(typedLang, 'stories', 'storyLandingIntro')}
+          </p>
           <p className="text-gray-700 leading-relaxed mb-6">
-            {t(typedLang, 'about', 'description')}
+            {t(typedLang, 'stories', 'storyLandingSubtagline')}
           </p>
 
           {/* Features grid */}

@@ -590,6 +590,7 @@ useEffect(() => {
                     index={originalIndex}
                     title={getStoryDisplayTitle(typedLang, story.slug)}
                     image={story.image}
+                    href={`/${typedLang}/stories/${story.slug}`}
                     onClick={() => openDetailModal(story.slug)}
                     isNew={isNewStory(story.addedAt)}
                     newLabel={t(typedLang, "stories", "newBadge")}
@@ -639,6 +640,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryDisplayTitle(typedLang, story.slug)}
                         image={story.image}
+                        href={`/${typedLang}/stories/${story.slug}`}
                         onClick={() => openDetailModal(story.slug)}
                         isNew={isNewStory(story.addedAt)}
                         newLabel={t(typedLang, "stories", "newBadge")}
@@ -689,6 +691,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryDisplayTitle(typedLang, story.slug)}
                         image={story.image}
+                        href={`/${typedLang}/stories/${story.slug}`}
                         onClick={() => openDetailModal(story.slug)}
                         isNew={isNewStory(story.addedAt)}
                         newLabel={t(typedLang, "stories", "newBadge")}
@@ -738,6 +741,7 @@ useEffect(() => {
                         index={originalIndex}
                         title={getStoryDisplayTitle(typedLang, story.slug)}
                         image={story.image}
+                        href={`/${typedLang}/stories/${story.slug}`}
                         onClick={() => openDetailModal(story.slug)}
                         isNew={isNewStory(story.addedAt)}
                         newLabel={t(typedLang, "stories", "newBadge")}

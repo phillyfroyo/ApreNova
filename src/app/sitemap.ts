@@ -54,7 +54,29 @@ function staticEntries(now: Date): SitemapEntry[] {
   return entries;
 }
 
-/** For one story, emit one entry per (language, level) — each lands at ch1/page1. */
+/** Story info-card landing page — 1 per language per story, priority 0.8.
+ *  This is what Google should land cold visitors on (vs deep reader URLs). */
+function infoPageEntriesForStory(slug: string, now: Date): SitemapEntry[] {
+  const enUrl = `${BASE_URL}/en/stories/${slug}`;
+  const esUrl = `${BASE_URL}/es/stories/${slug}`;
+  const entries: SitemapEntry[] = [];
+  for (const lang of LANGUAGES) {
+    entries.push({
+      url: lang === "en" ? enUrl : esUrl,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+      alternates: {
+        languages: { en: enUrl, es: esUrl },
+      },
+    });
+  }
+  return entries;
+}
+
+/** Reader URLs — one per (language, level), priority 0.7. Demoted below
+ *  the info-card pages so Google consolidates ranking signal on the info
+ *  page rather than diluting it across all CEFR-level variants. */
 function entriesForStory(slug: string, levels: CEFRCode[], now: Date): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
 
@@ -68,7 +90,7 @@ function entriesForStory(slug: string, levels: CEFRCode[], now: Date): SitemapEn
         url: lang === "en" ? enUrl : esUrl,
         lastModified: now,
         changeFrequency: "monthly",
-        priority: 0.8,
+        priority: 0.7,
         alternates: {
           languages: { en: enUrl, es: esUrl },
         },
@@ -88,6 +110,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const visibleStories = STORY_METADATA.filter((s) => !s.isArchived);
 
   for (const story of visibleStories) {
+    entries.push(...infoPageEntriesForStory(story.slug, now));
     entries.push(...entriesForStory(story.slug, story.levels, now));
   }
 

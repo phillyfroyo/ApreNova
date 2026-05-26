@@ -227,6 +227,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["adventure","mystery","friendship","suspenseful","heartwarming"],
     targetAudience: "all",
+    descriptions: {
+      hook: "An enchanted forest, hidden creatures, and a mystery only the curious can solve. A Spanish adventure for learners.",
+      summary: "Read Aventura in Spanish at A1–C1: a short adventure-mystery set in an enchanted forest. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+    },
   },
   {
     slug: "the-last-word",
@@ -238,6 +242,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["suspenseful","heartwarming","reflective","inspiring"],
     targetAudience: "all",
+    descriptions: {
+      hook: "A girl who can barely speak in class is asked to read a poem on stage in front of the entire school.",
+      summary: "Read The Last Word in Spanish at A1–C1: a short coming-of-age story about stage fright, grief, and finding your voice. Built-in translation and word-by-word audio. A Cuentana original.",
+    },
   },
   {
     slug: "saturday-morning",
@@ -265,6 +273,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     tags: ["technology","reflective","inspiring","heartwarming"],
     targetAudience: "all",
+    descriptions: {
+      hook: "A teenager drops his phone out a window and must survive a month without it.",
+      summary: "Read Diego Unplugged in Spanish at A1–C1: a short story about a phone-addicted teen forced offline for a month. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+    },
   },{
     slug: "my-day-3",
     image: "/images/my-day-3-thumbnail-7027.png",
@@ -274,13 +286,21 @@ export const STORY_METADATA: StoryMetadata[] = [
     origin: { isOriginal: true },
     targetAudience: "all",
     structureType: "anthology",
-    tags: []
+    tags: [],
+    descriptions: {
+      hook: "A simple Spanish poem about the rhythm of an ordinary day, from dawn to dusk.",
+      summary: "Read My Day in Spanish at A1–C1: a short poem capturing the rhythm of a single day, dawn to dusk. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+    },
   },
   {
     slug: "poems-by-emily-dickinson-complete",
     image: "/images/poems-by-emily-dickinson-complete-thumbnail-4653.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
     originalLevel: "C2",
+    descriptions: {
+      hook: "Emily Dickinson's complete poetry, adapted for Spanish learners across all CEFR levels.",
+      summary: "Read Emily Dickinson's poems in Spanish at A1–C2: the complete 1890 collection, edited by Mabel Loomis Todd and T.W. Higginson. Built-in translation, word-by-word audio, and bilingual mode.",
+    },
     type: "poem",
     origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems by Emily Dickinson", publisher: "Not specified", editor: "Mabel Loomis Todd and T.W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, and her works are in the public domain.", url: "https://www.gutenberg.org/ebooks/12242" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/12242" }, region: "United States", culturalInfluences: ["American"], genres: ["poetry"] } },
     tags: ["love","death","usa","inspiring"],
@@ -291,6 +311,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     image: "/images/the-great-gatsby-a-8-thumbnail-7588.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
+    descriptions: {
+      hook: "F. Scott Fitzgerald's 1925 classic novel, adapted for Spanish learners from A1 to C1.",
+      summary: "Read The Great Gatsby in Spanish at A1–C1: Fitzgerald's 1925 American classic about love, wealth, and the green light across the bay. Built-in translation, word-by-word audio, and bilingual mode.",
+    },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/64317" } } },
     tags: ["romance", "urban", "tragedy", "love"],
@@ -303,6 +327,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     image: "/images/the-adventures-of-tom-sawyer-thumbnail-4502.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
+    descriptions: {
+      hook: "Mark Twain's 1876 classic, adapted for Spanish learners from A1 to C1.",
+      summary: "Read The Adventures of Tom Sawyer in Spanish at A1–C1: Twain's 1876 tale of a mischievous boy in a Mississippi River town. Built-in translation, word-by-word audio, and bilingual mode.",
+    },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "Mark Twain", lifespan: "1835-1910", note: "Mark Twain is the pen name of Samuel Langhorne Clemens." }, yearWritten: "c. 1876", yearFirstPublished: 1876, sourceEdition: { title: "The Adventures of Tom Sawyer", isPublicDomain: true, publicDomainNote: "Published before 1928 and author died over 70 years ago.", url: "https://www.gutenberg.org/ebooks/74" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/74" }, region: "United States", genres: ["novel", "children's literature"] } },
     tags: ["friendship","adventure","coming-of-age","humorous","nature","travel","historical","rural"],
@@ -315,6 +343,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     image: "/images/the-wonderful-wizard-of-oz-thumbnail-1030.jpeg",
     levels: ["A1", "A2", "B1", "B2"],
     originalLevel: "B2",
+    descriptions: {
+      hook: "L. Frank Baum's 1900 fairy tale, adapted for Spanish learners from A1 to B2.",
+      summary: "Read The Wonderful Wizard of Oz in Spanish at A1–B2: Baum's 1900 fairy tale of Dorothy, Toto, and the yellow brick road. Built-in translation, word-by-word audio, and bilingual mode.",
+    },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "L. Frank Baum", lifespan: "1856 – 1919" }, yearWritten: "1900", sourceEdition: { title: "The Wonderful Wizard of Oz", publicationYear: 1900, isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/55" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/55" }, region: "United States", genres: ["fairy tale", "children's literature"] } },
     tags: ["friendship","adventure","fantasy","heros-journey","heartwarming"],
