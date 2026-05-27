@@ -267,99 +267,86 @@ Optional but cheap (~10 min). Bing has ~10% of search traffic.
 These are the slow-compounding items. Don't touch now; they're the
 "6-month plan" referenced in the broader strategy.
 
-- **Content optimization** — story descriptions written specifically
-  to rank (e.g. "Beginner Spanish A2 reading"), level-specific landing
-  pages, language-pair pages.
+- **Content optimization — descriptions backfill ✅ Done (2026-05-26)**
 
-  **2026-05-18 backfill note:** Audited `STORY_METADATA` and discovered
-  that despite the Stage 2 plumbing reading from
-  `storyMeta.descriptions?.hook` / `?.summary` (see
-  `[storySlug]/[level]/[chapter]/[page]/page.tsx:42-48`), **zero stories
-  had `descriptions` set at all** — every page was falling through to
-  the generic template. Trail-blazed the field shape on
-  `saturday-morning` (commit forthcoming) as a reference:
-  ```ts
-  descriptions: {
-    hook: "One-liner under ~110 chars.",
-    summary: "~280-char pitch. Names the central image; surfaces the
-      learner-facing features (audio/translation/bilingual); mentions
-      level range. The route slices at 300 chars.",
-  },
-  ```
-  Note: `descriptions` is language-agnostic (one string, used regardless
-  of `lng`); the template fallback adapts per language but the
-  hand-tuned string does not. Writing in English is the right call —
-  most "learn Spanish via stories" search traffic queries in English.
+  All 9 stories now have hand-tuned `descriptions.hook` + `descriptions.summary`
+  in `src/lib/stories.ts`. Skeleton: "Read [Title] in Spanish at [level
+  range]: [hook]. Built-in translation, word-by-word audio, and bilingual
+  mode." Hooks vary per story (Cuentana originals lean on central
+  conflict; non-Cuentana classics lean on author + year + recognizable
+  phrase like "green light across the bay" for Gatsby).
 
-  **Remaining backfill: 8 stories.** Aventura, the-last-word,
-  diego-unplugged, my-day-3, poems-by-emily-dickinson-complete,
-  the-great-gatsby-a-8, the-adventures-of-tom-sawyer,
-  the-wonderful-wizard-of-oz. The in-app hook/description in
-  `src/content/ui/{en,es}.ts` is a good starting draft for Cuentana
-  originals; for non-Cuentana classics, lean on the author + year +
-  one-sentence hook that names the central conflict.
+  Per-story `<meta description>`, OG, Twitter Card, and JSON-LD
+  `Book.description` now serve unique snippets instead of the generic
+  Stage 2 template fallback. Template fallback path kept as defensive
+  default for future stories shipped without `descriptions` set.
+
+  Note: `descriptions` is language-agnostic (one string used regardless
+  of `lng`). Spanish snippets are English-language because most
+  "learn Spanish through stories" search traffic queries in English.
+  Per-language descriptions could be added later but not worth the
+  schema change at current scale.
 
 
-- **Story landing page (info card with its own URL).** Discovered
-  2026-05-18 during a discussion of where Google-referred users should
-  land for specific-story searches. Today's sitemap (and the route
-  shipped in Stage 1) points specific-story queries at the **reader**
-  (`/[lng]/stories/[slug]/[level]/1/1`) — so someone Googling "great
-  gatsby simplified A2 spanish" lands inside chapter 1, page 1 of the
-  reader with no orientation, no "what is this app," no visible level
-  picker. Jarring for cold visitors who don't know Cuentana yet.
+- **Story landing page (info card with its own URL) ✅ Done (2026-05-26)**
 
-  Meanwhile `StoryDetailModal` (`src/components/StoryDetailModal.tsx`)
-  — the info card with title, hook, description, level badges, author/
-  origin, rights statement — is **purely client-side modal state on
-  `/[lng]/stories`**. It has no URL, so Google can't link to it.
+  Shipped `/[lng]/stories/[storySlug]` as a server-rendered route that
+  surfaces the info card (image, title, hook, description, level badges,
+  author/rights, "Read Me" CTA) with its own metadata + JSON-LD +
+  sitemap entry. Google-referred cold visitors now land here instead of
+  inside chapter 1, page 1 of the reader.
 
-  **Recommended structure** (hybrid):
-  1. Add a real route `/[lng]/stories/[storySlug]` that server-renders
-     the info-card UI plus a clear "Start reading" CTA into the reader
-     at the user's current/default level (or a level picker if no
-     bookmark exists).
-  2. Keep the modal experience inside `/stories` for in-app flow (no
-     change). The new route is for search-landing.
-  3. Add `generateMetadata` on the new route with per-story title +
-     description (already plumbed via `storyMeta.descriptions`).
-  4. Add JSON-LD: `Book` + `BreadcrumbList` (no `LearningResource`
-     here since no specific level is implied yet).
-  5. Update sitemap priorities:
+  What landed:
+  1. New route at `src/app/[lng]/stories/[storySlug]/page.tsx`
+  2. `<StoryDetailContent>` extracted from `StoryDetailModal` as a
+     shared component — single source of truth for the info card visual
+  3. `generateMetadata`: per-story title, description, canonical,
+     hreflang en↔es, OG, Twitter Card
+  4. JSON-LD: `Book` + `BreadcrumbList`
+  5. Server-side bookmark + quizLevel resolution for the "Read Me" CTA
+     so the link in initial HTML is correct for both crawlers (lowest
+     level) and signed-in users (their bookmark or quizLevel)
+  6. Sitemap restructured:
 
      | Pri | URL | Audience |
      |---|---|---|
      | 1.0 | `/en` | Brand search |
      | 0.9 | `/en/stories` | Browse intent |
-     | **0.8** | **`/en/stories/[storySlug]` (NEW)** | **Specific-story search → land on info card** |
-     | 0.7 | `/en/stories/[storySlug]/[level]/1/1` | Returning user / deep crawl (demoted) |
+     | 0.8 | `/en/stories/[storySlug]` | Specific-story search → info card (NEW) |
+     | 0.7 | `/en/stories/[storySlug]/[level]/1/1` | Returning user / deep crawl (demoted from 0.8) |
 
-  6. Update `[storySlug]/[level]/[chapter]/[page]/page.tsx`'s canonical
-     to point at the new info-card URL when the searcher is cold
-     (no session), so Google consolidates link equity on the info page.
-     For warm users (existing session/bookmark), canonical stays on the
-     reader to avoid redirect loops on direct bookmark visits.
+  7. Internal linking: each `<StoryCard>` on `/[lng]/stories` now wraps
+     image+title in an `<a href>` to the info-card URL — crawlers and
+     cmd-click users follow the link; left-click still opens the modal
+  8. Cuentana context block below each card (logo, tagline, "Hi there,
+     we're Cuentana..." intro copy, two CTAs) — orients cold visitors
+  9. Back-to-stories link above the card; card height capped at
+     `calc(100vh - 120px)` on desktop with `hide-scrollbar` so the
+     Cuentana logo peeks above the fold as a "more here" signal
 
-  **Why this beats just changing copy or templates:** the info card
-  does real orienting work — shows level badges, author, hook,
-  "Start reading" affordance. Spending 30 seconds there before clicking
-  in is the difference between "I get what this is" and a bounce.
+  Canonical decision: each info-page URL is its own canonical (no
+  reader → info redirect). Simpler than the original plan note about
+  conditional canonicals; avoids any risk of redirect loops on direct
+  bookmark visits.
 
-  **Scope estimate:** ~3-4 hours. The info card UI already exists;
-  this is mostly making it a server-rendered route + sitemap update +
-  canonical logic.
+  Sitemap deployed with 100 URLs (was 84). Sitemap re-submitted in
+  Google Search Console + Bing Webmaster Tools 2026-05-26; 10 priority
+  URLs manually requested for indexing (5 English + 5 Spanish — Gatsby,
+  Tom Sawyer, the-last-word, saturday-morning, diego-unplugged).
 
-  **Don't ship this without `descriptions:` backfilled on every story**
-  (see Content optimization above) — the new landing page lives or
-  dies on the quality of that hand-tuned summary.
+  Expected timeline:
+  - **2026-06-01** (week 1): manually-requested URLs appear in index
+  - **2026-06-23** (week 4): first impression/click data in Performance
+    report
+  - **~2026-07** (week 6-8): ranking changes settle
 
-- **Level-landing pages.** Same conversation flagged that "A2 Spanish
-  reading content" searches currently land on `/[lng]/stories` with no
-  level filter applied. Long-tail SEO opportunity: dedicated landing
-  pages at `/[lng]/stories/level/[cefr]` (e.g. `/en/stories/level/A2`)
-  that show only A2 stories with a level-specific title/description.
-  Compounds with the per-story info pages above. Lower priority than
-  the info-card landing route.
+- **Level-landing pages.** Original SEO discussion flagged that "A2
+  Spanish reading content" searches currently land on `/[lng]/stories`
+  with no level filter applied. Long-tail SEO opportunity: dedicated
+  landing pages at `/[lng]/stories/level/[cefr]` (e.g.
+  `/en/stories/level/A2`) that show only A2 stories with a
+  level-specific title/description. Compounds with the per-story info
+  pages above. **Status: deferred to Stage 5 — Move 2 (see below).**
 
 - **Internal linking taxonomy** — story → author → language → level
   hub pages. Today there's no `/[lng]/authors/[author]` route or
@@ -384,6 +371,150 @@ These are the slow-compounding items. Don't touch now; they're the
 
   Migrate all to `getNavigationUrl()` (`src/utils/storyNavigation.ts:56`)
   so shared links use the canonical form. ~30 min cleanup, low urgency.
+
+### Stage 5 — Search-intent / keyword research (added 2026-05-26)
+
+Stages 1–4 + the Stage 5+ landing-page work above are the **technical
+foundation**: pages exist, are indexable, have clean metadata, are in
+the sitemap, and Google has been notified. We've built a site that
+can rank for whatever queries Google decides match it.
+
+Stage 5 shifts the work from *technical infrastructure* to *demand
+matching*: figure out what your audience actually types into Google,
+then make sure your site uses those words in the right places (and
+eventually, build content explicitly targeting those queries).
+
+The work breaks into three moves of increasing investment. Each builds
+on the previous.
+
+#### Move 1 — Keyword research to inform existing copy (this month)
+
+**Goal:** Discover the 10–20 phrases your audience actually searches
+for, then audit existing titles/descriptions/on-page copy to use those
+phrases naturally where they don't already.
+
+**Why it works:** Google ranks pages on word-match more than people
+realize. If your audience searches "spanish reading practice a2" but
+your A2-related pages say "CEFR-leveled stories at A2," Google sees
+a partial match and ranks you lower than a competitor whose page uses
+the searcher's exact vocabulary. Small copy edits, big ranking impact.
+
+**Process:**
+1. Brainstorm 30–50 seed queries. Examples:
+   - "learn spanish through stories"
+   - "spanish reading practice [a1|a2|b1|b2|c1]"
+   - "free spanish reading for beginners"
+   - "spanish short stories for [level] learners"
+   - "comprehensible input spanish"
+   - "spanish books for beginners"
+   - "[author name] in spanish for english speakers"
+   - "easy spanish books to read online"
+2. Run them through free keyword tools to get search volume +
+   competition data:
+   - **Google Keyword Planner** (free with a Google Ads account, no
+     spend required)
+   - **AnswerThePublic** (free tier — surfaces question-form variants)
+   - **Google auto-suggest** (just type into the search bar)
+   - **Search Console Performance report** — after 4–8 weeks of data,
+     this surfaces queries we're *already* showing up for. Goldmine
+     for finding accidental matches we should double down on.
+3. Narrow to a top-10 list ranked by (volume × intent-match × low
+   competition).
+4. Audit existing pages against the top-10. For each mismatch,
+   update copy. Concrete examples of where to look:
+   - Story info-page `<title>` and `<meta description>` (currently
+     uses "Spanish Stories" phrasing — does the audience say
+     "Spanish reading" or "Spanish stories" more?)
+   - `/stories` index page `<title>` and `<h1>`
+   - Landing page hero copy
+   - About page intro
+
+**Effort:** ~3–5 hours research + 1–2 hours of copy edits. No code
+changes beyond text. Massively informative regardless of what comes
+next.
+
+**Risk:** Don't target queries we can't actually serve well. If we
+rank for "spanish songs for learners" but don't have song-lyric
+content, users bounce, Google demotes us. Match keywords to the
+actual experience we deliver.
+
+**Start:** May/June 2026.
+
+#### Move 2 — Build content around proven search demand (deferred to August)
+
+**Goal:** Once Move 1 surfaces queries with strong demand that we
+don't currently rank for, build dedicated landing pages targeting
+those queries.
+
+**Examples worth considering** (depending on Move 1 findings):
+
+- `/[lng]/learn-spanish-through-stories/` — pillar page targeting
+  the brand-defining query. Single deeply-optimized page with rich
+  content (testimonials, story samples, "how it works," comparison
+  to other methods). The kind of page that ranks #1 forever.
+- `/[lng]/stories/level/[cefr]/` — level-landing pages targeting
+  "A2 spanish reading," "B1 spanish reading," etc. Was originally
+  flagged as its own Stage 5+ item; rolls up here as a Move 2 task.
+- `/[lng]/comprehensible-input-spanish/` — explainer page targeting
+  the methodology-aware searcher. High-intent, often used in
+  language-learning communities.
+- `/[lng]/free-spanish-books-online/` — targets the "free" qualifier
+  which is a high-volume modifier.
+
+**Why ship one at a time:** Each landing page that ranks becomes a
+permanent traffic engine. Better to ship one excellent page than five
+mediocre ones. Pick the highest-leverage target from Move 1 findings.
+
+**Effort per landing page:** ~4–8 hours (copy, layout, internal
+linking, OG image, JSON-LD).
+
+**Defer reason:** Move 1 has to happen first so we target real
+queries rather than guesses. Also gives ~4 weeks of Search Console
+data to inform decisions.
+
+**Start:** August 2026 or later, after Move 1 informs targets.
+
+#### Move 3 — Programmatic SEO (deferred to August or later)
+
+**Goal:** Build a template that auto-generates one landing page per
+(level × topic × language) combination — e.g.
+`/spanish-reading-a2-romance`, `/spanish-reading-b1-mystery`,
+`/spanish-reading-c1-coming-of-age`. Each ranks for its long-tail
+combination; total surface area becomes hundreds of indexable pages.
+
+**Why it works:** This is how Babbel, FluentU, and similar sites
+built early-stage organic traffic. Long-tail queries individually
+have low volume but collectively are most of the search universe.
+A template that ships 100 pages can capture more total traffic than
+5 hand-crafted pages.
+
+**Why we're deferring:**
+1. Programmatic SEO done lazily generates thin pages that Google
+   may treat as "spam" and demote. Done well requires real content
+   per combination (story excerpts, stats, recommendations).
+2. We don't yet have enough story-tag taxonomy to fill the
+   combinations. Most stories have 3–5 tags; combining 5 levels ×
+   ~20 tags × 2 languages = 200 potential URLs, but most would be
+   empty (no A1 horror stories yet).
+3. Move 1 + Move 2 may move the needle enough that programmatic
+   becomes unnecessary at our scale.
+
+**Trigger to revisit:** When we have either (a) ≥30 stories or
+(b) Move 2 landing pages prove the template structure works.
+
+**Effort:** ~1–2 weeks. Includes schema design, template, internal
+linking, sitemap generation, and content sufficiency rules
+(don't generate empty combinations).
+
+**Start:** Q4 2026 at earliest, possibly later.
+
+#### Sequencing summary
+
+| Move | Effort | Start | Trigger |
+|---|---|---|---|
+| Move 1 (research + audit) | ~5–7 hrs total | May/June 2026 | Now — depends on nothing else |
+| Move 2 (landing pages) | ~4–8 hrs each, ship 1 at a time | August 2026 | Move 1 done + 4 weeks of Search Console data |
+| Move 3 (programmatic) | ~1–2 weeks | Q4 2026+ | ≥30 stories or Move 2 proves the model |
 
 ## Verification
 
