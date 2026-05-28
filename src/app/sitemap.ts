@@ -22,27 +22,18 @@ const ENTRY_PAGE = 1;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
-/** Top-level URLs (home, stories index). */
+/** Top-level URLs. /[lng]/stories is the brand-landing entry point
+ *  (priority 1.0) — /[lng] itself is intentionally omitted because it
+ *  302-redirects to /[lng]/stories; we publish the destination directly
+ *  so Google indexes a 200, not a redirect. */
 function staticEntries(now: Date): SitemapEntry[] {
   const entries: SitemapEntry[] = [];
   for (const lang of LANGUAGES) {
     entries.push({
-      url: `${BASE_URL}/${lang}`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 1.0,
-      alternates: {
-        languages: {
-          en: `${BASE_URL}/en`,
-          es: `${BASE_URL}/es`,
-        },
-      },
-    });
-    entries.push({
       url: `${BASE_URL}/${lang}/stories`,
       lastModified: now,
       changeFrequency: "weekly",
-      priority: 0.9,
+      priority: 1.0,
       alternates: {
         languages: {
           en: `${BASE_URL}/en/stories`,
