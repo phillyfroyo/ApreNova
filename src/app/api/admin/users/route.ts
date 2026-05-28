@@ -146,22 +146,29 @@ async function getUsersSummary() {
     };
   });
 
-  // Exclude admin/test account and deleted users from summary averages
-  const EXCLUDED_USER_ID = "cmcwccvsd0000ja6065zucooe";
-  const nonExcludedUsers = users.filter((u) => u.id !== EXCLUDED_USER_ID && !u.deletedAt);
+  // Exclude admin/test accounts and deleted users from summary averages.
+  // - cmcwccvsd0000ja6065zucooe = philipwooleryprice@gmail.com (founder/admin)
+  // - cmoyrzj8n0000kt0478katy1u = test_inngest1@email.com (Inngest pipeline test account)
+  const EXCLUDED_USER_IDS = [
+    "cmcwccvsd0000ja6065zucooe",
+    "cmoyrzj8n0000kt0478katy1u",
+  ];
+  const nonExcludedUsers = users.filter(
+    (u) => !EXCLUDED_USER_IDS.includes(u.id) && !u.deletedAt
+  );
   const activeUsers = users.filter((u) => !u.deletedAt);
 
-  // Calculate totals (excluding test account for cost/usage stats; deleted users excluded from count)
+  // Calculate totals (excluding test accounts for cost/usage stats; deleted users excluded from count)
   const totalUsers = activeUsers.length;
   const totalStories = nonExcludedUsers.reduce((sum, u) => sum + u.storyCount, 0);
   const totalCostCents = nonExcludedUsers.reduce((sum, u) => sum + u.totalCostCents, 0);
   const avgCostPerUser =
     totalUsers > 0 ? Math.round(totalCostCents / totalUsers) : 0;
-  // Avg per story uses ALL users (including test account) since per-story cost is still useful
-  const allStories = users.reduce((sum, u) => sum + u.storyCount, 0);
-  const allCostCents = users.reduce((sum, u) => sum + u.totalCostCents, 0);
+  // Avg per story also excludes test accounts so the per-story figure isn't
+  // skewed by the founder/test-account uploads (which often have unusual cost
+  // profiles from re-running pipelines during development).
   const avgCostPerStory =
-    allStories > 0 ? Math.round(allCostCents / allStories) : 0;
+    totalStories > 0 ? Math.round(totalCostCents / totalStories) : 0;
 
   // Current month's costs (resets each month)
   const now = new Date();
@@ -169,7 +176,7 @@ async function getUsersSummary() {
   const monthCosts = await prisma.apiCost.aggregate({
     where: {
       createdAt: { gte: monthStart },
-      userId: { not: EXCLUDED_USER_ID },
+      userId: { notIn: EXCLUDED_USER_IDS },
     },
     _sum: { costCents: true },
   });
