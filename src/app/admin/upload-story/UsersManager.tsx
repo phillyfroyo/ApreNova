@@ -21,6 +21,9 @@ interface UserListItem {
   quizLevel: string | null;
   isPremium: boolean;
   readingMs: number;
+  distinctReturnDays: number;
+  lastActiveAt: string | null;
+  isReturning: boolean;
   createdAt: string;
   deletedAt: string | null;
   storyCount: number;
@@ -28,7 +31,7 @@ interface UserListItem {
   avgCostPerStory: number;
 }
 
-type SortField = "userNumber" | "cost" | "stories" | "reading";
+type SortField = "userNumber" | "cost" | "stories" | "reading" | "returns";
 
 interface UserDetail {
   id: string;
@@ -177,6 +180,9 @@ export default function UsersManager() {
   const [sortField, setSortField] = useState<SortField>("userNumber");
   const [sortDesc, setSortDesc] = useState(false);
 
+  // Filter: when on, show only users who came back after their signup day
+  const [returningOnly, setReturningOnly] = useState(false);
+
   // Selected user details
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetailsData | null>(null);
@@ -310,13 +316,18 @@ export default function UsersManager() {
     }
   }
 
-  const sortedUsers = [...data.users].sort((a, b) => {
+  const filteredUsers = returningOnly
+    ? data.users.filter((u) => u.isReturning)
+    : data.users;
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
     let diff = 0;
     switch (sortField) {
       case "userNumber": diff = a.userNumber - b.userNumber; break;
       case "cost": diff = a.totalCostCents - b.totalCostCents; break;
       case "stories": diff = a.storyCount - b.storyCount; break;
       case "reading": diff = a.readingMs - b.readingMs; break;
+      case "returns": diff = a.distinctReturnDays - b.distinctReturnDays; break;
     }
     return sortDesc ? -diff : diff;
   });
@@ -384,12 +395,13 @@ export default function UsersManager() {
               <h3 className="font-medium text-gray-900">Users</h3>
               <p className="text-xs text-gray-500">Tap to view details</p>
             </div>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1 flex-wrap items-center">
               {([
                 ["userNumber", "#"],
                 ["cost", "Cost"],
                 ["stories", "Stories"],
                 ["reading", "Reading"],
+                ["returns", "Returns"],
               ] as [SortField, string][]).map(([field, label]) => (
                 <button
                   key={field}
@@ -403,6 +415,18 @@ export default function UsersManager() {
                   {label}
                 </button>
               ))}
+              <span className="text-gray-300 mx-1" aria-hidden="true">|</span>
+              <button
+                onClick={() => setReturningOnly((v) => !v)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  returningOnly
+                    ? "bg-green-100 text-green-700 font-medium"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                title="Show only users who returned after signup day"
+              >
+                Returning only
+              </button>
             </div>
           </div>
           <div className="max-h-[60vh] sm:max-h-[500px] overflow-y-auto">
@@ -501,6 +525,22 @@ export default function UsersManager() {
                           {user.readingMs > 0 && (
                             <span className="text-xs text-gray-500">
                               · {formatReadingTime(user.readingMs)}
+                            </span>
+                          )}
+                          {user.distinctReturnDays > 0 && (
+                            <span
+                              className="text-xs text-gray-500"
+                              title={`Returned on ${user.distinctReturnDays} distinct day(s) after signup`}
+                            >
+                              · {user.distinctReturnDays}d returned
+                            </span>
+                          )}
+                          {user.isReturning && (
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 font-medium flex-shrink-0"
+                              title="Returned at least once after signup day"
+                            >
+                              ↺ Returning
                             </span>
                           )}
                           <span className="text-xs text-gray-400">

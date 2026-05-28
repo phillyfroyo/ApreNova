@@ -65,6 +65,28 @@ async function getUsersSummary() {
     readingTimeByUser.map((r) => [r.userId, r._sum.ms || 0])
   );
 
+  // Per-user engagement: count of distinct calendar days the user had a session
+  // (any type) PLUS last-active timestamp. Computed server-side via raw SQL
+  // because Prisma's groupBy can't COUNT(DISTINCT DATE(...)). We get the raw
+  // active-day count here and subtract the signup day per-user below to derive
+  // "return days" (days they came back).
+  const engagementByUser = await prisma.$queryRaw<
+    { userId: string; distinctActiveDays: bigint; lastActiveAt: Date | null }[]
+  >`
+    SELECT
+      "userId",
+      COUNT(DISTINCT DATE("createdAt")) AS "distinctActiveDays",
+      MAX("createdAt") AS "lastActiveAt"
+    FROM "SessionLog"
+    GROUP BY "userId"
+  `;
+  const engagementMap = new Map(
+    engagementByUser.map((r) => [
+      r.userId,
+      { distinctActiveDays: Number(r.distinctActiveDays), lastActiveAt: r.lastActiveAt },
+    ])
+  );
+
   // Get all users
   const usersWithCosts = await prisma.user.findMany({
     select: {
@@ -92,6 +114,14 @@ async function getUsersSummary() {
       (sum, cost) => sum + cost.costCents,
       0
     );
+    const engagement = engagementMap.get(user.id);
+    const lastActiveAt = engagement?.lastActiveAt ?? null;
+    // Return days = distinct active days MINUS the signup day. So a user who only
+    // ever used the app on signup day has 0 return days; a user who came back on
+    // 3 other days has 3 return days. "isReturning" is just returnDays > 0.
+    const rawActiveDays = engagement?.distinctActiveDays ?? 0;
+    const distinctReturnDays = Math.max(0, rawActiveDays - 1);
+    const isReturning = distinctReturnDays > 0;
     return {
       id: user.id,
       userNumber: index + 1,
@@ -104,6 +134,9 @@ async function getUsersSummary() {
       createdAt: user.createdAt.toISOString(),
       deletedAt: user.deletedAt?.toISOString() || null,
       readingMs: readingMsMap.get(user.id) || 0,
+      distinctReturnDays,
+      lastActiveAt: lastActiveAt ? lastActiveAt.toISOString() : null,
+      isReturning,
       storyCount: user.UserStory.length,
       totalCostCents,
       avgCostPerStory:
