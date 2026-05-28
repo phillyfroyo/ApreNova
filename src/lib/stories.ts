@@ -234,7 +234,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   },
   {
     slug: "the-last-word",
-    image: "/images/the-last-word-thumbnail.png",
+    image: "/images/the-last-word-thumbnail2.png",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
     isPremiumOnly: false,
@@ -265,7 +265,7 @@ export const STORY_METADATA: StoryMetadata[] = [
   },
   {
     slug: "diego-unplugged",
-    image: "/images/diego-unplugged-thumbnail.png",
+    image: "/images/diego-unplugged-thumbnail2.png",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
     isPremiumOnly: false,
