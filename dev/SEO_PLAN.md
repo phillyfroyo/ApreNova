@@ -267,6 +267,48 @@ Optional but cheap (~10 min). Bing has ~10% of search traffic.
 These are the slow-compounding items. Don't touch now; they're the
 "6-month plan" referenced in the broader strategy.
 
+- **Post-launch fix: middleware, `<html lang>`, canonical, hreflang ✅ Done (2026-05-28)**
+
+  Google Search Console flagged `/en` and `/es` as 404s (first detected
+  2026-05-22). Two compounding issues, both shipped:
+
+  1. **`/[lng]` route gap.** The sitemap published `/en` and `/es` as
+     priority-1.0 brand-landing URLs, but there was no `page.tsx` at
+     `src/app/[lng]/` — only `home/`, `stories/`, etc. underneath.
+     Added `src/app/[lng]/page.tsx` that 307-redirects to
+     `/[lng]/stories`. Dropped `/en` and `/es` from sitemap.xml and
+     promoted `/[lng]/stories` to priority 1.0 (Google indexes the
+     destination directly, not the redirect).
+
+  2. **Middleware was never running.** `middleware.ts` lived at the
+     project root, but Next.js looks for it at `src/middleware.ts`
+     when the app directory is under `src/`. So every page had been
+     rendering with `<html lang="en">` regardless of route, canonical
+     pointed at the bare root domain on every page, and hreflang
+     alternates were missing entirely — none of which were visible
+     in the UI but all of which Google reads.
+
+     Moved to `src/middleware.ts` and switched from
+     `response.headers.set(...)` (which only reaches the browser) to
+     `NextResponse.next({ request: { headers } })` so server components
+     can read the headers via `next/headers`. After the fix:
+     - `/es/*` renders `<html lang="es">`
+     - canonical on `/en/stories` etc. resolves to the actual page URL
+     - hreflang en/es alternates emit on every page
+
+  Re-running the Stage 4 verification checklist on the next prod
+  deploy is recommended — view-source on `/es/stories`, Rich Results
+  Test on a story info page, then re-request indexing for the URLs
+  Search Console had marked as 404.
+
+  Notes:
+  - Next 16 emits a build warning that the `middleware` convention is
+    deprecated in favor of `proxy`. Functional today; worth a follow-up
+    rename (`src/middleware.ts` → `src/proxy.ts`).
+  - `/dashboard` (un-prefixed) throws a client-side error instead of
+    404'ing. Pre-existing, unrelated, deferred — internal nav never
+    routes there.
+
 - **Content optimization — descriptions backfill ✅ Done (2026-05-26)**
 
   All 9 stories now have hand-tuned `descriptions.hook` + `descriptions.summary`
@@ -560,11 +602,16 @@ For each stage, before marking done:
 ## File map (as shipped)
 
 New:
-- `middleware.ts` — sets `x-cuentana-lang` + `x-cuentana-pathname`
-  headers per request so layouts can render language-aware
-  `<html lang>` and hreflang alternates.
+- `src/middleware.ts` — sets `x-cuentana-lang` + `x-cuentana-pathname`
+  request headers per request so layouts can render language-aware
+  `<html lang>` and hreflang alternates. Must live under `src/` (not
+  the project root) because the app directory is under `src/` — Next.js
+  looks for middleware alongside the app dir. See the 2026-05-28
+  post-launch fix entry under Stage 5+ for context.
+- `src/app/[lng]/page.tsx` — server-side redirect to `/[lng]/stories`
+  so `/en` and `/es` resolve with a 200 (via redirect) instead of 404.
 - `src/app/robots.ts` — auto-generated robots.txt.
-- `src/app/sitemap.ts` — auto-generated sitemap.xml (~84 URLs).
+- `src/app/sitemap.ts` — auto-generated sitemap.xml (~98 URLs).
 - `src/app/[lng]/my-stories/layout.tsx` — `noindex` belt-and-suspenders
   for user-uploaded story routes.
 - `src/app/[lng]/stories/StoriesPageClient.tsx` — moved client-side
