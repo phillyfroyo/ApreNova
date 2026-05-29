@@ -111,7 +111,7 @@ async function resolveReadUrl(
         where: { userId: session.user.id, storySlug },
       });
       if (bookmark) {
-        return getNavigationUrl(lng, storySlug, bookmark.level, bookmark.chapter, bookmark.page, false);
+        return getNavigationUrl(lng, storySlug, toCEFR(bookmark.level), bookmark.chapter, bookmark.page, false);
       }
       // No bookmark — use the user's quiz level if available
       const userLevel = (session.user as { quizLevel?: string }).quizLevel;

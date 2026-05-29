@@ -9,7 +9,7 @@ import { useAzureTTS } from "@/hooks/useAzureTTS";
 import { getPrevNextPage as getPrevNextPageUtil } from "@/utils/storyNavigation";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { t } from "@/lib/t";
-import { getCEFRLabel, type CEFRCode } from "@/lib/cefr";
+import { getCEFRLabel, toCEFR, type CEFRCode } from "@/lib/cefr";
 import type { Language } from "@/types/i18n";
 import type { StoryLine } from "@/lib/story-processing/text-processing";
 import {
@@ -172,7 +172,7 @@ export default function StoryLayoutWithAzureTTS({
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const pathParts = pathname ? pathname.split("/") : [];
-  const currentLevel = pathParts[4] || initialLevel || "l1";
+  const currentLevel = toCEFR(pathParts[4] || initialLevel || "A1");
   const isLegacyStreamingRoute = pathParts[5] === "stream";
   const rawChapter = isLegacyStreamingRoute ? pathParts[6] : pathParts[5];
   const rawPage = isLegacyStreamingRoute ? pathParts[7] : pathParts[6];
