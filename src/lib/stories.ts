@@ -278,7 +278,7 @@ export const STORY_METADATA: StoryMetadata[] = [
       summary: "Read Diego Unplugged in Spanish at A1–C1: a short story about a phone-addicted teen forced offline for a month. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
     },
   },{
-    slug: "my-day-3",
+    slug: "my-day",
     image: "/images/my-day-3-thumbnail-7027.png",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "A1",
@@ -307,7 +307,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     targetAudience: "all",
     structureType: "anthology",
   },{
-    slug: "the-great-gatsby-a-8",
+    slug: "the-great-gatsby",
     image: "/images/the-great-gatsby-a-8-thumbnail-7588.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",

@@ -37,7 +37,7 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     hoverAccentColor: "hover:bg-indigo-300",
     fontFamily: "font-sans",
   },
-"my-day-3": {
+"my-day": {
     backgroundGradient: "linear-gradient(135deg, #e8f4f8 0%, #d1e8f0 100%)",
     textColor: "text-gray-900",
     accentColor: "bg-blue-600",
@@ -51,7 +51,7 @@ export const STORY_THEMES: Record<string, StoryTheme> = {
     accentColor: "bg-green-600",
     hoverAccentColor: "hover:bg-green-300",
     fontFamily: "font-sans",
-  },"the-great-gatsby-a-8": {
+  },"the-great-gatsby": {
     backgroundColor: "#f5f0e6",
     textColor: "text-gray-900",
     accentColor: "bg-green-600",
