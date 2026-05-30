@@ -309,6 +309,46 @@ These are the slow-compounding items. Don't touch now; they're the
     404'ing. Pre-existing, unrelated, deferred — internal nav never
     routes there.
 
+- **Domain consolidation: `.org` → `.app` 308 redirect ✅ Done (2026-05-29)**
+
+  Brand search "cuentana" was returning `cuentana.org` ahead of
+  `cuentana.app` because both domains were attached to the same Vercel
+  project and serving identical content. Every page already emitted a
+  canonical pointing at `.app`, but Google was overriding the
+  cross-domain canonical hint — likely because `.org` had accumulated
+  more age/link-equity signal. Canonical tags are advisory; a 308 is
+  not.
+
+  Configured in Vercel project Domains:
+  - `cuentana.org` → 308 redirect to `cuentana.app` (path-preserving)
+  - `www.cuentana.org` → 308 redirect to `cuentana.app` (path-preserving)
+
+  Verified live with curl:
+  - `https://cuentana.org` → `308`, `location: https://cuentana.app/`
+  - `https://www.cuentana.org` → `308`, `location: https://cuentana.app/`
+  - `https://cuentana.org/en/stories` → `308`,
+    `location: https://cuentana.app/en/stories` (path forwarding works)
+
+  Expected timeline:
+  - 1–2 weeks: Search Console "Pages" report shows `.org` URLs moving
+    to "Page with redirect" status.
+  - 2–4 weeks: Googling "cuentana" should surface `.app` at #1; `.org`
+    should drop from results.
+  - 4–8 weeks: Link equity fully consolidated on `.app`.
+
+  Code surface unchanged. Every URL constant in the codebase
+  (`SITE_URL`, `BASE_URL`, `metadataBase`, sitemap, JSON-LD, OG tags)
+  already pointed at `.app`, so no follow-up edits were needed. Stripe
+  checkout success/cancel URLs continue to use
+  `NEXT_PUBLIC_BASE_URL` (set to `.app`); pre-redirect `.org` payment
+  flows would have landed users on `.app` post-payment, which is now
+  consistent end-to-end.
+
+  Latent housekeeping (low-priority):
+  - Both `.app` and `.org` show "DNS Change Recommended" in Vercel.
+    Unrelated to the redirect; just a config nudge. Site works fine.
+    Worth resolving in a future housekeeping pass.
+
 - **Content optimization — descriptions backfill ✅ Done (2026-05-26)**
 
   All 9 stories now have hand-tuned `descriptions.hook` + `descriptions.summary`
@@ -587,17 +627,8 @@ For each stage, before marking done:
   description in `STORY_METADATA` is what actually moves rankings.
   Probably a Stage 5 task once we know which stories matter most.
 
-- **Domain consolidation.** Long-term, running both `.app` and `.org`
-  is awkward. The current setup uses canonical tags on every page
-  pointing to `cuentana.app`, which tells Google "the .app version is
-  authoritative even when this page is served from .org." That handles
-  the SEO duplicate-content concern.
-  However, a **301 redirect from `.org` → `.app`** would be cleaner:
-  one canonical domain, no duplicate Search Console properties, no
-  ambiguity for users sharing links. Setup at the Vercel/DNS level
-  (probably cleanest as a Vercel project-level redirect rule).
-  Marketing decision: do users associate the brand with one over the
-  other? Defer to a separate conversation.
+- ~~**Domain consolidation.**~~ Resolved 2026-05-29 — see Stage 5+
+  shipped entry for the `.org` → `.app` 308 redirect.
 
 ## File map (as shipped)
 
