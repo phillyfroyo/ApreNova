@@ -22,6 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
       languages: {
         en: `${SITE_URL}/en${stripped === "/" ? "" : stripped}`,
         es: `${SITE_URL}/es${stripped === "/" ? "" : stripped}`,
+        // Primary audience is Spanish-native — fall back to /es.
+        "x-default": `${SITE_URL}/es${stripped === "/" ? "" : stripped}`,
       },
     },
   };

@@ -349,6 +349,60 @@ These are the slow-compounding items. Don't touch now; they're the
     Unrelated to the redirect; just a config nudge. Site works fine.
     Worth resolving in a future housekeeping pass.
 
+- **Hierarchy: `hreflang x-default` → `/es` + middleware default ✅ Done (2026-05-30)**
+
+  Goal: make the SEO setup respect the stated audience hierarchy —
+  primary = Spanish-native (LATAM) learning English on `/es/*`,
+  secondary = English-native learning Spanish on `/en/*` — without
+  demoting the secondary target. Per-query targeting was already
+  correct (reciprocal `en`/`es` hreflang clusters Spanish queries → `/es`,
+  English queries → `/en`); the only signals leaning the wrong way were
+  the *undefined fallbacks*, both of which defaulted to English.
+
+  Two fixes, both leaning the fallback toward Spanish:
+
+  1. **`x-default` → `/es`** added to every hreflang declaration. The
+     `x-default` link is Google's tiebreaker for searchers whose
+     language matches neither `en` nor `es`; without it Google guesses,
+     and historically skews to the English URL. Now points at the `/es`
+     variant on every page (including `/en` pages — the fallback is
+     language-independent). Touched:
+     - `src/app/sitemap.ts` (all 3 entry types: stories home, info
+       cards, reader pages)
+     - `src/app/[lng]/layout.tsx` (default for any `/[lng]/*` page)
+     - `src/app/[lng]/stories/page.tsx`
+     - `src/app/[lng]/stories/[storySlug]/page.tsx`
+     - `src/app/[lng]/stories/[storySlug]/[level]/[chapter]/[page]/page.tsx`
+
+  2. **`middleware.ts` `DEFAULT_LANG`: `"en"` → `"es"`.** This only
+     affects un-prefixed / unknown-first-segment paths (e.g. `/`,
+     `/privacy`); it sets `<html lang>` on those pages. Was the lone
+     outlier — `[lng]/layout.tsx` and `constants/i18n.ts` already
+     default to `es`. No redirect/rewrite behavior; header-only.
+
+  This supersedes the earlier "`hreflang x-default` — when we have more
+  than two languages" deferral note below: x-default is useful with two
+  languages too, precisely because it claims the ambiguous bucket for
+  the primary audience.
+
+  No user-facing behavior change: `/en/*` and `/es/*` content pages are
+  untouched (their `lang` comes from the URL segment); only the metadata
+  `lang` attribute on un-prefixed pages flips `en` → `es`, which is
+  arguably more correct (the `/` landing already defaults its visible
+  copy to Spanish). `tsc --noEmit` clean.
+
+  Verified on local dev server (view-source / curl, not devtools):
+  - `/es/stories`, `/en/stories`, story info + reader pages all emit the
+    `en` / `es` / `x-default→/es` triple
+  - `sitemap.xml`: 98/98 `<url>` entries carry `x-default→/es`
+  - `<html lang>`: `/es/*`→`es`, `/en/*`→`en`, `/`→`es`, `/privacy`→`es`
+
+  Latent (not addressed, low-priority): `src/app/layout.tsx:78` still
+  hardcodes its own `?? 'en'` fallback. Unreachable in practice (the
+  middleware sets the header on `/` and `/privacy` before the layout
+  reads it), but now slightly inconsistent with the `es` middleware
+  default. Worth aligning in a future housekeeping pass.
+
 - **Content optimization — descriptions backfill ✅ Done (2026-05-26)**
 
   All 9 stories now have hand-tuned `descriptions.hook` + `descriptions.summary`
@@ -438,7 +492,8 @@ These are the slow-compounding items. Don't touch now; they're the
 - **Backlink building** — guest posts, partnerships with
   language-learning blogs. This is the slowest-compounding channel and
   the most external.
-- **`hreflang` x-default** — when we have more than two languages.
+- ~~**`hreflang` x-default** — when we have more than two languages.~~
+  Done 2026-05-30 (with two languages) — see the hierarchy entry above.
 - **Consolidate story URL emission to `getNavigationUrl()`.** Discovered
   2026-05-16: the route accepts both short form (`/A2/1/1`) and long
   form (`/A2/ch1/page-1`) and `page.tsx` normalizes them, so they

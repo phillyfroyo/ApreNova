@@ -38,6 +38,9 @@ function staticEntries(now: Date): SitemapEntry[] {
         languages: {
           en: `${BASE_URL}/en/stories`,
           es: `${BASE_URL}/es/stories`,
+          // Primary audience is Spanish-native — fall back to /es for
+          // searchers whose language matches neither en nor es.
+          "x-default": `${BASE_URL}/es/stories`,
         },
       },
     });
@@ -58,7 +61,7 @@ function infoPageEntriesForStory(slug: string, now: Date): SitemapEntry[] {
       changeFrequency: "monthly",
       priority: 0.8,
       alternates: {
-        languages: { en: enUrl, es: esUrl },
+        languages: { en: enUrl, es: esUrl, "x-default": esUrl },
       },
     });
   }
@@ -83,7 +86,7 @@ function entriesForStory(slug: string, levels: CEFRCode[], now: Date): SitemapEn
         changeFrequency: "monthly",
         priority: 0.7,
         alternates: {
-          languages: { en: enUrl, es: esUrl },
+          languages: { en: enUrl, es: esUrl, "x-default": esUrl },
         },
       });
     }

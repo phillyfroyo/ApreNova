@@ -11,7 +11,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const SUPPORTED_LANGS = new Set(["en", "es"]);
-const DEFAULT_LANG = "en";
+// Primary audience is Spanish-native (LATAM); default un-prefixed/unknown
+// paths to "es" so <html lang> and hreflang fall back to the primary
+// language — matches the "es" default in [lng]/layout.tsx and constants/i18n.ts.
+const DEFAULT_LANG = "es";
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

@@ -59,7 +59,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     description,
     alternates: {
       canonical: canonicalUrl,
-      languages: { en: enUrl, es: esUrl },
+      // x-default → /es: primary audience is Spanish-native.
+      languages: { en: enUrl, es: esUrl, "x-default": esUrl },
     },
     openGraph: {
       type: "article",
