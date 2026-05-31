@@ -590,10 +590,25 @@ export function ComparisonModal({
   };
 
   const handleRevert = () => {
-    setLeftLines(leftText.split("\n"));
-    setRightLines(rightText.split("\n"));
-    setEditingCell(null);
+    // Clear all saved edits first.
     editedChaptersRef.current = {};
+    setEditingCell(null);
+
+    // Restore the displayed lines to match the CURRENT view, not the full text.
+    // In chapter view, leftLines/rightLines must hold only the selected chapter's
+    // content — restoring the full multi-chapter text here would leave the modal
+    // in an inconsistent state where a subsequent save reconstructs duplicate
+    // chapter dividers (the "duplicate chapters — aborting save" guard) and the
+    // chapter-view renderer chokes on the whole document.
+    if (viewMode === 'chapter' && hasMultipleChapters) {
+      const leftChapter = leftChapters[selectedChapter];
+      const rightChapter = rightChapters[selectedChapter];
+      setLeftLines(leftChapter?.content.split("\n") || []);
+      setRightLines(rightChapter?.content.split("\n") || []);
+    } else {
+      setLeftLines(leftText.split("\n"));
+      setRightLines(rightText.split("\n"));
+    }
     setHasUnsavedChanges(false);
   };
 
