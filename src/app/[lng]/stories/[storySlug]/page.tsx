@@ -193,7 +193,7 @@ export default async function StoryInfoPage({ params }: { params: Promise<RouteP
             {t(typedLang, "stories", "backToStories")}
           </Link>
         </div>
-        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden md:flex md:flex-row md:max-h-[calc(100vh-120px)] md:[overscroll-behavior:contain]">
+        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden md:flex md:flex-row md:max-h-[calc(100vh-120px)]">
           <StoryDetailContent
             story={story}
             lang={typedLang}

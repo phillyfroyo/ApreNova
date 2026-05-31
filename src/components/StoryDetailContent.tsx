@@ -260,8 +260,11 @@ export default function StoryDetailContent({
         </div>
       </div>
 
-      {/* Right side - Content */}
-      <div className="flex-1 md:overflow-y-auto hide-scrollbar p-6 md:p-8">
+      {/* Right side - Content. md:overscroll-auto so that once this inner
+          scroll reaches its bottom, continued wheel scroll chains out to the
+          page (vs. the previous overscroll-contain on the wrapper, which
+          trapped scroll inside the card). */}
+      <div className="flex-1 md:overflow-y-auto md:overscroll-auto hide-scrollbar p-6 md:p-8">
         {/* Story Type Badge */}
         <div className="flex flex-wrap gap-2 mb-3">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
