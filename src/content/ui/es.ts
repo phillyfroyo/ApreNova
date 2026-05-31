@@ -630,7 +630,7 @@ storiesMetadata: {
     title: "Secretos del Desierto",
     description: "El pasado cobra vida entre las dunas del desierto.",
   },
-  "my-day-3": {
+  "my-day": {
     title: "Mi Día",
     hook: "Un poema sencillo sobre el ritmo de un día común — del amanecer al atardecer.",
     description: "",
@@ -639,7 +639,7 @@ storiesMetadata: {
     title: "Poemas de Emily Dickinson, Tres Series, Completo",
     hook: "Descubre la poesía introspectiva y poco convencional de Emily Dickinson, que refleja su perspectiva única sobre la vida y el éxito.",
     description: "Esta colección reúne los primeros poemas publicados de Emily Dickinson, editados después de su muerte por Mabel Loomis Todd y T. W. Higginson. Escritos en gran parte sin pensar en su publicación, sus versos reflejan un espíritu ferozmente independiente y un estilo poco convencional que desafiaba las normas literarias de su tiempo. Una ermitaña de por vida de Amherst, Massachusetts, Dickinson produjo poemas de originalidad sorprendente—destellos de profunda percepción sobre la naturaleza, la vida, la fe y la muerte—marcados por imágenes vívidas, pensamientos audaces y una voz como ninguna otra en la poesía estadounidense.",
-  },"the-great-gatsby-a-8": {
+  },"the-great-gatsby": {
     title: "El Gran Gatsby",
     hook: "En los rugientes años veinte, un millonario misterioso cautiva con su lujoso estilo de vida y secretos.",
     description: "En el resplandeciente verano de 1922, un joven del Medio Oeste llega a las costas de Long Island y se adentra en un mundo de riqueza inimaginable, desenfreno imprudente y sueños rotos. Su enigmático vecino, Jay Gatsby, ofrece fastuosas fiestas en su mansión gótica, pero nadie parece saber quién es realmente ni qué es lo que desea.\n\nA medida que Nick Carraway se ve atraído por la órbita de Gatsby, descubre la verdad detrás del espectáculo: un amor consumidor y desesperado por Daisy Buchanan, una mujer de vieja fortuna, encanto y negligencia. Gatsby se ha reinventado por completo, construyendo una fortuna en los oscuros márgenes del Sueño Americano, todo por la oportunidad de recuperar un pasado que quizás nunca existió realmente.\n\nPero bajo el brillo de la Nueva York de la Era del Jazz se oculta un mundo de traición, violencia y decadencia moral. Cuando los secretos se desmoronan y las lealtades se ponen a prueba, las consecuencias resultan devastadoras e ineludibles.\n\nAmpliamente considerada como una de las mejores novelas jamás escritas, El gran Gatsby es el luminoso retrato de F. Scott Fitzgerald sobre el Sueño Americano: su promesa, su seducción y su ruina.",

@@ -21,6 +21,27 @@ const nextConfig = {
   // Turbopack config (Next.js 16 default)
   turbopack: {},
 
+  // Permanent (308 ≈ 301) redirects from old story slugs to their normalized
+  // form. These slugs picked up upload-artifact suffixes (-a-8, -3) from
+  // repeated local re-uploads; the canonical slug, content dirs, and
+  // STORY_METADATA were renamed to the clean form. These redirects preserve
+  // SEO equity on the already-indexed old URLs and keep existing user
+  // bookmarks / external links working. `:path*` matches zero-or-more
+  // trailing segments, so one rule per slug covers both the info-card page
+  // (/[lng]/stories/<slug>) and every deep reader URL beneath it. `:lng`
+  // captures en|es. See dev/SEO_PLAN.md Stage 5+.
+  async redirects() {
+    const slugMap = [
+      { from: "the-great-gatsby-a-8", to: "the-great-gatsby" },
+      { from: "my-day-3", to: "my-day" },
+    ];
+    return slugMap.map(({ from, to }) => ({
+      source: `/:lng(en|es)/stories/${from}/:path*`,
+      destination: `/:lng/stories/${to}/:path*`,
+      permanent: true,
+    }));
+  },
+
   // Keep large static assets out of serverless function bundles. They're
   // still served from /public via Vercel's CDN — this just stops them from
   // being copied into every function bundle and pushing past the 250MB cap.
