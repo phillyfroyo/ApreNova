@@ -267,6 +267,65 @@ Optional but cheap (~10 min). Bing has ~10% of search traffic.
 These are the slow-compounding items. Don't touch now; they're the
 "6-month plan" referenced in the broader strategy.
 
+- **Slug normalization: gatsby / my-day ✅ Done (2026-05-30)**
+
+  Two story slugs carried upload-artifact suffixes from repeated local
+  re-uploads during development:
+    `the-great-gatsby-a-8` → `the-great-gatsby`
+    `my-day-3`            → `my-day`
+
+  SEO-neutral for ranking, but the suffixes read as junk/auto-generated
+  in SERPs (weak CTR signal) and were inconsistent across the catalog.
+  Renamed end-to-end:
+
+  1. **Code + content.** STORY_METADATA slug (`src/lib/stories.ts`),
+     `storyThemes.ts` keys, and the `storiesMetadata` translation keys in
+     `ui/en.ts` + `ui/es.ts`. Renamed content dirs `src/content/{slug}`
+     via `git mv` and updated the hardcoded `storySlug` in all 55
+     level/chapter files. Left `image:` paths pointing at the existing
+     thumbnail filenames (image URLs aren't SEO-meaningful).
+
+  2. **301 redirects.** `next.config.mjs` `redirects()` —
+     `/:lng(en|es)/stories/<old>/:path*` → `/:lng/stories/<new>/:path*`,
+     `permanent: true` (308 ≈ 301). One rule per slug covers the info
+     page and every deep reader URL, both languages. Preserves equity on
+     the already-indexed old URLs and keeps existing bookmarks/links
+     working. The redirect is what made the rename safe — renaming a live
+     indexed slug without it would have orphaned the indexed URL.
+
+  3. **DB migration.** `storySlug` is a plain string column (no FK) across
+     9 tables; 28 distinct users had data on these two stories, so a
+     code-only rename would have orphaned their bookmarks/progress. Ran a
+     conflict-aware migration (transactional): flat `updateMany` on the
+     non-keyed tables; on the unique-constrained tables
+     (`storyBookmark`, `pageVisit`, `completedStory`) the dirty-slug row
+     won — deleted the stale clean-slug duplicate (9 rows, almost all one
+     founder/test account), then renamed. Post-check: 0 dirty rows remain,
+     946 rows now under the clean slugs. Script was throwaway (removed
+     after run).
+
+  **Rollout order (matters):** deployed code+redirects to `main` FIRST,
+  confirmed redirects live on `cuentana.app` (old → 308 → clean, sitemap
+  shows 0 dirty refs), THEN ran the DB migration — so live redirects
+  protected existing bookmarks during the gap.
+
+  Note: the DB migration ran against the **production Neon DB**, which is
+  also what local dev points at (known tech-debt: no separate staging DB).
+
+  GSC follow-up (optional, speed only): the old URLs will move to "Page
+  with redirect" and the new URLs will index on Google's natural re-crawl.
+  Can request-index `/en/stories/the-great-gatsby` + `/es/...` +
+  `/en/stories/my-day` + `/es/...` to speed it up.
+
+  Loose end (NOT done): orphan audio dir `public/audio/es/El Bosque
+  Perdido/` (400 files, no story in STORY_METADATA references it) — dead
+  weight in /public, worth deleting in a future housekeeping pass.
+
+  Also fixed in the same deploy (unrelated): scroll-chaining on the story
+  info-card page (removed `overscroll-behavior:contain` that trapped
+  wheel scroll inside the card; cursor over card/thumbnail now scrolls
+  the page once the card bottoms out).
+
 - **Post-launch fix: middleware, `<html lang>`, canonical, hreflang ✅ Done (2026-05-28)**
 
   Google Search Console flagged `/en` and `/es` as 404s (first detected
