@@ -160,6 +160,12 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
   // First pass: look for EXPLICIT chapter markers only
   // These are definitive: "CHAPTER X", Roman numerals alone, "BOOK/PART X"
   const explicitMarkers: ChapterMarker[] = [];
+  // Bare numerals ("I." / "II." alone on a line) are collected separately:
+  // they are real chapter markers for books like Gatsby (bare numerals are
+  // the ONLY heading), but they double as INTERNAL section dividers inside
+  // titled stories (e.g. Sherlock's "I." within "I.A SCANDAL IN BOHEMIA").
+  // We only fold them in below if no titled (Pattern 2b) markers were found.
+  const bareNumeralMarkers: ChapterMarker[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -184,6 +190,45 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
       continue;
     }
 
+    // Pattern 2b: Numeral + period + ALL-CAPS title on the SAME line.
+    // e.g. "I.A SCANDAL IN BOHEMIA", "V. THE FIVE ORANGE PIPS", "1. THE GIFT"
+    // This is the dominant heading style in Project Gutenberg short-story
+    // collections (Sherlock Holmes, etc.). The numeral may be Roman or Arabic,
+    // and HTML extraction sometimes drops the space after the period
+    // ("I.A SCANDAL"), so \s* (zero-or-more) is required.
+    //
+    // Guards that keep this from matching prose or a table of contents:
+    //   - title must be ALL CAPS (no lowercase letters). TOC entries are
+    //     Title Case ("I. A Scandal in Bohemia") and prose sentences that
+    //     happen to start "I. The..." contain lowercase — both excluded.
+    //   - title 3-80 chars with >=3 uppercase letters (excludes "I. 5", stray
+    //     all-caps quotes that begin with punctuation, etc.).
+    // Verified to match 0 lines across Moby Dick, Dracula, Frankenstein,
+    // Gatsby, Tom Sawyer, and Oz (they use Pattern 1 / bare-numeral Pattern 2),
+    // and exactly the 12 story headings in Sherlock Holmes.
+    const titledMatch = line.match(/^([IVXLC]+|\d+)\.\s*(.+)$/);
+    if (titledMatch) {
+      const numStr = titledMatch[1].toUpperCase();
+      const titleCandidate = titledMatch[2].trim();
+      const isAllCapsTitle =
+        titleCandidate.length >= 3 &&
+        titleCandidate.length <= 80 &&
+        !/[a-z]/.test(titleCandidate) &&
+        (titleCandidate.match(/[A-Z]/g)?.length ?? 0) >= 3;
+      const num = ROMAN_TO_ARABIC[numStr] || parseInt(numStr) || explicitMarkers.length + 1;
+      // Only treat Roman numerals or plausible chapter numbers as valid here.
+      if (isAllCapsTitle && (ROMAN_TO_ARABIC[numStr] || (parseInt(numStr) >= 1 && parseInt(numStr) <= 200))) {
+        explicitMarkers.push({
+          lineIndex: i,
+          type: ROMAN_TO_ARABIC[numStr] ? 'roman' : 'arabic',
+          number: num,
+          title: titleCandidate,
+          fullMatch: line,
+        });
+        continue;
+      }
+    }
+
     // Pattern 2: Roman numeral alone on line (I., II., XLIII., etc.)
     const romanMatch = line.match(/^([IVXLC]+)\.?$/);
     if (romanMatch && ROMAN_TO_ARABIC[romanMatch[1]]) {
@@ -195,7 +240,7 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
         /^[A-Z]/.test(nextLine) &&
         !nextLine.match(/^(CHAPTER|BOOK|PART|\d+\s*$|[IVXLC]+\.?\s*$)/i);
 
-      explicitMarkers.push({
+      bareNumeralMarkers.push({
         lineIndex: i,
         type: 'roman',
         number: num,
@@ -226,9 +271,19 @@ export function detectChapterMarkers(lines: string[], options: DetectChapterOpti
     }
   }
 
-  // If we found explicit markers, use those and ignore fallback patterns
+  // Merge bare-numeral markers with the titled/explicit ones.
+  //   - If we found titled markers (CHAPTER X, "I.A SCANDAL...", BOOK X),
+  //     bare numerals are INTERNAL sub-sections of those chapters — drop them.
+  //     (Sherlock: keep the 12 story headings, discard story 1's "I."/"II.".)
+  //   - If we found NO titled markers, the bare numerals ARE the chapters
+  //     (Gatsby: "I", "II", ... are the only headings) — use them.
   if (explicitMarkers.length > 0) {
-    return explicitMarkers;
+    // Sort by position so chapters come out in document order regardless of
+    // which pattern matched them.
+    return explicitMarkers.sort((a, b) => a.lineIndex - b.lineIndex);
+  }
+  if (bareNumeralMarkers.length > 0) {
+    return bareNumeralMarkers;
   }
 
   // Fallback: If NO explicit markers found, try ALL CAPS section headers
@@ -480,7 +535,18 @@ export function splitIntoChapters(
 
     // Skip subtitle line if present (and we're not preserving markers)
     const skipLines = (!preserveMarkers && marker.subtitle) ? 1 : 0;
-    const contentLines = chapterLines.slice(skipLines);
+    let contentLines = chapterLines.slice(skipLines);
+
+    // Strip internal bare-numeral section dividers (e.g. "I.", "II.", "III."
+    // standing alone on a line) that survive inside a titled chapter body.
+    // These appear in some short-story collections where a story is internally
+    // sub-divided (e.g. Sherlock's "A Scandal in Bohemia" has parts I/II/III).
+    // Once the story is a single chapter, those dividers are noise. Only done
+    // when NOT preserving markers (prose path); anthologies preserve markers
+    // and rely on these numerals, so they're untouched there.
+    if (!preserveMarkers) {
+      contentLines = contentLines.filter((l) => !/^\s*[IVXLC]+\.?\s*$/.test(l));
+    }
 
     const rawText = contentLines.join('\n').trim();
 
