@@ -36,7 +36,7 @@ export function scanContentWarnings(text: string, level: number): ContentWarning
   const warnings: ContentWarning[] = [];
 
   // Split into chapters first
-  const chapterParts = text.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const chapterParts = text.split(/---\s*(?:Chapter|Capítulo)\s+\d+(?:(?!---).)*---/i);
   const chapterOffset = chapterParts[0]?.trim() === "" ? 1 : 0; // Skip empty pre-chapter text
 
   for (let chIdx = chapterOffset; chIdx < chapterParts.length; chIdx++) {
@@ -102,10 +102,10 @@ export function scanTranslationQuality(
   if (!sourceText || !translatedText) return [];
   const warnings: ContentWarning[] = [];
 
-  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?:(?!---).)*---$/i;
 
-  const sourceChapterParts = sourceText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
-  const transChapterParts = translatedText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const sourceChapterParts = sourceText.split(/---\s*(?:Chapter|Capítulo)\s+\d+(?:(?!---).)*---/i);
+  const transChapterParts = translatedText.split(/---\s*(?:Chapter|Capítulo)\s+\d+(?:(?!---).)*---/i);
 
   // Detect chapter numbers from divider lines
   const sourceChapterNums: number[] = [];
@@ -171,10 +171,10 @@ export function scanQuoteMismatches(
   if (!originalText || !comparisonText) return [];
   const warnings: ContentWarning[] = [];
 
-  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?:(?!---).)*---$/i;
 
-  const origChapterParts = originalText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
-  const compChapterParts = comparisonText.split(/---\s*(?:Chapter|Capítulo)\s+\d+[^-]*---/i);
+  const origChapterParts = originalText.split(/---\s*(?:Chapter|Capítulo)\s+\d+(?:(?!---).)*---/i);
+  const compChapterParts = comparisonText.split(/---\s*(?:Chapter|Capítulo)\s+\d+(?:(?!---).)*---/i);
 
   // Detect chapter numbers from divider lines
   const chapterNums: number[] = [];
@@ -278,7 +278,7 @@ export function scanLineAlignment(
   if (!leftText || !rightText) return [];
   const warnings: LineAlignmentWarning[] = [];
 
-  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+  const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?:(?!---).)*---$/i;
 
   // Split both texts into chapters
   const splitIntoChapters = (text: string) => {

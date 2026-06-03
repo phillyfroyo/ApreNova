@@ -177,6 +177,10 @@ export function ComparisonModal({
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [viewMode, setViewMode] = useState<'chapter' | 'all'>('chapter');
 
+  // Which quote-mismatch we're currently parked on (index into the sorted list
+  // of quote-warning row indices). Used by the up/down navigation arrows.
+  const [currentQuoteIdx, setCurrentQuoteIdx] = useState(0);
+
   // Lines state for editing (declared early so alignment memos can reference them)
   const [leftLines, setLeftLines] = useState<string[]>([]);
   const [rightLines, setRightLines] = useState<string[]>([]);
@@ -351,6 +355,25 @@ export function ComparisonModal({
       editInputRef.current.select();
     }
   }, [editingCell]);
+
+  // Reset the quote-navigation cursor when the chapter changes (each chapter
+  // has its own set of quote warnings).
+  useEffect(() => {
+    setCurrentQuoteIdx(0);
+  }, [selectedChapter]);
+
+  // Scroll to the i-th quote mismatch (by position in the sorted index list).
+  // Pure viewport navigation — reads the warning rows, scrolls; mutates nothing.
+  const scrollToQuoteIdx = (navIdx: number) => {
+    const sorted = Array.from(quoteWarningLineIndices).sort((a, b) => a - b);
+    if (sorted.length === 0 || !scrollContainerRef.current) return;
+    const clamped = ((navIdx % sorted.length) + sorted.length) % sorted.length; // wrap
+    setCurrentQuoteIdx(clamped);
+    const rowIdx = sorted[clamped];
+    const rows = scrollContainerRef.current.querySelectorAll('[data-row-idx]');
+    const target = Array.from(rows).find(r => r.getAttribute('data-row-idx') === String(rowIdx));
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -590,10 +613,25 @@ export function ComparisonModal({
   };
 
   const handleRevert = () => {
-    setLeftLines(leftText.split("\n"));
-    setRightLines(rightText.split("\n"));
-    setEditingCell(null);
+    // Clear all saved edits first.
     editedChaptersRef.current = {};
+    setEditingCell(null);
+
+    // Restore the displayed lines to match the CURRENT view, not the full text.
+    // In chapter view, leftLines/rightLines must hold only the selected chapter's
+    // content — restoring the full multi-chapter text here would leave the modal
+    // in an inconsistent state where a subsequent save reconstructs duplicate
+    // chapter dividers (the "duplicate chapters — aborting save" guard) and the
+    // chapter-view renderer chokes on the whole document.
+    if (viewMode === 'chapter' && hasMultipleChapters) {
+      const leftChapter = leftChapters[selectedChapter];
+      const rightChapter = rightChapters[selectedChapter];
+      setLeftLines(leftChapter?.content.split("\n") || []);
+      setRightLines(rightChapter?.content.split("\n") || []);
+    } else {
+      setLeftLines(leftText.split("\n"));
+      setRightLines(rightText.split("\n"));
+    }
     setHasUnsavedChanges(false);
   };
 
@@ -854,24 +892,46 @@ export function ComparisonModal({
               </button>
             )}
             {quoteWarningLineIndices.size > 0 && (
-              <button
-                onClick={() => {
-                  // Scroll to first quote warning row
-                  const firstIdx = Array.from(quoteWarningLineIndices)[0];
-                  if (firstIdx !== undefined && scrollContainerRef.current) {
-                    const rows = scrollContainerRef.current.querySelectorAll('[data-row-idx]');
-                    const target = Array.from(rows).find(r => r.getAttribute('data-row-idx') === String(firstIdx));
-                    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }}
-                className="text-sm bg-yellow-500/80 hover:bg-yellow-500 px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer transition-colors"
-                title="Click to scroll to first quote mismatch"
+              <div
+                className="text-sm bg-yellow-500/80 px-1.5 py-0.5 rounded-full flex items-center gap-1 select-none"
+                title="Navigate quote mismatches"
               >
-                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
-                <span className="text-white">{quoteWarningLineIndices.size} quote count issue{quoteWarningLineIndices.size !== 1 ? 's' : ''}</span>
-              </button>
+                {/* Previous mismatch (scroll up) */}
+                <button
+                  onClick={() => scrollToQuoteIdx(currentQuoteIdx - 1)}
+                  className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-yellow-600/60 transition-colors"
+                  title="Previous quote mismatch"
+                  aria-label="Previous quote mismatch"
+                >
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+
+                {/* Label — click jumps to the current mismatch */}
+                <button
+                  onClick={() => scrollToQuoteIdx(currentQuoteIdx)}
+                  className="px-1.5 text-white hover:underline cursor-pointer flex items-center gap-1"
+                  title="Scroll to current quote mismatch"
+                >
+                  <svg className="w-3.5 h-3.5 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  {currentQuoteIdx + 1}/{quoteWarningLineIndices.size} quote count issue{quoteWarningLineIndices.size !== 1 ? 's' : ''}
+                </button>
+
+                {/* Next mismatch (scroll down) */}
+                <button
+                  onClick={() => scrollToQuoteIdx(currentQuoteIdx + 1)}
+                  className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-yellow-600/60 transition-colors"
+                  title="Next quote mismatch"
+                  aria-label="Next quote mismatch"
+                >
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
             )}
             {processingBadge && (
               <span className="text-sm bg-yellow-500/80 px-3 py-1 rounded-full animate-pulse flex items-center gap-2">

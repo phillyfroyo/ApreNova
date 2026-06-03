@@ -143,7 +143,7 @@ export function parseChapters(rawText: string): string[][] {
   // Also handle cases where the title might be duplicated like "Chapter 3: Chapter 3"
   let normalized = rawText
     // Full divider format: --- Chapter X: Title --- (possibly with varying whitespace)
-    .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*[:\-—–]?\s*[^-]*---/gi, '\n---CHAPTER_BREAK---\n')
+    .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*[:\-—–]?\s*(?:(?!---).)*---/gi, '\n---CHAPTER_BREAK---\n')
     // Also handle simpler format: --- Chapter X ---
     .replace(/---\s*(Chapter|Capítulo)\s+\d+\s*---/gi, '\n---CHAPTER_BREAK---\n')
     // Handle standalone CHAPTER markers (not wrapped in ---)

@@ -23,6 +23,7 @@ import {
   splitIntoChapters,
   extractPreChapterText,
 } from '../shared/chapter-detection';
+import { normalizeContinuedQuotes } from '../shared/quote-normalization';
 
 // ============================================================================
 // PROSE PREPROCESSING
@@ -95,6 +96,18 @@ export function preprocessProse(
   chapters = chapters.map(ch => ({
     ...ch,
     rawText: normalizeLineBreaks(ch.rawText, lineBreakStyle),
+  }));
+
+  // Step 10b: Normalize continued-quotation paragraphs.
+  // 19th-century prose often opens a quote (“) at the start of every paragraph
+  // of a long speech but closes it (”) only once at the very end. The
+  // per-paragraph rewrite model can't handle an opener with no matching close
+  // and emits orphaned “ (the recurring quote-mismatch warnings). Convert each
+  // such paragraph into a self-contained “...” BEFORE rewrite. Balanced lines
+  // (normal dialogue, interjections) are left untouched. See quote-normalization.ts.
+  chapters = chapters.map(ch => ({
+    ...ch,
+    rawText: normalizeContinuedQuotes(ch.rawText).text,
   }));
 
   // Step 11: Build full cleaned text

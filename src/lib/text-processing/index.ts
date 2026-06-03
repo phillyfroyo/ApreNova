@@ -146,6 +146,13 @@ export {
 export type { FrontMatterResult } from './shared/gutenberg';
 
 export {
+  // Quote normalization (continued-quotation → self-contained per paragraph)
+  normalizeContinuedQuotes,
+} from './shared/quote-normalization';
+
+export type { QuoteNormalizationResult } from './shared/quote-normalization';
+
+export {
   // Chapter detection
   detectThematicSectionMarkers,
   detectChapterMarkers,

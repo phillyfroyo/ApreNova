@@ -112,7 +112,7 @@ export function useTranslationPipeline({
     if (!translatedText?.trim()) return [];
     // Split by both Spanish AND English chapter markers
     // (English markers appear when translation failed and source text was used as fallback)
-    const parts = translatedText.split(/---\s*(?:Capítulo|Chapter)\s+\d+[^-]*---/i);
+    const parts = translatedText.split(/---\s*(?:Capítulo|Chapter)\s+\d+(?:(?!---).)*---/i);
     return parts.map(p => p.trim()).filter(p => p.length > 0);
   }, []);
 
@@ -704,7 +704,7 @@ export function useTranslationPipeline({
       if (!currentContent?.translatedText) return;
 
       const fullLines = currentContent.translatedText.split('\n');
-      const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)[^-]*---$/i;
+      const chapterDivider = /^---\s*(?:Chapter|Capítulo)\s+(\d+)(?:(?!---).)*---$/i;
 
       // Find chapter boundaries in translated text
       const dividerIndices: number[] = [];
