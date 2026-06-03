@@ -15,3 +15,7 @@ Some additional ideas for improvement.
 4. After saving a word and visiting the vocab page, saved words are immediately overdue. This is not a great UX, it's kind of stressful. Maybe set freshly saved words to be due by the end of the day, instead of an impossible immediate deadline. 
 
 5. Remove the time descriptions at vocabulary quiz route after you answer a question as they are not accurate. Either let them be accurate or remove. 
+
+6. Add more context for user to see when quizzing. Let's go look at the current setup, but I believe it will just show you a section of the native language text from the paragraph where the word was saved. I'm not even sure if it will just show the first few words of a paragraph, or if it actually shows text surrounding the saved word. Proposed: Main context is to add the surruounding 5 or 6 words of either side of the saved word, in the users target language, with a blank where the saved word is. I think this would be very easy and high value. 
+
+
