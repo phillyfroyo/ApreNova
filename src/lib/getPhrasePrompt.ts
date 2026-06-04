@@ -1,6 +1,8 @@
 // src\lib\getPhrasePrompt.ts
 
-export function getPhrasePrompt(phrase: string, sentence: string, level: number = 2, context?: any): string {
+import { cefrConstraintLine } from "@/lib/cefr";
+
+export function getPhrasePrompt(phrase: string, sentence: string, level: string | number = 2, context?: any): string {
   const base = `
 You are a bilingual English-Spanish language tutor helping Spanish-speaking learners understand English phrases and expressions in context.
 
@@ -25,14 +27,6 @@ The longer the phrase, the more likely you are to return only the "Primary" tran
 IMPORTANT: In each example, the English sentence MUST use the original English phrase being translated, and the Spanish sentence MUST use the alternative Spanish translation. For instance, primary "vino"; an alternate { "translation": "llegó", "example": { "en": "He came home late.", "es": "Llegó tarde a casa." } }.
 `.trim();
 
-  const constraints: Record<number, string> = {
-    1: `CEFR level A1.`,
-    2: `CEFR level A2.`,
-    3: `CEFR level B1.`,
-    4: `CEFR level B2.`,
-    5: `CEFR level C1.`,
-  };
-
   const contextInfo = context ? `
 
 STORY CONTEXT (for better understanding of pronouns and references):
@@ -46,7 +40,7 @@ Use this context to better understand who pronouns refer to and the story's narr
   return `
 ${base}
 
-${constraints[level]}
+${cefrConstraintLine(level)}
 ${contextInfo}
 
   English Phrase: ${phrase}

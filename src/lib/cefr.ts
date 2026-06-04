@@ -424,6 +424,17 @@ export function fromNumericLevel(level: number): CEFRCode {
 }
 
 /**
+ * The CEFR constraint line injected into translation/example prompts, e.g.
+ * "CEFR level B2." Accepts any level form (URL segment "l4", CEFR "B2",
+ * numeric 4) and normalizes via toCEFR(). Centralizes what was previously a
+ * per-prompt `constraints[level]` lookup keyed 1-5 — which silently produced
+ * "undefined" whenever a non-numeric level (the common case) was passed.
+ */
+export function cefrConstraintLine(level: CEFRCode | string | number | null | undefined): string {
+  return `CEFR level ${toCEFR(level)}.`;
+}
+
+/**
  * Check if a string is a valid CEFR code
  */
 export function isValidCEFR(level: string | null | undefined): level is CEFRCode {

@@ -1,6 +1,7 @@
 // src/lib/getWordPrompt.ts
 
 import { WORD_TRANSLATION_TOOL } from "@/lib/wordTranslationSchema";
+import { cefrConstraintLine } from "@/lib/cefr";
 
 /**
  * Builds the English→Spanish word-translation prompt.
@@ -95,21 +96,13 @@ Use these English subject pronouns in this exact order:
 Report your analysis by calling the ${WORD_TRANSLATION_TOOL.name} tool. Set any field you have no value for to null (or an empty array for the list fields).
 `.trim();
 
-const CONSTRAINTS: Record<number, string> = {
-  1: `CEFR level A1.`,
-  2: `CEFR level A2.`,
-  3: `CEFR level B1.`,
-  4: `CEFR level B2.`,
-  5: `CEFR level C1.`,
-};
-
 /** Cache-stable system prompt. Byte-identical across requests. */
 export function getWordPromptSystem(): string {
   return STATIC_INSTRUCTIONS;
 }
 
 /** Per-request variable tail: CEFR level, optional story context, word + sentence. */
-export function getWordPrompt(word: string, sentence: string, level: number = 2, context?: any): string {
+export function getWordPrompt(word: string, sentence: string, level: string | number = 2, context?: any): string {
   const contextInfo = context ? `
 
 STORY CONTEXT (for better understanding of pronouns and references):
@@ -121,7 +114,7 @@ Use this context to better understand who pronouns refer to and the story's narr
 ` : '';
 
   return `
-${CONSTRAINTS[level]}
+${cefrConstraintLine(level)}
 ${contextInfo}
 
 English Word: ${word}
