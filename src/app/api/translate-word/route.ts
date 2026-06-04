@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     const raw = toolUse.input as WordTranslationToolInput;
+    console.log("translate-word raw:", JSON.stringify(raw));
 
     // Defensive defaults — mirror prior behavior so a slightly-off response
     // never 500s. The shape is guaranteed by the tool schema; these guard
