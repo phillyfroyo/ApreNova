@@ -1,10 +1,24 @@
 // src/lib/getWordPromptToEnglish.ts
 
-export function getWordPromptToEnglish(word: string, sentence: string, level: number = 2, context?: any): string {
-  const base = `
+import { WORD_TRANSLATION_TOOL } from "@/lib/wordTranslationSchema";
+
+/**
+ * Builds the Spanish→English word-translation prompt.
+ *
+ * The prompt is split into a STATIC instruction block (returned by
+ * `getWordPromptToEnglishSystem()`, identical on every call so it can be prompt-
+ * cached) and a small VARIABLE tail (level + story context + the word/sentence)
+ * returned by `getWordPromptToEnglish()`. The route sends the static block as a
+ * cached system prompt and the variable tail as the user message.
+ *
+ * Output shape is enforced by the report_word_translation tool
+ * (see wordTranslationSchema.ts), so the prompt no longer carries JSON examples.
+ */
+
+const STATIC_INSTRUCTIONS = `
 You are a bilingual English-Spanish language tutor helping English-speaking learners understand Spanish words.
 
-You will be given a single Spanish word and the sentence it appears in. Analyze the word and return a structured JSON response with the following sections.
+You will be given a single Spanish word and the sentence it appears in. Analyze the word and report your analysis by calling the ${WORD_TRANSLATION_TOOL.name} tool with the following sections.
 
 1. Part of Speech
 Identify the part of speech of the word AS IT IS USED in the given sentence.
@@ -28,7 +42,7 @@ If the word is a conjugated or inflected form (e.g., "corrieron" from "correr", 
 - Set isDerivative to true
 - Provide rootWord (the base/infinitive form) and rootTranslation (its English translation)
 
-If the word is already in its root form, set isDerivative to false and omit rootWord and rootTranslation.
+If the word is already in its root form, set isDerivative to false and set rootWord and rootTranslation to null.
 
 4. Other Common Translations
 Optionally return one or two additional English translations that represent functionally different senses of the word.
@@ -45,8 +59,6 @@ Optionally return one or two additional English translations that represent func
 - IMPORTANT: The Spanish example MUST use the original Spanish word being translated. The English example MUST use the alternative English translation. For example, if the word is "siempre" and the alternative is "constantly", the Spanish sentence must contain "siempre" and the English sentence must contain "constantly".
 - Target usage suitable for learners in the United States.
 
-Return each as an object: { "translation": "told (to someone)", "example": { "es": "Ella le dijo a su amigo la verdad.", "en": "She told her friend the truth." } }
-
 5. Word Family / Derivatives
 List common derivatives of this word in OTHER parts of speech (excluding the POS from section 1).
 For each, provide:
@@ -62,108 +74,38 @@ Rules:
 - If no common derivatives exist, return an empty array.
 
 6. Verb Conjugation Chart
-IMPORTANT: verbChart is REQUIRED whenever a related verb exists — not just when the word itself is a verb.
-- If the word IS a verb in the sentence, conjugate it in the exact tense used in the sentence.
-- If the word is NOT a verb (noun, adjective, adverb) but has a verb in its word family or derivatives, you MUST include verbChart for that related verb conjugated in Presente (present indicative). For example: "teléfono" (noun) → verbChart for "telefonear"; "interesado" (adjective) → verbChart for "interesar".
-- Spanish verbs like "poder", "deber", "querer" conjugate normally — always show verbChart for these. Never substitute a verb with an alternative construction (e.g., use "poder" not "ser capaz de").
-- Only omit verbChart if the word is a pronoun, preposition, conjunction, or determiner, OR if no related verb form exists at all.
+- If the word IS a verb in the sentence, set verbChart and conjugate it in the exact tense used in the sentence.
+- If the word is NOT a verb but has a closely related, everyday verb in its word family, you MAY include verbChart for that related verb in Presente (present indicative). Only do this when the related verb is natural and common — do NOT invent an awkward verb just to fill the chart. If no natural related verb exists, set verbChart to null.
+- Spanish verbs like "poder", "deber", "querer" conjugate normally — show verbChart for these. Never substitute a verb with an alternative construction (e.g., use "poder" not "ser capaz de").
+- Set verbChart to null if the word is a pronoun, preposition, conjunction, or determiner, or if no related verb form exists.
 
 Use these Spanish subject pronouns in this exact order:
 "yo", "tú", "él/ella/usted", "nosotros", "vosotros", "ellos/ellas/ustedes"
 
-Respond with valid JSON only. No prose, no markdown, no commentary.
-
-Example response for a non-verb word:
-{
-  "partOfSpeech": "adjective",
-  "contextTranslation": "interested",
-  "subject": null,
-  "subjectTranslation": null,
-  "isDerivative": true,
-  "rootWord": "interesar",
-  "rootTranslation": "to interest",
-  "otherCommonTranslations": [{"translation": "fascinated (deep interest)", "example": {"es": "Estaba fascinada por la historia del arte.", "en": "She was fascinated by the history of art."}}],
-  "derivatives": [
-    {
-      "pos": "verb",
-      "word": "interesar",
-      "translation": "to interest",
-      "example": {
-        "es": "Este tema me interesa mucho.",
-        "en": "This topic interests me a lot."
-      }
-    },
-    {
-      "pos": "noun",
-      "word": "el interes",
-      "translation": "the interest",
-      "example": {
-        "es": "Tiene un fuerte interes en el arte.",
-        "en": "She has a strong interest in art."
-      }
-    }
-  ],
-  "verbChart": {
-    "tense": "Presente",
-    "infinitive": "interesar",
-    "conjugations": {
-      "yo": "intereso",
-      "tú": "interesas",
-      "él/ella/usted": "interesa",
-      "nosotros": "interesamos",
-      "vosotros": "interesais",
-      "ellos/ellas/ustedes": "interesan"
-    }
-  }
-}
-
-Example response for a verb:
-{
-  "partOfSpeech": "verb",
-  "contextTranslation": "ran",
-  "subject": "ella",
-  "subjectTranslation": "she",
-  "isDerivative": true,
-  "rootWord": "correr",
-  "rootTranslation": "to run",
-  "otherCommonTranslations": [{"translation": "worked (a machine)", "example": {"es": "El motor corri\u00f3 sin problemas toda la noche.", "en": "The engine ran smoothly all night."}}],
-  "derivatives": [
-    {
-      "pos": "noun",
-      "word": "la carrera",
-      "translation": "the race / the run",
-      "example": {
-        "es": "La carrera empieza a las ocho.",
-        "en": "The race starts at eight."
-      }
-    }
-  ],
-  "verbChart": {
-    "tense": "Preterito",
-    "infinitive": "correr",
-    "conjugations": {
-      "yo": "corri",
-      "tú": "corriste",
-      "él/ella/usted": "corrio",
-      "nosotros": "corrimos",
-      "vosotros": "corristeis",
-      "ellos/ellas/ustedes": "corrieron"
-    }
-  }
-}
-
-The output must be valid JSON. Do not include triple backticks or surrounding text.
-Your output will be parsed by a computer. Invalid formatting will break the system.
+Report your analysis by calling the ${WORD_TRANSLATION_TOOL.name} tool. Set any field you have no value for to null (or an empty array for the list fields).
 `.trim();
 
-  const constraints: Record<number, string> = {
-    1: `CEFR level A1.`,
-    2: `CEFR level A2.`,
-    3: `CEFR level B1.`,
-    4: `CEFR level B2.`,
-    5: `CEFR level C1.`,
-  };
+const CONSTRAINTS: Record<number, string> = {
+  1: `CEFR level A1.`,
+  2: `CEFR level A2.`,
+  3: `CEFR level B1.`,
+  4: `CEFR level B2.`,
+  5: `CEFR level C1.`,
+};
 
+/**
+ * The cache-stable system prompt. Byte-identical across all requests, so it can
+ * carry a `cache_control` breakpoint in the route.
+ */
+export function getWordPromptToEnglishSystem(): string {
+  return STATIC_INSTRUCTIONS;
+}
+
+/**
+ * The per-request variable tail: CEFR level, optional story context, and the
+ * word + sentence. Sent as the user message after the cached system prompt.
+ */
+export function getWordPromptToEnglish(word: string, sentence: string, level: number = 2, context?: any): string {
   const contextInfo = context ? `
 
 STORY CONTEXT (for better understanding of pronouns and references):
@@ -175,9 +117,7 @@ Use this context to better understand who pronouns refer to and the story's narr
 ` : '';
 
   return `
-${base}
-
-${constraints[level]}
+${CONSTRAINTS[level]}
 ${contextInfo}
 
 Spanish Word: ${word}

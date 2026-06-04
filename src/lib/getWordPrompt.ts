@@ -1,8 +1,21 @@
-export function getWordPrompt(word: string, sentence: string, level: number = 2, context?: any): string {
-  const base = `
+// src/lib/getWordPrompt.ts
+
+import { WORD_TRANSLATION_TOOL } from "@/lib/wordTranslationSchema";
+
+/**
+ * Builds the English→Spanish word-translation prompt.
+ *
+ * Split into a STATIC instruction block (`getWordPromptSystem()`, identical on
+ * every call → prompt-cacheable) and a small VARIABLE tail (`getWordPrompt()`:
+ * level + story context + word/sentence). Output shape is enforced by the
+ * report_word_translation tool (see wordTranslationSchema.ts), so no JSON
+ * examples live in the prompt.
+ */
+
+const STATIC_INSTRUCTIONS = `
 You are a bilingual Spanish-English language tutor helping Spanish-speaking learners understand English words.
 
-You will be given a single English word and the sentence it appears in. Analyze the word and return a structured JSON response with the following sections.
+You will be given a single English word and the sentence it appears in. Analyze the word and report your analysis by calling the ${WORD_TRANSLATION_TOOL.name} tool with the following sections.
 
 1. Part of Speech
 Identify the part of speech of the word AS IT IS USED in the given sentence.
@@ -28,7 +41,7 @@ If the word is a conjugated or inflected form (e.g., "ran" from "run", "cities" 
 - Set isDerivative to true
 - Provide rootWord (the base/infinitive form) and rootTranslation (its Spanish translation)
 
-If the word is already in its root form, set isDerivative to false and omit rootWord and rootTranslation.
+If the word is already in its root form, set isDerivative to false and set rootWord and rootTranslation to null.
 
 If the word is an auxiliary verb (do/does/did/don't/doesn't/didn't used to form negation or questions, NOT as a main verb meaning "hacer"), set rootWord to "do (auxiliar)" and rootTranslation to "Verbo auxiliar sin equivalente en español. En español se usa 'no' + verbo conjugado." Set isDerivative to true.
 
@@ -48,8 +61,6 @@ Optionally return one or two additional Spanish translations that represent func
 - IMPORTANT: The English example MUST use the original English word being translated. The Spanish example MUST use the alternative Spanish translation. For example, if the word is "always" and the alternative is "constantemente", the English sentence must contain "always" and the Spanish sentence must contain "constantemente".
 - Target usage suitable for learners in Mexico.
 
-Return each as an object: { "translation": "toca (instrumento musical)", "example": { "en": "She plays the guitar every evening.", "es": "Ella toca la guitarra todas las noches." } }
-
 5. Word Family / Derivatives
 List common derivatives of this word in OTHER parts of speech (excluding the POS from section 1).
 For each, provide:
@@ -65,117 +76,40 @@ Rules:
 - If no common derivatives exist, return an empty array.
 
 6. Verb Conjugation Chart
-IMPORTANT: verbChart is REQUIRED whenever a related verb exists — not just when the word itself is a verb.
-- If the word IS a verb in the sentence, conjugate it in the exact tense used in the sentence.
-- If the word is NOT a verb (noun, adjective, adverb) but has a verb in its word family or derivatives, you MUST include verbChart for that related verb conjugated in Present Simple. For example: "telephone" (noun) → verbChart for "to call/phone"; "interested" (adjective) → verbChart for "to interest".
+- If the word IS a verb in the sentence, set verbChart and conjugate it in the exact tense used in the sentence.
+- If the word is NOT a verb but has a closely related, everyday verb in its word family, you MAY include verbChart for that related verb in Present Simple. Only do this when the related verb is natural and common — do NOT invent an awkward verb just to fill the chart. If no natural related verb exists, set verbChart to null.
 - If the word is a modal verb (can, could, will, would, shall, should, may, might, must):
-  - DO include the verb chart. Use the base modal as the infinitive (e.g., "can", not "be able to"). Never substitute with alternative constructions.
+  - DO set verbChart. Use the base modal as the infinitive (e.g., "can", not "be able to"). Never substitute with alternative constructions.
   - Do NOT append ", modal verb" to the tense — just use the tense name (e.g., "Past Simple").
   - Modal verbs use the same form for all persons — show that (e.g., "could" for all six).
 - If the word is an auxiliary verb (do/does/did/don't/doesn't/didn't as auxiliary):
-  - DO include the verb chart. Use "do" as the infinitive.
+  - DO set verbChart. Use "do" as the infinitive.
   - Do NOT append ", auxiliary verb" to the tense — just use the tense name (e.g., "Past Simple").
   - Conjugate the auxiliary form for each person (e.g., Past Simple: "didn't" for all; Present Simple: "don't" for most, "doesn't" for he/she/it).
-  - Omit derivatives (return empty array).
-- Only omit verbChart if the word is a pronoun, preposition, conjunction, or determiner, OR if no related verb form exists at all.
+  - Set derivatives to an empty array.
+- Set verbChart to null if the word is a pronoun, preposition, conjunction, or determiner, or if no related verb form exists.
 
 Use these English subject pronouns in this exact order:
 "I", "you", "he/she/it", "we", "you all", "they"
 
-Respond with valid JSON only. No prose, no markdown, no commentary.
-
-Example response for a non-verb word:
-{
-  "partOfSpeech": "adjective",
-  "contextTranslation": "interesado",
-  "subject": null,
-  "subjectTranslation": null,
-  "isDerivative": true,
-  "rootWord": "interest",
-  "rootTranslation": "interesar",
-  "otherCommonTranslations": [{"translation": "fascinado (gran interes)", "example": {"en": "He was fascinated by the old castle.", "es": "Estaba fascinado por el castillo antiguo."}}],
-  "derivatives": [
-    {
-      "pos": "verb",
-      "word": "to interest",
-      "translation": "interesar",
-      "example": {
-        "en": "This topic interests me.",
-        "es": "Este tema me interesa."
-      }
-    },
-    {
-      "pos": "noun",
-      "word": "interest",
-      "translation": "el interes",
-      "example": {
-        "en": "She has a strong interest in art.",
-        "es": "Tiene un fuerte interes en el arte."
-      }
-    }
-  ],
-  "verbChart": {
-    "tense": "Present Simple",
-    "infinitive": "to interest",
-    "conjugations": {
-      "I": "interest",
-      "you": "interest",
-      "he/she/it": "interests",
-      "we": "interest",
-      "you all": "interest",
-      "they": "interest"
-    }
-  }
-}
-
-Example response for a verb:
-{
-  "partOfSpeech": "verb",
-  "contextTranslation": "corrio",
-  "subject": "she",
-  "subjectTranslation": "ella",
-  "isDerivative": true,
-  "rootWord": "run",
-  "rootTranslation": "correr",
-  "otherCommonTranslations": [{"translation": "funciono (una maquina)", "example": {"en": "The machine ran all night without stopping.", "es": "La maquina funciono toda la noche sin parar."}}],
-  "derivatives": [
-    {
-      "pos": "noun",
-      "word": "a run",
-      "translation": "una carrera",
-      "example": {
-        "en": "I went for a run this morning.",
-        "es": "Fui a correr esta manana."
-      }
-    }
-  ],
-  "verbChart": {
-    "tense": "Past Simple",
-    "infinitive": "to run",
-    "conjugations": {
-      "I": "ran",
-      "you": "ran",
-      "he/she/it": "ran",
-      "we": "ran",
-      "you all": "ran",
-      "they": "ran"
-    }
-  }
-}
-
-The output must be valid JSON. Do not include triple backticks or surrounding text.
-Your output will be parsed by a computer. Invalid formatting will break the system.
+Report your analysis by calling the ${WORD_TRANSLATION_TOOL.name} tool. Set any field you have no value for to null (or an empty array for the list fields).
 `.trim();
 
-  const constraints: Record<number, string> = {
-    1: `CEFR level A1.`,
-    2: `CEFR level A2.`,
-    3: `CEFR level B1.`,
-    4: `CEFR level B2.`,
-    5: `CEFR level C1.`,
-  };
+const CONSTRAINTS: Record<number, string> = {
+  1: `CEFR level A1.`,
+  2: `CEFR level A2.`,
+  3: `CEFR level B1.`,
+  4: `CEFR level B2.`,
+  5: `CEFR level C1.`,
+};
 
+/** Cache-stable system prompt. Byte-identical across requests. */
+export function getWordPromptSystem(): string {
+  return STATIC_INSTRUCTIONS;
+}
 
+/** Per-request variable tail: CEFR level, optional story context, word + sentence. */
+export function getWordPrompt(word: string, sentence: string, level: number = 2, context?: any): string {
   const contextInfo = context ? `
 
 STORY CONTEXT (for better understanding of pronouns and references):
@@ -187,9 +121,7 @@ Use this context to better understand who pronouns refer to and the story's narr
 ` : '';
 
   return `
-${base}
-
-${constraints[level]}
+${CONSTRAINTS[level]}
 ${contextInfo}
 
 English Word: ${word}

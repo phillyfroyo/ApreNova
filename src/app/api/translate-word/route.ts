@@ -1,7 +1,8 @@
 // src/app/api/translate-word/route.ts
 import Anthropic from "@anthropic-ai/sdk";
-import { getWordPrompt } from "@/lib/getWordPrompt";
-import { getWordPromptToEnglish } from "@/lib/getWordPromptToEnglish";
+import { getWordPrompt, getWordPromptSystem } from "@/lib/getWordPrompt";
+import { getWordPromptToEnglish, getWordPromptToEnglishSystem } from "@/lib/getWordPromptToEnglish";
+import { WORD_TRANSLATION_TOOL, type WordTranslationToolInput } from "@/lib/wordTranslationSchema";
 import { NextRequest, NextResponse } from 'next/server';
 import { logAnthropicCost } from "@/lib/cost-tracker";
 import { getServerSession } from "next-auth";
@@ -31,7 +32,11 @@ export async function POST(req: NextRequest) {
   const lang = req.nextUrl.searchParams.get("lang") ?? "es";
   const isSpanishToEnglish = lang === "en";
 
-  const prompt = isSpanishToEnglish
+  // Static instruction block (cacheable) + per-request variable tail.
+  const systemPrompt = isSpanishToEnglish
+    ? getWordPromptToEnglishSystem()
+    : getWordPromptSystem();
+  const userPrompt = isSpanishToEnglish
     ? getWordPromptToEnglish(word, sentence, level, context)
     : getWordPrompt(word, sentence, level, context);
 
@@ -42,81 +47,74 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Structured output via forced tool use: the model is required to call
+    // report_word_translation, so its arguments always match our schema —
+    // no fenced-```json``` stripping, no parse-failure 500s. The text-based
+    // example responses were removed from the prompt accordingly.
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       temperature: 0.3,
+      // Cache the large static instruction block — it's byte-identical across
+      // every request for a given direction, so repeat calls read it from cache
+      // (~0.1x cost, faster TTFT) instead of reprocessing it each time.
+      system: [
+        {
+          type: "text",
+          text: systemPrompt,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      tools: [WORD_TRANSLATION_TOOL],
+      tool_choice: { type: "tool", name: WORD_TRANSLATION_TOOL.name },
       messages: [
-        { role: "user", content: `${prompt}\n\nWord: "${word}"` },
+        { role: "user", content: userPrompt },
       ],
     });
+
+    // Cache-hit telemetry — if cache_read_input_tokens stays 0 across repeats,
+    // a silent invalidator crept into the static block.
+    if (message.usage) {
+      console.log("translate-word cache:", {
+        write: message.usage.cache_creation_input_tokens ?? 0,
+        read: message.usage.cache_read_input_tokens ?? 0,
+        input: message.usage.input_tokens,
+      });
+    }
 
     // Log cost (fire-and-forget)
     logAnthropicCost("translate-word", "claude-sonnet-4-6", message.usage, { userId: session.user.id });
 
-    const reply = message.content[0]?.type === "text" ? message.content[0].text : "";
-    console.log("Claude raw reply:", reply);
+    const toolUse = message.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+    );
 
-    const cleanReply = reply.replace(/```json|```/g, "").trim();
-
-    let result: any = {};
-
-    try {
-      const raw = JSON.parse(cleanReply);
-      
-      // Handle enhanced format with new fields
-      if (typeof raw === "object" && raw.contextTranslation) {
-        result = {
-          contextTranslation: raw.contextTranslation,
-          isDerivative: raw.isDerivative || false,
-          rootWord: raw.rootWord || null,
-          rootTranslation: raw.rootTranslation || null,
-          otherCommonTranslations: raw.otherCommonTranslations || [],
-          partOfSpeech: raw.partOfSpeech || null,
-          subject: raw.subject || null,
-          subjectTranslation: raw.subjectTranslation || null,
-          derivatives: raw.derivatives || [],
-          verbChart: raw.verbChart || null,
-          // Legacy support - map contextTranslation to first item in translations
-          translations: [raw.contextTranslation, ...(raw.otherCommonTranslations || [])]
-        };
-      }
-      // Handle legacy format for backwards compatibility
-      else if (typeof raw === "object" && raw.primary) {
-        result = {
-          contextTranslation: raw.primary,
-          isDerivative: false,
-          rootWord: null,
-          rootTranslation: null,
-          otherCommonTranslations: raw.otherCommonTranslations || [],
-          partOfSpeech: null,
-          subject: null,
-          subjectTranslation: null,
-          derivatives: [],
-          verbChart: null,
-          translations: [raw.primary, ...(raw.otherCommonTranslations || [])]
-        };
-      } else if (Array.isArray(raw)) {
-        result = {
-          contextTranslation: raw[0] || "",
-          isDerivative: false,
-          rootWord: null,
-          rootTranslation: null,
-          otherCommonTranslations: raw.slice(1) || [],
-          partOfSpeech: null,
-          subject: null,
-          subjectTranslation: null,
-          derivatives: [],
-          verbChart: null,
-          translations: raw
-        };
-      } else {
-        throw new Error("Invalid translation format");
-      }
-    } catch (parseError) {
-      console.error("Failed to parse Claude response:", parseError);
+    if (!toolUse) {
+      console.error("translate-word: no tool_use block in response", message.stop_reason);
       return NextResponse.json({ error: "Invalid translation format." }, { status: 500 });
     }
+
+    const raw = toolUse.input as WordTranslationToolInput;
+
+    // Defensive defaults — mirror prior behavior so a slightly-off response
+    // never 500s. The shape is guaranteed by the tool schema; these guard
+    // against missing optional fields only.
+    const contextTranslation = raw.contextTranslation ?? "";
+    const otherCommonTranslations = raw.otherCommonTranslations ?? [];
+    const result = {
+      contextTranslation,
+      isDerivative: raw.isDerivative ?? false,
+      rootWord: raw.rootWord ?? null,
+      rootTranslation: raw.rootTranslation ?? null,
+      otherCommonTranslations,
+      partOfSpeech: raw.partOfSpeech ?? null,
+      subject: raw.subject ?? null,
+      subjectTranslation: raw.subjectTranslation ?? null,
+      derivatives: raw.derivatives ?? [],
+      verbChart: raw.verbChart ?? null,
+      // Legacy support - map contextTranslation to first item in translations
+      translations: [contextTranslation, ...otherCommonTranslations],
+    };
 
     cache.set(cacheKey, result);
 
