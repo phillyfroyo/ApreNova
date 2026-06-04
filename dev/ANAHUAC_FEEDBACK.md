@@ -50,6 +50,41 @@ Maybe user just wants an instant translation, and if it seems off, they can
 research it further if they want. Or maybe, they want a reliable, context
 appropriate, rich with information translation that takes a few seconds longer.
 
+### Deferred: translation cache (and the key design that would make it worth it)
+
+**Decision: deferred for now.** A DB cache for word translations is real value but
+not urgent at ~180 users, and we may still change the translation-card payload —
+which would partly invalidate any stored data. Revisit once the card format is
+stable and/or user count is higher.
+
+**The key design is the whole ballgame.** The value of the LLM call is that it's
+*context-dependent* — the same word can mean wildly different things in different
+sentences. So the cache key must NOT be the bare word. A bare-word key would
+return wrong translations.
+
+- **Naive context key** = `(word + exact sentence + level + direction)`. Correct,
+  but fragile (whitespace/punctuation/re-clean changes miss) and low hit-rate at
+  our scale: with 8 stories, several up to 10 versions each (5 levels × 2 langs),
+  and Gatsby alone being tens of thousands of words ×10, the odds two users
+  translate the exact same word-in-sentence are low today.
+
+- **Better: location key + cross-level mapping.** Key on the word's *structural
+  position* — `(storySlug, chapter, page, line, word, direction)` — which is far
+  more stable than sentence text. The prize: the same word often sits on the
+  corresponding line across levels (e.g. "deberia" on Gatsby ch1/p18/line1 appears
+  identically at A1/A2/B1/B2; C1 uses a different construction). If we can map one
+  cached translation to the equivalent location across all levels that share it,
+  that's a 4–5× hit-rate multiplier — the first reader through *any* level seeds
+  the word for everyone reading that line at *any* level. This converts caching
+  from "wait for a random collision" to "structurally high hit rate."
+
+  **Open question / hinge:** does this require that lines are index-aligned across
+  levels? If A1 line N ⟷ B2 line N by index, the cross-level mapping is easy. If
+  the rewrite pipeline merges/splits/reorders lines between levels, "the same
+  word's location" is not a clean index map and we'd need word-level alignment
+  (much harder). Verify line alignment across levels BEFORE committing to this
+  design.
+
 ### Bug in our current smart translations
 
 Current error in the word translation card, i've seen it conjugate an infinitive
