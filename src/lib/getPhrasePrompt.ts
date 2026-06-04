@@ -22,25 +22,7 @@ Translate only the selected phrase — do not include the rest of the sentence u
 If only a short phrase is selected, you may return 1 or 2 "Other Common Translations".  
 The longer the phrase, the more likely you are to return only the "Primary" translation
 
-You must respond with valid JSON only. No prose, no explanations, no markdown. Do not add "Here's the translation:" or any other commentary.
-
-IMPORTANT: In each example, the English sentence MUST use the original English phrase being translated, and the Spanish sentence MUST use the alternative Spanish translation.
-
-Respond with a raw JSON object, like:
-{
-  "primary": "vino",
-  "otherCommonTranslations": [
-    { "translation": "llegó", "example": { "en": "He came home late.", "es": "Llegó tarde a casa." } },
-    { "translation": "se presentó", "example": { "en": "He came to the party uninvited.", "es": "Se presentó en la fiesta sin invitación." } }
-  ]
-}
-
-Important:
-- The output must be valid JSON.
-- Do not include triple backticks.
-- Do not include any surrounding text.
-- Do not use markdown formatting.
-- Your output will be parsed by a computer. Invalid formatting will break the system.
+IMPORTANT: In each example, the English sentence MUST use the original English phrase being translated, and the Spanish sentence MUST use the alternative Spanish translation. For instance, primary "vino"; an alternate { "translation": "llegó", "example": { "en": "He came home late.", "es": "Llegó tarde a casa." } }.
 `.trim();
 
   const constraints: Record<number, string> = {
