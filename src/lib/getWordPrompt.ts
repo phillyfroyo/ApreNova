@@ -16,10 +16,12 @@ Translate the word into Spanish based on how it is used in the sentence.
 - Translate only the specific word given, not the phrase or concept it belongs to. For example, "Second" in "Second World War" should translate to "Segunda", not "Guerra".
 - Do not return generic translations like "momento," "cosa," or "hacer" unless clearly the most natural fit.
 
-If the word is a verb, also identify the subject acting on it:
+If the word is a CONJUGATED (finite) verb, also identify the subject acting on it:
 - Return "subject" (the English pronoun or noun from the sentence) and "subjectTranslation" (its Spanish equivalent).
 - If the subject is implicit, infer it from context.
-- Only include these fields for verbs.
+- ONLY include "subject"/"subjectTranslation" when the word is the conjugated/finite verb that the subject directly performs.
+- DO NOT include a subject for an infinitive, gerund, or participle — even when it follows another verb. In "wants to go", translating "go" gives "ir" (NOT "he go"); in "could be", translating "be" gives "ser" (NOT "it be"). For these non-finite forms, set "subject" and "subjectTranslation" to null.
+- For all non-verbs, also set both fields to null.
 
 3. Root Word Analysis
 If the word is a conjugated or inflected form (e.g., "ran" from "run", "cities" from "city"):
