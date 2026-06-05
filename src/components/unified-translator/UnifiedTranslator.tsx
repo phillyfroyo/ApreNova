@@ -32,7 +32,7 @@ export default function UnifiedTranslator({
 
   // ---- Translation fetch hook ----
   const {
-    translations, enhancedTranslation, loading, error, authError,
+    translations, enhancedTranslation, loading, richLoading, error, authError,
     fetchTranslation, triggerManualTranslation, createTrigger, clearTranslation,
     hasActiveTranslation,
   } = useTranslationFetch({
@@ -166,6 +166,7 @@ export default function UnifiedTranslator({
           translations={translations}
           enhancedTranslation={enhancedTranslation}
           loading={loading}
+          richLoading={richLoading}
           error={error}
           authError={authError}
           currentLang={currentLang}

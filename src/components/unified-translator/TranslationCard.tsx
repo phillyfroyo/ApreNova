@@ -12,6 +12,8 @@ interface TranslationCardProps {
   translations: string[];
   enhancedTranslation: EnhancedTranslation | null;
   loading: boolean;
+  /** Rich info (Call B) still loading after the quick headline (Call A) showed. */
+  richLoading?: boolean;
   error: string;
   authError: boolean;
   currentLang: Language;
@@ -22,7 +24,7 @@ interface TranslationCardProps {
 }
 
 export default function TranslationCard({
-  translations, enhancedTranslation, loading, error, authError,
+  translations, enhancedTranslation, loading, richLoading, error, authError,
   currentLang, showSpanishFirst, selectedText, onClose, tooltipRef,
 }: TranslationCardProps) {
   const [visibleExamples, setVisibleExamples] = useState<Set<number>>(new Set());
@@ -66,7 +68,9 @@ export default function TranslationCard({
       {error && !authError && <div className="text-sm text-red-500 pr-6">{error}</div>}
 
       <div className="text-sm text-left pr-6">
-        {loading && (
+        {/* Big loader only until the headline (Call A) lands; once we have any
+            translation content, the subtle richLoading indicator takes over. */}
+        {loading && !enhancedTranslation && translations.length === 0 && (
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold">{t(currentLang, "translator", "translating")}…</span>
             <span className="animate-pulse text-lg">{"\u{1F9E0}"}</span>
@@ -83,6 +87,7 @@ export default function TranslationCard({
                 selectedText={selectedText}
                 visibleExamples={visibleExamples}
                 toggleExample={toggleExample}
+                richLoading={richLoading}
               />
             ) : (
               <LegacyTranslationContent
@@ -104,7 +109,7 @@ export default function TranslationCard({
 
 function EnhancedTranslationContent({
   enhancedTranslation, currentLang, showSpanishFirst, selectedText,
-  visibleExamples, toggleExample,
+  visibleExamples, toggleExample, richLoading,
 }: {
   enhancedTranslation: EnhancedTranslation;
   currentLang: Language;
@@ -112,6 +117,7 @@ function EnhancedTranslationContent({
   selectedText: string;
   visibleExamples: Set<number>;
   toggleExample: (idx: number) => void;
+  richLoading?: boolean;
 }) {
   return (
     <>
@@ -196,6 +202,16 @@ function EnhancedTranslationContent({
       {/* Verb Conjugation Chart */}
       {enhancedTranslation.verbChart && ["verb", "auxiliary verb", "modal verb"].includes(enhancedTranslation.partOfSpeech || "") && (
         <VerbChart verbChart={enhancedTranslation.verbChart} selectedWord={selectedText} />
+      )}
+
+      {/* Rich info (Call B) still loading after the quick headline showed.
+          This is the seam the loading-tidbit feature will later fill. */}
+      {richLoading && (
+        <div className="flex items-center gap-1.5 mt-2 text-gray-400">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse [animation-delay:150ms]" />
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse [animation-delay:300ms]" />
+        </div>
       )}
     </>
   );
