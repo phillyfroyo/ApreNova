@@ -51,7 +51,10 @@ export default function VerbChart({ verbChart, selectedWord }: VerbChartProps) {
         {verbChart.infinitive} &mdash; {verbChart.tense}
       </p>
       <div className="overflow-x-auto">
-        <table className="text-sm w-full border-collapse border border-gray-200 min-w-[340px]">
+        {/* whitespace-nowrap keeps every cell on one line, so long forms
+            (e.g. reflexive "nos lavamos") push the table past the card edge
+            and scroll behind it instead of wrapping. */}
+        <table className="text-sm w-full border-collapse border border-gray-200 min-w-[340px] whitespace-nowrap">
           <tbody>
             {pairs.map(([left, right], i) => {
               const leftForm = c[left] || '';
