@@ -50,6 +50,41 @@ Maybe user just wants an instant translation, and if it seems off, they can
 research it further if they want. Or maybe, they want a reliable, context
 appropriate, rich with information translation that takes a few seconds longer.
 
+### Deferred: translation cache (and the key design that would make it worth it)
+
+**Decision: deferred for now.** A DB cache for word translations is real value but
+not urgent at ~180 users, and we may still change the translation-card payload —
+which would partly invalidate any stored data. Revisit once the card format is
+stable and/or user count is higher.
+
+**The key design is the whole ballgame.** The value of the LLM call is that it's
+*context-dependent* — the same word can mean wildly different things in different
+sentences. So the cache key must NOT be the bare word. A bare-word key would
+return wrong translations.
+
+- **Naive context key** = `(word + exact sentence + level + direction)`. Correct,
+  but fragile (whitespace/punctuation/re-clean changes miss) and low hit-rate at
+  our scale: with 8 stories, several up to 10 versions each (5 levels × 2 langs),
+  and Gatsby alone being tens of thousands of words ×10, the odds two users
+  translate the exact same word-in-sentence are low today.
+
+- **Better: location key + cross-level mapping.** Key on the word's *structural
+  position* — `(storySlug, chapter, page, line, word, direction)` — which is far
+  more stable than sentence text. The prize: the same word often sits on the
+  corresponding line across levels (e.g. "deberia" on Gatsby ch1/p18/line1 appears
+  identically at A1/A2/B1/B2; C1 uses a different construction). If we can map one
+  cached translation to the equivalent location across all levels that share it,
+  that's a 4–5× hit-rate multiplier — the first reader through *any* level seeds
+  the word for everyone reading that line at *any* level. This converts caching
+  from "wait for a random collision" to "structurally high hit rate."
+
+  **Open question / hinge:** does this require that lines are index-aligned across
+  levels? If A1 line N ⟷ B2 line N by index, the cross-level mapping is easy. If
+  the rewrite pipeline merges/splits/reorders lines between levels, "the same
+  word's location" is not a clean index map and we'd need word-level alignment
+  (much harder). Verify line alignment across levels BEFORE committing to this
+  design.
+
 ### Bug in our current smart translations
 
 Current error in the word translation card, i've seen it conjugate an infinitive
@@ -138,3 +173,72 @@ Lori loves the app, and her students are really into it. Lori learned English la
 1. She wants to be able to underline words in a Cuentana story, just like she would with a pen in a real book. First UI thought would be to add an icon to the emoji row, and when word(s) are highlighted and this new underline icon is clicked, words get underlined. I'm open to other ideas. The next part of the equation (perhapse for later on) would be for users to have access to underlined words, as remembering/finding underlined sections in this web app form would be difficult otherwise. We'll have to think about that after more deeply understanding what the user is really getting at when they underline a word. 
 
 2. The next idea was to be able to write notes in the margins, just like you might in a physical book. So maybe you click and hold the margin area and a text box pops up. Open to other ideas of how to introduce this, as it will be a tricky one to add while keeping the UI clean. Each note could be attached / go with a paragraph. Same second part of the equation as last time, i'd propose we think through and design an area for users to view all of their underlines and notes. 
+
+---
+
+## Translation Speed: Loading Tidbit (GF's idea) + measurement notes
+
+### The idea — make the wait a moment of learning
+
+Word/phrase translations take a few seconds (rich, context-aware output). Rather
+than only chasing raw speed, *lean into* the wait the way Claude's playful loading
+messages ("philosophizing…", "juggling…") do — but make it educational. While a
+translation loads, show a random **MX/US colloquial saying or idiom** (with its
+translation) on the translation card. A 5-second tidbit of real learning, on-theme
+for a language app.
+
+**Bonus mechanic:** a quick **save** option — if the user is fast, they can save the
+displayed tidbit to their vocabulary route before the translation arrives. Connects
+the loading state to the existing save-word/vocab system.
+
+**Design cautions (don't skip these):**
+- **Don't let it excuse slowness.** The tidbit is a delighter *on top of* a
+  reasonably fast translation, not a justification for 9s. Keep pushing the headline
+  to land as soon as it's ready.
+- **Handle the variable wait.** Warm/light translations can return in ~2s — the
+  tidbit (and its save option) must not flash by and vanish before the user reacts.
+  Consider letting the tidbit/save persist briefly even after the translation lands,
+  or park the save affordance in a corner.
+- **Curate, don't randomize.** "Random words" goes stale fast — Anahuac students hit
+  this dozens of times per class and will see repeats within one session. Lean toward
+  a rich, finite set of **sayings/idioms** over arbitrary vocabulary; they're more
+  memorable and more "worth the wait."
+
+### Streaming vs. double-call — measured, then parked
+
+Decision: **parked.** We measured the word route (warm, cache hitting):
+
+- firstToken ~1.2s, headlineDone ~5.4s, fullDone ~9.5s (~640 output tokens).
+- Streaming would reveal the headline ~4s earlier than the full payload — a *real
+  but modest* win, not the "1.5s vs 6s" transformation that would make it a slam dunk.
+- (The probe's headlineDone proxy fired late — true headline is somewhat earlier —
+  so streaming's benefit is at least this good.)
+- Streaming structured output means partial-JSON parsing of tool-use input deltas:
+  meaningful frontend complexity. Not worth it until we know the wait actually hurts.
+
+The original "two separate calls" idea is fully superseded: the requirement is
+**one user request, rich info delivered automatically (no extra button)** — under
+that constraint the double-call generates the same tokens as one call but adds a
+round-trip, so it has no advantage. If we ever shorten the wait, streaming is the
+tool; revisit only if the tidbit doesn't make the wait pleasant enough.
+
+### Trimming output density — discussed, deferred
+
+~9.5s is dominated by ~640 output tokens. Generating less = faster for everyone,
+no streaming complexity. But trim *carefully*:
+
+- **Do NOT cut the "xxx can also mean" alternate example sentences.** They're
+  high-value (we were considering showing them open-by-default, not hiding them).
+  Making them click-to-fetch would convert one wait into a 6s wait *plus* a fresh
+  ~4s AI round-trip every time the user wants an example — likely a *worse*
+  experience for engaged students, plus a new lazy-fetch code path. The content is
+  the product; don't degrade the part we value most.
+- **If trimming, cut the peripheral instead:** the verb conjugation chart (6
+  conjugations generated on every verb — and *deterministic*, so it could be
+  generated from the infinitive WITHOUT an AI call, eliminating those tokens
+  entirely), and/or the per-derivative example sentences (the "word family" section
+  is more peripheral than the primary translation's alternates).
+- **But don't trim yet.** We haven't established 9.5s is actually a problem. Build
+  the loading tidbit first; if it makes the wait pleasant, the pressure to degrade
+  content evaporates and we keep all the rich output. Decide on trimming *after*,
+  from felt experience, not theory.

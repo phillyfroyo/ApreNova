@@ -4,6 +4,7 @@ import { OpenAI } from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getPhrasePrompt } from '@/lib/getPhrasePrompt';
 import { getPhrasePromptToEnglish } from '@/lib/getPhrasePromptToEnglish';
+import { PHRASE_TRANSLATION_RESPONSE_FORMAT, type PhraseTranslationResult } from "@/lib/phraseTranslationSchema";
 import { logOpenAICost } from "@/lib/cost-tracker";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
@@ -34,10 +35,14 @@ const prompt = isSpanishToEnglish
   console.log("🧠 Prompt to GPT:", prompt);
 
   try {
+    // Structured output via json_schema (strict): GPT-4o is constrained to our
+    // schema, so the reply is always valid JSON — no more ```json``` stripping
+    // or parse-failure 500s. Temp lowered 0.7 -> 0.3 for steadier translations.
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
+      temperature: 0.3,
+      response_format: PHRASE_TRANSLATION_RESPONSE_FORMAT,
     });
 
     // Log cost (fire-and-forget)
@@ -46,22 +51,19 @@ const prompt = isSpanishToEnglish
     const result = completion.choices[0]?.message?.content;
     console.log("🧠 Raw GPT response:", result);
 
-    const cleaned = result?.replace(/^```json\n?|```$/g, '').trim();
+    // A strict-schema refusal/empty completion is the only way content is absent.
+    if (!result) {
+      console.error("❌ Empty GPT response", completion.choices[0]?.finish_reason);
+      return NextResponse.json({ error: "Invalid GPT response format" }, { status: 500 });
+    }
 
-    try {
-  const parsed = JSON.parse(cleaned!);
-
-  if (typeof parsed === "object" && parsed.primary) {
-    return NextResponse.json({ translations: parsed });
-  } else if (Array.isArray(parsed)) {
-    return NextResponse.json({ translations: { primary: parsed[0], otherCommonTranslations: parsed.slice(1) } });
-  } else {
-    throw new Error("Invalid GPT response structure");
-  }
-} catch (parseErr) {
-  console.error("❌ GPT response parsing failed:", cleaned);
-  return NextResponse.json({ error: "Invalid GPT response format" }, { status: 500 });
-}
+    const parsed = JSON.parse(result) as PhraseTranslationResult;
+    return NextResponse.json({
+      translations: {
+        primary: parsed.primary ?? "",
+        otherCommonTranslations: parsed.otherCommonTranslations ?? [],
+      },
+    });
   } catch (e) {
     console.error("🔥 GPT request failed:", e);
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 });

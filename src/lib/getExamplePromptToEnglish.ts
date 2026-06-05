@@ -1,7 +1,9 @@
 // src/lib/getExamplePromptToEnglish.ts
 
+import { cefrConstraintLine } from "@/lib/cefr";
+
 type ExamplePromptParams = {
-  level: number;
+  level: string | number;
   englishWord: string;
   spanishWord: string;
 };
@@ -39,17 +41,9 @@ Respond only with a raw JSON object like this:
 No formatting, no code blocks, no explanations.
 `.trim();
 
-  const constraints: Record<number, string> = {
-    1: `CEFR level A1.`,
-    2: `CEFR level A2.`,
-    3: `CEFR level B1.`,
-    4: `CEFR level B2.`,
-    5: `CEFR level C1.`,
-  };
-
   return `
 ${base}
 
-${constraints[level]}
+${cefrConstraintLine(level)}
 `.trim();
 }

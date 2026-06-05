@@ -35,6 +35,15 @@ export const PRICING = {
     input: 1.00,
     output: 5.00,
   },
+  "claude-sonnet-4-6": {
+    input: 3.00,    // $3.00 per 1M input tokens
+    output: 15.00,  // $15.00 per 1M output tokens
+  },
+  // NOTE: input cost here is the full base rate. The translate-word route uses
+  // prompt caching, where cache_read_input_tokens bill at ~0.1x. We don't yet
+  // split cached vs uncached input, so logged input cost for cached calls is a
+  // slight OVER-estimate. Acceptable for now; revisit if precise cache
+  // accounting is needed.
 
   // Azure TTS (per 1M characters)
   "azure-tts-neural": {
