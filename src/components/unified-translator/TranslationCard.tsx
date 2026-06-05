@@ -44,10 +44,12 @@ export default function TranslationCard({
       className="mt-1 bg-white text-black px-4 pt-3 pb-3 rounded-xl shadow z-50 relative w-[calc(100%+16px)] -ml-2 not-italic"
       data-tooltip
     >
-      {/* Close button */}
+      {/* Close button — padding + min size give a comfortable tap target
+          (the bare glyph alone was hard to hit, especially on touch). */}
       <button
         onClick={onClose}
-        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm"
+        aria-label="Close"
+        className="absolute top-1 right-1 flex items-center justify-center min-w-[32px] min-h-[32px] p-1 leading-none text-gray-400 hover:text-gray-600 text-base"
         data-translation-control="close"
       >
         ✕
