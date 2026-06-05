@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { t } from "@/lib/t";
 import type { Language } from "@/types/i18n";
 import type { EnhancedTranslation } from "./types";
+import { buildTranslationKey, getCachedTranslation, setCachedTranslation } from "./translationCache";
 
 interface UseTranslationFetchOptions {
   words: string[];
@@ -77,6 +78,19 @@ export function useTranslationFetch({
       const isCurrent = () => myReq === reqSeq.current;
       const body = { word: cleanWord, sentence, level: currentLevel, context };
 
+      // Per-device cache hit -> render the full card instantly, no network.
+      const cacheKey = buildTranslationKey("word", cleanWord, sentence, currentLevel, currentLang);
+      const cached = getCachedTranslation<EnhancedTranslation>(cacheKey);
+      if (cached) {
+        setEnhancedTranslation(cached);
+        setTranslations([cached.contextTranslation ?? ""]);
+        setLoading(false);
+        setRichLoading(false);
+        setError("");
+        setAuthError(false);
+        return;
+      }
+
       setLoading(true);
       setRichLoading(false);
       setError("");
@@ -121,7 +135,7 @@ export function useTranslationFetch({
           if (!isCurrent()) return;
           if (data.error) throw new Error(data.error);
           if (data.contextTranslation) {
-            setEnhancedTranslation({
+            const full: EnhancedTranslation = {
               contextTranslation: data.contextTranslation,
               isDerivative: data.isDerivative,
               rootWord: data.rootWord,
@@ -132,8 +146,11 @@ export function useTranslationFetch({
               subjectTranslation: data.subjectTranslation,
               derivatives: data.derivatives,
               verbChart: data.verbChart,
-            });
+            };
+            setEnhancedTranslation(full);
             setTranslations([data.contextTranslation]);
+            // Persist the full result for instant same-device repeats.
+            setCachedTranslation(cacheKey, full);
           }
         } catch (err: any) {
           if (!isCurrent()) return;
@@ -159,7 +176,19 @@ export function useTranslationFetch({
       return;
     }
 
-    // ---- Phrase: single call (unchanged) ----
+    // ---- Phrase: single call ----
+    // Per-device cache hit -> render instantly, no network.
+    const phraseCacheKey = buildTranslationKey("phrase", cleanWord, sentence, currentLevel, currentLang);
+    const cachedPhrase = getCachedTranslation<EnhancedTranslation>(phraseCacheKey);
+    if (cachedPhrase) {
+      setEnhancedTranslation(cachedPhrase);
+      setTranslations([]);
+      setLoading(false);
+      setError("");
+      setAuthError(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -173,11 +202,13 @@ export function useTranslationFetch({
       if (data.error) throw new Error(data.error);
 
       if (typeof data.translations === "object" && data.translations.primary) {
-        setEnhancedTranslation({
+        const full: EnhancedTranslation = {
           contextTranslation: data.translations.primary,
           otherCommonTranslations: data.translations.otherCommonTranslations || [],
-        });
+        };
+        setEnhancedTranslation(full);
         setTranslations([]);
+        setCachedTranslation(phraseCacheKey, full);
       } else if (Array.isArray(data.translations)) {
         setTranslations(data.translations);
         setEnhancedTranslation(null);
