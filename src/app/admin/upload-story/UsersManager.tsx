@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { resolveCostRange, rangeQueryString, type CostRangePreset } from "@/lib/admin/cost-date-range";
+import { isAnahuacUser } from "@/lib/admin/anahuac";
 
 interface UserSummary {
   totalUsers: number;
@@ -467,6 +468,15 @@ export default function UsersManager({ costRange }: { costRange: CostRangePreset
                           <span className="font-medium text-gray-900 truncate">
                             {user.name || "Anonymous"}
                           </span>
+                          {isAnahuacUser(user) && (
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded text-white flex-shrink-0 font-medium"
+                              style={{ backgroundColor: "#E8430F" }}
+                              title="Anáhuac student — do not contact for personal outreach"
+                            >
+                              Anáhuac
+                            </span>
+                          )}
                           {user.deletedAt && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex-shrink-0">
                               Deleted
