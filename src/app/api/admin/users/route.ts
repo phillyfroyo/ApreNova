@@ -32,18 +32,31 @@ const OPERATION_LABELS: Record<string, string> = {
   "tutor": "AI Tutor",
 };
 
+// Build a reusable createdAt filter from optional ISO start/end params, so the
+// shared admin date control applies to per-user cost numbers too. Empty object
+// when neither is set ("all time").
+function parseCreatedAtFilter(searchParams: URLSearchParams): { gte?: Date; lte?: Date } {
+  const start = searchParams.get("startDate");
+  const end = searchParams.get("endDate");
+  const filter: { gte?: Date; lte?: Date } = {};
+  if (start) filter.gte = new Date(start);
+  if (end) filter.lte = new Date(end);
+  return filter;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
+    const createdAtFilter = parseCreatedAtFilter(searchParams);
 
     // If userId is provided, return detailed user info with stories
     if (userId) {
-      return getUserDetails(userId);
+      return getUserDetails(userId, createdAtFilter);
     }
 
     // Otherwise, return summary of all users with costs
-    return getUsersSummary();
+    return getUsersSummary(createdAtFilter);
   } catch (error) {
     console.error("Failed to fetch user data:", error);
     return NextResponse.json(
@@ -53,7 +66,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function getUsersSummary() {
+async function getUsersSummary(createdAtFilter: { gte?: Date; lte?: Date }) {
+  const hasDateFilter = Object.keys(createdAtFilter).length > 0;
+  const apiCostWhere = hasDateFilter ? { createdAt: createdAtFilter } : undefined;
   // Get reading time per user
   const readingTimeByUser = await prisma.sessionLog.groupBy({
     by: ["userId"],
@@ -103,6 +118,7 @@ async function getUsersSummary() {
         select: { id: true },
       },
       ApiCost: {
+        where: apiCostWhere,
         select: { costCents: true },
       },
     },
@@ -195,7 +211,12 @@ async function getUsersSummary() {
   });
 }
 
-async function getUserDetails(userId: string) {
+async function getUserDetails(userId: string, createdAtFilter: { gte?: Date; lte?: Date }) {
+  // Apply the shared date range to this user's cost queries so the per-student
+  // breakdown matches whatever window the admin selected. Spread into where.
+  const hasDateFilter = Object.keys(createdAtFilter).length > 0;
+  const dateWhere = hasDateFilter ? { createdAt: createdAtFilter } : {};
+
   // Get user info
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -232,6 +253,7 @@ async function getUserDetails(userId: string) {
     ? await prisma.apiCost.groupBy({
         by: ["userStoryId"],
         where: {
+          ...dateWhere,
           userStoryId: { in: storyIdArray },
         },
         _sum: { costCents: true },
@@ -245,7 +267,7 @@ async function getUserDetails(userId: string) {
 
   // Get total costs for this user (includes deleted stories, tutor, etc.)
   const totalUserCosts = await prisma.apiCost.aggregate({
-    where: { userId },
+    where: { userId, ...dateWhere },
     _sum: { costCents: true },
   });
 
@@ -263,6 +285,7 @@ async function getUserDetails(userId: string) {
     by: ["operation"],
     where: {
       userId,
+      ...dateWhere,
       operation: { in: IN_STORY_OPERATIONS },
     },
     _sum: { costCents: true },
@@ -285,6 +308,7 @@ async function getUserDetails(userId: string) {
     by: ["operation"],
     where: {
       userId,
+      ...dateWhere,
       operation: { in: TUTOR_OPERATIONS },
     },
     _sum: { costCents: true },
