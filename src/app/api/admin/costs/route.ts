@@ -13,18 +13,40 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Parse date range (default to last 30 days)
-    const daysParam = searchParams.get("days") || "30";
-    const days = parseInt(daysParam, 10);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    // Date range: prefer explicit startDate/endDate (ISO) from the shared
+    // admin date control; fall back to the legacy relative `days` param.
+    // `startDate` may be omitted ("all time") -> no lower bound.
+    const startParam = searchParams.get("startDate");
+    const endParam = searchParams.get("endDate");
+
+    let startDate: Date | null;
+    let endDate: Date | null = null;
+    let days: number;
+
+    if (startParam || endParam) {
+      startDate = startParam ? new Date(startParam) : null;
+      endDate = endParam ? new Date(endParam) : null;
+      days = startDate
+        ? Math.max(1, Math.round((Date.now() - startDate.getTime()) / 86_400_000))
+        : 0; // 0 = all-time, for display only
+    } else {
+      const daysParam = searchParams.get("days") || "30";
+      days = parseInt(daysParam, 10);
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+    }
+
+    // Reusable createdAt filter (gte/lte as available). Spread into where clauses.
+    const createdAtFilter: { gte?: Date; lte?: Date } = {};
+    if (startDate) createdAtFilter.gte = startDate;
+    if (endDate) createdAtFilter.lte = endDate;
+    const hasCreatedAtFilter = Object.keys(createdAtFilter).length > 0;
+    const createdAtWhere = hasCreatedAtFilter ? { createdAt: createdAtFilter } : {};
 
     // Get summary by operation
     const byOperation = await prisma.apiCost.groupBy({
       by: ["operation"],
-      where: {
-        createdAt: { gte: startDate },
-      },
+      where: createdAtWhere,
       _sum: { costCents: true, inputTokens: true, outputTokens: true },
       _count: true,
     });
@@ -32,9 +54,7 @@ export async function GET(req: NextRequest) {
     // Get summary by provider
     const byProvider = await prisma.apiCost.groupBy({
       by: ["provider"],
-      where: {
-        createdAt: { gte: startDate },
-      },
+      where: createdAtWhere,
       _sum: { costCents: true },
       _count: true,
     });
@@ -42,14 +62,16 @@ export async function GET(req: NextRequest) {
     // Get summary by model
     const byModel = await prisma.apiCost.groupBy({
       by: ["model"],
-      where: {
-        createdAt: { gte: startDate },
-      },
+      where: createdAtWhere,
       _sum: { costCents: true, inputTokens: true, outputTokens: true },
       _count: true,
     });
 
-    // Get daily totals for chart
+    // Get daily totals for chart. Bound by start/end when present; with no
+    // bounds ("all time") select everything. Build the WHERE conditionally so a
+    // null startDate doesn't produce `>= NULL` (which matches no rows).
+    const lowerBound = startDate ?? new Date(0);
+    const upperBound = endDate ?? new Date();
     const dailyRaw = await prisma.$queryRaw<
       { date: Date; total_cents: bigint; call_count: bigint }[]
     >`
@@ -58,7 +80,7 @@ export async function GET(req: NextRequest) {
         SUM("costCents") as total_cents,
         COUNT(*) as call_count
       FROM "ApiCost"
-      WHERE "createdAt" >= ${startDate}
+      WHERE "createdAt" >= ${lowerBound} AND "createdAt" <= ${upperBound}
       GROUP BY DATE("createdAt")
       ORDER BY date ASC
     `;
@@ -71,9 +93,7 @@ export async function GET(req: NextRequest) {
 
     // Get recent entries (last 100)
     const recentEntries = await prisma.apiCost.findMany({
-      where: {
-        createdAt: { gte: startDate },
-      },
+      where: createdAtWhere,
       orderBy: { createdAt: "desc" },
       take: 100,
       select: {
@@ -102,7 +122,7 @@ export async function GET(req: NextRequest) {
     const costsByStory = await prisma.apiCost.groupBy({
       by: ["userStoryId"],
       where: {
-        createdAt: { gte: startDate },
+        ...createdAtWhere,
         userStoryId: { not: null },
       },
       _sum: { costCents: true },
@@ -136,7 +156,7 @@ export async function GET(req: NextRequest) {
     // Include deleted stories in story type analysis
     const deletedStories = await prisma.deletedUserStory.findMany({
       where: {
-        deletedAt: { gte: startDate },
+        ...(hasCreatedAtFilter ? { deletedAt: createdAtFilter } : {}),
         storyType: { not: null },
         wordCount: { not: null },
       },
@@ -196,7 +216,7 @@ export async function GET(req: NextRequest) {
         totalCents,
         totalCalls,
         days,
-        startDate: startDate.toISOString(),
+        startDate: startDate ? startDate.toISOString() : null,
       },
       byOperation: byOperation.map((op) => ({
         operation: op.operation,

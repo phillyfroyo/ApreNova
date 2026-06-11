@@ -10,6 +10,7 @@ import CostsManager from "./CostsManager";
 import UsersManager from "./UsersManager";
 import { SUTPAlgorithms } from "./components/dev-tools";
 import StoryTester from "./StoryTester";
+import { COST_RANGE_OPTIONS, type CostRangePreset } from "@/lib/admin/cost-date-range";
 
 const ADMIN_SESSION_KEY = "admin_authenticated";
 
@@ -26,6 +27,9 @@ export default function UploadStoryPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>("users");
+  // Shared cost date-range window — set once, applied to both the Costs
+  // dashboard and the per-user breakdown so every number agrees.
+  const [costRange, setCostRange] = useState<CostRangePreset>("since-launch");
 
   useEffect(() => {
     // Check if already authenticated in this session
@@ -158,13 +162,36 @@ export default function UploadStoryPage() {
         </div>
       </div>
 
+      {/* Shared cost date-range control — visible on the cost-bearing tabs.
+          One window applies to both the Costs dashboard and per-user costs. */}
+      {(activeTab === "costs" || activeTab === "users") && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-2">
+            <label htmlFor="cost-range" className="text-sm text-gray-500">
+              Date range:
+            </label>
+            <select
+              id="cost-range"
+              value={costRange}
+              onChange={(e) => setCostRange(e.target.value as CostRangePreset)}
+              className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700"
+            >
+              {COST_RANGE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-400">applies to all cost figures below</span>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {activeTab === "upload" && (
         <StoryUploadForm onLogout={handleLogout} hideHeader />
       )}
       {activeTab === "manage" && <StoryManager />}
-      {activeTab === "costs" && <CostsManager />}
-      {activeTab === "users" && <UsersManager />}
+      {activeTab === "costs" && <CostsManager costRange={costRange} />}
+      {activeTab === "users" && <UsersManager costRange={costRange} />}
       {activeTab === "premium" && <PremiumManager />}
       {activeTab === "dev" && <DevTools />}
       {activeTab === "test" && <StoryTester />}

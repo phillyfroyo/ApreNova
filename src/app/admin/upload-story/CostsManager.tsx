@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { resolveCostRange, rangeQueryString, type CostRangePreset } from "@/lib/admin/cost-date-range";
 
 interface CostSummary {
   totalCents: number;
@@ -125,21 +126,22 @@ const STORY_TYPE_LABELS: Record<string, string> = {
   unknown: "Unknown",
 };
 
-export default function CostsManager() {
+export default function CostsManager({ costRange }: { costRange: CostRangePreset }) {
   const [data, setData] = useState<CostData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [days, setDays] = useState(30);
 
   useEffect(() => {
     fetchCosts();
-  }, [days]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [costRange]);
 
   async function fetchCosts() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/costs?days=${days}`);
+      const qs = rangeQueryString(resolveCostRange(costRange, new Date()));
+      const res = await fetch(`/api/admin/costs?${qs}`);
       if (!res.ok) throw new Error("Failed to fetch costs");
       const json = await res.json();
       setData(json);
@@ -185,28 +187,15 @@ export default function CostsManager() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header with Date Range Selector */}
+      {/* Header. Date range is controlled by the shared selector above the tabs. */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">API Cost Tracker</h2>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Time Range:</label>
-          <select
-            value={days}
-            onChange={(e) => setDays(parseInt(e.target.value))}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
-            <option value={365}>Last year</option>
-          </select>
-          <button
-            onClick={fetchCosts}
-            className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-          >
-            Refresh
-          </button>
-        </div>
+        <button
+          onClick={fetchCosts}
+          className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+        >
+          Refresh
+        </button>
       </div>
 
       {/* Summary Cards */}

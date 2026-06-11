@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { resolveCostRange, rangeQueryString, type CostRangePreset } from "@/lib/admin/cost-date-range";
+import { isAnahuacUser } from "@/lib/admin/anahuac";
 
 interface UserSummary {
   totalUsers: number;
@@ -171,7 +173,7 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING_REVIEW: "bg-blue-100 text-blue-700",
 };
 
-export default function UsersManager() {
+export default function UsersManager({ costRange }: { costRange: CostRangePreset }) {
   const [data, setData] = useState<UsersData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,10 +213,14 @@ export default function UsersManager() {
     }
   }
 
+  // Refetch the user list whenever the shared date range changes.
   useEffect(() => {
     fetchUsers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [costRange]);
 
+  // Refetch the open user's detail when the selection OR the range changes,
+  // so the per-student breakdown always matches the selected window.
   useEffect(() => {
     if (selectedUserId) {
       fetchUserDetails(selectedUserId);
@@ -222,13 +228,18 @@ export default function UsersManager() {
     } else {
       setUserDetails(null);
     }
-  }, [selectedUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUserId, costRange]);
+
+  function rangeQs() {
+    return rangeQueryString(resolveCostRange(costRange, new Date()));
+  }
 
   async function fetchUsers() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch(`/api/admin/users?${rangeQs()}`);
       if (!res.ok) throw new Error("Failed to fetch users");
       const json = await res.json();
       setData(json);
@@ -242,7 +253,7 @@ export default function UsersManager() {
   async function fetchUserDetails(userId: string) {
     setDetailsLoading(true);
     try {
-      const res = await fetch(`/api/admin/users?userId=${userId}`);
+      const res = await fetch(`/api/admin/users?userId=${userId}&${rangeQs()}`);
       if (!res.ok) throw new Error("Failed to fetch user details");
       const json = await res.json();
       setUserDetails(json);
@@ -457,6 +468,15 @@ export default function UsersManager() {
                           <span className="font-medium text-gray-900 truncate">
                             {user.name || "Anonymous"}
                           </span>
+                          {isAnahuacUser(user) && (
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded text-white flex-shrink-0 font-medium"
+                              style={{ backgroundColor: "#E8430F" }}
+                              title="Anáhuac student — do not contact for personal outreach"
+                            >
+                              Anáhuac
+                            </span>
+                          )}
                           {user.deletedAt && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex-shrink-0">
                               Deleted
