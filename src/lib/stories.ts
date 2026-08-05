@@ -298,6 +298,10 @@ export const STORY_METADATA: StoryMetadata[] = [
     slug: "the-adventures-of-sherlock-holmes",
     image: "/images/the-adventures-of-sherlock-holmes-thumbnail-1280.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
+    descriptions: {
+      hook: "Arthur Conan Doyle's 1892 detective stories, adapted for Spanish learners from A1 to C1.",
+      summary: "Read The Adventures of Sherlock Holmes in Spanish at A1–C1: twelve self-contained cases from 221B Baker Street, narrated by Dr. Watson. Built-in translation, word-by-word audio, and bilingual mode.",
+    },
     type: "short-story-collection",
     origin: { isOriginal: false, attribution: { author: { name: "Arthur Conan Doyle", lifespan: "1859-1930", note: "Scottish physician who wrote the Holmes stories between patients; created the modern detective story's template and then spent decades resenting it." }, yearWritten: "1891–1892", yearFirstPublished: 1892, sourceEdition: { title: "The Adventures of Sherlock Holmes", isPublicDomain: true, publicDomainNote: "Public domain in the United States (published 1892); author died 1930.", url: "https://www.gutenberg.org/ebooks/1661" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "England", genres: ["Detective fiction", "mystery", "crime", "short story collection", "Victorian literature"] } },
     tags: ["mystery", "adventure", "suspenseful", "urban", "historical", "heroic", "friendship"],
