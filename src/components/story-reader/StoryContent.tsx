@@ -28,9 +28,9 @@ export default function StoryContent() {
         className="self-center shrink-0"
         style={{ width: "min(46rem, calc(100vw - 2rem))" }}
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-center w-full">{title}</h1>
         {chapterTitle && (
-          <h2 className="text-xl sm:text-2xl italic text-center w-full">{chapterTitle}</h2>
+          <h2 className="text-lg sm:text-xl italic text-center w-full">{chapterTitle}</h2>
         )}
         <h3 className={`text-center mb-2 w-full ${chapterTitle ? "text-base sm:text-lg opacity-80" : "text-lg sm:text-xl"}`}>{dynamicPageTitle}</h3>
       </div>
