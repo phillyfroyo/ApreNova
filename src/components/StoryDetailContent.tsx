@@ -270,7 +270,7 @@ export default function StoryDetailContent({
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
             story.type === "poem" || story.type === "song-lyrics"
               ? "bg-purple-100 text-purple-700"
-              : story.type === "novel" || story.type === "short-story"
+              : story.type === "novel" || story.type === "short-story" || story.type === "short-story-collection"
               ? "bg-blue-100 text-blue-700"
               : story.type === "fable" || story.type === "folktale" || story.type === "myth" || story.type === "legend"
               ? "bg-amber-100 text-amber-700"

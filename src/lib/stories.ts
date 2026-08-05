@@ -9,6 +9,7 @@ const translations = { en, es };
 // Display labels for story types (singular - used in story modal/detail)
 export const STORY_TYPE_LABELS: Record<StoryType, { en: string; es: string }> = {
   "short-story": { en: "Short Story", es: "Cuento" },
+  "short-story-collection": { en: "Short Story Collection", es: "Colección de cuentos" },
   "poem": { en: "Poem", es: "Poema" },
   "fable": { en: "Fable", es: "Fábula" },
   "folktale": { en: "Folktale", es: "Cuento popular" },
@@ -26,6 +27,7 @@ export const STORY_TYPE_LABELS: Record<StoryType, { en: string; es: string }> = 
 // Plural labels for story types (used in filters)
 export const STORY_TYPE_LABELS_PLURAL: Record<StoryType, { en: string; es: string }> = {
   "short-story": { en: "Short Stories", es: "Cuentos" },
+  "short-story-collection": { en: "Short Story Collections", es: "Colecciones de cuentos" },
   "poem": { en: "Poems", es: "Poemas" },
   "fable": { en: "Fables", es: "Fábulas" },
   "folktale": { en: "Folktales", es: "Cuentos populares" },
@@ -87,7 +89,7 @@ export const STORY_TAG_LABELS: Record<StoryTag, { en: string; es: string }> = {
 
 // All available story types for UI dropdowns
 export const ALL_STORY_TYPES: StoryType[] = [
-  "short-story", "poem", "fable", "folktale", "novel", "article", "dialogue", "song-lyrics",
+  "short-story", "short-story-collection", "poem", "fable", "folktale", "novel", "article", "dialogue", "song-lyrics",
   "epic", "myth", "legend", "movie-script", "tv-script"
 ];
 
@@ -358,7 +360,7 @@ export const STORY_METADATA: StoryMetadata[] = [
     slug: "the-adventures-of-sherlock-holmes",
     image: "/images/the-adventures-of-sherlock-holmes-thumbnail-1280.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
-    type: "short-story",
+    type: "short-story-collection",
     origin: { isOriginal: false, attribution: { author: { name: "Arthur Conan Doyle", lifespan: "1859-1930", note: "Scottish physician who wrote the Holmes stories between patients; created the modern detective story's template and then spent decades resenting it." }, yearWritten: "1891–1892", yearFirstPublished: 1892, sourceEdition: { title: "The Adventures of Sherlock Holmes", isPublicDomain: true, publicDomainNote: "Public domain in the United States (published 1892); author died 1930.", url: "https://www.gutenberg.org/ebooks/1661" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "England", genres: ["Detective fiction", "mystery", "crime", "short story collection", "Victorian literature"] } },
     tags: ["mystery", "adventure", "suspenseful", "urban", "historical", "heroic", "friendship"],
     targetAudience: "all",

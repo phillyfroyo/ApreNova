@@ -12,6 +12,7 @@ export type Level = CEFRCode;
 // Story type classification
 export type StoryType =
   | "short-story"   // Standalone narrative fiction
+  | "short-story-collection" // Multiple self-contained stories under one title
   | "poem"          // Poetry (any form)
   | "fable"         // Moral/teaching stories
   | "folktale"      // Traditional/cultural stories
