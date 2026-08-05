@@ -658,6 +658,7 @@ storiesMetadata: {
   },
   "the-adventures-of-sherlock-holmes": {
     title: "Las aventuras de Sherlock Holmes",
+    displayTitle: "Sherlock Holmes",
     hook: "Doce casos. Un detective consultor. Y un Londres lleno de gente con algo que ocultar.",
     description: "En el 221B de Baker Street, alguien puede llegar con un problema cualquiera —una oferta de trabajo demasiado buena, un prometido que desaparece camino al altar, un sobre con cinco semillas de naranja— y salir una hora después con su vida entera desarmada y vuelta a armar por Sherlock Holmes. Narrados por su amigo, el doctor Watson, estos doce casos independientes presentaron al mundo al detective capaz de leer la historia de un hombre en los puños de su camisa. Se pueden leer en cualquier orden; cada uno se sostiene solo.",
   },

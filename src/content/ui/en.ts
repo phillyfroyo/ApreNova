@@ -657,6 +657,7 @@ storiesMetadata: {
   },
   "the-adventures-of-sherlock-holmes": {
     title: "The Adventures of Sherlock Holmes",
+    displayTitle: "Sherlock Holmes",
     hook: "Twelve cases. One consulting detective. And a London full of people with something to hide.",
     description: "At 221B Baker Street, a visitor can arrive with an ordinary problem — an absurdly generous job offer, a fiancé who vanished on the way to the wedding, an envelope containing five orange pips — and leave an hour later having watched Sherlock Holmes take their life apart and put it back together. Narrated by his friend Dr. Watson, these twelve self-contained cases introduced the world to the detective who reads a man's history in his shirt cuffs. Read them in any order; each one stands on its own.",
   },
