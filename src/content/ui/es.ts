@@ -656,6 +656,12 @@ storiesMetadata: {
     hook: "Dorothy lleva una vida monótona en las praderas de Kansas hasta que un torbellino la lleva a un viaje inesperado.",
     description: "Esta historia clásica sigue a Dorothy, una niña que es llevada lejos de su hogar en Kansas hasta la mágica Tierra de Oz. En su camino para regresar a casa, conoce a compañeros inolvidables: un Espantapájaros en busca de un cerebro, un Hombre de Hojalata que anhela un corazón y un León Cobarde que desea encontrar valor.\n\nJuntos emprenden una aventura llena de desafíos, criaturas extrañas y poderosa magia, mientras descubren que aquello que buscan quizá siempre ha estado dentro de ellos.\n\nEscrita por L. Frank Baum, esta historia atemporal ha cautivado a lectores durante generaciones gracias a su mundo imaginativo, sus personajes memorables y su mensaje duradero sobre la amistad, el valor y la confianza en uno mismo.\n\nAunque fue escrita pensando en lectores jóvenes, la historia sigue conectando con personas de todas las edades por su calidez, su magia y sus temas universales.",
   },
+  "the-adventures-of-sherlock-holmes": {
+    title: "Las aventuras de Sherlock Holmes",
+    hook: "Doce casos. Un detective consultor. Y un Londres lleno de gente con algo que ocultar.",
+    description: "En el 221B de Baker Street, alguien puede llegar con un problema cualquiera —una oferta de trabajo demasiado buena, un prometido que desaparece camino al altar, un sobre con cinco semillas de naranja— y salir una hora después con su vida entera desarmada y vuelta a armar por Sherlock Holmes. Narrados por su amigo, el doctor Watson, estos doce casos independientes presentaron al mundo al detective capaz de leer la historia de un hombre en los puños de su camisa. Se pueden leer en cualquier orden; cada uno se sostiene solo.",
+  },
+
 
 
 

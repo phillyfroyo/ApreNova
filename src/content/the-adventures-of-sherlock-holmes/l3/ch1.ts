@@ -1,0 +1,1159 @@
+export const chapterContent = {
+  "storySlug": "the-adventures-of-sherlock-holmes",
+  "level": 3,
+  "chapter": 1,
+  "pages": {
+    "1": {
+      "lines": [
+        {
+          "en": "To Sherlock Holmes, she was always the woman. I rarely heard him call her by any other name. In his eyes, she outshone and dominated all women. It wasn't because he felt any love for Irene Adler. All emotions, especially love, were unpleasant to his cold, precise, but perfectly balanced mind. I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position. He never spoke of softer feelings, except with a joke or a sneer. They were useful for understanding people’s motives and actions. But for a trained thinker like him, allowing such feelings would disturb his clear thinking. Strong emotions would be like grit in a sensitive instrument or a crack in one of his high-power lenses. Yet, there was only one woman for him, and that was the late Irene Adler, of uncertain and questionable memory.",
+          "es": "Para Sherlock Holmes, ella siempre fue la mujer. Raramente lo oí llamarla por cualquier otro nombre. En sus ojos, ella superaba y dominaba a todas las mujeres. No era porque sintiera amor por Irene Adler. Todas las emociones, especialmente el amor, eran desagradables para su mente fría, precisa pero perfectamente equilibrada. Creo que era la mejor máquina de razonamiento y observación que el mundo ha visto, pero como amante, habría estado en una posición incorrecta. Nunca hablaba de sentimientos más suaves, excepto con una broma o un gesto de desprecio. Eran útiles para entender los motivos y acciones de las personas. Pero para un pensador entrenado como él, permitir tales sentimientos habría perturbado su pensamiento claro. Las emociones fuertes serían como arena en un instrumento delicado o una grieta en uno de sus lentes de alta potencia. Sin embargo, había solo una mujer para él, y esa era la difunta Irene Adler, de memoria incierta y cuestionable."
+        },
+        {
+          "en": "I had not seen much of Holmes lately. My marriage had taken us apart. My happiness and the new responsibilities of my own home took all my attention. Holmes, who hated all forms of society, stayed in our rooms on Baker Street. He was buried in his books, switching between the calm of the drug and the energy of his nature. He was still drawn to solving crimes, using his great skills to solve cases the police had given up on. Sometimes I heard about his activities: his trip to Odessa for the Trepoff murder, solving the Atkinson brothers’ tragedy in Trincomalee, and his successful mission for the royal family of Holland. Beyond these stories, which everyone read in the newspapers, I knew little of my old friend.",
+          "es": "No había visto mucho a Holmes últimamente. Mi matrimonio nos había separado. Mi felicidad y las nuevas responsabilidades de mi propio hogar tomaban toda mi atención. Holmes, quien odiaba todas las formas de sociedad, se quedaba en nuestras habitaciones en Baker Street. Estaba sepultado en sus libros, alternando entre la calma de la droga y la energía de su naturaleza. Seguía siendo atraído por resolver crímenes, usando sus grandes habilidades para resolver casos que la policía había abandonado. A veces escuchaba sobre sus actividades: su viaje a Odesa por el asesinato de Trepoff, resolver la tragedia de los hermanos Atkinson en Trincomalee, y su misión exitosa para la familia real de Holanda. Más allá de estas historias, que todos leían en los periódicos, sabía poco de mi viejo amigo."
+        },
+        {
+          "en": "One night, on the twentieth of March, 1888, I was returning from visiting a patient. My way took me through Baker Street. As I passed the familiar door, I felt a strong desire to see Holmes again and find out how he was using his amazing skills. His rooms were brightly lit, and I saw his tall, thin figure pass twice in shadow against the window. He was walking quickly, with his head down and hands behind his back. I knew his every habit, and his manner told me he was working again. He had left his drug dreams and was chasing a new problem. I rang the bell and was shown up to the room that had once been partly mine.",
+          "es": "Una noche, el veinte de marzo de 1888, volvía de visitar a un paciente. Mi camino me llevaba a través de Baker Street. Cuando pasé por la puerta familiar, sentí un fuerte deseo de ver a Holmes de nuevo y descubrir cómo estaba usando sus habilidades asombrosas. Sus habitaciones estaban brillantemente iluminadas, y vi su figura alta y delgada pasar dos veces en sombra contra la ventana. Caminaba rápidamente, con la cabeza gacha y las manos detrás de la espalda. Conocía todos sus hábitos, y su manera me decía que estaba trabajando de nuevo. Había dejado sus sueños de droga y estaba persiguiendo un nuevo problema. Toqué el timbre y fui llevado a la habitación que una vez había sido parcialmente mía."
+        },
+        {
+          "en": "His manner was not overly warm. It rarely was, but I think he was glad to see me. Without many words, but with a kind look, he waved me to an armchair, offered me cigars, and pointed to a spirit case and a gasogene in the corner. Then he stood by the fire and looked at me in his usual thoughtful way.",
+          "es": "Su manera no era especialmente cálida. Raramente lo era, pero creo que estaba contento de verme. Sin muchas palabras, pero con una mirada amable, me hizo un gesto hacia un sillón, me ofreció puros, y señaló una botella de bebida alcohólica y un gasógeno en la esquina. Luego se paró junto al fuego y me miró de su manera habitual y pensativa."
+        },
+        {
+          "en": "\"Marriage suits you,\" he said. \"I think, Watson, you have gained seven and a half pounds since I last saw you.\"",
+          "es": "\"El matrimonio te favorece,\" dijo. \"Creo, Watson, que has ganado siete kilos y medio desde la última vez que te vi.\""
+        },
+        {
+          "en": "\"Seven!\" I replied.",
+          "es": "\"¡Siete!\" respondí."
+        },
+        {
+          "en": "\"Indeed, I thought it might be a bit more. Just a little more, Watson. And you are practicing again, I see. You didn’t tell me you planned to return to work.\"",
+          "es": "\"De hecho, pensé que podría ser un poco más. Solo un poco más, Watson. Y estás practicando de nuevo, veo. No me dijiste que planeabas volver al trabajo.\""
+        },
+        {
+          "en": "\"Then, how do you know?\"",
+          "es": "\"Entonces, ¿cómo lo sabes?\""
+        }
+      ]
+    },
+    "2": {
+      "lines": [
+        {
+          "en": "\"I see it, I deduce it. How do I know you’ve been very wet lately, and that you have a careless servant girl?\"",
+          "es": "\"Lo veo, lo deduzco. ¿Cómo sé que has estado muy mojado últimamente, y que tienes una criada descuidada?\""
+        },
+        {
+          "en": "\"My dear Holmes,\" I said, \"this is too much. You would have been burned as a witch a few centuries ago. It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes. I don’t see how you deduce it. As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.\"",
+          "es": "\"Mi querido Holmes,\" dije, \"esto es demasiado. Te habrían quemado como una bruja hace unos siglos. Es verdad que tuve un paseo campestre el jueves y volví hecho un desastre, pero cambié mi ropa. No veo cómo lo deduces. En cuanto a Mary Jane, es un caso perdido, y mi esposa le ha dado aviso, pero nuevamente, no veo cómo lo averiguaste.\""
+        },
+        {
+          "en": "He laughed to himself and rubbed his long, nervous hands together.",
+          "es": "Rió para sí mismo y se frotó las manos largas y nerviosas."
+        },
+        {
+          "en": "\"It’s very simple,\" he said. \"I see on the inside of your left shoe, where the firelight hits it, the leather is marked by six almost parallel cuts. They were made by someone who scraped around the sole to remove mud. So, I deduced you had been out in bad weather and had a particularly careless servant. As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.\"",
+          "es": "\"Es muy simple,\" dijo. \"Veo en el interior de tu zapato izquierdo, donde brilla el fuego, el cuero está marcado por seis cortes casi paralelos. Fueron hechos por alguien que raspó alrededor de la suela para quitar barro. Así que deduje que habías estado en mal tiempo y tenías una criada particularmente descuidada. En cuanto a tu práctica, si un hombre viene a mis habitaciones oliendo a yodoformo, con una marca negra de nitrato de plata en su dedo índice derecho, y un bulto en el lado derecho de su sombrero donde esconde su estetoscopio, debo ser muy poco inteligente para no saber que es un médico activo.\""
+        },
+        {
+          "en": "I couldn’t help laughing at how easily he explained his deductions. \"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain. Yet I believe my eyes are as good as yours.\"",
+          "es": "No pude evitar reír de lo fácil que explicó sus deducciones. \"Cuando escucho tus razones,\" dije, \"siempre parece tan simple que creo que podría hacerlo yo mismo, aunque estoy confundido hasta que explicas. Sin embargo, creo que mis ojos son tan buenos como los tuyos.\""
+        },
+        {
+          "en": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair. \"You see, but you do not observe. The difference is clear. For example, you have often seen the steps leading up from the hall to this room.\"",
+          "es": "\"Completamente,\" replicó, encendiendo un cigarrillo y sentándose en un sillón. \"Ves, pero no observas. La diferencia es clara. Por ejemplo, has visto a menudo los escalones que suben del pasillo a esta habitación.\""
+        },
+        {
+          "en": "\"Often.\"",
+          "es": "\"A menudo.\""
+        },
+        {
+          "en": "\"How often?\"",
+          "es": "\"¿Con qué frecuencia?\""
+        }
+      ]
+    },
+    "3": {
+      "lines": [
+        {
+          "en": "\"Well, hundreds of times.\"",
+          "es": "\"Bueno, cientos de veces.\""
+        },
+        {
+          "en": "\"Then how many are there?\"",
+          "es": "\"Entonces, ¿cuántos hay?\""
+        },
+        {
+          "en": "\"How many? I don’t know.\"",
+          "es": "\"¿Cuántos? No lo sé.\""
+        },
+        {
+          "en": "\"Exactly! You have not observed. Yet you have seen. That’s my point. I know there are seventeen steps because I have both seen and observed. By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.\" He handed me a sheet of thick, pink-tinted notepaper from the table. \"It came by the last post,\" he said. \"Read it aloud.\"",
+          "es": "\"¡Exactamente! No has observado. Sin embargo, has visto. Ese es mi punto. Sé que hay diecisiete escalones porque los he visto y observado. Por cierto, como te interesa este tipo de problemas, y has escrito sobre algunas de mis experiencias, quizás te guste esto.\" Me entregó una hoja de papel de color rosa claro de la mesa. \"Llegó por el último correo,\" dijo. \"Lee en voz alta.\""
+        },
+        {
+          "en": "The note was undated and had no signature or address.",
+          "es": "La nota no estaba fechada y no tenía firma ni dirección."
+        },
+        {
+          "en": "\"A gentleman will call on you tonight, at a quarter to eight,\" it said, \"to consult you on a very important matter. Your recent help to a royal family in Europe shows you can be trusted with serious matters. We have heard this about you from many sources. Be in your room at that time, and don’t be surprised if your visitor wears a mask.\"",
+          "es": "\"Un caballero vendrá a verte esta noche, a las siete y cuarenta y cinco,\" decía, \"para consultarte sobre un asunto muy importante. Tu ayuda reciente a una familia real en Europa muestra que se puede confiar en ti con asuntos serios. Hemos escuchado esto sobre ti de muchas fuentes. Estén en tu habitación a esa hora, y no te sorprendas si tu visitante usa una máscara.\""
+        },
+        {
+          "en": "\"This is a real mystery,\" I said. \"What do you think it means?\"",
+          "es": "\"Esto es un verdadero misterio,\" dije. \"¿Qué crees que significa?\""
+        },
+        {
+          "en": "\"I have no information yet. It’s a big mistake to theorize before having data. One starts to twist facts to fit theories, instead of theories to fit facts. But the note itself. What do you deduce from it?\"",
+          "es": "\"No tengo información aún. Es un gran error teorizar antes de tener datos. Uno comienza a torcer los hechos para que se ajusten a las teorías, en lugar de ajustar las teorías a los hechos. Pero la nota misma. ¿Qué deduces de ella?\""
+        }
+      ]
+    },
+    "4": {
+      "lines": [
+        {
+          "en": "I carefully looked at the writing and the paper it was on.",
+          "es": "Miré cuidadosamente la escritura y el papel en que estaba escrita."
+        },
+        {
+          "en": "\"The writer was probably well-off,\" I said, trying to copy Holmes’s methods. \"Such paper costs at least half a crown a packet. It’s very strong and stiff.\"",
+          "es": "\"El escritor probablemente era de buena posición económica,\" dije, intentando copiar los métodos de Holmes. \"Ese papel cuesta al menos media corona por paquete. Es muy fuerte y rígido.\""
+        },
+        {
+          "en": "\"Strange—that's the right word,\" said Holmes. \"This isn't English paper at all. Hold it up to the light.\"",
+          "es": "\"Extraño, esa es la palabra correcta,\" dijo Holmes. \"Este no es papel inglés en absoluto. Mantenlo contra la luz.\""
+        },
+        {
+          "en": "I did, and I saw a big \"E\" with a small \"g,\" a \"P,\" and a big \"G\" with a small \"t\" in the paper.",
+          "es": "Lo hice, y vi una \"E\" grande con una pequeña \"g,\" una \"P,\" y una \"G\" grande con una pequeña \"t\" en el papel."
+        },
+        {
+          "en": "\"What do you think of that?\" asked Holmes.",
+          "es": "\"¿Qué piensas de eso?\" preguntó Holmes."
+        },
+        {
+          "en": "\"It's probably the maker's name or his initials.\"",
+          "es": "\"Probablemente es el nombre del fabricante o sus iniciales.\""
+        },
+        {
+          "en": "\"Not at all. The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.' It's like our 'Co.' 'P' stands for 'Papier.' Now for the 'Eg.' Let's check our Continental Gazetteer.\" He took a heavy brown book from his shelf. \"Eglow, Eglonitz—here it is, Egria. It's in a German-speaking area—in Bohemia, near Carlsbad. 'Known for the death of Wallenstein, and for its many glass factories and paper mills.' Ha, ha, my boy, what do you think of that?\" His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+          "es": "\"No es nada de eso. La \"G\" con la pequeña \"t\" significa \"Gesellschaft,\" que es alemán para \"Compañía.\" Es como nuestro \"Co.\" \"P\" significa \"Papier.\" Ahora para la \"Eg.\" Verifiquemos nuestro Gazetteer Continental.\" Tomó un libro marrón pesado de su estante. \"Eglow, Eglonitz, aquí está, Egria. Es en un área de habla alemana, en Bohemia, cerca de Carlsbad. \"Conocido por la muerte de Wallenstein, y por sus muchas fábricas de vidrio y molinos de papel.\" ¡Ja, ja, muchacho, qué piensas de eso?\" Sus ojos brillaron, y sopló una nube azul grande de su cigarrillo."
+        },
+        {
+          "en": "\"The paper was made in Bohemia,\" I said.",
+          "es": "\"El papel fue hecho en Bohemia,\" dije."
+        }
+      ]
+    },
+    "5": {
+      "lines": [
+        {
+          "en": "\"Exactly. And the writer of the note is German. Notice the strange sentence structure—'This account of you we have from all quarters received.' A Frenchman or Russian wouldn't write that. It's the German who treats his verbs this way. Now we just need to find out what this German wants, who writes on Bohemian paper and prefers a mask to showing his face. And here he comes, if I'm not mistaken, to clear up our doubts.\"",
+          "es": "\"Exactamente. Y el escritor de la nota es alemán. Nota la estructura de la oración extraña, 'Esta cuenta sobre ti la hemos recibido de todas partes.' Un francés o ruso no escribiría así. Es el alemán quien trata sus verbos de esta manera. Ahora solo necesitamos descubrir qué quiere este alemán, quién escribe en papel bohemio y prefiere una máscara a mostrar su cara. Y aquí viene, si no me equivoco, para aclarar nuestras dudas.\""
+        },
+        {
+          "en": "Just then, we heard the sharp sound of horses' hooves and wheels on the curb, followed by a loud ring at the bell. Holmes whistled.",
+          "es": "Justo entonces, escuchamos el sonido agudo de cascos de caballos y ruedas en la acera, seguido por un timbrazo fuerte. Holmes silbó."
+        },
+        {
+          "en": "\"A pair, by the sound,\" he said. \"Yes,\" he went on, looking out the window. \"A nice little carriage and a pair of beauties. A hundred and fifty guineas each. There's money in this case, Watson, if nothing else.\"",
+          "es": "\"Un par, por el sonido,\" dijo. \"Sí,\" continuó, mirando por la ventana. \"Un pequeño carruaje agradable y un par de bellezas. Ciento cincuenta guineas cada uno. Hay dinero en este caso, Watson, si nada más.\""
+        },
+        {
+          "en": "\"I think I should leave, Holmes.\"",
+          "es": "\"Creo que debería irme, Holmes.\""
+        },
+        {
+          "en": "\"Not at all, Doctor. Stay here. I need my Boswell. This looks interesting. You wouldn't want to miss it.\"",
+          "es": "\"De ninguna manera, Doctor. Quédate aquí. Necesito mi Boswell. Esto se ve interesante. No querrías perdértelo.\""
+        },
+        {
+          "en": "\"But your client—\"",
+          "es": "\"Pero tu cliente—\""
+        },
+        {
+          "en": "\"Don't worry about him. I may need your help, and so might he. Here he comes. Sit in that armchair, Doctor, and pay close attention.\"",
+          "es": "\"No te preocupes por él. Podría necesitar tu ayuda, y él también. Aquí viene. Siéntate en ese sillón, Doctor, y presta mucha atención.\""
+        },
+        {
+          "en": "We heard a slow, heavy step on the stairs and in the hallway, stopping just outside the door. Then there was a loud, firm knock.",
+          "es": "Escuchamos un paso lento y pesado en las escaleras y en el pasillo, parándose justo fuera de la puerta. Luego hubo un golpe fuerte y firme."
+        }
+      ]
+    },
+    "6": {
+      "lines": [
+        {
+          "en": "\"Come in!\" said Holmes.",
+          "es": "\"¡Adelante!\" dijo Holmes."
+        },
+        {
+          "en": "A man entered who was at least six feet six inches tall, with the build of a Hercules. His clothes were rich, but in England, they might seem a bit too much. Heavy bands of astrakhan were on the sleeves and front of his coat, and his deep blue cloak was lined with bright silk and held with a brooch of a single bright beryl. His boots reached halfway up his calves and were trimmed with rich brown fur. He held a wide-brimmed hat in his hand and wore a black mask over his face, which he seemed to adjust as he entered. The lower part of his face showed a man of strong character, with a thick lip and a long chin that suggested determination.",
+          "es": "Entró un hombre que medía al menos dos metros de altura, con la constitución de un Hércules. Su ropa era rica, pero en Inglaterra, podría parecer un poco excesiva. Bandas pesadas de astracán estaban en las mangas y el frente de su abrigo, y su capa azul profunda estaba forrada con seda brillante y sostenida con un broche de un único berilo brillante. Sus botas llegaban hasta la mitad de sus pantorrillas y estaban adornadas con piel marrón rica. Sostenía un sombrero de ala ancha en su mano y llevaba una máscara negra sobre su cara, que parecía ajustar mientras entraba. La parte inferior de su cara mostraba un hombre de carácter fuerte, con un labio grueso y una barbilla larga que sugería determinación."
+        },
+        {
+          "en": "\"Did you get my note?\" he asked in a deep, rough voice with a strong German accent. \"I said I would call.\" He looked at both of us, unsure who to speak to.",
+          "es": "\"¿Recibiste mi nota?\" preguntó en una voz profunda y áspera con un acento alemán fuerte. \"Dije que vendría.\" Miró a ambos, inseguro de con quién hablar."
+        },
+        {
+          "en": "\"Please sit down,\" said Holmes. \"This is my friend and colleague, Dr. Watson, who sometimes helps me with my cases. May I know who I am speaking to?\"",
+          "es": "\"Por favor, siéntate,\" dijo Holmes. \"Este es mi amigo y colega, el Doctor Watson, quien a veces me ayuda con mis casos. ¿Puedo saber con quién estoy hablando?\""
+        },
+        {
+          "en": "\"You can call me Count Von Kramm, a Bohemian nobleman. I understand your friend is a man of honor and discretion, whom I can trust with a very important matter. If not, I'd prefer to speak with you alone.\"",
+          "es": "\"Puedes llamarme Conde Von Kramm, un noble bohemio. Entiendo que tu amigo es un hombre de honor y discreción, en quien puedo confiar un asunto muy importante. Si no, preferiría hablar contigo solo.\""
+        },
+        {
+          "en": "I stood to leave, but Holmes grabbed my wrist and pushed me back into my chair. \"It's both of us, or none,\" he said. \"You can say to him what you can say to me.\"",
+          "es": "Me levanté para irme, pero Holmes agarró mi muñeca y me empujó de vuelta a mi silla. \"Es los dos, o ninguno,\" dijo. \"Puedes decirle lo que me puedes decir a mí.\""
+        },
+        {
+          "en": "The Count shrugged his wide shoulders. \"Then I must start,\" he said, \"by asking you both to keep this secret for two years; after that, it won't matter. Right now, it's so important it could affect European history.\"",
+          "es": "El Conde se encogió de hombros anchos. \"Entonces debo empezar,\" dijo, \"pidiéndoles a ambos que guarden este secreto durante dos años; después de eso, no importará. Ahora mismo, es tan importante que podría afectar la historia de Europa.\""
+        },
+        {
+          "en": "\"I promise,\" said Holmes.",
+          "es": "\"Lo prometo,\" dijo Holmes."
+        }
+      ]
+    },
+    "7": {
+      "lines": [
+        {
+          "en": "\"And I,\" I added.",
+          "es": "\"Y yo,\" añadí."
+        },
+        {
+          "en": "\"Please excuse the mask,\" continued our unusual guest. \"The important person who employs me wants his agent to stay unknown to you, and I must admit the title I used isn't exactly mine.\"",
+          "es": "\"Por favor, disculpa la máscara,\" continuó nuestro huésped inusual. \"La persona importante que me emplea quiere que su agente permanezca desconocido para ti, y debo admitir que el título que usé no es exactamente mío.\""
+        },
+        {
+          "en": "\"I knew that,\" said Holmes dryly.",
+          "es": "\"Ya lo sabía,\" dijo Holmes secamente."
+        },
+        {
+          "en": "\"The situation is very delicate, and we must prevent what could become a huge scandal and seriously affect one of Europe's royal families. The issue involves the great House of Ormstein, hereditary kings of Bohemia.\"",
+          "es": "\"La situación es muy delicada, y debemos prevenir lo que podría convertirse en un escándalo enorme y afectar seriamente a una de las familias reales de Europa. El asunto involucra la gran Casa de Ormstein, reyes hereditarios de Bohemia.\""
+        },
+        {
+          "en": "\"I knew that too,\" murmured Holmes, settling into his armchair and closing his eyes.",
+          "es": "\"También lo sabía,\" murmuró Holmes, instalándose en su sillón y cerrando los ojos."
+        },
+        {
+          "en": "Our guest looked surprised at the relaxed figure of the man described to him as Europe's sharpest thinker and most active agent. Holmes slowly opened his eyes and looked impatiently at his large client.",
+          "es": "Nuestro huésped se sorprendió por la figura relajada del hombre que le habían descrito como el pensador más agudo de Europa y el agente más activo. Holmes abrió lentamente los ojos y miró impacientemente a su gran cliente."
+        },
+        {
+          "en": "\"If your Majesty would explain your case,\" he said, \"I could advise you better.\"",
+          "es": "\"Si Su Majestad explicara su caso,\" dijo, \"podría aconsejarle mejor.\""
+        },
+        {
+          "en": "The man jumped from his chair and paced the room in agitation. Then, with a desperate gesture, he tore the mask from his face and threw it on the ground. \"You are right,\" he cried; \"I am the King. Why should I hide it?\"",
+          "es": "El hombre saltó de su silla y caminó por la habitación con agitación. Luego, con un gesto desesperado, se arrancó la máscara de la cara y la lanzó al suelo. \"Tienes razón,\" gritó; \"Soy el Rey. ¿Por qué debería ocultarlo?\""
+        }
+      ]
+    },
+    "8": {
+      "lines": [
+        {
+          "en": "\"Why, indeed?\" murmured Holmes. \"Your Majesty hadn't spoken before I knew I was addressing Wilhelm Gottsreich Sigismond von Ormstein, Grand Duke of Cassel-Felstein, and hereditary King of Bohemia.\"",
+          "es": "\"¿Por qué, de hecho?\" murmuró Holmes. \"Su Majestad no había hablado antes de que supiera que estaba dirigiéndome a Wilhelm Gottsreich Sigismond von Ormstein, Gran Duque de Cassel-Felstein, y Rey hereditario de Bohemia.\""
+        },
+        {
+          "en": "\"But you see,\" said our unusual guest, sitting down again and touching his high white forehead, \"I'm not used to handling such business personally. Yet it was so delicate I couldn't trust an agent without risking myself. I've come in secret from Prague to consult you.\"",
+          "es": "\"Pero ves,\" dijo nuestro huésped inusual, sentándose de nuevo y tocando su frente alta y blanca, \"no estoy acostumbrado a manejar tales asuntos personalmente. Sin embargo, fue tan delicado que no podía confiar en un agente sin arriesgarme a mí mismo. He venido en secreto desde Praga para consultarte.\""
+        },
+        {
+          "en": "\"Then, please consult,\" said Holmes, closing his eyes again.",
+          "es": "\"Entonces, por favor consulta,\" dijo Holmes, cerrando los ojos de nuevo."
+        },
+        {
+          "en": "\"The facts are simple: About five years ago, during a long visit to Warsaw, I met the famous adventuress, Irene Adler. You probably know the name.\"",
+          "es": "\"Los hechos son simples: Hace alrededor de cinco años, durante una larga visita a Varsovia, conocí a la famosa aventurera, Irene Adler. Probablemente conoces el nombre.\""
+        },
+        {
+          "en": "\"Check her in my index, Doctor,\" murmured Holmes without opening his eyes. For years, he had kept a system of filing all notes about people and things, so it was hard to name a subject or person he couldn't find information on quickly. In this case, I found her biography between a Hebrew rabbi and a staff-commander who wrote about deep-sea fish.",
+          "es": "\"Búscala en mi índice, Doctor,\" murmuró Holmes sin abrir los ojos. Durante años, había mantenido un sistema de archivo de todas las notas sobre personas y cosas, así que era difícil nombrar un tema o persona sobre la que no pudiera encontrar información rápidamente. En este caso, encontré su biografía entre un rabino hebreo y un comandante que escribía sobre peces de aguas profundas."
+        },
+        {
+          "en": "\"Let me see!\" said Holmes. \"Hmm! Born in New Jersey in 1858. Contralto—hmm! La Scala, hmm! Prima donna Imperial Opera of Warsaw—yes! Retired from opera—ha! Living in London—exactly! Your Majesty, as I understand, got involved with this young woman, wrote her some compromising letters, and now wants them back.\"",
+          "es": "\"¡Déjame ver!\" dijo Holmes. \"¡Hmm! Nacida en Nueva Jersey en 1858. Contralto, ¡hmm! La Scala, ¡hmm! Primera dama de la Ópera Imperial de Varsovia, ¡sí! Se retiró de la ópera, ¡ja! Viviendo en Londres, ¡exactamente! Su Majestad, según entiendo, se involucró con esta joven mujer, le escribió algunas cartas comprometedoras, y ahora quiere recuperarlas.\""
+        },
+        {
+          "en": "\"Exactly. But how—\"",
+          "es": "\"Exactamente. Pero ¿cómo—\""
+        },
+        {
+          "en": "\"Was there a secret marriage?\"",
+          "es": "\"¿Hubo un matrimonio secreto?\""
+        }
+      ]
+    },
+    "9": {
+      "lines": [
+        {
+          "en": "\"No.\"",
+          "es": "\"No.\""
+        },
+        {
+          "en": "\"No legal papers or certificates?\"",
+          "es": "\"¿No hay papeles legales o certificados?\""
+        },
+        {
+          "en": "\"None.\"",
+          "es": "\"Ninguno.\""
+        },
+        {
+          "en": "\"Then I don't follow you, your Majesty. If this young woman tries to use the letters for blackmail or other reasons, how can she prove they're genuine?\"",
+          "es": "\"Entonces no te entiendo, Su Majestad. Si esta joven mujer intenta usar las cartas para chantaje u otras razones, ¿cómo puede probar que son auténticas?\""
+        },
+        {
+          "en": "\"There is the writing.\"",
+          "es": "\"Está la escritura.\""
+        },
+        {
+          "en": "\"Nonsense! It's a forgery.\"",
+          "es": "\"¡Tonterías! Es una falsificación.\""
+        },
+        {
+          "en": "\"It's my personal note-paper.\"",
+          "es": "\"Es mi papel de nota personal.\""
+        },
+        {
+          "en": "\"Stolen.\"",
+          "es": "\"Robado.\""
+        }
+      ]
+    },
+    "10": {
+      "lines": [
+        {
+          "en": "\"My own seal.\"",
+          "es": "\"Mi propio sello.\""
+        },
+        {
+          "en": "\"Copied.\"",
+          "es": "\"Copiado.\""
+        },
+        {
+          "en": "\"My photograph.\"",
+          "es": "\"Mi fotografía.\""
+        },
+        {
+          "en": "\"Purchased.\"",
+          "es": "\"Comprada.\""
+        },
+        {
+          "en": "\"We are both in the photograph.\"",
+          "es": "\"Estamos ambos en la fotografía.\""
+        },
+        {
+          "en": "\"Oh no! That is very serious! Your Majesty has made a mistake.\"",
+          "es": "\"¡Oh, no! ¡Eso es muy serio! Su Majestad ha cometido un error.\""
+        },
+        {
+          "en": "\"I was foolish—out of my mind.\"",
+          "es": "\"Fui tonto, perdí la cabeza.\""
+        },
+        {
+          "en": "\"You have put yourself in a difficult position.\"",
+          "es": "\"Te has puesto en una posición difícil.\""
+        }
+      ]
+    },
+    "11": {
+      "lines": [
+        {
+          "en": "\"I was only the Crown Prince then. I was young. I am only thirty now.\"",
+          "es": "\"Yo era solo el Príncipe Heredero entonces. Yo era joven. Ahora tengo solo treinta años.\""
+        },
+        {
+          "en": "\"We must get it back.\"",
+          "es": "\"Debemos recuperarla.\""
+        },
+        {
+          "en": "\"We have tried but failed.\"",
+          "es": "\"Hemos intentado pero fallamos.\""
+        },
+        {
+          "en": "\"Your Majesty must pay for it. It must be bought.\"",
+          "es": "\"Su Majestad debe pagarla. Debe ser comprada.\""
+        },
+        {
+          "en": "\"She won't sell it.\"",
+          "es": "\"Ella no la venderá.\""
+        },
+        {
+          "en": "\"Then steal it.\"",
+          "es": "\"Entonces róbala.\""
+        },
+        {
+          "en": "\"Five attempts have been made. Twice burglars searched her house. Once we took her luggage when she traveled. Twice she was stopped. No success.\"",
+          "es": "\"Se han hecho cinco intentos. Dos veces los ladrones registraron su casa. Una vez tomamos su equipaje cuando viajaba. Dos veces fue detenida. Sin éxito.\""
+        },
+        {
+          "en": "\"No sign of it?\"",
+          "es": "\"¿Ninguna señal de ello?\""
+        }
+      ]
+    },
+    "12": {
+      "lines": [
+        {
+          "en": "\"None at all.\"",
+          "es": "\"Ninguna en absoluto.\""
+        },
+        {
+          "en": "Holmes laughed. \"It's a nice little problem,\" he said.",
+          "es": "Holmes rió. \"Es un pequeño problema agradable,\" dijo."
+        },
+        {
+          "en": "\"But a very serious one for me,\" replied the King, sounding upset.",
+          "es": "\"Pero un asunto muy serio para mí,\" replicó el Rey, sonando molesto."
+        },
+        {
+          "en": "\"Very serious indeed. What does she plan to do with the photograph?\"",
+          "es": "\"Muy serio de hecho. ¿Qué planea hacer con la fotografía?\""
+        },
+        {
+          "en": "\"To ruin me.\"",
+          "es": "\"Arruinarme.\""
+        },
+        {
+          "en": "\"How?\"",
+          "es": "\"¿Cómo?\""
+        },
+        {
+          "en": "\"I am about to get married.\"",
+          "es": "\"Estoy a punto de casarme.\""
+        },
+        {
+          "en": "\"I have heard.\"",
+          "es": "\"He escuchado.\""
+        }
+      ]
+    },
+    "13": {
+      "lines": [
+        {
+          "en": "\"To Clotilde Lothman von Saxe-Meningen, the second daughter of the King of Scandinavia. Her family has strict principles. She is very delicate. Any doubt about my behavior would end everything.\"",
+          "es": "\"Con Clotilde Lothman von Saxe-Meningen, la segunda hija del Rey de Escandinavia. Su familia tiene principios estrictos. Ella es muy delicada. Cualquier duda sobre mi comportamiento lo terminaría todo.\""
+        },
+        {
+          "en": "\"And Irene Adler?\"",
+          "es": "\"¿Y Irene Adler?\""
+        },
+        {
+          "en": "\"She threatens to send them the photograph. And she will do it. I know she will. You don't know her, but she is very strong-willed. She has the beauty of a woman and the determination of a man. She would do anything to stop me from marrying another woman.\"",
+          "es": "\"Amenaza con enviarles la fotografía. Y lo hará. Sé que lo hará. No la conoces, pero ella tiene una voluntad muy fuerte. Tiene la belleza de una mujer y la determinación de un hombre. Haría cualquier cosa para impedir que me case con otra mujer.\""
+        },
+        {
+          "en": "\"Are you sure she hasn't sent it yet?\"",
+          "es": "\"¿Estás seguro de que no la ha enviado aún?\""
+        },
+        {
+          "en": "\"I'm sure.\"",
+          "es": "\"Estoy seguro.\""
+        },
+        {
+          "en": "\"Why?\"",
+          "es": "\"¿Por qué?\""
+        },
+        {
+          "en": "\"Because she said she would send it on the day the engagement is announced. That will be next Monday.\"",
+          "es": "\"Porque dijo que la enviaría el día que se anuncie el compromiso. Eso será el próximo lunes.\""
+        },
+        {
+          "en": "\"Oh, then we still have three days,\" said Holmes, yawning. \"That's lucky, as I have some important matters to look into right now. Your Majesty will stay in London for now?\"",
+          "es": "\"Oh, entonces aún nos quedan tres días,\" dijo Holmes, bostezando. \"Eso es suerte, ya que tengo algunos asuntos importantes que investigar ahora. ¿Su Majestad se quedará en Londres por ahora?\""
+        }
+      ]
+    },
+    "14": {
+      "lines": [
+        {
+          "en": "\"Certainly. You can find me at the Langham under the name Count Von Kramm.\"",
+          "es": "\"Ciertamente. Puedes encontrarme en el Langham bajo el nombre Conde Von Kramm.\""
+        },
+        {
+          "en": "\"I'll send you a note to update you on our progress.\"",
+          "es": "\"Te enviaré una nota para actualizarte sobre nuestro progreso.\""
+        },
+        {
+          "en": "\"Please do. I will be anxious.\"",
+          "es": "\"Por favor, hazlo. Estaré ansioso.\""
+        },
+        {
+          "en": "\"And about money?\"",
+          "es": "\"¿Y sobre dinero?\""
+        },
+        {
+          "en": "\"You have a free hand.\"",
+          "es": "\"Tienes mano libre.\""
+        },
+        {
+          "en": "\"Really?\"",
+          "es": "\"¿De verdad?\""
+        },
+        {
+          "en": "\"I would give a part of my kingdom to get that photograph back.\"",
+          "es": "\"Daría una parte de mi reino para recuperar esa fotografía.\""
+        },
+        {
+          "en": "\"And for current expenses?\"",
+          "es": "\"¿Y para gastos actuales?\""
+        }
+      ]
+    },
+    "15": {
+      "lines": [
+        {
+          "en": "The King took a heavy leather bag from under his cloak and put it on the table.",
+          "es": "El Rey sacó una bolsa de cuero pesada de debajo de su capa y la puso en la mesa."
+        },
+        {
+          "en": "\"There are three hundred pounds in gold and seven hundred in notes,\" he said.",
+          "es": "\"Hay trescientas libras en oro y setecientas en billetes,\" dijo."
+        },
+        {
+          "en": "Holmes wrote a receipt on a sheet from his notebook and handed it to him.",
+          "es": "Holmes escribió un recibo en una hoja de su cuaderno y se la entregó."
+        },
+        {
+          "en": "\"And Miss Adler's address?\" he asked.",
+          "es": "\"¿Y la dirección de la Señorita Adler?\" preguntó."
+        },
+        {
+          "en": "\"Briony Lodge, Serpentine Avenue, St. John's Wood.\"",
+          "es": "\"Briony Lodge, Serpentine Avenue, St. John's Wood.\""
+        },
+        {
+          "en": "Holmes noted it down. \"One more question,\" he said. \"Was the photograph a cabinet one?\"",
+          "es": "Holmes lo anotó. \"Una pregunta más,\" dijo. \"¿Era la fotografía de tamaño de gabinete?\""
+        },
+        {
+          "en": "\"Yes, it was.\"",
+          "es": "\"Sí, lo era.\""
+        },
+        {
+          "en": "\"Then, good night, your Majesty. I hope we will soon have good news for you. And good night, Watson,\" he added, as the royal carriage rolled down the street. \"Please come tomorrow afternoon at three o'clock. I'd like to discuss this little matter with you.\"",
+          "es": "\"Entonces, buenas noches, Su Majestad. Espero que pronto tengamos buenas noticias para ti. Y buenas noches, Watson,\" añadió, mientras el carruaje real bajaba por la calle. \"Por favor, ven mañana a las tres de la tarde. Me gustaría discutir este pequeño asunto contigo.\""
+        }
+      ]
+    },
+    "16": {
+      "lines": [
+        {
+          "en": "At exactly three o'clock, I was at Baker Street, but Holmes hadn't returned yet. The landlady told me he left shortly after eight in the morning. I sat by the fire, planning to wait for him, no matter how long it took. I was already very interested in his investigation. Although it wasn't as grim or strange as the two crimes I had written about before, the nature of the case and the high status of his client made it unique. Besides the investigation, I enjoyed studying Holmes's way of working and his sharp reasoning, which helped him solve the most complex mysteries. I was so used to his success that I never thought he could fail.",
+          "es": "Exactamente a las tres, estaba en Baker Street, pero Holmes aún no había regresado. La casera me dijo que se fue poco después de las ocho de la mañana. Me senté junto al fuego, planeando esperar como fuera necesario. Ya estaba muy interesado en su investigación. Aunque no era tan grave o extraño como los dos crímenes que había escrito antes, la naturaleza del caso y el alto estado de su cliente lo hacía único. Además de la investigación, disfrutaba estudiando la forma de trabajar de Holmes y su razonamiento agudo, que lo ayudaba a resolver los misterios más complejos. Estaba tan acostumbrado a su éxito que nunca pensé que pudiera fallar."
+        },
+        {
+          "en": "It was nearly four when the door opened, and a shabby-looking groom, with a red face and messy clothes, came into the room. I was used to my friend's amazing disguises, but I had to look three times to be sure it was him. With a nod, he disappeared into the bedroom and came out five minutes later, dressed neatly in tweed. He put his hands in his pockets, stretched out his legs in front of the fire, and laughed for several minutes.",
+          "es": "Era casi las cuatro cuando la puerta se abrió, y un mozo de caballos de aspecto desaliñado, con cara roja y ropa desordenada, entró en la habitación. Estaba acostumbrado a los disfraces asombrosos de mi amigo, pero tuve que mirar tres veces para estar seguro de que era él. Con un gesto, desapareció en el dormitorio y salió cinco minutos después, vestido pulcramente con tweed. Metió las manos en los bolsillos, estiró las piernas frente al fuego, y rió durante varios minutos."
+        },
+        {
+          "en": "\"Well, really!\" he exclaimed, then laughed again until he had to lie back in the chair, helpless.",
+          "es": "\"¡Bueno, realmente!\" exclamó, luego rió de nuevo hasta que tuvo que recostarse en la silla, sin remedio."
+        },
+        {
+          "en": "\"What is it?\"",
+          "es": "\"¿Qué es?\""
+        },
+        {
+          "en": "\"It's really funny. I bet you can't guess how I spent my morning or what I ended up doing.\"",
+          "es": "\"Es realmente divertido. Apuesto a que no puedes adivinar cómo pasé mi mañana o qué terminé haciendo.\""
+        },
+        {
+          "en": "\"I can't imagine. I suppose you were watching Miss Irene Adler's habits and maybe her house.\"",
+          "es": "\"No puedo imaginar. Supongo que estabas observando los hábitos de la Señorita Irene Adler y quizás su casa.\""
+        },
+        {
+          "en": "\"Exactly; but the outcome was quite unusual. I'll tell you. I left the house a little after eight this morning, pretending to be an out-of-work groom. There's a great connection among horsemen. If you become one of them, you'll learn everything. I soon found Briony Lodge. It's a small villa with a garden at the back. The front is built right up to the road, with two stories. The door has a Chubb lock. There's a large sitting-room on the right, well-furnished, with long windows almost to the floor, and those silly English window fasteners a child could open. The back wasn't remarkable, except you could reach the passage window from the top of the coach-house. I walked around and checked it from every angle but found nothing else interesting.\"",
+          "es": "\"Exactamente; pero el resultado fue bastante inusual. Te lo diré. Salí de la casa poco después de las ocho esta mañana, fingiendo ser un mozo de caballos desempleado. Hay una gran conexión entre los hombres de caballos. Si te conviertes en uno de ellos, aprenderás todo. Pronto encontré Briony Lodge. Es una pequeña villa con un jardín en la parte trasera. El frente está construido directamente hasta la carretera, con dos pisos. La puerta tiene una cerradura Chubb. Hay una gran sala de estar a la derecha, bien amueblada, con ventanas largas casi hasta el suelo, y esos ridículos cierres de ventana ingleses que un niño podría abrir. La parte trasera no era notable, excepto que podías alcanzar la ventana del pasillo desde la parte superior de la casa de coches. Caminé alrededor y lo revisé desde cada ángulo pero no encontré nada más interesante.\""
+        },
+        {
+          "en": "\"I then walked down the street and found, as I expected, there was a mews in a lane next to the garden wall. I helped the stable workers clean their horses and got two pence, a glass of half-and-half, two fills of shag tobacco, and as much information as I wanted about Miss Adler. I also heard about half a dozen other people in the area that I wasn't interested in, but I had to listen to their stories.\"",
+          "es": "\"Luego caminé por la calle y encontré, como esperaba, que había un establo en un callejón junto a la pared del jardín. Ayudé a los mozos de establo a limpiar sus caballos y obtuve dos peniques, un vaso de media y media, dos rellenos de tabaco en rama, e información sobre la Señorita Adler. También escuché sobre media docena de otras personas en el área que no me interesaban, pero tuve que escuchar sus historias.\""
+        }
+      ]
+    },
+    "17": {
+      "lines": [
+        {
+          "en": "\"And what about Irene Adler?\" I asked.",
+          "es": "\"¿Y qué hay sobre Irene Adler?\" pregunté."
+        },
+        {
+          "en": "\"Oh, she's turned all the men's heads in that area. They say she's the prettiest woman in the world. That's what everyone in Serpentine-mews says. She lives quietly, sings at concerts, drives out at five every day, and returns at seven for dinner. She rarely goes out at other times, except when she sings. She has only one male visitor, but he visits often. He's dark, handsome, and charming, never visits less than once a day, often twice. He's Mr. Godfrey Norton, of the Inner Temple. That's the advantage of having a cabman as a confidant. They've driven him home many times from Serpentine-mews and know all about him. After hearing everything they had to say, I started walking up and down near Briony Lodge again, thinking about my next move.\"",
+          "es": "\"Oh, ha cautivado a todos los hombres en esa área. Dicen que es la mujer más hermosa del mundo. Eso es lo que todos en Serpentine-mews dicen. Vive tranquilamente, canta en conciertos, sale en coche a las cinco cada día, y regresa a las siete para cenar. Raramente sale en otros momentos, excepto cuando canta. Tiene solo un visitante masculino, pero visita a menudo. Es moreno, guapo y encantador, nunca visita menos de una vez al día, a menudo dos. Es el Sr. Godfrey Norton, del Inner Temple. Esa es la ventaja de tener un cochero como confidente. Lo han llevado a casa muchas veces desde Serpentine-mews y saben todo sobre él. Después de escuchar todo lo que tenían que decir, comencé a caminar arriba y abajo cerca de Briony Lodge de nuevo, pensando en mi próximo movimiento.\""
+        },
+        {
+          "en": "\"This Godfrey Norton seemed important in this situation. He was a lawyer, which sounded serious. What was their relationship, and why did he visit her so often? Was she his client, friend, or something more? If she was his client, maybe she gave him the photograph. If she was more, it seemed unlikely. Depending on this, I would either stay at Briony Lodge or focus on his office in the Temple. It was a tricky decision that expanded my investigation. I hope I'm not boring you with these details, but you need to understand my challenges.\"",
+          "es": "\"Este Godfrey Norton parecía importante en esta situación. Era abogado, lo que sonaba serio. ¿Cuál era su relación, y por qué la visitaba tan a menudo? ¿Era su cliente, amiga, o algo más? Si era su cliente, quizás le dio la fotografía. Si era más, parecía poco probable. Dependiendo de esto, permanecería en Briony Lodge o enfocaría su oficina en Temple. Era una decisión complicada que expandía mi investigación. Espero no estar aburriendo te con estos detalles, pero necesitas entender mis desafíos.\""
+        },
+        {
+          "en": "\"I'm following you closely,\" I replied.",
+          "es": "\"Te estoy siguiendo de cerca,\" respondí."
+        },
+        {
+          "en": "\"I was still thinking about it when a hansom cab arrived at Briony Lodge, and a man jumped out. He was very handsome, dark, with sharp features and a moustache—clearly the man I had heard about. He seemed in a hurry, told the cab to wait, and walked past the maid at the door like he belonged there.\"",
+          "es": "\"Aún estaba pensando en ello cuando un hansom llegó a Briony Lodge, y un hombre saltó. Era muy guapo, moreno, con facciones agudas y un bigote, claramente el hombre del que había escuchado. Parecía tener prisa, le dijo al coche que esperara, y pasó junto a la criada en la puerta como si perteneciera allí.\""
+        },
+        {
+          "en": "\"He stayed in the house for about thirty minutes. I saw him through the sitting-room windows, pacing and talking with excitement, waving his arms. I didn't see her. When he left, he looked even more rushed. As he got into the cab, he checked his gold watch and shouted, 'Drive fast, first to Gross & Hankey’s on Regent Street, then to the Church of St. Monica on Edgeware Road. I'll pay extra if you make it in twenty minutes!'\"",
+          "es": "\"Se quedó en la casa unos treinta minutos. Lo vi a través de las ventanas de la sala de estar, caminando y hablando con excitación, agitando los brazos. No la vi a ella. Cuando se fue, se veía aún más apresurado. Mientras entraba en el coche, miró su reloj de oro y gritó, '¡Conduce rápido, primero a Gross & Hankey en Regent Street, luego a la Iglesia de St. Monica en Edgeware Road. ¡Te pagaré extra si lo haces en veinte minutos!'\""
+        },
+        {
+          "en": "\"They drove off, and I was wondering if I should follow when a neat little landau came up the lane. The coachman looked a bit untidy, with his coat half-buttoned and tie askew. Before it stopped, she rushed out of the house and into it. I only saw her briefly, but she was a beautiful woman, with a face a man might die for.\"",
+          "es": "\"Se fueron, y me preguntaba si debería seguir cuando un pequeño landó limpio subió por el carril. El cochero se veía un poco desaliñado, con su abrigo medio abrochado y la corbata torcida. Antes de que se detuviera, ella salió corriendo de la casa. Solo la vi brevemente, pero era una mujer hermosa, con una cara por la que un hombre podría morir.\""
+        },
+        {
+          "en": "\"'To the Church of St. Monica, John,' she called, 'and I'll pay you extra if you get there in twenty minutes.'\"",
+          "es": "\"'A la Iglesia de St. Monica, John,' gritó, 'y te pagaré extra si llegas en veinte minutos.'\""
+        }
+      ]
+    },
+    "18": {
+      "lines": [
+        {
+          "en": "\"This was too interesting to miss, Watson. I was deciding whether to run after them or jump on the back of her landau when a cab came by. The driver hesitated at my shabby appearance, but I got in before he could refuse. 'To the Church of St. Monica,' I said, 'and I'll pay extra if you get there in twenty minutes.' It was twenty-five minutes to twelve, and it was clear what was happening.\"",
+          "es": "\"Esto era demasiado interesante para perderlo, Watson. Estaba decidiendo si correr tras ellos o saltar a la parte trasera de su landó cuando pasó un coche. El conductor dudó por mi aspecto desaliñado, pero entré antes de que pudiera rechazarme. 'A la Iglesia de St. Monica,' dije, 'y te pagaré extra si llegas en veinte minutos.' Faltaban veinticinco minutos para las doce, y estaba claro qué estaba sucediendo.\""
+        },
+        {
+          "en": "\"My cabbie drove fast, faster than I'd ever experienced, but the others arrived before us. The cab and landau with steaming horses were at the door when I got there. I paid the driver and hurried into the church. No one was there except the two I followed and a clergyman in a surplice, who seemed to be discussing something with them. They stood together in front of the altar. I walked up the side aisle like an idle visitor. Suddenly, to my surprise, they all turned to me, and Godfrey Norton ran towards me.\"",
+          "es": "\"Mi cochero condujo rápido, más rápido de lo que jamás había experimentado, pero los otros llegaron antes. El coche y el landó con caballos humeantes estaban en la puerta cuando llegué. Pagué al conductor y me apresué a entrar a la iglesia. No había nadie excepto los dos que seguí y un clérigo en una sobrepelliz, que parecía estar discutiendo algo con ellos. Estaban juntos frente al altar. Caminé por el pasillo lateral como un visitante ocioso. De repente, para mi sorpresa, todos se dieron la vuelta hacia mí, y Godfrey Norton corrió hacia mí.\""
+        },
+        {
+          "en": "\"'Thank God,' he shouted. 'You'll do. Come quickly!'\"",
+          "es": "\"'Gracias a Dios,' gritó. '¡Tú servirás. ¡Ven rápido!'\""
+        },
+        {
+          "en": "\"'What for?' I asked.\"",
+          "es": "\"'¿Para qué?' pregunté.\""
+        },
+        {
+          "en": "\"'Hurry, man, only three minutes left, or it won't be legal.'\"",
+          "es": "\"'¡Apúrate, hombre, solo tres minutos o no será legal.'\""
+        },
+        {
+          "en": "\"I was half-dragged to the altar, and before I knew it, I was mumbling responses whispered in my ear, agreeing to things I knew nothing about, and helping to marry Irene Adler, spinster, to Godfrey Norton, bachelor. It happened so fast, and there they were, thanking me on both sides, while the clergyman smiled in front. It was the strangest situation I had ever been in, and thinking of it made me laugh. It seems there was an issue with their license, and the clergyman refused to marry them without a witness. My lucky appearance saved the groom from searching the streets for a best man. The bride gave me a sovereign, and I plan to wear it on my watch chain to remember the occasion.\"",
+          "es": "\"Fui medio arrastrado al altar, y antes de que me diera cuenta, estaba murmurando respuestas susurradas en mi oído, aceptando cosas que no sabía nada, y ayudando a casar a Irene Adler, soltera, con Godfrey Norton, soltero. Sucedió tan rápido, y allí estaban, agradeciéndome en ambos lados, mientras el clérigo sonreía enfrente. Fue la situación más extraña en que había estado, y pensar en ello me hizo reír. Parece que había un problema con su licencia, y el clérigo se negaba a casarlos sin un testigo. Mi aparición afortunada salvó al novio de buscar por las calles un padrino. La novia me dio una soberana, y planeo usarla en mi cadena de reloj para recordar la ocasión.\""
+        },
+        {
+          "en": "\"This is a very unexpected turn of events,\" I said, \"and what happened next?\"",
+          "es": "\"Este es un giro muy inesperado de eventos,\" dije, \"¿y qué sucedió después?\""
+        },
+        {
+          "en": "\"Well, my plans were at risk. It seemed they might leave immediately, which would need quick action from me. But at the church door, they parted ways, he went back to the Temple, and she returned home. 'I will drive in the park at five as usual,' she said as she left him. I heard nothing more. They drove away separately, and I went to make my own plans.\"",
+          "es": "\"Bueno, mis planes estaban en riesgo. Parecía que podrían irse inmediatamente, lo que habría requerido acción rápida de mi parte. Pero en la puerta de la iglesia, se separaron, él regresó a Temple, y ella volvió a casa. 'Conduciré en el parque a las cinco como de costumbre,' dijo mientras lo dejaba. No escuché nada más. Se fueron por separado, y fui a hacer mis propios planes.\""
+        }
+      ]
+    },
+    "19": {
+      "lines": [
+        {
+          "en": "\"What are your plans?\"",
+          "es": "\"¿Cuáles son tus planes?\""
+        },
+        {
+          "en": "\"Some cold beef and a glass of beer,\" he replied, ringing the bell. \"I've been too busy to eat, and I'll be even busier tonight. By the way, Doctor, I'll need your help.\"",
+          "es": "\"Un poco de carne fría y un vaso de cerveza,\" replicó, tocando el timbre. \"He estado demasiado ocupado para comer, y estaré aún más ocupado esta noche. Por cierto, Doctor, necesitaré tu ayuda.\""
+        },
+        {
+          "en": "\"I'd be delighted.\"",
+          "es": "\"Estaría encantado.\""
+        },
+        {
+          "en": "\"You don't mind breaking the law?\"",
+          "es": "\"¿No te importa romper la ley?\""
+        },
+        {
+          "en": "\"Not at all.\"",
+          "es": "\"De ninguna manera.\""
+        },
+        {
+          "en": "\"Nor risking arrest?\"",
+          "es": "\"¿Ni arriesgar el arresto?\""
+        },
+        {
+          "en": "\"Not for a good cause.\"",
+          "es": "\"No por una buena causa.\""
+        },
+        {
+          "en": "\"Oh, the cause is excellent!\"",
+          "es": "\"¡Oh, la causa es excelente!\""
+        }
+      ]
+    },
+    "20": {
+      "lines": [
+        {
+          "en": "\"Then I'm your man.\"",
+          "es": "\"Entonces soy tu hombre.\""
+        },
+        {
+          "en": "\"I knew I could rely on you.\"",
+          "es": "\"Sabía que podía contar contigo.\""
+        },
+        {
+          "en": "\"But what do you want me to do?\"",
+          "es": "\"Pero ¿qué quieres que haga?\""
+        },
+        {
+          "en": "\"When Mrs. Turner brings the tray, I'll explain. Now,\" he said, turning to the simple meal our landlady provided, \"I must discuss it while eating, as time is short. It's nearly five. In two hours, we must be ready. Miss Irene, or rather Madame, returns from her drive at seven. We need to be at Briony Lodge to meet her.\"",
+          "es": "\"Cuando la Sra. Turner traiga la bandeja, explicaré. Ahora,\" dijo, girándose hacia la comida simple que nuestra casera proporcionó, \"debo discutirlo mientras como, ya que el tiempo es corto. Son casi las cinco. En dos horas, debemos estar listos. La Señorita Irene, o mejor dicho, Madame, regresa de su paseo a las siete. Necesitamos estar en Briony Lodge para recibirla.\""
+        },
+        {
+          "en": "\"And then what?\"",
+          "es": "\"¿Y entonces qué?\""
+        },
+        {
+          "en": "\"Leave that to me. I have a plan. There's only one thing you must do. Don't interfere, no matter what happens. Understand?\"",
+          "es": "\"Déjalo en mis manos. Tengo un plan. Hay solo una cosa que debes hacer. No interfiers, sin importar qué suceda. ¿Entiendes?\""
+        },
+        {
+          "en": "\"I should stay neutral?\"",
+          "es": "\"¿Debería permanecer neutral?\""
+        },
+        {
+          "en": "\"Do nothing at all. There might be some trouble. Don't get involved. It will end with me entering the house. A few minutes later, the sitting-room window will open. You should be near that window.\"",
+          "es": "\"No hagas nada en absoluto. Podría haber algo de problemas. No te involucres. Terminará conmigo entrando en la casa. Pocos minutos después, la ventana de la sala se abrirá. Debes estar cerca de esa ventana.\""
+        }
+      ]
+    },
+    "21": {
+      "lines": [
+        {
+          "en": "\"Yes.\"",
+          "es": "\"Sí.\""
+        },
+        {
+          "en": "\"Watch me, as I will be visible to you.\"",
+          "es": "\"Mírame, ya que estaré visible para ti.\""
+        },
+        {
+          "en": "\"Yes.\"",
+          "es": "\"Sí.\""
+        },
+        {
+          "en": "\"When I raise my hand like this, you will throw into the room what I give you and shout 'fire.' Do you understand?\"",
+          "es": "\"Cuando levante mi mano así, lanzarás al cuarto lo que te doy y gritarás 'fuego.' ¿Entiendes?\""
+        },
+        {
+          "en": "\"Completely.\"",
+          "es": "\"Completamente.\""
+        },
+        {
+          "en": "\"It's nothing serious,\" he said, showing a long, cigar-shaped roll from his pocket. \"It's a simple plumber's smoke-rocket, with caps to make it self-lighting. Your job is just that. When you shout 'fire,' others will join in. Then walk to the end of the street, and I'll meet you in ten minutes. Have I made myself clear?\"",
+          "es": "\"No es nada serio,\" dijo, mostrando un rollo largo en forma de cigarro de su bolsillo. \"Es un simple cohete de humo de plomero, con cápsulas para auto encenderse. Tu trabajo es solo eso. Cuando grites 'fuego,' otros se unirán. Luego camina al final de la calle, y te encontraré en diez minutos. ¿He sido claro?\""
+        },
+        {
+          "en": "\"I should remain neutral, get near the window, watch you, and at your signal, throw in this object, shout 'fire,' and wait for you at the street corner.\"",
+          "es": "\"Debo permanecer neutral, acercarme a la ventana, observarte, y en tu señal, lanzar este objeto, gritar 'fuego,' y esperar en la esquina de la calle.\""
+        },
+        {
+          "en": "\"Exactly.\"",
+          "es": "\"Exactamente.\""
+        }
+      ]
+    },
+    "22": {
+      "lines": [
+        {
+          "en": "\"You can rely on me.\"",
+          "es": "\"Puedes confiar en mí.\""
+        },
+        {
+          "en": "\"That's excellent. I think it's time I prepare for my new role.\"",
+          "es": "\"Excelente. Creo que es hora de prepararme para mi nuevo papel.\""
+        },
+        {
+          "en": "He went into his bedroom and returned soon, dressed as a friendly and simple-minded Nonconformist clergyman. His wide black hat, baggy trousers, white tie, and kind smile, along with his curious look, could only be matched by Mr. John Hare. It wasn't just his costume that changed. His expression, manner, and even his personality seemed to change with each role he played. The stage lost a great actor, just as science lost a sharp thinker, when he became a crime specialist.",
+          "es": "Entró en su dormitorio y regresó pronto, vestido como un clérigo disidente amable e ingenuo. Su sombrero negro ancho, pantalones holgados, corbata blanca y sonrisa amable, junto con su mirada curiosa, solo podían compararse con la del señor John Hare. No fue solo su disfraz lo que cambió. Su expresión, manera y hasta su personalidad parecían cambiar con cada papel que interpretaba. El teatro perdió un gran actor, así como la ciencia perdió un pensador agudo, cuando se convirtió en especialista en crímenes."
+        },
+        {
+          "en": "It was a quarter past six when we left Baker Street, and it was almost seven when we arrived at Serpentine Avenue. The sky was getting dark, and the street lamps were just being turned on as we walked back and forth in front of Briony Lodge, waiting for its owner to arrive. The house looked just like Sherlock Holmes had described, but the area seemed busier than I expected. For a small street in a quiet neighborhood, it was surprisingly lively. There was a group of poorly dressed men smoking and laughing in a corner, a man sharpening scissors, two soldiers flirting with a nurse, and several well-dressed young men walking with cigars in their mouths.",
+          "es": "Eran las seis y cuarto cuando salimos de Baker Street, y eran casi las siete cuando llegamos a Serpentine Avenue. El cielo se oscurecía, y los faroles de la calle acababan de encenderse mientras caminábamos de un lado a otro frente a Briony Lodge, esperando que llegara su dueña. La casa se veía exactamente como Sherlock Holmes la había descrito, pero el área parecía más concurrida de lo que esperaba. Para una calle pequeña en un barrio tranquilo, era sorprendentemente animada. Había un grupo de hombres mal vestidos fumando y riendo en una esquina, un hombre afilando tijeras, dos soldados coqueteando con una enfermera, y varios jóvenes bien vestidos caminando con cigarros en la boca."
+        },
+        {
+          "en": "“You see,” said Holmes, as we continued to walk in front of the house, “this marriage makes things simpler. The photograph is now a double-edged weapon. She would not want Mr. Godfrey Norton to see it any more than our client wants his princess to see it. Now, the question is, where can we find the photograph?”",
+          "es": "\"Ya ves,\" dijo Holmes, mientras continuábamos caminando frente a la casa, \"este matrimonio simplifica las cosas. La fotografía ahora es un arma de doble filo. Ella no querría que el señor Godfrey Norton la viera más de lo que nuestro cliente quiere que la princesa la vea. Ahora, la pregunta es, ¿dónde podemos encontrar la fotografía?\""
+        },
+        {
+          "en": "“Where, indeed?”",
+          "es": "\"¿Dónde, en verdad?\""
+        },
+        {
+          "en": "“It’s unlikely she carries it with her. It’s too large to hide easily in a woman’s dress. She knows the King might have her stopped and searched. Two attempts have already been made. So, we can assume she doesn’t carry it with her.”",
+          "es": "\"Es poco probable que la lleve consigo. Es demasiado grande para esconderla fácilmente en el vestido de una mujer. Ella sabe que el Rey podría detenerla e interrogarla. Ya se han hecho dos intentos. Así que, podemos asumir que no la lleva consigo.\""
+        },
+        {
+          "en": "“Where, then?”",
+          "es": "\"¿Dónde, entonces?\""
+        }
+      ]
+    },
+    "23": {
+      "lines": [
+        {
+          "en": "“Her banker or her lawyer. That’s possible, but I think not. Women are naturally secretive and prefer to keep their own secrets. Why would she give it to someone else? She trusts herself more than a businessman who might be influenced. Also, she plans to use it soon. It must be somewhere she can easily get to it. It must be in her house.”",
+          "es": "\"Con su banquero o su abogado. Es posible, pero creo que no. Las mujeres son naturalmente reservadas y prefieren guardar sus propios secretos. ¿Por qué se la daría a otra persona? Confía más en sí misma que en un hombre de negocios que podría ser influenciado. Además, ella planea usarla pronto. Debe estar en un lugar donde pueda acceder a ella fácilmente. Debe estar en su casa.\""
+        },
+        {
+          "en": "“But it has been burgled twice.”",
+          "es": "\"Pero la casa ha sido robada dos veces.\""
+        },
+        {
+          "en": "“Nonsense! They didn’t know how to search properly.”",
+          "es": "\"¡Tonterías! No sabían cómo buscar adecuadamente.\""
+        },
+        {
+          "en": "“But how will you search?”",
+          "es": "\"¿Pero cómo buscarás?\""
+        },
+        {
+          "en": "“I won’t search.”",
+          "es": "\"No buscaré.\""
+        },
+        {
+          "en": "“What then?”",
+          "es": "\"¿Entonces qué?\""
+        },
+        {
+          "en": "“I will make her show me.”",
+          "es": "\"Haré que ella me la muestre.\""
+        },
+        {
+          "en": "“But she will refuse.”",
+          "es": "\"Pero ella se negará.\""
+        }
+      ]
+    },
+    "24": {
+      "lines": [
+        {
+          "en": "“She won’t be able to. Listen, I hear wheels. Her carriage is coming. Now, follow my instructions exactly.”",
+          "es": "\"No podrá hacerlo. Escucha, oigo ruedas. Su carruaje viene. Ahora, sigue mis instrucciones exactamente.\""
+        },
+        {
+          "en": "As he spoke, the lights of a carriage appeared around the corner of the avenue. It was a nice little landau that stopped in front of Briony Lodge. As it stopped, one of the men on the corner ran to open the door, hoping for a tip, but another man pushed him aside to do the same. A fierce argument started, involving the two soldiers, who sided with one of the men, and the scissors-grinder, who supported the other. A fight broke out, and soon the lady who stepped out of the carriage was surrounded by men hitting each other. Holmes rushed into the crowd to protect her, but as he reached her, he cried out and fell to the ground, blood running down his face. When he fell, the soldiers ran one way and the other men ran another, while better-dressed people who had been watching rushed to help the lady and the injured man. Irene Adler, as I will call her, hurried up the steps but stood at the top, looking back into the street.",
+          "es": "Mientras hablaba, vimos las luces de un carruaje aparecer en la esquina de la avenida. Era un pequeño landau elegante que se detuvo frente a Briony Lodge. Al detenerse, uno de los hombres de la esquina corrió para abrir la puerta, esperando una propina, pero otro hombre lo apartó para hacer lo mismo. Comenzó una fuerte discusión, que involucró a los dos soldados, que apoyaron a uno de los hombres, y al afilador de tijeras, que apoyó al otro. Estalló una pelea, y pronto la dama que bajaba del carruaje estaba rodeada de hombres golpeándose. Holmes se lanzó entre la multitud para protegerla, pero cuando la alcanzó, gritó y cayó al suelo, con sangre corriendo por su cara. Cuando cayó, los soldados corrieron en una dirección y los otros hombres en otra, mientras la gente mejor vestida que había estado mirando se apresuró a ayudar a la dama y al hombre herido. Irene Adler, como la llamaré, subió rápidamente los escalones pero se detuvo en la parte superior, mirando hacia atrás a la calle."
+        },
+        {
+          "en": "“Is the poor gentleman badly hurt?” she asked.",
+          "es": "\"¿Está el pobre caballero gravemente herido?\" preguntó."
+        },
+        {
+          "en": "“He is dead,” several voices cried.",
+          "es": "\"Está muerto,\" gritaron varias voces."
+        },
+        {
+          "en": "“No, no, he’s alive!” shouted another. “But he’ll die before you can get him to a hospital.”",
+          "es": "\"¡No, no, está vivo!\" gritó otro. \"Pero morirá antes de que lo lleven al hospital.\""
+        },
+        {
+          "en": "“He’s a brave man,” said a woman. “They would have taken the lady’s purse and watch if not for him. They were a gang, and a rough one. Ah, he’s breathing now.”",
+          "es": "\"Es un hombre valiente,\" dijo una mujer. \"Le hubieran robado el bolso y el reloj a la dama si no fuera por él. Eran una banda, y una peligrosa. Ah, ahora está respirando.\""
+        },
+        {
+          "en": "“He can’t stay in the street. Can we bring him inside, ma’am?”",
+          "es": "\"No puede quedarse en la calle. ¿Podemos llevarlo adentro, señora?\""
+        },
+        {
+          "en": "“Of course. Bring him into the sitting room. There’s a comfortable sofa. This way, please!”",
+          "es": "\"Por supuesto. Llévalo a la sala. Hay un sofá cómodo. ¡De esta forma, por favor!\""
+        }
+      ]
+    },
+    "25": {
+      "lines": [
+        {
+          "en": "Slowly and solemnly, they carried him into Briony Lodge and laid him in the main room, while I watched from my spot by the window. The lamps were on, but the blinds were not drawn, so I could see Holmes lying on the couch. I don’t know if he felt guilty for his role, but I felt deeply ashamed as I watched the beautiful woman we were deceiving, and her kindness to the injured man. Yet, it would be a betrayal to Holmes if I backed out now. I steeled myself and took the smoke-rocket from under my coat. After all, I thought, we are not harming her, only stopping her from harming someone else.",
+          "es": "Lentamente y solemnemente, lo llevaron a Briony Lodge y lo acostaron en la sala principal, mientras yo observaba desde mi lugar junto a la ventana. Las lámparas estaban encendidas, pero las persianas no estaban cerradas, así que podía ver a Holmes acostado en el sofá. No sé si se sintió culpable por su papel, pero yo me sentí profundamente avergonzado al ver a la hermosa mujer a quien estábamos engañando, y su amabilidad hacia el hombre herido. Sin embargo, sería una traición a Holmes si me echaba atrás ahora. Me preparé mentalmente y saqué el cohete de humo de bajo mi abrigo. Después de todo, pensé, no le estamos haciendo daño, solo evitando que ella haga daño a alguien más."
+        },
+        {
+          "en": "Holmes sat up on the couch, and I saw him gesture like he needed air. A maid quickly opened the window. At that moment, he raised his hand, and I threw my rocket into the room, shouting “Fire!” As soon as I said it, everyone, both well-dressed and not—gentlemen, stable workers, and maids—joined in shouting “Fire!” Thick smoke filled the room and poured out the window. I saw people rushing around, and a moment later, I heard Holmes inside telling them it was a false alarm. Slipping through the crowd, I made my way to the street corner, and ten minutes later, I was happy to find my friend’s arm in mine as we left the chaotic scene. He walked quickly and silently for a few minutes until we turned down a quiet street towards the Edgeware Road.",
+          "es": "Holmes se sentó en el sofá, y lo vi hacer un gesto como si necesitara aire. Una criada rápidamente abrió la ventana. En ese momento, él levantó la mano, y yo lancé mi cohete dentro de la habitación, gritando \"¡Fuego!\" Tan pronto como lo dije, todos, tanto gente bien vestida como la que no lo era—caballeros, mozos de establo y criadas—se unieron gritando \"¡Fuego!\" Un humo espeso llenó la habitación y se derramó por la ventana. Vi a la gente corriendo de un lado a otro, y un momento después, escuché a Holmes dentro diciéndoles que era una falsa alarma. Abriéndome paso entre la multitud, me dirigí hacia la esquina de la calle, y diez minutos después, me alegró encontrar el brazo de mi amigo en el mío mientras salíamos de la escena caótica. Caminó rápido y en silencio durante algunos minutos hasta que doblamos hacia una calle tranquila hacia Edgeware Road."
+        },
+        {
+          "en": "“You did it very well, Doctor,” he said. “It was perfect. Everything went right.”",
+          "es": "\"Lo hiciste muy bien, Doctor,\" dijo. \"Fue perfecto. Todo salió bien.\""
+        },
+        {
+          "en": "“Do you have the photograph?”",
+          "es": "\"¿Tienes la fotografía?\""
+        },
+        {
+          "en": "“I know where it is.”",
+          "es": "\"Sé dónde está.\""
+        },
+        {
+          "en": "“How did you find out?”",
+          "es": "\"¿Cómo lo descubriste?\""
+        },
+        {
+          "en": "“She showed me, just as I said she would.”",
+          "es": "\"Ella me la mostró, exactamente como dije que lo haría.\""
+        },
+        {
+          "en": "“I’m still confused.”",
+          "es": "\"Aún estoy confundido.\""
+        }
+      ]
+    },
+    "26": {
+      "lines": [
+        {
+          "en": "“I don’t want to make it a mystery,” he laughed. “It was actually very simple. You saw that everyone in the street was part of the plan. They were all hired for the evening.”",
+          "es": "\"No quiero hacerlo un misterio,\" rió. \"En realidad fue muy simple. Viste que todos en la calle eran parte del plan. Todos fueron contratados para la noche.\""
+        },
+        {
+          "en": "“I suspected as much.”",
+          "es": "\"Lo sospechaba.\""
+        },
+        {
+          "en": "“Then, when the fight started, I had some wet red paint in my hand. I rushed forward, fell, put my hand on my face, and looked injured. It’s an old trick.”",
+          "es": "\"Entonces, cuando comenzó la pelea, tenía pintura roja mojada en mi mano. Me lancé hacia adelante, caí, me puse la mano en la cara, y me veía herido. Es un viejo truco.\""
+        },
+        {
+          "en": "“I figured that out too.”",
+          "es": "\"Yo también lo descubrí.\""
+        },
+        {
+          "en": "“Then they brought me inside. She had to let me in. What else could she do? And they took me to her sitting room, which was the room I suspected. It was between that and her bedroom, and I wanted to see which. They laid me on a couch, I signaled for air, they had to open the window, and you had your chance.”",
+          "es": "\"Entonces me llevaron adentro. Ella tuvo que dejarme entrar. ¿Qué más podía hacer? Y me llevaron a su sala, que era la habitación que sospechaba. Estaba entre esa y su dormitorio, y quería ver cuál era. Me acostaron en un sofá, hice una señal pidiendo aire, tuvieron que abrir la ventana, y tuviste tu oportunidad.\""
+        },
+        {
+          "en": "“How did that help you?”",
+          "es": "\"¿Cómo te ayudó eso?\""
+        },
+        {
+          "en": "\"It was very important. When a woman thinks her house is on fire, she runs to what she values most. It's a strong impulse, and I've used it more than once. In the Darlington Substitution Scandal, it was useful, and also in the Arnsworth Castle case. A married woman will grab her baby; an unmarried one will go for her jewelry. Today, it was clear that the woman had nothing more precious in the house than what we are looking for. She would rush to secure it. The fire alarm was done perfectly. The smoke and shouting were enough to scare anyone. She reacted just as expected. The photograph is behind a sliding panel above the right bell-pull. She went there immediately, and I saw it when she almost took it out. When I shouted that it was a false alarm, she put it back, looked at the rocket, and left the room. I haven't seen her since. I got up, made my excuses, and left the house. I thought about getting the photograph right away, but the coachman was watching me closely, so it seemed safer to wait. Being too hasty could ruin everything.\"",
+          "es": "\"Fue muy importante. Cuando una mujer cree que su casa se está quemando, corre hacia lo que más valora. Es un impulso fuerte, y lo he usado más de una vez. En el Escándalo de la Sustitución de Darlington, fue útil, y también en el caso del Castillo de Arnsworth. Una mujer casada agarrará a su bebé; una soltera irá por sus joyas. Hoy, fue claro que la mujer no tenía nada más precioso en la casa que lo que buscamos. Ella correría a asegurarlo. La alarma de fuego fue perfecta. El humo y los gritos eran suficientes para asustar a cualquiera. Ella reaccionó exactamente como esperaba. La fotografía está detrás de un panel deslizante sobre el tirante de campana derecho. Ella fue allá inmediatamente, y la vi cuando casi la saca. Cuando grité que era una falsa alarma, la volvió a poner, miró el cohete, y salió de la habitación. No la he visto desde entonces. Me levanté, ofrecí mis disculpas, y abandoné la casa. Pensé en conseguir la fotografía de inmediato, pero el cochero me estaba observando de cerca, así que pareció más seguro esperar. Actuar demasiado rápido podría arruinarlo todo.\""
+        },
+        {
+          "en": "\"And now?\" I asked.",
+          "es": "\"¿Y ahora?\" pregunté."
+        }
+      ]
+    },
+    "27": {
+      "lines": [
+        {
+          "en": "\"Our search is almost over. I'll visit with the King tomorrow, and you can join us if you like. We will wait in the sitting-room for the lady, but she might find neither us nor the photograph when she arrives. It might please His Majesty to retrieve it himself.\"",
+          "es": "\"Nuestra búsqueda casi termina. Visitaré al Rey mañana, y puedes acompañarnos si quieres. Esperaremos en la sala para la dama, pero ella podría no encontrarnos a nosotros ni a la fotografía cuando llegue. Podría agradarle a Su Majestad recuperarla él mismo.\""
+        },
+        {
+          "en": "\"And when will you visit?\"",
+          "es": "\"¿Y cuándo visitarás?\""
+        },
+        {
+          "en": "\"At eight in the morning. She won't be awake, so we'll have a clear chance. We must be quick because her marriage might change her life completely. I need to send a message to the King immediately.\"",
+          "es": "\"A las ocho de la mañana. Ella no estará despierta, así que tendremos una oportunidad clara. Debemos ser rápidos porque su matrimonio podría cambiar su vida completamente. Necesito enviar un mensaje al Rey inmediatamente.\""
+        },
+        {
+          "en": "We reached Baker Street and stopped at the door. He was looking for his key when someone walking by said:",
+          "es": "Llegamos a Baker Street y nos detuvimos en la puerta. Él estaba buscando su llave cuando alguien que pasaba dijo:"
+        },
+        {
+          "en": "\"Good night, Mister Sherlock Holmes.\"",
+          "es": "\"Buenas noches, Señor Sherlock Holmes.\""
+        },
+        {
+          "en": "There were several people on the street, but the greeting seemed to come from a slim young man in an overcoat who hurried past.",
+          "es": "Había varias personas en la calle, pero el saludo parecía venir de un joven delgado en un abrigo que pasó apresuradamente."
+        },
+        {
+          "en": "\"I've heard that voice before,\" said Holmes, staring down the dark street. \"I wonder who that could have been.\"",
+          "es": "\"He escuchado esa voz antes,\" dijo Holmes, mirando fijamente hacia la calle oscura. \"Me pregunto quién habrá sido eso.\""
+        },
+        {
+          "en": "I stayed at Baker Street that night. In the morning, we were having toast and coffee when the King of Bohemia rushed in.",
+          "es": "Me quedé en Baker Street esa noche. Por la mañana, estábamos tomando tostadas y café cuando el Rey de Bohemia entró precipitadamente."
+        }
+      ]
+    },
+    "28": {
+      "lines": [
+        {
+          "en": "\"You really got it!\" he exclaimed, grabbing Sherlock Holmes by the shoulders and looking eagerly at him.",
+          "es": "\"¡Realmente lo lograste!\" exclamó, agarrando a Sherlock Holmes por los hombros y mirándolo ansiosamente."
+        },
+        {
+          "en": "\"Not yet.\"",
+          "es": "\"Aún no.\""
+        },
+        {
+          "en": "\"But you have hopes?\"",
+          "es": "\"¿Pero tienes esperanzas?\""
+        },
+        {
+          "en": "\"I have hopes.\"",
+          "es": "\"Tengo esperanzas.\""
+        },
+        {
+          "en": "\"Then, let's go. I can't wait any longer.\"",
+          "es": "\"Entonces, vamos. No puedo esperar más.\""
+        },
+        {
+          "en": "\"We need a cab.\"",
+          "es": "\"Necesitamos un taxi.\""
+        },
+        {
+          "en": "\"No, my carriage is waiting.\"",
+          "es": "\"No, mi carruaje está esperando.\""
+        },
+        {
+          "en": "\"That makes it easier.\" We left and headed to Briony Lodge again.",
+          "es": "\"Eso lo hace más fácil.\" Salimos y nos dirigimos a Briony Lodge nuevamente."
+        }
+      ]
+    },
+    "29": {
+      "lines": [
+        {
+          "en": "\"Irene Adler is married,\" said Holmes.",
+          "es": "\"Irene Adler se casó,\" dijo Holmes."
+        },
+        {
+          "en": "\"Married! When?\"",
+          "es": "\"¿¡Se casó! ¿Cuándo?\""
+        },
+        {
+          "en": "\"Yesterday.\"",
+          "es": "\"Ayer.\""
+        },
+        {
+          "en": "\"To whom?\"",
+          "es": "\"¿Con quién?\""
+        },
+        {
+          "en": "\"To an English lawyer named Norton.\"",
+          "es": "\"Con un abogado inglés llamado Norton.\""
+        },
+        {
+          "en": "\"But she couldn't love him.\"",
+          "es": "\"Pero ella no pudo haberlo amado.\""
+        },
+        {
+          "en": "\"I hope she does.\"",
+          "es": "\"Espero que sí lo haga.\""
+        },
+        {
+          "en": "\"Why do you hope that?\"",
+          "es": "\"¿Por qué esperas eso?\""
+        }
+      ]
+    },
+    "30": {
+      "lines": [
+        {
+          "en": "\"Because it would mean you have nothing to worry about. If she loves her husband, she doesn't love you. If she doesn't love you, she won't interfere with your plans.\"",
+          "es": "\"Porque significaría que no tienes nada de qué preocuparte. Si ella ama a su marido, no te ama a ti. Si no te ama a ti, no interferirá en tus planes.\""
+        },
+        {
+          "en": "\"That's true. But still—! I wish she had been of my own rank! What a queen she would have been!\" He became silent and thoughtful until we reached Serpentine Avenue.",
+          "es": "\"Es verdad. Pero aún así—¡Desearía que hubiera sido de mi mismo rango! ¡Qué reina hubiera sido!\" Se quedó en silencio y pensativo hasta que llegamos a Serpentine Avenue."
+        },
+        {
+          "en": "The door of Briony Lodge was open, and an older woman stood on the steps. She watched us with a sharp look as we got out of the carriage.",
+          "es": "La puerta de Briony Lodge estaba abierta, y una mujer mayor estaba en los escalones. Nos observó con una mirada aguda mientras bajábamos del carruaje."
+        },
+        {
+          "en": "\"Mr. Sherlock Holmes, I believe?\" she said.",
+          "es": "\"¿Señor Sherlock Holmes, me imagino?\" dijo."
+        },
+        {
+          "en": "\"I am Mr. Holmes,\" answered my companion, looking at her with surprise.",
+          "es": "\"Soy el señor Holmes,\" respondió mi compañero, mirándola con sorpresa."
+        },
+        {
+          "en": "\"Indeed! My mistress told me you might come. She left this morning with her husband on the 5: train from Charing Cross for the Continent.\"",
+          "es": "\"¡Ciertamente! Mi ama me dijo que podrías venir. Ella salió esta mañana con su marido en el tren de las 5 desde Charing Cross hacia el Continente.\""
+        },
+        {
+          "en": "\"What!\" Sherlock Holmes stepped back, shocked and surprised. \"Do you mean she has left England?\"",
+          "es": "\"¿¡Qué!\" Sherlock Holmes retrocedió, conmocionado y sorprendido. \"¿Quieres decir que ella ha dejado Inglaterra?\""
+        },
+        {
+          "en": "\"Never to return.\"",
+          "es": "\"Para nunca regresar.\""
+        }
+      ]
+    },
+    "31": {
+      "lines": [
+        {
+          "en": "\"And the papers?\" asked the King anxiously. \"Is everything lost?\"",
+          "es": "\"¿Y los papeles?\" preguntó el Rey ansiosamente. \"¿Todo está perdido?\""
+        },
+        {
+          "en": "\"We shall see.\" Holmes pushed past the servant and ran into the drawing-room, with the King and me following. The furniture was scattered everywhere, with shelves and drawers open, as if the lady had searched them quickly before leaving. Holmes went to the bell-pull, opened a small sliding panel, and took out a photograph and a letter. The photograph was of Irene Adler in evening dress, and the letter was addressed to \"Sherlock Holmes, Esq. To be left till called for.\" My friend opened it, and we all read it together. It was dated at midnight the night before and said:",
+          "es": "\"Ya veremos.\" Holmes pasó junto a la criada y corrió al salón de estar, con el Rey y yo siguiendo. Los muebles estaban esparcidos por todas partes, con estantes y cajones abiertos, como si la dama los hubiera buscado rápidamente antes de partir. Holmes fue al tirante de campana, abrió un pequeño panel deslizante, y sacó una fotografía y una carta. La fotografía era de Irene Adler en traje de noche, y la carta estaba dirigida a \"Sherlock Holmes, Esq. Para ser dejada hasta que sea solicitada.\" Mi amigo la abrió, y todos la leímos juntos. Estaba fechada a la medianoche la noche anterior y decía:"
+        },
+        {
+          "en": "\"MY DEAR MR. SHERLOCK HOLMES,—You did very well. You fooled me completely. Until after the fire alarm, I had no idea. But then, when I realized how I had revealed myself, I started to think. I was warned about you months ago. I was told that if the King used an agent, it would be you. I even had your address. Yet, you made me show what you wanted to know. Even after I became suspicious, it was hard to think badly of such a kind old clergyman. But, you know, I have been an actress myself. Male costume is not new to me. I often use the freedom it gives. I sent John, the coachman, to watch you, ran upstairs, changed clothes, and came down as you left. I followed you to your door, to be sure I was of interest to the famous Mr. Sherlock Holmes. Then I, rather foolishly, wished you good night and went to see my husband. We both thought the best solution was to leave, pursued by such a strong opponent; so you will find the place empty when you visit tomorrow. As for the photograph, your client can be at ease. I love and am loved by a better man than he. The King can do what he wants without trouble from someone he has wronged. I keep it only to protect myself and as a weapon to ensure he doesn't act against me in the future. I leave a photograph he might want; and I remain, dear Mr. Sherlock Holmes,\"",
+          "es": "\"MI ESTIMADO SEÑOR SHERLOCK HOLMES,—Lo hiciste muy bien. Me engañaste completamente. Hasta después de la alarma de fuego, no tenía idea. Pero entonces, cuando me di cuenta de cómo me había revelado a mí misma, comencé a pensar. Me habían advertido sobre ti hace meses. Me dijeron que si el Rey usaba un agente, serías tú. Incluso tenía tu dirección. Sin embargo, me hiciste mostrar lo que querías saber. Incluso después de que empecé a sospechar, era difícil pensar mal de un clérigo tan amable. Pero, ya sabes, he sido actriz yo misma. El disfraz de hombre no es nuevo para mí. Frecuentemente uso la libertad que da. Envié a John, el cochero, para que te vigilara, corrí escaleras arriba, cambié de ropa, y bajé cuando te iba. Te seguí hasta tu puerta, para estar segura de que era de interés para el famoso Señor Sherlock Holmes. Entonces yo, bastante tontamente, te desee buenas noches y fui a ver a mi marido. Ambos pensamos que la mejor solución era partir, perseguidos por un oponente tan fuerte; así que encontrarás el lugar vacío cuando visites mañana. En cuanto a la fotografía, tu cliente puede estar tranquilo. Amo y soy amada por un hombre mejor que él. El Rey puede hacer lo que quiera sin problemas de parte de alguien a quien ha ofendido. La guardo solo para protegerme a mí misma y como un arma para asegurar que no actúe contra mí en el futuro. Dejo una fotografía que podría querer; y permanezco, estimado Señor Sherlock Holmes,\""
+        },
+        {
+          "en": "\"Very truly yours, IRENE NORTON, née ADLER.\"",
+          "es": "\"Muy verdaderamente suyo, IRENE NORTON, née ADLER.\""
+        },
+        {
+          "en": "\"What a woman—oh, what a woman!\" cried the King of Bohemia, after we all read the letter. \"Didn't I tell you how quick and determined she was? Wouldn't she have made a wonderful queen? Isn't it a pity she wasn't of my rank?\"",
+          "es": "\"¡Qué mujer—oh, ¡qué mujer!\" gritó el Rey de Bohemia, después de que todos leímos la carta. \"¿No te dije cuán rápida y decidida era? ¿No hubiera hecho una reina maravillosa? ¿No es una lástima que no fuera de mi rango?\""
+        },
+        {
+          "en": "\"From what I've seen of her, she seems to be on a very different level from your Majesty,\" said Holmes coldly. \"I'm sorry I couldn't bring your business to a more successful end.\"",
+          "es": "\"Por lo que he visto de ella, parece estar en un nivel muy diferente de tu Majestad,\" dijo Holmes fríamente. \"Lamento no haber podido llevar tu asunto a un final más exitoso.\""
+        },
+        {
+          "en": "\"On the contrary, my dear sir,\" cried the King; \"nothing could be more successful. I know her word is trustworthy. The photograph is as safe as if it were burned.\"",
+          "es": "\"Al contrario, mi estimado señor,\" gritó el Rey; \"nada podría ser más exitoso. Sé que su palabra es confiable. La fotografía está tan segura como si estuviera quemada.\""
+        },
+        {
+          "en": "\"I'm glad to hear you say that, Your Majesty.\"",
+          "es": "\"Me alegra escucharte decir eso, Su Majestad.\""
+        }
+      ]
+    },
+    "32": {
+      "lines": [
+        {
+          "en": "\"I owe you a great debt. Please tell me how I can reward you. This ring—\" He took an emerald snake ring from his finger and held it out in his hand.",
+          "es": "\"Te debo una gran deuda. Por favor, dime cómo puedo recompensarte. Este anillo—\" Sacó un anillo de serpiente de esmeralda de su dedo y lo extendió en su mano."
+        },
+        {
+          "en": "\"Your Majesty has something I would value even more,\" said Holmes.",
+          "es": "\"Su Majestad tiene algo que yo valoraría mucho más,\" dijo Holmes."
+        },
+        {
+          "en": "\"Just name it.\"",
+          "es": "\"Solo dilo.\""
+        },
+        {
+          "en": "\"This photograph!\"",
+          "es": "\"¡Esta fotografía!\""
+        },
+        {
+          "en": "The King looked at him in surprise.",
+          "es": "El Rey lo miró con sorpresa."
+        },
+        {
+          "en": "\"Irene's photograph!\" he exclaimed. \"Certainly, if you want it.\"",
+          "es": "\"¡La fotografía de Irene!\" exclamó. \"Ciertamente, si la quieres.\""
+        },
+        {
+          "en": "\"Thank you, Your Majesty. Then there's nothing more to do. I wish you a very good morning.\" He bowed and, turning away without noticing the King's outstretched hand, left with me for his chambers.",
+          "es": "\"Gracias, Su Majestad. Entonces no hay nada más que hacer. Te deseo un muy buen día.\" Se inclinó y, dándose la vuelta sin notar la mano extendida del Rey, se fue conmigo a sus habitaciones."
+        },
+        {
+          "en": "That was how a big scandal almost affected the kingdom of Bohemia, and how Mr. Sherlock Holmes's best plans were outsmarted by a woman's cleverness. He used to joke about how smart women are, but I haven't heard him do that lately. When he talks about Irene Adler or mentions her photograph, he always calls her with respect, saying \"the woman.\"",
+          "es": "Así fue como un gran escándalo casi afectó al reino de Bohemia, y cómo los mejores planes del Señor Sherlock Holmes fueron superados por la inteligencia de una mujer. Él solía bromear sobre lo inteligentes que son las mujeres, pero no lo he escuchado hacer eso últimamente. Cuando habla de Irene Adler o menciona su fotografía, siempre la llama con respeto, diciendo \"la mujer.\""
+        }
+      ]
+    }
+  }
+};

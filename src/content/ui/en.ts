@@ -655,6 +655,12 @@ storiesMetadata: {
     hook: "Dorothy lives a dull life on the Kansas prairie until a whirlwind takes her on an unexpected journey.",
     description: "This classic story follows Dorothy, a young girl swept away from her home in Kansas to the magical Land of Oz. As she journeys to find her way back, she meets unforgettable companions—a Scarecrow in search of a brain, a Tin Woodman longing for a heart, and a Cowardly Lion seeking courage.\n\nTogether, they embark on an adventure filled with challenges, strange creatures, and powerful magic, all while discovering that the qualities they seek may have been within them all along.\n\nWritten by L. Frank Baum, this timeless tale has captivated readers for generations with its imaginative world, memorable characters, and enduring message about friendship, courage, and believing in oneself.\n\nAlthough written with young readers in mind, the story continues to resonate with audiences of all ages through its warmth, wonder, and universal themes.",
   },
+  "the-adventures-of-sherlock-holmes": {
+    title: "The Adventures of Sherlock Holmes",
+    hook: "Twelve cases. One consulting detective. And a London full of people with something to hide.",
+    description: "At 221B Baker Street, a visitor can arrive with an ordinary problem — an absurdly generous job offer, a fiancé who vanished on the way to the wedding, an envelope containing five orange pips — and leave an hour later having watched Sherlock Holmes take their life apart and put it back together. Narrated by his friend Dr. Watson, these twelve self-contained cases introduced the world to the detective who reads a man's history in his shirt cuffs. Read them in any order; each one stands on its own.",
+  },
+
 
 
 
