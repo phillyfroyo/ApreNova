@@ -350,6 +350,15 @@ export default function StoryLayoutWithAzureTTS({
     return storyMap.hasChapters ? `${getNavigationLabel("chapter")} ${chapterNumber}, ${getNavigationLabel("page")} ${pageNumber}` : `${getNavigationLabel("page")} ${pageNumber}`;
   })();
 
+  // Chapter title, shown on its own line beneath the chapter/page label.
+  // Only for stories whose content supplies metadata.title; omitted otherwise.
+  const chapterTitle = (() => {
+    const ch = storyMap.chapters.find((c) => c.chapter === chapterNumber);
+    const t = ch?.title?.trim();
+    if (!t || t === `${getNavigationLabel("chapter")} ${chapterNumber}`) return null;
+    return t;
+  })();
+
   let currentPagePosition = 0;
   let totalPages = 0;
   for (const ch of storyMap.chapters) { for (const pg of ch.pages) { totalPages++; if (ch.chapter === chapterNumber && pg === pageNumber) currentPagePosition = totalPages; } }
@@ -408,7 +417,7 @@ export default function StoryLayoutWithAzureTTS({
     tutorContext, setTutorContext, preloadedMessages, handleMessagesUpdate,
     scrollYBeforeTutorRef, tabOffsetY, tabDragRef, tabElRef, tabMomentumRef,
     getNavigationUrl, getHomeUrl, getNavigationLabel, getCurrentPoem,
-    usePoemNavigation, dynamicPageTitle, currentPagePosition, totalPages,
+    usePoemNavigation, dynamicPageTitle, chapterTitle, currentPagePosition, totalPages,
     isFinalPage, setIsFinalPage,
     theme, backgroundStyle, readOnlyMode,
     audioPlayer, sentenceRefs,

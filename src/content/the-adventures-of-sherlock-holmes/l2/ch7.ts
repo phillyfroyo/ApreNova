@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 2,
   "chapter": 7,
+  "metadata": {
+    "title": "The Adventure of the Blue Carbuncle"
+  },
   "pages": {
     "1": {
       "lines": [

@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 3,
   "chapter": 10,
+  "metadata": {
+    "title": "The Adventure of the Noble Bachelor"
+  },
   "pages": {
     "1": {
       "lines": [

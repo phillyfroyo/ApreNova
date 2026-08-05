@@ -200,6 +200,7 @@ export interface StoryReaderContextValue {
   getCurrentPoem: (chapterNum: number, pageNum: number) => PoemNavInfo | null;
   usePoemNavigation: boolean;
   dynamicPageTitle: string;
+  chapterTitle: string | null;
   currentPagePosition: number;
   totalPages: number;
   isFinalPage: boolean;

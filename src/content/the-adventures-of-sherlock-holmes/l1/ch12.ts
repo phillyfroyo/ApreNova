@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 1,
   "chapter": 12,
+  "metadata": {
+    "title": "The Adventure of the Copper Beeches"
+  },
   "pages": {
     "1": {
       "lines": [

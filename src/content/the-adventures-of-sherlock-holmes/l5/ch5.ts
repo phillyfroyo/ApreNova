@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 5,
   "chapter": 5,
+  "metadata": {
+    "title": "The Five Orange Pips"
+  },
   "pages": {
     "1": {
       "lines": [

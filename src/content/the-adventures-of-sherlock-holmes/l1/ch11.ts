@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 1,
   "chapter": 11,
+  "metadata": {
+    "title": "The Adventure of the Beryl Coronet"
+  },
   "pages": {
     "1": {
       "lines": [

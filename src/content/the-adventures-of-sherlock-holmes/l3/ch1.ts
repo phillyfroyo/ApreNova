@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 3,
   "chapter": 1,
+  "metadata": {
+    "title": "A Scandal in Bohemia"
+  },
   "pages": {
     "1": {
       "lines": [

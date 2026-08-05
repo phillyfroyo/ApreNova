@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 2,
   "chapter": 4,
+  "metadata": {
+    "title": "The Boscombe Valley Mystery"
+  },
   "pages": {
     "1": {
       "lines": [

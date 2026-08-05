@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 3,
   "chapter": 8,
+  "metadata": {
+    "title": "The Adventure of the Speckled Band"
+  },
   "pages": {
     "1": {
       "lines": [

@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 5,
   "chapter": 2,
+  "metadata": {
+    "title": "The Red-Headed League"
+  },
   "pages": {
     "1": {
       "lines": [

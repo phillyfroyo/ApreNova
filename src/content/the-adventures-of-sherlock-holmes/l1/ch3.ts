@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 1,
   "chapter": 3,
+  "metadata": {
+    "title": "A Case of Identity"
+  },
   "pages": {
     "1": {
       "lines": [

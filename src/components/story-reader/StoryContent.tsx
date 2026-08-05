@@ -9,7 +9,7 @@ import StanzaTranslationCard from "./StanzaTranslationCard";
 
 export default function StoryContent() {
   const {
-    sentences, stanzas, storyType, title, dynamicPageTitle,
+    sentences, stanzas, storyType, title, dynamicPageTitle, chapterTitle,
     typedLang, isStoryTutorOpen, isFinalPage,
     storySlug, currentLevel, chapterNumber, pageNumber,
   } = useStoryReader();
@@ -21,8 +21,19 @@ export default function StoryContent() {
     <div className={`flex flex-col items-start w-full max-w-md sm:max-w-lg px-4 transition-transform duration-300 ${
       isStoryTutorOpen ? "-translate-x-full lg:-translate-x-[50%]" : "translate-x-0 lg:translate-x-0 mx-auto"
     }`}>
-      <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
-      <h2 className="text-lg sm:text-xl text-center mb-2 w-full">{dynamicPageTitle}</h2>
+      {/* Headings break out of the text column's max-width so long chapter
+          titles don't wrap while there's room beside them. Width is clamped
+          to the viewport so narrow screens are unaffected. */}
+      <div
+        className="self-center shrink-0"
+        style={{ width: "min(46rem, calc(100vw - 2rem))" }}
+      >
+        <h1 className="text-2xl sm:text-3xl font-bold text-center w-full">{title}</h1>
+        {chapterTitle && (
+          <h2 className="text-lg sm:text-xl italic text-center w-full">{chapterTitle}</h2>
+        )}
+        <h3 className={`text-center mb-2 w-full ${chapterTitle ? "text-base sm:text-lg opacity-80" : "text-lg sm:text-xl"}`}>{dynamicPageTitle}</h3>
+      </div>
 
       {/* Render stanzas or flat sentences */}
       {stanzas && stanzas.length > 0 && isPoemType ? (

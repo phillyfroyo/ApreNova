@@ -2,6 +2,9 @@ export const chapterContent = {
   "storySlug": "the-adventures-of-sherlock-holmes",
   "level": 4,
   "chapter": 6,
+  "metadata": {
+    "title": "The Man with the Twisted Lip"
+  },
   "pages": {
     "1": {
       "lines": [
