@@ -295,6 +295,17 @@ export const STORY_METADATA: StoryMetadata[] = [
     },
   },
   {
+    slug: "the-adventures-of-sherlock-holmes",
+    image: "/images/the-adventures-of-sherlock-holmes-thumbnail-1280.jpeg",
+    levels: ["A1", "A2", "B1", "B2", "C1"],
+    type: "short-story-collection",
+    origin: { isOriginal: false, attribution: { author: { name: "Arthur Conan Doyle", lifespan: "1859-1930", note: "Scottish physician who wrote the Holmes stories between patients; created the modern detective story's template and then spent decades resenting it." }, yearWritten: "1891–1892", yearFirstPublished: 1892, sourceEdition: { title: "The Adventures of Sherlock Holmes", isPublicDomain: true, publicDomainNote: "Public domain in the United States (published 1892); author died 1930.", url: "https://www.gutenberg.org/ebooks/1661" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "England", genres: ["Detective fiction", "mystery", "crime", "short story collection", "Victorian literature"] } },
+    tags: ["mystery", "adventure", "suspenseful", "urban", "historical", "heroic", "friendship"],
+    targetAudience: "all",
+    addedAt: "2026-08-05",
+  },
+
+  {
     slug: "poems-by-emily-dickinson-complete",
     image: "/images/poems-by-emily-dickinson-complete-thumbnail-4653.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
@@ -354,17 +365,6 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["friendship","adventure","fantasy","heros-journey","heartwarming"],
     targetAudience: "all",
     addedAt: "2026-03-24",
-  },
-
-  {
-    slug: "the-adventures-of-sherlock-holmes",
-    image: "/images/the-adventures-of-sherlock-holmes-thumbnail-1280.jpeg",
-    levels: ["A1", "A2", "B1", "B2", "C1"],
-    type: "short-story-collection",
-    origin: { isOriginal: false, attribution: { author: { name: "Arthur Conan Doyle", lifespan: "1859-1930", note: "Scottish physician who wrote the Holmes stories between patients; created the modern detective story's template and then spent decades resenting it." }, yearWritten: "1891–1892", yearFirstPublished: 1892, sourceEdition: { title: "The Adventures of Sherlock Holmes", isPublicDomain: true, publicDomainNote: "Public domain in the United States (published 1892); author died 1930.", url: "https://www.gutenberg.org/ebooks/1661" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "England", genres: ["Detective fiction", "mystery", "crime", "short story collection", "Victorian literature"] } },
-    tags: ["mystery", "adventure", "suspenseful", "urban", "historical", "heroic", "friendship"],
-    targetAudience: "all",
-    addedAt: "2026-08-05",
   },
 ];
 
