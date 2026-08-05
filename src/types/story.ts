@@ -180,9 +180,19 @@ export type StoryOrigin =
 // ============================================
 // DESCRIPTIONS
 // ============================================
+/** SEO copy only — not rendered in the UI. `summary` feeds the meta
+ *  description and JSON-LD Book.description; `hook` is currently unused
+ *  by the app. Per-language because the search snippet must match the
+ *  page's hreflang, and because the target language is relative to the
+ *  reader: an /es visitor is learning English, an /en visitor Spanish. */
+export type LocalizedText = {
+  en: string;
+  es: string;
+};
+
 export type StoryDescriptions = {
-  hook: string;                        // One-line hook for catalog
-  summary?: string;                    // 2-3 paragraph description
+  hook: LocalizedText;                 // One-line hook for catalog
+  summary?: LocalizedText;             // 2-3 paragraph description
 };
 
 // ============================================

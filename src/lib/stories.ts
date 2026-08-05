@@ -230,8 +230,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["adventure","mystery","friendship","suspenseful","heartwarming"],
     targetAudience: "all",
     descriptions: {
-      hook: "An enchanted forest, hidden creatures, and a mystery only the curious can solve. A Spanish adventure for learners.",
-      summary: "Read Aventura in Spanish at A1–C1: a short adventure-mystery set in an enchanted forest. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+      hook: {
+        en: "An enchanted forest, hidden creatures, and a mystery only the curious can solve. A Spanish adventure for learners.",
+        es: "Un bosque encantado, criaturas escondidas y un misterio que solo los curiosos pueden resolver. Una aventura en inglés para estudiantes.",
+      },
+      summary: {
+        en: "Read Aventura in Spanish at A1–C1: a short adventure-mystery set in an enchanted forest. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+        es: "Lee Aventura en inglés de A1 a C1: una breve aventura de misterio ambientada en un bosque encantado. Traducción integrada, audio palabra por palabra y modo de lectura bilingüe. Un original de Cuentana.",
+      },
     },
   },
   {
@@ -245,8 +251,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["suspenseful","heartwarming","reflective","inspiring"],
     targetAudience: "all",
     descriptions: {
-      hook: "A girl who can barely speak in class is asked to read a poem on stage in front of the entire school.",
-      summary: "Read The Last Word in Spanish at A1–C1: a short coming-of-age story about stage fright, grief, and finding your voice. Built-in translation and word-by-word audio. A Cuentana original.",
+      hook: {
+        en: "A girl who can barely speak in class is asked to read a poem on stage in front of the entire school.",
+        es: "A una chica que apenas puede hablar en clase le piden leer un poema en el escenario frente a toda la escuela.",
+      },
+      summary: {
+        en: "Read The Last Word in Spanish at A1–C1: a short coming-of-age story about stage fright, grief, and finding your voice. Built-in translation and word-by-word audio. A Cuentana original.",
+        es: "Lee The Last Word en inglés de A1 a C1: un breve relato de crecimiento sobre el miedo escénico, el duelo y encontrar la propia voz. Traducción integrada y audio palabra por palabra. Un original de Cuentana.",
+      },
     },
   },
   {
@@ -261,8 +273,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     targetAudience: "all",
     addedAt: "2026-05-18",
     descriptions: {
-      hook: "An ordinary Saturday morning, told one quiet detail at a time. Nothing happens. Everything happens.",
-      summary: "A short, reflective vignette for Spanish learners: Maya's Saturday morning told in small, repeating details — the vendor's call, the green motorcycle, the light on the wall. Read at A1–C1 with built-in translation, word-by-word audio, and bilingual mode. The first in a series of parallel-lives stories from Cuentana.",
+      hook: {
+        en: "An ordinary Saturday morning, told one quiet detail at a time. Nothing happens. Everything happens.",
+        es: "Un sábado por la mañana cualquiera, contado con un detalle tranquilo a la vez. No pasa nada. Pasa todo.",
+      },
+      summary: {
+        en: "A short, reflective vignette for Spanish learners: Maya's Saturday morning told in small, repeating details — the vendor's call, the green motorcycle, the light on the wall. Read at A1–C1 with built-in translation, word-by-word audio, and bilingual mode. The first in a series of parallel-lives stories from Cuentana.",
+        es: "Una viñeta breve y reflexiva para estudiantes de inglés: el sábado por la mañana de Maya, contado en pequeños detalles que se repiten: el pregón del vendedor, la motocicleta verde, la luz en la pared. Léela de A1 a C1 con traducción integrada, audio palabra por palabra y modo bilingüe. La primera de una serie de historias de vidas paralelas de Cuentana.",
+      },
     },
   },
   {
@@ -276,8 +294,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     tags: ["technology","reflective","inspiring","heartwarming"],
     targetAudience: "all",
     descriptions: {
-      hook: "A teenager drops his phone out a window and must survive a month without it.",
-      summary: "Read Diego Unplugged in Spanish at A1–C1: a short story about a phone-addicted teen forced offline for a month. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+      hook: {
+        en: "A teenager drops his phone out a window and must survive a month without it.",
+        es: "Un adolescente deja caer su teléfono por la ventana y debe sobrevivir un mes sin él.",
+      },
+      summary: {
+        en: "Read Diego Unplugged in Spanish at A1–C1: a short story about a phone-addicted teen forced offline for a month. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+        es: "Lee Diego Unplugged en inglés de A1 a C1: un relato breve sobre un adolescente adicto al teléfono obligado a desconectarse durante un mes. Traducción integrada, audio palabra por palabra y modo de lectura bilingüe. Un original de Cuentana.",
+      },
     },
   },{
     slug: "my-day",
@@ -290,8 +314,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     structureType: "anthology",
     tags: [],
     descriptions: {
-      hook: "A simple Spanish poem about the rhythm of an ordinary day, from dawn to dusk.",
-      summary: "Read My Day in Spanish at A1–C1: a short poem capturing the rhythm of a single day, dawn to dusk. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+      hook: {
+        en: "A simple Spanish poem about the rhythm of an ordinary day, from dawn to dusk.",
+        es: "Un poema sencillo en inglés sobre el ritmo de un día cualquiera, del amanecer al anochecer.",
+      },
+      summary: {
+        en: "Read My Day in Spanish at A1–C1: a short poem capturing the rhythm of a single day, dawn to dusk. Built-in translation, word-by-word audio, and bilingual reading mode. A Cuentana original.",
+        es: "Lee My Day en inglés de A1 a C1: un poema breve que captura el ritmo de un solo día, del amanecer al anochecer. Traducción integrada, audio palabra por palabra y modo de lectura bilingüe. Un original de Cuentana.",
+      },
     },
   },
   {
@@ -299,8 +329,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     image: "/images/the-adventures-of-sherlock-holmes-thumbnail-1280.jpeg",
     levels: ["A1", "A2", "B1", "B2", "C1"],
     descriptions: {
-      hook: "Arthur Conan Doyle's 1892 detective stories, adapted for Spanish learners from A1 to C1.",
-      summary: "Read The Adventures of Sherlock Holmes in Spanish at A1–C1: twelve self-contained cases from 221B Baker Street, narrated by Dr. Watson. Built-in translation, word-by-word audio, and bilingual mode.",
+      hook: {
+        en: "Arthur Conan Doyle's 1892 detective stories, adapted for Spanish learners from A1 to C1.",
+        es: "Los relatos policiacos de 1892 de Arthur Conan Doyle, adaptados para estudiantes de inglés de A1 a C1.",
+      },
+      summary: {
+        en: "Read The Adventures of Sherlock Holmes in Spanish at A1–C1: twelve self-contained cases from 221B Baker Street, narrated by Dr. Watson. Built-in translation, word-by-word audio, and bilingual mode.",
+        es: "Lee Las aventuras de Sherlock Holmes en inglés de A1 a C1: doce casos independientes desde el 221B de Baker Street, narrados por el doctor Watson. Traducción integrada, audio palabra por palabra y modo bilingüe.",
+      },
     },
     type: "short-story-collection",
     origin: { isOriginal: false, attribution: { author: { name: "Arthur Conan Doyle", lifespan: "1859-1930", note: "Scottish physician who wrote the Holmes stories between patients; created the modern detective story's template and then spent decades resenting it." }, yearWritten: "1891–1892", yearFirstPublished: 1892, sourceEdition: { title: "The Adventures of Sherlock Holmes", isPublicDomain: true, publicDomainNote: "Public domain in the United States (published 1892); author died 1930.", url: "https://www.gutenberg.org/ebooks/1661" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana." }, region: "England", genres: ["Detective fiction", "mystery", "crime", "short story collection", "Victorian literature"] } },
@@ -315,8 +351,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
     originalLevel: "C2",
     descriptions: {
-      hook: "Emily Dickinson's complete poetry, adapted for Spanish learners across all CEFR levels.",
-      summary: "Read Emily Dickinson's poems in Spanish at A1–C2: the complete 1890 collection, edited by Mabel Loomis Todd and T.W. Higginson. Built-in translation, word-by-word audio, and bilingual mode.",
+      hook: {
+        en: "Emily Dickinson's complete poetry, adapted for Spanish learners across all CEFR levels.",
+        es: "La poesía completa de Emily Dickinson, adaptada para estudiantes de inglés en todos los niveles del MCER.",
+      },
+      summary: {
+        en: "Read Emily Dickinson's poems in Spanish at A1–C2: the complete 1890 collection, edited by Mabel Loomis Todd and T.W. Higginson. Built-in translation, word-by-word audio, and bilingual mode.",
+        es: "Lee los poemas de Emily Dickinson en inglés de A1 a C2: la colección completa de 1890, editada por Mabel Loomis Todd y T.W. Higginson. Traducción integrada, audio palabra por palabra y modo bilingüe.",
+      },
     },
     type: "poem",
     origin: { isOriginal: false, attribution: { author: { name: "Emily Dickinson", lifespan: "1830-1886", note: "Emily Dickinson was a recluse by temperament and habit, known for her unique and remote personality." }, sourceEdition: { title: "Poems by Emily Dickinson", publisher: "Not specified", editor: "Mabel Loomis Todd and T.W. Higginson", isPublicDomain: true, publicDomainNote: "Emily Dickinson died in 1886, and her works are in the public domain.", url: "https://www.gutenberg.org/ebooks/12242" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/12242" }, region: "United States", culturalInfluences: ["American"], genres: ["poetry"] } },
@@ -329,8 +371,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
     descriptions: {
-      hook: "F. Scott Fitzgerald's 1925 classic novel, adapted for Spanish learners from A1 to C1.",
-      summary: "Read The Great Gatsby in Spanish at A1–C1: Fitzgerald's 1925 American classic about love, wealth, and the green light across the bay. Built-in translation, word-by-word audio, and bilingual mode.",
+      hook: {
+        en: "F. Scott Fitzgerald's 1925 classic novel, adapted for Spanish learners from A1 to C1.",
+        es: "La novela clásica de 1925 de F. Scott Fitzgerald, adaptada para estudiantes de inglés de A1 a C1.",
+      },
+      summary: {
+        en: "Read The Great Gatsby in Spanish at A1–C1: Fitzgerald's 1925 American classic about love, wealth, and the green light across the bay. Built-in translation, word-by-word audio, and bilingual mode.",
+        es: "Lee El gran Gatsby en inglés de A1 a C1: el clásico estadounidense de 1925 de Fitzgerald sobre el amor, la riqueza y la luz verde al otro lado de la bahía. Traducción integrada, audio palabra por palabra y modo bilingüe.",
+      },
     },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "F. Scott Fitzgerald", lifespan: "1896 - 1940" }, yearWritten: "1925", sourceEdition: { isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/64317" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/64317" } } },
@@ -345,8 +393,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     levels: ["A1", "A2", "B1", "B2", "C1"],
     originalLevel: "C1",
     descriptions: {
-      hook: "Mark Twain's 1876 classic, adapted for Spanish learners from A1 to C1.",
-      summary: "Read The Adventures of Tom Sawyer in Spanish at A1–C1: Twain's 1876 tale of a mischievous boy in a Mississippi River town. Built-in translation, word-by-word audio, and bilingual mode.",
+      hook: {
+        en: "Mark Twain's 1876 classic, adapted for Spanish learners from A1 to C1.",
+        es: "El clásico de 1876 de Mark Twain, adaptado para estudiantes de inglés de A1 a C1.",
+      },
+      summary: {
+        en: "Read The Adventures of Tom Sawyer in Spanish at A1–C1: Twain's 1876 tale of a mischievous boy in a Mississippi River town. Built-in translation, word-by-word audio, and bilingual mode.",
+        es: "Lee Las aventuras de Tom Sawyer en inglés de A1 a C1: el relato de 1876 de Twain sobre un niño travieso en un pueblo a orillas del río Misisipi. Traducción integrada, audio palabra por palabra y modo bilingüe.",
+      },
     },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "Mark Twain", lifespan: "1835-1910", note: "Mark Twain is the pen name of Samuel Langhorne Clemens." }, yearWritten: "c. 1876", yearFirstPublished: 1876, sourceEdition: { title: "The Adventures of Tom Sawyer", isPublicDomain: true, publicDomainNote: "Published before 1928 and author died over 70 years ago.", url: "https://www.gutenberg.org/ebooks/74" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/74" }, region: "United States", genres: ["novel", "children's literature"] } },
@@ -361,8 +415,14 @@ export const STORY_METADATA: StoryMetadata[] = [
     levels: ["A1", "A2", "B1", "B2"],
     originalLevel: "B2",
     descriptions: {
-      hook: "L. Frank Baum's 1900 fairy tale, adapted for Spanish learners from A1 to B2.",
-      summary: "Read The Wonderful Wizard of Oz in Spanish at A1–B2: Baum's 1900 fairy tale of Dorothy, Toto, and the yellow brick road. Built-in translation, word-by-word audio, and bilingual mode.",
+      hook: {
+        en: "L. Frank Baum's 1900 fairy tale, adapted for Spanish learners from A1 to B2.",
+        es: "El cuento de hadas de 1900 de L. Frank Baum, adaptado para estudiantes de inglés de A1 a B2.",
+      },
+      summary: {
+        en: "Read The Wonderful Wizard of Oz in Spanish at A1–B2: Baum's 1900 fairy tale of Dorothy, Toto, and the yellow brick road. Built-in translation, word-by-word audio, and bilingual mode.",
+        es: "Lee El maravilloso mago de Oz en inglés de A1 a B2: el cuento de hadas de 1900 de Baum sobre Dorothy, Toto y el camino de baldosas amarillas. Traducción integrada, audio palabra por palabra y modo bilingüe.",
+      },
     },
     type: "novel",
     origin: { isOriginal: false, attribution: { author: { name: "L. Frank Baum", lifespan: "1856 – 1919" }, yearWritten: "1900", sourceEdition: { title: "The Wonderful Wizard of Oz", publicationYear: 1900, isPublicDomain: true, url: "https://www.gutenberg.org/ebooks/55" }, rights: { originalWorkStatus: "public-domain", displayStatement: "The original text is in the public domain. This educational adaptation © Cuentana.", provenanceUrl: "https://www.gutenberg.org/ebooks/55" }, region: "United States", genres: ["fairy tale", "children's literature"] } },

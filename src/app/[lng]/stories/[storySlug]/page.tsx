@@ -48,8 +48,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
     : `${title} — ${langLabel} Stories`;
 
   // Description: prefer registry hand-tuned summary, then hook, else template.
-  const hook = storyMeta.descriptions?.hook;
-  const summary = storyMeta.descriptions?.summary;
+  const hook = storyMeta.descriptions?.hook?.[lng];
+  const summary = storyMeta.descriptions?.summary?.[lng];
   const description = (summary || hook ||
     (lng === "es"
       ? `Lee "${title}" en inglés con traducción integrada, audio palabra por palabra y modo bilingüe en Cuentana.`
@@ -164,7 +164,7 @@ export default async function StoryInfoPage({ params }: { params: Promise<RouteP
         inLanguage: targetLanguageCode,
         url: infoUrl,
         ...(ogImage ? { image: ogImage } : {}),
-        ...(story.descriptions?.summary ? { description: story.descriptions.summary } : {}),
+        ...(story.descriptions?.summary?.[typedLang] ? { description: story.descriptions.summary[typedLang] } : {}),
       },
       {
         "@type": "BreadcrumbList",

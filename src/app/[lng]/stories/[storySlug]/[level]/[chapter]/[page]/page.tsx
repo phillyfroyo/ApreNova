@@ -39,8 +39,8 @@ export async function generateMetadata({ params }: { params: Promise<RouteParams
   const fullTitle = `${title} — ${cefrLevel} ${langLabel}`;
 
   // Description: prefer the hand-tuned hook/summary, fall back to a template.
-  const hook = storyMeta.descriptions?.hook;
-  const summary = storyMeta.descriptions?.summary;
+  const hook = storyMeta.descriptions?.hook?.[lng];
+  const summary = storyMeta.descriptions?.summary?.[lng];
   const description = (summary || hook ||
     (lng === "es"
       ? `Lee "${title}" en inglés al nivel ${cefrLevel}. Traducción integrada, audio con resaltado palabra por palabra, y modo bilingüe.`
@@ -144,7 +144,7 @@ export default async function Page({ params }: { params: Promise<RouteParams> })
         inLanguage: targetLanguageCode,
         url: storyUrl,
         ...(storyImage ? { image: storyImage } : {}),
-        ...(storyMeta.descriptions?.summary ? { description: storyMeta.descriptions.summary } : {}),
+        ...(storyMeta.descriptions?.summary?.[lng as Language] ? { description: storyMeta.descriptions.summary[lng as Language] } : {}),
       },
       {
         "@type": "LearningResource",
