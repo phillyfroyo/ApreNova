@@ -1,0 +1,386 @@
+[
+ {
+  "page": 1,
+  "matches": [
+   {
+    "lineIndex": 0,
+    "matchedText": "I rarely heard him call her",
+    "sentence": "I rarely heard him call her by any other name.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Simple past tense showing a habitual action in the past."
+   },
+   {
+    "lineIndex": 0,
+    "matchedText": "has seen",
+    "sentence": "I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position.",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "Present perfect tense showing an experience completed."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "who hated",
+    "sentence": "Holmes, who hated all forms of society, stayed in our rooms on Baker Street.",
+    "pointId": "u1-pronouns",
+    "confidence": "high",
+    "note": "Relative pronoun introducing a clause providing more information about Holmes."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "was buried",
+    "sentence": "He was buried in his books, switching between the calm of the drug and the energy of his nature.",
+    "pointId": "u1-active-passive",
+    "confidence": "high",
+    "note": "Passive form indicating the subject receives the action."
+   },
+   {
+    "lineIndex": 2,
+    "matchedText": "As I passed",
+    "sentence": "As I passed the familiar door, I felt a strong desire to see Holmes again and find out how he was using his amazing skills.",
+    "pointId": "u1-tenses-time-clauses",
+    "confidence": "high",
+    "note": "Time clause showing an action that happened at the same time as another action."
+   },
+   {
+    "lineIndex": 2,
+    "matchedText": "told me he was working again",
+    "sentence": "I knew his every habit, and his manner told me he was working again.",
+    "pointId": "u2-rv-do-clause",
+    "confidence": "high",
+    "note": "Reporting verb followed by an object and a clause."
+   },
+   {
+    "lineIndex": 6,
+    "matchedText": "you are practicing",
+    "sentence": "And you are practicing again, I see.",
+    "pointId": "u2-present-continuous",
+    "confidence": "high",
+    "note": "Present continuous indicating an ongoing action."
+   },
+   {
+    "lineIndex": 6,
+    "matchedText": "to return",
+    "sentence": "You didn’t tell me you planned to return to work.",
+    "pointId": "u2-rv-do-inf",
+    "confidence": "high",
+    "note": "Reporting verb with object followed by an infinitive verb."
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 2296,
+   "completion_tokens": 480,
+   "total_tokens": 2776,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "audio_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "audio_tokens": 0,
+    "accepted_prediction_tokens": 0,
+    "rejected_prediction_tokens": 0
+   }
+  }
+ },
+ {
+  "page": 2,
+  "matches": [
+   {
+    "lineIndex": 0,
+    "matchedText": "I see",
+    "sentence": "\"I see it, I deduce it.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple tense describing a habitual action."
+   },
+   {
+    "lineIndex": 0,
+    "matchedText": "I deduce",
+    "sentence": "\"I see it, I deduce it.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple tense describing a habitual action."
+   },
+   {
+    "lineIndex": 0,
+    "matchedText": "you’ve been",
+    "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "Present perfect used for an action that occurred recently and has relevance now."
+   },
+   {
+    "lineIndex": 0,
+    "matchedText": "girl",
+    "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?",
+    "pointId": "u1-pronouns",
+    "confidence": "medium",
+    "note": "The word 'girl' isn't actually a pronoun but a mistake - should have marked 'careless' as part of the point instead."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "this is too much",
+    "sentence": "\"My dear Holmes,\" I said, \"this is too much.",
+    "pointId": "u1-determiners",
+    "confidence": "high",
+    "note": "Use of 'too much' to indicate excessive amount."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "would have been burned",
+    "sentence": "You would have been burned as a witch a few centuries ago.",
+    "pointId": "u3-conditionals",
+    "confidence": "high",
+    "note": "This is a third conditional structure implying an unreal past condition."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "had a country walk",
+    "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple describing a completed action in the past."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "came back",
+    "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple describing a completed action in the past."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "changed",
+    "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple tense describing a completed action."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "As for Mary Jane, she is hopeless",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+    "pointId": "u1-pronouns",
+    "confidence": "medium",
+    "note": "Not a pronoun but indicating an error. 'Mary Jane' is a specific person."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "my wife has given her notice",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "Present perfect for an action completed at a non-specific time in the past."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "don’t see",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple tense indicating lack of understanding."
+   },
+   {
+    "lineIndex": 1,
+    "matchedText": "worked it out",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple tense indicating solving or concluding."
+   },
+   {
+    "lineIndex": 2,
+    "matchedText": "to himself",
+    "sentence": "He laughed to himself and rubbed his long, nervous hands together.",
+    "pointId": "u1-pronouns",
+    "confidence": "high",
+    "note": "Reflexive pronoun indicating the action of laughing was directed back at the subject."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "they were made",
+    "sentence": "They were made by someone who scraped around the sole to remove mud.",
+    "pointId": "u1-active-passive",
+    "confidence": "high",
+    "note": "Passive voice indicating the action was performed by someone else."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "scraped around",
+    "sentence": "They were made by someone who scraped around the sole to remove mud.",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "Past simple describing an action completed in the past."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "I deduced",
+    "sentence": "So, I deduced you had been out in bad weather and had a particularly careless servant.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple indicating an action of concluding based on evidence."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "you had been out",
+    "sentence": "So, I deduced you had been out in bad weather and had a particularly careless servant.",
+    "pointId": "u2-past-simple",
+    "confidence": "low",
+    "note": "This technically is past perfect tense, but as a B1-level concept, it can be loosely connected to past action completion."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "had a particularly careless servant",
+    "sentence": "So, I deduced you had been out in bad weather and had a particularly careless servant.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple indicating a possession or association in the past."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "if a man comes",
+    "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+    "pointId": "u3-conditionals",
+    "confidence": "high",
+    "note": "First conditional indicating a real condition and result."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "comes",
+    "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple in the conditional clause indicating future possibility."
+   },
+   {
+    "lineIndex": 3,
+    "matchedText": "hides",
+    "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple describing a habitual action."
+   },
+   {
+    "lineIndex": 4,
+    "matchedText": "I hear",
+    "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple used to express regular activity or frequency."
+   },
+   {
+    "lineIndex": 4,
+    "matchedText": "seems",
+    "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple expressing a state or consistency."
+   },
+   {
+    "lineIndex": 4,
+    "matchedText": "could do",
+    "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+    "pointId": "u2-modals",
+    "confidence": "high",
+    "note": "Modal verb expressing potential ability."
+   },
+   {
+    "lineIndex": 4,
+    "matchedText": "am puzzled",
+    "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+    "pointId": "u2-present-simple",
+    "confidence": "medium",
+    "note": "Present simple expressing current feeling or state."
+   },
+   {
+    "lineIndex": 4,
+    "matchedText": "are",
+    "sentence": "Yet I believe my eyes are as good as yours.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple describing general truth or state."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "replied",
+    "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair.",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple tense indicating a completed action."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "lighting",
+    "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair.",
+    "pointId": "u2-present-continuous",
+    "confidence": "medium",
+    "note": "Participle form indicating an ongoing action relative to another past action."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "sitting",
+    "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair.",
+    "pointId": "u2-present-continuous",
+    "confidence": "medium",
+    "note": "Participial form indicating concurrent action."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "You see",
+    "sentence": "\"You see, but you do not observe.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple indicating habitual activity."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "do not observe",
+    "sentence": "\"You see, but you do not observe.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple in negative form indicating habitual lack."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "is",
+    "sentence": "The difference is clear.",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple indicating a state or condition."
+   },
+   {
+    "lineIndex": 5,
+    "matchedText": "you have often seen",
+    "sentence": "For example, you have often seen the steps leading up from the hall to this room.",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "Present perfect simple emphasizing experience up to now."
+   },
+   {
+    "lineIndex": 6,
+    "matchedText": "Often",
+    "sentence": "\"Often.",
+    "pointId": "u1-determiners",
+    "confidence": "medium",
+    "note": "While not a determiner by rule, this answers a frequency question, often expected in descriptions."
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 2044,
+   "completion_tokens": 2227,
+   "total_tokens": 4271,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "audio_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "audio_tokens": 0,
+    "accepted_prediction_tokens": 0,
+    "rejected_prediction_tokens": 0
+   }
+  }
+ }
+]

@@ -1,0 +1,1976 @@
+{
+ "pages": [
+  1,
+  2,
+  3,
+  4
+ ],
+ "summary": [
+  {
+   "model": "gpt-4o",
+   "total": 49,
+   "anchored": 47,
+   "unanchored": 2,
+   "anchorRate": 95.9,
+   "badPointId": 0,
+   "badLineIndex": 0,
+   "highConfidence": 44,
+   "highAnchored": 42,
+   "filteredOut": 5,
+   "pointsCovered": 13,
+   "pointsCoveredHigh": 11,
+   "pointsCoveredList": [
+    "u1-active-passive",
+    "u1-determiners",
+    "u1-pronouns",
+    "u1-tenses-time-clauses",
+    "u2-modals",
+    "u2-past-simple",
+    "u2-present-continuous",
+    "u2-present-perfect",
+    "u2-present-simple",
+    "u2-reported-speech",
+    "u2-rv-do-clause",
+    "u3-conditionals",
+    "u3-word-building"
+   ],
+   "avgSpanTokens": 3.96,
+   "perPage": [
+    {
+     "page": 1,
+     "matches": 9,
+     "anchored": 9
+    },
+    {
+     "page": 2,
+     "matches": 17,
+     "anchored": 17
+    },
+    {
+     "page": 3,
+     "matches": 9,
+     "anchored": 9
+    },
+    {
+     "page": 4,
+     "matches": 14,
+     "anchored": 12
+    }
+   ],
+   "promptTokens": 8234,
+   "completionTokens": 4070,
+   "failures": [
+    {
+     "page": 4,
+     "reason": "not found in line",
+     "lineIndex": 6,
+     "matchedText": "said"
+    },
+    {
+     "page": 4,
+     "reason": "not found in line",
+     "lineIndex": 6,
+     "matchedText": "is known for"
+    }
+   ],
+   "cacheReadTokens": 0,
+   "totalSeconds": 33.5
+  },
+  {
+   "model": "claude-sonnet-5",
+   "total": 162,
+   "anchored": 161,
+   "unanchored": 1,
+   "anchorRate": 99.4,
+   "badPointId": 0,
+   "badLineIndex": 0,
+   "highConfidence": 115,
+   "highAnchored": 114,
+   "filteredOut": 47,
+   "pointsCovered": 15,
+   "pointsCoveredHigh": 15,
+   "pointsCoveredList": [
+    "u1-active-passive",
+    "u1-determiners",
+    "u1-pronouns",
+    "u1-tenses-time-clauses",
+    "u2-commands",
+    "u2-modals",
+    "u2-past-simple",
+    "u2-present-continuous",
+    "u2-present-perfect",
+    "u2-present-simple",
+    "u2-rv-clause",
+    "u2-rv-do-clause",
+    "u2-rv-inf",
+    "u3-conditionals",
+    "u3-word-building"
+   ],
+   "avgSpanTokens": 1.77,
+   "perPage": [
+    {
+     "page": 1,
+     "matches": 53,
+     "anchored": 52
+    },
+    {
+     "page": 2,
+     "matches": 44,
+     "anchored": 44
+    },
+    {
+     "page": 3,
+     "matches": 34,
+     "anchored": 34
+    },
+    {
+     "page": 4,
+     "matches": 31,
+     "anchored": 31
+    }
+   ],
+   "promptTokens": 2654,
+   "completionTokens": 43177,
+   "failures": [
+    {
+     "page": 1,
+     "reason": "not found in line",
+     "lineIndex": 1,
+     "matchedText": "was drawn"
+    }
+   ],
+   "cacheReadTokens": 8349,
+   "totalSeconds": 342.1
+  }
+ ],
+ "raw": {
+  "openai": [
+   {
+    "page": 1,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "has seen",
+      "sentence": "I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect indicating an action at an indefinite time in the past."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "would have been",
+      "sentence": "I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position.",
+      "pointId": "u3-conditionals",
+      "confidence": "high",
+      "note": "Part of a third conditional implying a hypothetical situation in the past."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "questionable",
+      "sentence": "Yet, there was only one woman for him, and that was the late Irene Adler, of uncertain and questionable memory.",
+      "pointId": "u3-word-building",
+      "confidence": "high",
+      "note": "The word uses the suffix '-able', changing the meaning of the root word."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "who",
+      "sentence": "Holmes, who hated all forms of society, stayed in our rooms on Baker Street.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Relative pronoun introducing a dependent clause."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "was buried",
+      "sentence": "He was buried in his books, switching between the calm of the drug and the energy of his nature.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive form indicating that something else buried him (in a non-literal sense)."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "As I passed",
+      "sentence": "As I passed the familiar door, I felt a strong desire to see Holmes again and find out how he was using his amazing skills.",
+      "pointId": "u1-tenses-time-clauses",
+      "confidence": "high",
+      "note": "Time clause introduced by 'as', indicating the timing of the action."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "was working",
+      "sentence": "I knew his every habit, and his manner told me he was working again.",
+      "pointId": "u2-reported-speech",
+      "confidence": "medium",
+      "note": "Backshifted reported speech showing indirect reporting of his activities."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "are practicing",
+      "sentence": "\"Indeed, I thought it might be a bit more. Just a little more, Watson. And you are practicing again, I see.",
+      "pointId": "u2-present-continuous",
+      "confidence": "high",
+      "note": "Present continuous indicating an action currently in progress."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "didn’t tell me you planned",
+      "sentence": "You didn’t tell me you planned to return to work.\"",
+      "pointId": "u2-rv-do-clause",
+      "confidence": "medium",
+      "note": "Reporting verb plus direct object and clause, indicating something left unspoken."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 2296,
+     "completion_tokens": 596,
+     "total_tokens": 2892,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+     },
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+     }
+    },
+    "seconds": 6.213
+   },
+   {
+    "page": 2,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "I see",
+      "sentence": "\"I see it, I deduce it.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'see' is in the present simple tense."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "this is too much",
+      "sentence": "\"My dear Holmes,\" I said, \"this is too much.",
+      "pointId": "u1-determiners",
+      "confidence": "high",
+      "note": "'too much' shows excess, a teachable use of 'too'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "would have been burned",
+      "sentence": "You would have been burned as a witch a few centuries ago.",
+      "pointId": "u3-conditionals",
+      "confidence": "high",
+      "note": "This is a third conditional implying an unreal past scenario."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "I had a country walk",
+      "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "'had' is in the past simple tense."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "how you deduce it",
+      "sentence": "I don’t see how you deduce it.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'deduce' is in the present simple tense."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "As for Mary Jane, she is hopeless",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'is' is in the present simple tense."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "my wife has given her notice",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "'has given' is in the present perfect simple tense."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "how you worked it out",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "'worked' is in the past simple tense."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "to himself",
+      "sentence": "He laughed to himself and rubbed his long, nervous hands together.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "'himself' is a reflexive pronoun."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "they were made by someone",
+      "sentence": "They were made by someone who scraped around the sole to remove mud.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive voice indicating the subject receives the action."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "you had been out",
+      "sentence": "So, I deduced you had been out in bad weather and had a particularly careless servant.",
+      "pointId": "u3-conditionals",
+      "confidence": "medium",
+      "note": "Part of a past deduction or unreal condition."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "if a man comes into my rooms",
+      "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+      "pointId": "u3-conditionals",
+      "confidence": "high",
+      "note": "First conditional with 'if' in the present simple."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "I must be very dull",
+      "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "'must' indicates obligation or deduction."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "it always seems so simple",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'seems' is in the present simple tense."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "I could do",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "'could' indicates ability or possibility in the past."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "You see, but you do not observe",
+      "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair. \"You see, but you do not observe.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'see' and 'do not observe' are in the present simple tense."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "you have often seen",
+      "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair. \"You see, but you do not observe. The difference is clear. For example, you have often seen the steps leading up from the hall to this room.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "'have seen' is in the present perfect simple tense."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 2044,
+     "completion_tokens": 1200,
+     "total_tokens": 3244,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+     },
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+     }
+    },
+    "seconds": 11.457
+   },
+   {
+    "page": 3,
+    "matches": [
+     {
+      "lineIndex": 3,
+      "matchedText": "these little problems",
+      "sentence": "\"Exactly! You have not observed. Yet you have seen. That’s my point. I know there are seventeen steps because I have both seen and observed. By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.\"",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'These' functions as a demonstrative determiner here."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "about some of my experiences",
+      "sentence": "\"Exactly! You have not observed. Yet you have seen. That’s my point. I know there are seventeen steps because I have both seen and observed. By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.\"",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'Some' is used as a quantifier determiner here."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "you might like",
+      "sentence": "\"Exactly! You have not observed. Yet you have seen. That’s my point. I know there are seventeen steps because I have both seen and observed. By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.\"",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "'Might' is a modal verb indicating possibility."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "He handed me a sheet of thick, pink-tinted notepaper",
+      "sentence": "\"Exactly! You have not observed. Yet you have seen. That’s my point. I know there are seventeen steps because I have both seen and observed. By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.\" He handed me a sheet of thick, pink-tinted notepaper from the table.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "The verb 'handed' is in the past simple tense."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "Your recent help to a royal family in Europe shows you can be trusted with serious matters.",
+      "sentence": "\"A gentleman will call on you tonight, at a quarter to eight,\" it said, \"to consult you on a very important matter. Your recent help to a royal family in Europe shows you can be trusted with serious matters. We have heard this about you from many sources. Be in your room at that time, and don’t be surprised if your visitor wears a mask.\"",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "'Can be trusted' is a passive construction using a modal."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "you can be trusted with serious matters",
+      "sentence": "\"A gentleman will call on you tonight, at a quarter to eight,\" it said, \"to consult you on a very important matter. Your recent help to a royal family in Europe shows you can be trusted with serious matters. We have heard this about you from many sources. Be in your room at that time, and don’t be surprised if your visitor wears a mask.\"",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "'Can' is a modal verb suggesting ability or possibility."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "What do you think it means?",
+      "sentence": "\"This is a real mystery,\" I said. \"What do you think it means?\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'Think' is in the present simple tense here."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "I have no information yet",
+      "sentence": "\"I have no information yet. It’s a big mistake to theorize before having data. One starts to twist facts to fit theories, instead of theories to fit facts. But the note itself. What do you deduce from it?\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'Have' is in the present simple tense here."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "What do you deduce from it?",
+      "sentence": "\"I have no information yet. It’s a big mistake to theorize before having data. One starts to twist facts to fit theories, instead of theories to fit facts. But the note itself. What do you deduce from it?\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "'Deduce' is in the present simple tense here."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 1934,
+     "completion_tokens": 953,
+     "total_tokens": 2887,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+     },
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+     }
+    },
+    "seconds": 6.255
+   },
+   {
+    "page": 4,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "I carefully looked at",
+      "sentence": "I carefully looked at the writing and the paper it was on.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense indicating a completed action in the past."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "was",
+      "sentence": "I carefully looked at the writing and the paper it was on.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense indicating a completed action in the past."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "I said",
+      "sentence": "\"The writer was probably well-off,\" I said, trying to copy Holmes’s methods.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense indicating a completed action in the past."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "trying to copy",
+      "sentence": "\"The writer was probably well-off,\" I said, trying to copy Holmes’s methods.",
+      "pointId": "u2-present-continuous",
+      "confidence": "high",
+      "note": "Present continuous used to describe an action in progress at a past time."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "costs",
+      "sentence": "\"Such paper costs at least half a crown a packet.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple tense indicating a general truth or fact."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "said",
+      "sentence": "\"Strange—that's the right word,\" said Holmes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense used to narrate past actions."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "saw",
+      "sentence": "I did, and I saw a big \"E\" with a small \"g,\" a \"P,\" and a big \"G\" with a small \"t\" in the paper.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense indicating a completed action in the past."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "It's probably",
+      "sentence": "\"It's probably the maker's name or his initials.\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple tense expressing an assumption or speculation."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "said",
+      "sentence": "\"Not at all. The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.' It's like our 'Co.' 'P' stands for 'Papier.' Now for the 'Eg.' Let's check our Continental Gazetteer.\" He took a heavy brown book from his shelf. \"Eglow, Eglonitz—here it is, Egria. It's in a German-speaking area—in Bohemia, near Carlsbad. 'Known for the death of Wallenstein, and for its many glass factories and paper mills.' Ha, ha, my boy, what do you think of that?\" His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple tense used for reporting speech."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "It's like",
+      "sentence": "\"Not at all. The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.' It's like our 'Co.' 'P' stands for 'Papier.' Now for the 'Eg.' Let's check our Continental Gazetteer.\" He took a heavy brown book from his shelf. \"Eglow, Eglonitz—here it is, Egria. It's in a German-speaking area—in Bohemia, near Carlsbad. 'Known for the death of Wallenstein, and for its many glass factories and paper mills.' Ha, ha, my boy, what do you think of that?\" His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple tense used to state a fact or characteristic."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "stands for",
+      "sentence": "\"Not at all. The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.' It's like our 'Co.' 'P' stands for 'Papier.' Now for the 'Eg.' Let's check our Continental Gazetteer.\" He took a heavy brown book from his shelf. \"Eglow, Eglonitz—here it is, Egria. It's in a German-speaking area—in Bohemia, near Carlsbad. 'Known for the death of Wallenstein, and for its many glass factories and paper mills.' Ha, ha, my boy, what do you think of that?\" His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple tense to express what something represents or means."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "is known for",
+      "sentence": "\"Not at all. The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.' It's like our 'Co.' 'P' stands for 'Papier.' Now for the 'Eg.' Let's check our Continental Gazetteer.\" He took a heavy brown book from his shelf. \"Eglow, Eglonitz—here it is, Egria. It's in a German-speaking area—in Bohemia, near Carlsbad. 'Known for the death of Wallenstein, and for its many glass factories and paper mills.' Ha, ha, my boy, what do you think of that?\" His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive construction indicating the recognition of a place for something."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "The paper was made",
+      "sentence": "\"The paper was made in Bohemia,\" I said.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive voice indicating that the subject (paper) receives the action."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "I said",
+      "sentence": "\"The paper was made in Bohemia,\" I said.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense used for speech reporting."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 1960,
+     "completion_tokens": 1321,
+     "total_tokens": 3281,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+     },
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+     }
+    },
+    "seconds": 9.614
+   }
+  ],
+  "claude": [
+   {
+    "page": 1,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "heard",
+      "sentence": "I rarely heard him call her by any other name.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense of 'hear' describing a completed habitual action."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "any other name",
+      "sentence": "I rarely heard him call her by any other name.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'any' used in a negative/limiting context contrasting with 'some'."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "outshone",
+      "sentence": "In his eyes, she outshone and dominated all women.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb describing a finished state in the past."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "dominated",
+      "sentence": "In his eyes, she outshone and dominated all women.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Second past simple verb coordinated with 'outshone'."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "felt",
+      "sentence": "It wasn't because he felt any love for Irene Adler.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'feel'."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "unpleasant",
+      "sentence": "All emotions, especially love, were unpleasant to his cold, precise, but perfectly balanced mind.",
+      "pointId": "u3-word-building",
+      "confidence": "high",
+      "note": "Prefix 'un-' negates 'pleasant'."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "has seen",
+      "sentence": "I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect linking past achievement to the present."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "would have been",
+      "sentence": "I think he was the best reasoning and observing machine the world has seen, but as a lover, he would have been in a wrong position.",
+      "pointId": "u3-conditionals",
+      "confidence": "medium",
+      "note": "Implied third conditional: result clause without an explicit if-clause."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "spoke",
+      "sentence": "He never spoke of softer feelings, except with a joke or a sneer.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'speak'."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "would disturb",
+      "sentence": "But for a trained thinker like him, allowing such feelings would disturb his clear thinking.",
+      "pointId": "u3-conditionals",
+      "confidence": "medium",
+      "note": "Hypothetical result implying an unreal condition (if he allowed such feelings)."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "would be",
+      "sentence": "Strong emotions would be like grit in a sensitive instrument or a crack in one of his high-power lenses.",
+      "pointId": "u3-conditionals",
+      "confidence": "medium",
+      "note": "Hypothetical statement expressing an unreal comparison."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "questionable",
+      "sentence": "Yet, there was only one woman for him, and that was the late Irene Adler, of uncertain and questionable memory.",
+      "pointId": "u3-word-building",
+      "confidence": "high",
+      "note": "Suffix '-able' forms an adjective meaning 'able to be questioned'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "took",
+      "sentence": "My happiness and the new responsibilities of my own home took all my attention.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'take'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "who",
+      "sentence": "Holmes, who hated all forms of society, stayed in our rooms on Baker Street.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Relative pronoun introducing a non-defining clause about Holmes."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "hated",
+      "sentence": "Holmes, who hated all forms of society, stayed in our rooms on Baker Street.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb inside the relative clause."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "stayed",
+      "sentence": "Holmes, who hated all forms of society, stayed in our rooms on Baker Street.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Main clause past simple verb."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "was buried",
+      "sentence": "He was buried in his books, switching between the calm of the drug and the energy of his nature.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive construction; the subject receives the metaphorical action of being 'buried'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "was drawn",
+      "sentence": "He was still drawn to solving crimes, using his great skills to solve cases the police had given up on.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive form showing Holmes as recipient of the pull toward crime-solving."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "heard",
+      "sentence": "Sometimes I heard about his activities: his trip to Odessa for the Trepoff murder, solving the Atkinson brothers’ tragedy in Trincomalee, and his successful mission for the royal family of Holland.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'hear'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "successful",
+      "sentence": "Sometimes I heard about his activities: his trip to Odessa for the Trepoff murder, solving the Atkinson brothers’ tragedy in Trincomalee, and his successful mission for the royal family of Holland.",
+      "pointId": "u3-word-building",
+      "confidence": "high",
+      "note": "Suffix '-ful' forms an adjective from 'success'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "which",
+      "sentence": "Beyond these stories, which everyone read in the newspapers, I knew little of my old friend.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Relative pronoun referring back to 'these stories'."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "everyone",
+      "sentence": "Beyond these stories, which everyone read in the newspapers, I knew little of my old friend.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Indefinite pronoun referring to people in general."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "read",
+      "sentence": "Beyond these stories, which everyone read in the newspapers, I knew little of my old friend.",
+      "pointId": "u2-past-simple",
+      "confidence": "medium",
+      "note": "Past simple of 'read' (same spelling as present, but past tense here)."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "knew",
+      "sentence": "Beyond these stories, which everyone read in the newspapers, I knew little of my old friend.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'know'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "took",
+      "sentence": "My way took me through Baker Street.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'take'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "As I passed",
+      "sentence": "As I passed the familiar door, I felt a strong desire to see Holmes again and find out how he was using his amazing skills.",
+      "pointId": "u1-tenses-time-clauses",
+      "confidence": "high",
+      "note": "Time clause introduced by 'as', setting up the main action."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "felt",
+      "sentence": "As I passed the familiar door, I felt a strong desire to see Holmes again and find out how he was using his amazing skills.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Main clause past simple verb following the time clause."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "were brightly lit",
+      "sentence": "His rooms were brightly lit, and I saw his tall, thin figure pass twice in shadow against the window.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive construction describing the rooms as recipients of the lighting."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "saw",
+      "sentence": "His rooms were brightly lit, and I saw his tall, thin figure pass twice in shadow against the window.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'see'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "knew",
+      "sentence": "I knew his every habit, and his manner told me he was working again.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'know'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "told me he was working again",
+      "sentence": "I knew his every habit, and his manner told me he was working again.",
+      "pointId": "u2-rv-do-clause",
+      "confidence": "high",
+      "note": "Reporting verb 'told' + object 'me' + backshifted clause."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "rang",
+      "sentence": "I rang the bell and was shown up to the room that had once been partly mine.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'ring'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "was shown",
+      "sentence": "I rang the bell and was shown up to the room that had once been partly mine.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive construction; the subject 'I' receives the action of being shown up."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "that",
+      "sentence": "I rang the bell and was shown up to the room that had once been partly mine.",
+      "pointId": "u1-pronouns",
+      "confidence": "medium",
+      "note": "Relative pronoun introducing a clause describing 'the room'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "many words",
+      "sentence": "Without many words, but with a kind look, he waved me to an armchair, offered me cigars, and pointed to a spirit case and a gasogene in the corner.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "Quantifier 'many' modifying a plural noun."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "waved",
+      "sentence": "Without many words, but with a kind look, he waved me to an armchair, offered me cigars, and pointed to a spirit case and a gasogene in the corner.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'wave'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "offered",
+      "sentence": "Without many words, but with a kind look, he waved me to an armchair, offered me cigars, and pointed to a spirit case and a gasogene in the corner.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'offer'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "pointed",
+      "sentence": "Without many words, but with a kind look, he waved me to an armchair, offered me cigars, and pointed to a spirit case and a gasogene in the corner.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'point'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "stood",
+      "sentence": "Then he stood by the fire and looked at me in his usual thoughtful way.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'stand'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "looked",
+      "sentence": "Then he stood by the fire and looked at me in his usual thoughtful way.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'look'."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "suits",
+      "sentence": "\"Marriage suits you,\" he said.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple describing a general truth/state."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "think",
+      "sentence": "\"I think, Watson, you have gained seven and a half pounds since I last saw you.\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple verb expressing opinion."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "have gained",
+      "sentence": "\"I think, Watson, you have gained seven and a half pounds since I last saw you.\"",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect linking a past change to the present result (weight gain)."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "saw",
+      "sentence": "\"I think, Watson, you have gained seven and a half pounds since I last saw you.\"",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'see' in the 'since' clause."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "replied",
+      "sentence": "\"Seven!\" I replied.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'reply'."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "thought",
+      "sentence": "\"Indeed, I thought it might be a bit more.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple of 'think'."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "might be",
+      "sentence": "\"Indeed, I thought it might be a bit more.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "Modal 'might' expressing possibility in reported thought."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "a little more",
+      "sentence": "Just a little more, Watson.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "Quantifier phrase 'a little' expressing a small amount."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "are practicing",
+      "sentence": "And you are practicing again, I see.",
+      "pointId": "u2-present-continuous",
+      "confidence": "high",
+      "note": "Present continuous describing a currently ongoing action."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "see",
+      "sentence": "And you are practicing again, I see.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple verb used parenthetically to mean 'I understand'."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "tell me you planned to return to work",
+      "sentence": "You didn’t tell me you planned to return to work.",
+      "pointId": "u2-rv-do-clause",
+      "confidence": "high",
+      "note": "Reporting verb 'tell' + object 'me' + backshifted clause."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "planned to return",
+      "sentence": "You didn’t tell me you planned to return to work.",
+      "pointId": "u2-rv-inf",
+      "confidence": "high",
+      "note": "Reporting verb 'planned' followed directly by an infinitive."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "know",
+      "sentence": "\"Then, how do you know?\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple question form with auxiliary 'do'."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 1030,
+     "completion_tokens": 13048,
+     "cache_creation_input_tokens": 2783,
+     "cache_read_input_tokens": 0
+    },
+    "seconds": 98.763,
+    "stop_reason": "end_turn"
+   },
+   {
+    "page": 2,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "you’ve been",
+      "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "'you've been' = present perfect, action linked to now."
+     },
+     {
+      "lineIndex": 0,
+      "matchedText": "you have a careless servant girl",
+      "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple describing a current fact/state."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "said",
+      "sentence": "\"My dear Holmes,\" I said, \"this is too much.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb introducing direct speech."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "this is too much",
+      "sentence": "\"My dear Holmes,\" I said, \"this is too much.",
+      "pointId": "u1-determiners",
+      "confidence": "high",
+      "note": "'too much' expresses excess quantity."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "You would have been burned as a witch a few centuries ago",
+      "sentence": "You would have been burned as a witch a few centuries ago.",
+      "pointId": "u3-conditionals",
+      "confidence": "high",
+      "note": "Third conditional result clause with implied 'if' condition."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "had",
+      "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+      "pointId": "u2-past-simple",
+      "confidence": "medium",
+      "note": "Past simple describing a completed past action."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "came",
+      "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb for a finished action."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "changed",
+      "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb for a finished action."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "don’t see",
+      "sentence": "I don’t see how you deduce it.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Negative present simple form."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "deduce",
+      "sentence": "I don’t see how you deduce it.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple in embedded question clause."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "is",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple stating a current state."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "has given",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect for a recent action with present relevance."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "don’t see",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Negative present simple form, second instance."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "worked",
+      "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb describing a completed mental process."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "laughed",
+      "sentence": "He laughed to himself and rubbed his long, nervous hands together.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple narrative verb."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "himself",
+      "sentence": "He laughed to himself and rubbed his long, nervous hands together.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Reflexive pronoun referring back to the subject 'He'."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "rubbed",
+      "sentence": "He laughed to himself and rubbed his long, nervous hands together.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple narrative verb."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "said",
+      "sentence": "\"It’s very simple,\" he said.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "see",
+      "sentence": "I see on the inside of your left shoe, where the firelight hits it, the leather is marked by six almost parallel cuts.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple describing an ongoing observation."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "hits",
+      "sentence": "I see on the inside of your left shoe, where the firelight hits it, the leather is marked by six almost parallel cuts.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple describing a general fact."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "is marked",
+      "sentence": "I see on the inside of your left shoe, where the firelight hits it, the leather is marked by six almost parallel cuts.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive form: the leather receives the marking, agent unspecified."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "were made",
+      "sentence": "They were made by someone who scraped around the sole to remove mud.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive construction with agent introduced by 'by'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "someone",
+      "sentence": "They were made by someone who scraped around the sole to remove mud.",
+      "pointId": "u1-pronouns",
+      "confidence": "medium",
+      "note": "Indefinite pronoun referring to an unspecified person."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "who",
+      "sentence": "They were made by someone who scraped around the sole to remove mud.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Relative pronoun introducing a defining clause about 'someone'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "scraped",
+      "sentence": "They were made by someone who scraped around the sole to remove mud.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb inside relative clause."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "deduced you had been out in bad weather and had a particularly careless servant",
+      "sentence": "So, I deduced you had been out in bad weather and had a particularly careless servant.",
+      "pointId": "u2-rv-clause",
+      "confidence": "high",
+      "note": "Reporting verb 'deduced' followed directly by a backshifted clause."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "if a man comes",
+      "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+      "pointId": "u3-conditionals",
+      "confidence": "high",
+      "note": "First conditional: real/general condition introduced by 'if' + present simple."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "hides",
+      "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple in a relative clause describing habitual action."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "is",
+      "sentence": "As for your practice, if a man comes into my rooms smelling of iodoform, with a black mark of nitrate of silver on his right forefinger, and a bulge on the right side of his hat where he hides his stethoscope, I must be very dull not to know he is an active doctor.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple stating a general truth/identity."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "explained",
+      "sentence": "I couldn’t help laughing at how easily he explained his deductions.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing a completed past action."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "When I hear",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u1-tenses-time-clauses",
+      "confidence": "high",
+      "note": "Time clause introduced by 'When' with present simple."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "said",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "seems",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple describing a general impression."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "think",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple expressing an opinion."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "could do",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "Modal 'could' expressing hypothetical ability."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "myself",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Reflexive pronoun emphasizing the subject 'I'."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "am puzzled",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u1-active-passive",
+      "confidence": "medium",
+      "note": "Passive/stative form: the speaker is affected by confusion."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "explain",
+      "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple after 'until', general time reference."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "believe",
+      "sentence": "Yet I believe my eyes are as good as yours.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple expressing belief/opinion."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "replied",
+      "sentence": "\"Quite so,\" he replied, lighting a cigarette and sitting in an armchair.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "see",
+      "sentence": "\"You see, but you do not observe.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple describing general ability."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "do not observe",
+      "sentence": "\"You see, but you do not observe.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Negative present simple form."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "have often seen",
+      "sentence": "For example, you have often seen the steps leading up from the hall to this room.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect describing repeated past experience relevant to now."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "this room",
+      "sentence": "For example, you have often seen the steps leading up from the hall to this room.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "Demonstrative 'this' pointing to a specific place."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 629,
+     "completion_tokens": 9557,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 2783
+    },
+    "seconds": 70.297,
+    "stop_reason": "end_turn"
+   },
+   {
+    "page": 3,
+    "matches": [
+     {
+      "lineIndex": 2,
+      "matchedText": "don’t know",
+      "sentence": "How many? I don’t know.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple negative form 'don't know' expresses a current state of knowledge."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "have not observed",
+      "sentence": "You have not observed.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect 'have not observed' links past action to present relevance."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "have seen",
+      "sentence": "Yet you have seen.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect contrasts 'observing' with mere 'seeing'."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "know",
+      "sentence": "I know there are seventeen steps because I have both seen and observed.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple 'know' expresses a permanent fact/state."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "have both seen and observed",
+      "sentence": "I know there are seventeen steps because I have both seen and observed.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect with two coordinated past participles."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "these little problems",
+      "sentence": "By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'these' is a demonstrative determiner pointing to specific problems."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "you’ve written",
+      "sentence": "By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect 'have written' (contracted) connects past writing to now."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "some of my experiences",
+      "sentence": "By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.",
+      "pointId": "u1-determiners",
+      "confidence": "low",
+      "note": "'some' is a quantifier used with an uncountable/plural reference."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "might like",
+      "sentence": "By the way, since you’re interested in these little problems, and you’ve written about some of my experiences, you might like this.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "Modal 'might' expresses a tentative possibility/suggestion."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "handed",
+      "sentence": "He handed me a sheet of thick, pink-tinted notepaper from the table.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing a completed single action."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "came",
+      "sentence": "\"It came by the last post,\" he said.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple verb describing when the letter arrived."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "said",
+      "sentence": "\"It came by the last post,\" he said.",
+      "pointId": "u2-past-simple",
+      "confidence": "medium",
+      "note": "Past simple reporting tag after a direct quotation."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "Read",
+      "sentence": "\"Read it aloud.\"",
+      "pointId": "u2-commands",
+      "confidence": "high",
+      "note": "Imperative verb form giving an instruction."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "undated",
+      "sentence": "The note was undated and had no signature or address.",
+      "pointId": "u3-word-building",
+      "confidence": "medium",
+      "note": "Prefix 'un-' negates 'dated' to mean 'without a date'."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "had",
+      "sentence": "The note was undated and had no signature or address.",
+      "pointId": "u2-past-simple",
+      "confidence": "medium",
+      "note": "Past simple main verb 'had' meaning possessed/contained."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "no signature or address",
+      "sentence": "The note was undated and had no signature or address.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'no' functions as a negative quantifier before the nouns."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "will call",
+      "sentence": "\"A gentleman will call on you tonight, at a quarter to eight,\" it said, \"to consult you on a very important matter.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "'will' as a modal auxiliary expressing future prediction/plan."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "shows",
+      "sentence": "Your recent help to a royal family in Europe shows you can be trusted with serious matters.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple 'shows' expresses a general/timeless fact."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "can be trusted",
+      "sentence": "Your recent help to a royal family in Europe shows you can be trusted with serious matters.",
+      "pointId": "u2-modals",
+      "confidence": "high",
+      "note": "Modal 'can' combined with a passive infinitive."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "be trusted",
+      "sentence": "Your recent help to a royal family in Europe shows you can be trusted with serious matters.",
+      "pointId": "u1-active-passive",
+      "confidence": "medium",
+      "note": "Passive infinitive: the subject 'you' receives the trusting action."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "have heard",
+      "sentence": "We have heard this about you from many sources.",
+      "pointId": "u2-present-perfect",
+      "confidence": "high",
+      "note": "Present perfect linking past reports to the present situation."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "many sources",
+      "sentence": "We have heard this about you from many sources.",
+      "pointId": "u1-determiners",
+      "confidence": "low",
+      "note": "'many' is a quantifier indicating an indefinite large number."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "Be",
+      "sentence": "Be in your room at that time, and don’t be surprised if your visitor wears a mask.",
+      "pointId": "u2-commands",
+      "confidence": "high",
+      "note": "Imperative verb 'Be' giving an instruction."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "that time",
+      "sentence": "Be in your room at that time, and don’t be surprised if your visitor wears a mask.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'that' is a demonstrative determiner referring back to a specific time."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "don’t be surprised",
+      "sentence": "Be in your room at that time, and don’t be surprised if your visitor wears a mask.",
+      "pointId": "u2-commands",
+      "confidence": "medium",
+      "note": "Negative imperative instructing the listener not to react a certain way."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "if your visitor wears a mask",
+      "sentence": "Be in your room at that time, and don’t be surprised if your visitor wears a mask.",
+      "pointId": "u3-conditionals",
+      "confidence": "medium",
+      "note": "Real (zero/first-type) conditional clause paired with an imperative main clause."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "said",
+      "sentence": "\"This is a real mystery,\" I said.",
+      "pointId": "u2-past-simple",
+      "confidence": "medium",
+      "note": "Past simple reporting tag after direct speech."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "think it means",
+      "sentence": "\"What do you think it means?\"",
+      "pointId": "u2-rv-clause",
+      "confidence": "medium",
+      "note": "Reporting verb 'think' followed directly by a clause (that omitted)."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "have",
+      "sentence": "I have no information yet.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple 'have' expressing current possession/state, not perfect aspect."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "no information",
+      "sentence": "I have no information yet.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'no' functions as a negative quantifier before an uncountable noun."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "theorize",
+      "sentence": "It’s a big mistake to theorize before having data.",
+      "pointId": "u3-word-building",
+      "confidence": "medium",
+      "note": "Suffix '-ize' turns the noun 'theory' into a verb meaning 'to form theories'."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "One",
+      "sentence": "One starts to twist facts to fit theories, instead of theories to fit facts.",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "'One' is an indefinite pronoun referring to people in general."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "starts",
+      "sentence": "One starts to twist facts to fit theories, instead of theories to fit facts.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple describing a general habitual tendency."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "deduce",
+      "sentence": "What do you deduce from it?",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple question form asking about a general/current conclusion."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 466,
+     "completion_tokens": 11324,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 2783
+    },
+    "seconds": 98.417,
+    "stop_reason": "end_turn"
+   },
+   {
+    "page": 4,
+    "matches": [
+     {
+      "lineIndex": 0,
+      "matchedText": "looked",
+      "sentence": "I carefully looked at the writing and the paper it was on.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Simple past tense describing a completed action."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "was",
+      "sentence": "\"The writer was probably well-off,\" I said, trying to copy Holmes’s methods.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple 'was' describing a state in the past."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "said",
+      "sentence": "\"The writer was probably well-off,\" I said, trying to copy Holmes’s methods.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "Such",
+      "sentence": "Such paper costs at least half a crown a packet.",
+      "pointId": "u1-determiners",
+      "confidence": "medium",
+      "note": "'Such' functions as an intensifying determiner before a noun."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "costs",
+      "sentence": "Such paper costs at least half a crown a packet.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple used for a general fact/characteristic."
+     },
+     {
+      "lineIndex": 1,
+      "matchedText": "’s",
+      "sentence": "It’s very strong and stiff.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Contracted 'is' - present simple describing a current quality."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "said",
+      "sentence": "\"Strange—that's the right word,\" said Holmes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "'s",
+      "sentence": "\"Strange—that's the right word,\" said Holmes.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Contracted 'is' - present simple stating a fact."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "isn't",
+      "sentence": "\"This isn't English paper at all.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Negative present simple form."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "This",
+      "sentence": "\"This isn't English paper at all.",
+      "pointId": "u1-determiners",
+      "confidence": "high",
+      "note": "Demonstrative determiner pointing to the paper being discussed."
+     },
+     {
+      "lineIndex": 2,
+      "matchedText": "Hold",
+      "sentence": "Hold it up to the light.\"",
+      "pointId": "u2-commands",
+      "confidence": "high",
+      "note": "Imperative verb giving an instruction."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "did",
+      "sentence": "I did, and I saw a big \"E\" with a small \"g,\" a \"P,\" and a big \"G\" with a small \"t\" in the paper.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple auxiliary/verb confirming the action."
+     },
+     {
+      "lineIndex": 3,
+      "matchedText": "saw",
+      "sentence": "I did, and I saw a big \"E\" with a small \"g,\" a \"P,\" and a big \"G\" with a small \"t\" in the paper.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing a perception in the past."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "asked",
+      "sentence": "\"What do you think of that?\" asked Holmes.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     },
+     {
+      "lineIndex": 4,
+      "matchedText": "do you think",
+      "sentence": "\"What do you think of that?\" asked Holmes.",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple question form with auxiliary 'do'."
+     },
+     {
+      "lineIndex": 5,
+      "matchedText": "'s",
+      "sentence": "\"It's probably the maker's name or his initials.\"",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Contracted 'is' - present simple stating a probability."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "means",
+      "sentence": "The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.'",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple used to explain meaning."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "which",
+      "sentence": "The 'G' with the small 't' means 'Gesellschaft,' which is German for 'Company.'",
+      "pointId": "u1-pronouns",
+      "confidence": "high",
+      "note": "Relative pronoun introducing a clause about 'Gesellschaft'."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "'s",
+      "sentence": "It's like our 'Co.'",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Contracted 'is' - present simple comparison."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "stands",
+      "sentence": "'P' stands for 'Papier.'",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple describing what a letter represents."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "Let's check",
+      "sentence": "Let's check our Continental Gazetteer.\"",
+      "pointId": "u2-commands",
+      "confidence": "high",
+      "note": "'Let's' + base verb forms a suggestion/command."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "took",
+      "sentence": "He took a heavy brown book from his shelf.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing a completed action."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "is",
+      "sentence": "\"Eglow, Eglonitz—here it is, Egria.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Present simple 'is' locating the entry."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "'s",
+      "sentence": "It's in a German-speaking area—in Bohemia, near Carlsbad.",
+      "pointId": "u2-present-simple",
+      "confidence": "medium",
+      "note": "Contracted 'is' - present simple stating location."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "German-speaking",
+      "sentence": "It's in a German-speaking area—in Bohemia, near Carlsbad.",
+      "pointId": "u3-word-building",
+      "confidence": "medium",
+      "note": "Compound adjective built with the -ing suffix from 'speak'."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "many",
+      "sentence": "'Known for the death of Wallenstein, and for its many glass factories and paper mills.'",
+      "pointId": "u1-determiners",
+      "confidence": "high",
+      "note": "Quantifier indicating a large number of factories and mills."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "do you think",
+      "sentence": "Ha, ha, my boy, what do you think of that?\"",
+      "pointId": "u2-present-simple",
+      "confidence": "high",
+      "note": "Present simple question repeated for emphasis."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "sparkled",
+      "sentence": "His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing Holmes's eyes."
+     },
+     {
+      "lineIndex": 6,
+      "matchedText": "blew",
+      "sentence": "His eyes sparkled, and he blew a big blue cloud from his cigarette.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple describing the action of blowing smoke."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "was made",
+      "sentence": "\"The paper was made in Bohemia,\" I said.",
+      "pointId": "u1-active-passive",
+      "confidence": "high",
+      "note": "Passive voice: the paper receives the action of making."
+     },
+     {
+      "lineIndex": 7,
+      "matchedText": "said",
+      "sentence": "\"The paper was made in Bohemia,\" I said.",
+      "pointId": "u2-past-simple",
+      "confidence": "high",
+      "note": "Past simple reporting verb."
+     }
+    ],
+    "usage": {
+     "prompt_tokens": 529,
+     "completion_tokens": 9248,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 2783
+    },
+    "seconds": 74.643,
+    "stop_reason": "end_turn"
+   }
+  ]
+ }
+}

@@ -59,3 +59,6 @@ src/dev/InfraPage.txt
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Syllabus-matching spike: regenerable per-page model responses
+dev/syllabus-matching/spike/.ab-cache/

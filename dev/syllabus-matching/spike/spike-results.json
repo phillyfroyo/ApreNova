@@ -1,0 +1,281 @@
+[
+ {
+  "page": 1,
+  "matches": [
+   {
+    "lineIndex": 0,
+    "wordIndices": [
+     4,
+     7
+    ],
+    "matchedText": "was always",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "The use of 'was' sets the scene in past simple, describing a state over time.",
+    "sentence": "To Sherlock Holmes, she was always the woman."
+   },
+   {
+    "lineIndex": 0,
+    "wordIndices": [
+     28,
+     29
+    ],
+    "matchedText": "wasn't because",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "The negation 'wasn't' in past simple forms the basis for a deduction.",
+    "sentence": "It wasn't because he felt any love for Irene Adler."
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     79,
+     80
+    ],
+    "matchedText": "given up",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "'Given up' indicates an action completed at some unspecified time before now, impacting the present.",
+    "sentence": "...to solve cases the police had given up on."
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     46,
+     47,
+     48
+    ],
+    "matchedText": "buried in his",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "Describes Holmes' situation in the past, indicating something that has changed.",
+    "sentence": "He was buried in his books, switching between the calm of the drug and the energy of his nature."
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     84,
+     85,
+     86
+    ],
+    "matchedText": "heard about his",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "'Heard' in past simple indicates actions occurring during a past period.",
+    "sentence": "Sometimes I heard about his activities: his trip to Odessa for the Trepoff murder, solving the Atkinson brothers’ tragedy in Trincomalee, and his successful mission for the royal family of Holland."
+   },
+   {
+    "lineIndex": 2,
+    "wordIndices": [
+     8,
+     9,
+     10
+    ],
+    "matchedText": "was returning from",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "Past simple 'was returning' describes an action that occurred at a specific time in the past.",
+    "sentence": "One night, on the twentieth of March, 1888, I was returning from visiting a patient."
+   },
+   {
+    "lineIndex": 2,
+    "wordIndices": [
+     91,
+     92
+    ],
+    "matchedText": "was working",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "Indicates an action taking place over a period in the past.",
+    "sentence": "...and his manner told me he was working again."
+   },
+   {
+    "lineIndex": 3,
+    "wordIndices": [
+     2,
+     3,
+     4
+    ],
+    "matchedText": "was not overly",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "Describes a past state, emphasizing his habitual nature.",
+    "sentence": "His manner was not overly warm."
+   },
+   {
+    "lineIndex": 4,
+    "wordIndices": [
+     0,
+     1,
+     2
+    ],
+    "matchedText": "Marriage suits you",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "Present simple 'suits' describes a general truth or state.",
+    "sentence": "\"Marriage suits you,\" he said."
+   },
+   {
+    "lineIndex": 6,
+    "wordIndices": [
+     0,
+     1,
+     2
+    ],
+    "matchedText": "Indeed, I thought",
+    "pointId": "u2-past-simple",
+    "confidence": "medium",
+    "note": "The verb 'thought' is in the past simple, indicating a completed action.",
+    "sentence": "\"Indeed, I thought it might be a bit more."
+   },
+   {
+    "lineIndex": 6,
+    "wordIndices": [
+     16,
+     17
+    ],
+    "matchedText": "are practicing",
+    "pointId": "u2-present-continuous",
+    "confidence": "high",
+    "note": "Present continuous indicates an action occurring now or around now.",
+    "sentence": "And you are practicing again, I see."
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 3171,
+   "completion_tokens": 752,
+   "total_tokens": 3923,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "audio_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "audio_tokens": 0,
+    "accepted_prediction_tokens": 0,
+    "rejected_prediction_tokens": 0
+   }
+  },
+  "ms": 11923
+ },
+ {
+  "page": 2,
+  "matches": [
+   {
+    "lineIndex": 0,
+    "wordIndices": [
+     10,
+     11,
+     12
+    ],
+    "matchedText": "you’ve been",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "This is a present perfect construction indicating a past action relevant now.",
+    "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?"
+   },
+   {
+    "lineIndex": 0,
+    "wordIndices": [
+     17,
+     18
+    ],
+    "matchedText": "you have",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "This is a stative present simple verb indicating possession.",
+    "sentence": "How do I know you’ve been very wet lately, and that you have a careless servant girl?"
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     20,
+     22
+    ],
+    "matchedText": "It’s true",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "An example of present simple in a cleft sentence emphasizing the truth.",
+    "sentence": "It’s true I had a country walk on Thursday and came back a mess, but I changed my clothes."
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     48,
+     49,
+     50
+    ],
+    "matchedText": "Mary Jane, she",
+    "pointId": "u1-pronouns",
+    "confidence": "high",
+    "note": "Here 'she' is used as a personal pronoun referring back to 'Mary Jane'.",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out."
+   },
+   {
+    "lineIndex": 1,
+    "wordIndices": [
+     52,
+     53
+    ],
+    "matchedText": "is hopeless",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "This present simple verb form describes the current state of Mary Jane.",
+    "sentence": "As for Mary Jane, she is hopeless, and my wife has given her notice, but again, I don’t see how you worked it out."
+   },
+   {
+    "lineIndex": 3,
+    "wordIndices": [
+     0,
+     1,
+     2
+    ],
+    "matchedText": "It’s very simple",
+    "pointId": "u2-present-simple",
+    "confidence": "high",
+    "note": "The phrase 'is very simple' uses present simple to describe a general truth.",
+    "sentence": "It’s very simple, he said."
+   },
+   {
+    "lineIndex": 4,
+    "wordIndices": [
+     16,
+     17
+    ],
+    "matchedText": "I said",
+    "pointId": "u2-past-simple",
+    "confidence": "high",
+    "note": "The use of 'said' indicates that the action of speaking happened in the past.",
+    "sentence": "\"When I hear your reasons,\" I said, \"it always seems so simple that I think I could do it myself, though I am puzzled until you explain."
+   },
+   {
+    "lineIndex": 5,
+    "wordIndices": [
+     26,
+     28
+    ],
+    "matchedText": "you have seen",
+    "pointId": "u2-present-perfect",
+    "confidence": "high",
+    "note": "This present perfect form indicates an action completed in the past with relevance now.",
+    "sentence": "For example, you have often seen the steps leading up from the hall to this room."
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 2219,
+   "completion_tokens": 599,
+   "total_tokens": 2818,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "audio_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "audio_tokens": 0,
+    "accepted_prediction_tokens": 0,
+    "rejected_prediction_tokens": 0
+   }
+  },
+  "ms": 7273
+ }
+]
