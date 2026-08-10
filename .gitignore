@@ -1,7 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# No leading slash: matches node_modules at ANY depth, not just the repo root.
+# tts-aprenova/node_modules got committed because the old `/node_modules`
+# pattern only matched the root.
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
